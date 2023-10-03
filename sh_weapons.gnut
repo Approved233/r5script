@@ -22,7 +22,7 @@ global function MainWeapon_GetLoadoutOverviewOffset
 global function MainWeapon_GetLoadoutOverviewRotation
 
 
-
+global function ShowDefaultBodygroupsOnFakeWeapon
 
 
 
@@ -66,7 +66,7 @@ void function ShWeapons_LevelInit()
 
 
 
-
+		PrecacheWeapon( $"weapon_cubemap" )
 
 
 	AddCallback_RegisterRootItemFlavors( void function() {
@@ -101,8 +101,8 @@ void function OnItemFlavorRegistered_WeaponItemFlavor( ItemFlavor weaponFlavor )
 void function RegisterWeaponForUse( string weaponClassname )
 {
 
-
-
+		PrecacheWeapon( weaponClassname )
+		RegisterWeaponDamageSource( weaponClassname )
 
 }
 
@@ -241,9 +241,9 @@ array<ItemFlavor> function GetWeaponsInCategory( ItemFlavor category )
 
 	entity player = null
 
+
+
 		player = GetLocalClientPlayer()
-
-
 
 
 	foreach ( weapon in allWeapons )
@@ -299,18 +299,18 @@ vector function MainWeapon_GetLoadoutOverviewRotation( ItemFlavor flavor )
 
 
 
+void function ShowDefaultBodygroupsOnFakeWeapon( entity ent, string weaponClassName )
+{
+	SetBodyGroupsForWeaponConfig( ent, weaponClassName, [] )
+	if ( weaponClassName == "mp_weapon_bow" )
+	{
+		int idx = ent.FindBodygroup( "release_aid" )
+		if ( idx < 0 )
+			return
 
-
-
-
-
-
-
-
-
-
-
-
+		ent.SetBodygroupModelByIndex( idx, 1 )
+	}
+}
 
 
 

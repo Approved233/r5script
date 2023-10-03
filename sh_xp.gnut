@@ -22,18 +22,18 @@ global function GetXPEventValue
 global function GetXPEventCount
 
 
-global function GetXPEventNameDisplay
-global function GetXPEventValueDisplay
-global function XpEventTypeData_DisplayEmpty
 
-global function GetImageForReward
-global function GetStringForReward
-global function InitXPData
-global function UpdateXPEvents
 
-global function CreateNestedAccountDisplayBadge
-global function GetAccountBadgeRuiAssetAsString
-global function GetAccountBadgeRuiAssetAsAsset
+
+
+
+
+
+
+
+
+
+
 
 
 global function GetNextAccountLevel
@@ -138,6 +138,7 @@ string[eXPType._count_] xpDisplayNames = ["Unhandled", ...]
 void function ShXP_Init()
 {
 
+		PrecacheParticleSystem( PLAYER_LEVELUP_FX )
 
 
 
@@ -147,8 +148,7 @@ void function ShXP_Init()
 
 
 
-
-
+		InitXPData() 
 
 
 	
@@ -360,44 +360,44 @@ asset function GetAccountDisplayBadge( int levelIndex )
 }
 
 
-var function CreateNestedAccountDisplayBadge( var parentRui, string arg, int levelIndex )
-{
-	
-	RuiDestroyNestedIfAlive( parentRui, arg )
-	var nestedAccountRui
-	if ( levelIndex <= ACCOUNT_LEVEL_RUI_SWITCH_0_BASE || GetCurrentPlaylistVarInt( "account_progression_version", 3 ) == 2 )
-		nestedAccountRui = RuiCreateNested( parentRui, arg, $"ui/gcard_badge_account_t1.rpak" )
-	else
-		nestedAccountRui = RuiCreateNested( parentRui, arg, $"ui/gcard_badge_account_p1.rpak" )
-
-	RuiSetInt( nestedAccountRui, "tier", levelIndex )
-
-	return nestedAccountRui
-}
 
 
 
-string function GetAccountBadgeRuiAssetAsString( int levelIndex )
-{
-	string badgeRuiAsset
-	if ( levelIndex <= ACCOUNT_LEVEL_RUI_SWITCH_0_BASE || GetCurrentPlaylistVarInt( "account_progression_version", 3 ) == 2 )
-		badgeRuiAsset = "ui/gcard_badge_account_t1.rpak"
-	else
-		badgeRuiAsset = "ui/gcard_badge_account_p1.rpak"
 
-	return badgeRuiAsset
-}
 
-asset function GetAccountBadgeRuiAssetAsAsset( int levelIndex )
-{
-	asset badgeRuiAsset
-	if ( levelIndex <= ACCOUNT_LEVEL_RUI_SWITCH_0_BASE || GetCurrentPlaylistVarInt( "account_progression_version", 3 ) == 2 )
-		badgeRuiAsset = $"ui/gcard_badge_account_t1.rpak"
-	else
-		badgeRuiAsset = $"ui/gcard_badge_account_p1.rpak"
 
-	return badgeRuiAsset
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -625,11 +625,11 @@ void function InitXPData()
 }
 
 
-void function UpdateXPEvents()
-{
-	Assert( IsPersistenceAvailable(), "Cannot call UpdateXPEvents when persistence is not available" )
-	XpEventTypeData_SetDisplayEmpty( eXPType.BONUS_FRIEND, !IsLastPlaylistSolo( GetLocalClientPlayer() ) ) 
-}
+
+
+
+
+
 
 
 
@@ -687,59 +687,59 @@ int function GetXPEventValue( entity player, int xpType )
 
 
 
-string function GetXPEventNameDisplay( entity player, int xpType )
-{
-	int count = GetXPEventCount( player, xpType )
-
-	XPEventData eventData = file.xpEventTypeData[xpType]
-
-	float boost = expect float( player.GetPersistentVar( "lastGameBattlePassBoost" ) )
-	
-	if ( boost > 1.0 && (xpType == eXPType.WIN_MATCH || xpType == eXPType.TOP_FIVE) )
-		return Localize( eventData.displayString + "_WITH_BOOST", int( RoundToNearestMultiplier( (boost - 1.0) * 100, 1.0 ) ) )
-
-	return Localize( eventData.displayString, GetFormattedIntByType( count, eventData.countDisplayType ) )
-}
 
 
-bool function XpEventTypeData_DisplayEmpty( int xpType )
-{
-	return file.xpEventTypeData[xpType].displayEmpty
-}
 
-string function GetXPEventValueDisplay( entity player, int xpType, float boostModifier = 0 )
-{
-	int eventValue = GetXPEventValue( player, xpType )
-	eventValue += int(eventValue * boostModifier)
-	if ( eventValue == 0 )
-		return Localize( "#EOG_XP_NONE", GetXPEventValue( player, xpType ) )
-	else
-		return Localize( "#EOG_XP_PLUSNUMBER", GetXPEventValue( player, xpType ) )
 
-	unreachable
-}
 
-asset function GetImageForReward( RewardData reward )
-{
-	asset icon = $""
-	if ( IsItemFlavorStructValid( reward.item.guid, eValidation.DONT_ASSERT ) )
-	{
-		if ( ItemFlavor_GetType( reward.item ) == eItemType.account_currency )
-			icon = GRXCurrency_GetRewardIcon( reward.item )
-		else
-			icon = ItemFlavor_GetIcon( reward.item )
-	}
 
-	return icon
-}
 
-string function GetStringForReward( RewardData reward )
-{
-	if ( reward.quantity > 1 )
-		return FormatAndLocalizeNumber( "1", float( reward.quantity ), ItemFlavor_IsCurrency( reward.item ) || IsTenThousandOrMore( reward.quantity ) )
 
-	return ItemFlavor_GetShortName( reward.item )
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -365,20 +365,20 @@ void function Settings_Init()
 
 
 
+		GAMETYPE = GameRules_GetGameMode()
+		printl( "GAMETYPE: " + GAMETYPE )
 
+		MAX_TEAMS = GetCurrentPlaylistVarInt( "max_teams", 2 )
+		printl( "MAX_TEAMS: " + MAX_TEAMS )
 
+		MAX_PLAYERS = GetCurrentPlaylistVarInt( "max_players", 12 )
+		printl( "MAX_PLAYERS: " + MAX_PLAYERS )
 
+		MAX_TEAM_PLAYERS = GetMaxTeamPlayers()
+		printl( "MAX_TEAM_PLAYERS: " + MAX_TEAM_PLAYERS )
 
-
-
-
-
-
-
-
-
-
-
-
+		Assert( GAMETYPE in GAMETYPE_DESC, "Unsupported gamemode: '" + GAMETYPE + "' Check your mp_gamemode" )
+		Assert( GAMETYPE in GAMETYPE_TEXT, "Unsupported gamemode: '" + GAMETYPE + "' Check your mp_gamemode" )
+		GAMEDESC_CURRENT = GAMETYPE_DESC[GAMETYPE]
 
 }

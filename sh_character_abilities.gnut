@@ -138,8 +138,8 @@ void function OnItemFlavorRegistered_Character( ItemFlavor character )
 	{
 		string weaponClassname = CharacterAbility_GetWeaponClassname( ability )
 
-
-
+			if ( weaponClassname != "" )
+				PrecacheWeapon( weaponClassname )
 
 
 		

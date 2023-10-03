@@ -15,8 +15,8 @@ global function CharacterQuip_GetEffectColor1
 global function CharacterQuip_GetEffectColor2
 
 
-
-
+global function PerformQuip
+global function CharacterQuip_ShortenTextForCommsMenu
 
 
 
@@ -75,10 +75,10 @@ void function RegisterEquippableQuipsForCharacter( ItemFlavor characterClass, ar
 		}
 
 
-
-
-
-
+		if ( CharacterQuip_UseHoloProjector( quip ) )
+		{
+			PrecacheModel( CharacterQuip_GetModelAsset( quip ) )
+		}
 
 	}
 
@@ -165,29 +165,29 @@ void function RegisterEquippableQuipsForCharacter( ItemFlavor characterClass, ar
 
 
 
+void function PerformQuip( entity player, int index )
+{
+	if ( !IsAlive( player ) )
+		return
 
+	ItemFlavor quip      = GetItemFlavorByGUID( index )
 
+	CommsAction act
+	act.index = eCommsAction.QUIP
+	act.aliasSubname = CharacterQuip_GetAliasSubName( quip )
+	act.hasCalm = false
+	act.hasCalmFar = false
+	act.hasUrgent = false
+	act.hasUrgentFar = false
 
+	CommsOptions opt
+	opt.isFirstPerson = (player == GetLocalViewPlayer())
+	opt.isFar = false
+	opt.isUrgent = false
+	opt.pauseQueue = player.GetTeam() == GetLocalViewPlayer().GetTeam()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	PlaySoundForCommsAction( player, null, act, opt )
+}
 
 
 
@@ -479,7 +479,7 @@ string function CharacterQuip_ShortenTextForCommsMenu( ItemFlavor flav )
 		int TEXT_MAX_LEN = 26
 		int TEXT_MAX_LEN_W_DOTS = TEXT_MAX_LEN - 2
 
-
+		txt = CondenseText( txt, WORD_MAX_LEN, TEXT_MAX_LEN )
 
 	}
 	return txt

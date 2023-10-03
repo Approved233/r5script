@@ -48,11 +48,11 @@ global function DEV_ShouldIgnorePersistence
 
 
 
+global function ServerToClient_OnPersistentDataReady
 
 
 
 
-global function ClientToUI_OnPersistentDataReady
 
 
 #if DEV
@@ -129,7 +129,7 @@ void function ShPersistentData_LevelInit_Begin()
 
 
 
-
+		Remote_RegisterClientFunction( "ServerToClient_OnPersistentDataReady" )
 
 }
 
@@ -628,22 +628,22 @@ bool function IsAnyPersistenceBitSet( entity player, string persistenceVar )
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-void function ClientToUI_OnPersistentDataReady()
+void function ServerToClient_OnPersistentDataReady()
 {
+	RunUIScript( "ClientToUI_OnPersistentDataReady" )
+
 	foreach( OnPersistentDataReadyCallbackType cb in fileLevel.onPersistentDataReadyCallbacks )
 		cb( GetLocalClientPlayer() )
 }
+
+
+
+
+
+
+
+
+
 
 
 

@@ -32,10 +32,10 @@ global function Boost_IsAccountXPPropertyModified
 global function Boost_GetPostGameChallengeBonus
 global function Boost_GetBonusPostGameAccountXP
 
-	global function Boost_LowFreqUpdate
-	global function Boost_UI_SetHasNewBoosts
-	global function Boost_UI_HasNewBoosts
-	global function Boost_UI_MarkAllBoostsAsSeen
+
+
+
+
 
 
 
@@ -246,7 +246,7 @@ struct FileStruct_Boosts
 #endif
 
 
-		bool hasNewBoosts = false
+
 
 }
 FileStruct_Boosts& file
@@ -324,10 +324,10 @@ void function OnBoostsLoaded( entity player, BoostTable previousState )
 void function OnNewBoostDetected( entity player, int boostGuid )
 {
 
-#if DEV
-			printf("\tOnNewBoostDetected: %i\n", boostGuid )
-#endif
-		Boost_UI_SetHasNewBoosts( true )
+
+
+
+
 
 }
 
@@ -1655,7 +1655,7 @@ void function Boost_RefreshBoosts()
 
 
 
-		Boost_RefreshPlayerBoosts( GetLocalClientPlayer() )
+
 
 
 	SetStoredPlaylistBoostVersion( GetPlaylistBoostVersion() )
@@ -1887,48 +1887,48 @@ int function Boost_GetBonusPostGameAccountXP( entity player, int xpType )
 }
 
 
-	void function Boost_LowFreqUpdate()
-	{
-		if ( PlayerBoostsNeedRefresh( GetLocalClientPlayer() ) )
-		{
-#if DEV
-				print( "Refreshing boosts..." )
-#endif
 
-			
-			if ( StoredPlaylistVersionMismatch( GetLocalClientPlayer() ) )
-			{
-				ClearStoredPlaylistData()
-				RegisterPlaylistData()
-				ImportPlaylistData()
-			}
 
-			Boost_RefreshBoosts()
-		}
-	}
 
-	void function Boost_UI_SetHasNewBoosts( bool hasNewBoosts )
-	{
-		file.hasNewBoosts = hasNewBoosts
-	}
 
-	bool function Boost_UI_HasNewBoosts()
-	{
-		return file.hasNewBoosts
-	}
 
-	void function Boost_UI_MarkAllBoostsAsSeen()
-	{
-		entity player                   = GetLocalClientPlayer()
-		BoostGuidTable playerSeenBoosts = GetPlayerSeenBoosts( player )
-		foreach ( Boost boost in file.playerBoosts[ player ] )
-		{
-			playerSeenBoosts[ boost.guid ] <- true
-		}
 
-		Boost_UI_SetHasNewBoosts( false )
-		Remote_ServerCallFunction( "ClientToServer_MarkAllBoostsAsSeen" )
-	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

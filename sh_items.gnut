@@ -117,9 +117,9 @@ global function DEV_DescItemFlavor
 global function DEV_GetAllItemFlavors
 #endif
 
-
-
-
+#if DEV
+global function DEV_PrintAllGRXRefs
+#endif
 
 
 
@@ -2041,9 +2041,9 @@ bool function PlayerIsOnSwitch( entity player, ItemFlavor flav )
 bool function PlayerHasTwitchPrimeRewards( entity player, string rewardName )
 {
 
+		return player.DoesUserHaveTwitchPrimeReward( rewardName ) ? true : false
 
 
-		return DoesUserHaveTwitchPrimeReward( rewardName )
 
 }
 
@@ -2446,47 +2446,47 @@ bool function IsCalEvent( int itemType )
 
 
 
+#if DEV
+void function DEV_PrintAllGRXRefs()
+{
+	array <ItemFlavor> allItemFlavs = GetAllItemFlavors()
 
+	string currentType = "" 
+	string grxDump = ""
+	grxDump += "------- ALL ASSETS -------\n"
+	grxDump += "TYPE , ASSET PATH , GRX REF , LONG NAME , LONG KEY, RARITY, PARENT CHAR OR WEAPON\n"
+	foreach ( ItemFlavor flav in allItemFlavs )
+	{
+		
+		if ( ItemFlavor_GetGRXMode( flav ) == eItemFlavorGRXMode.NONE || ItemFlavor_GetGRXMode( flav ) == eItemFlavorGRXMode.OWNERSHIP_TARGET )
+			continue
 
+		string quality = ItemFlavor_HasQuality( flav ) ? DEV_GetEnumStringSafe( "eRarityTier", ItemFlavor_GetQuality( flav ) ) : "NULL"
 
+		asset parentFlav = GetGlobalSettingsAsset( ItemFlavor_GetAsset( flav ), "parentItemFlavor" )
+		string parentName = "NULL"
+		if ( parentFlav != "" && IsValidItemFlavorSettingsAsset( parentFlav ) )
+		{
+			parentName = Localize( ItemFlavor_GetShortName( GetItemFlavorByAsset( parentFlav ) ) )
+		}
 
+		grxDump += Localize( ItemFlavor_GetTypeName( flav ) ) + " , " + DEV_ItemFlavor_GetCleanedAssetPath( flav ) + " , " + ItemFlavor_GetGRXAlias( flav ) + " , " +
+				Localize( ItemFlavor_GetLongName( flav ) )  + " , " + ItemFlavor_GetLongName( flav ) + " , " + quality + " , " + parentName + "\n"
+	}
+	grxDump += "------- END ASSETS -------\n"
+	DEV_PrintGRXRefsToFile( grxDump )
+}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+void function DEV_PrintGRXRefsToFile( string out )
+{
+	const string DEBUG_OUTPUT_PATH = "../../dumps/" 
+	printt( "Dumping GRX refs to depot/r5dev/dumps/grx_refs_dump.txt" )
+	DevTextBufferClear()
+	DevTextBufferWrite( out )
+	DevTextBufferDumpToFile( DEBUG_OUTPUT_PATH + "grx_refs_dump.txt" )
+	DevTextBufferClear()
+}
+#endif
 
 
 

@@ -145,19 +145,19 @@ int function Ranked_GetNumProvisionalMatchesRequired()
 int function Ranked_GetNumProvisionalMatchesCompleted( entity player )
 {
 
-	if ( !IsFullyConnected() )
+
+
+
+
+
+	if ( !IsConnected() )
 		return 0
 
 
 
 
 
-
-
-
-		return GetPersistentVarAsInt( "rankedProvisionalMatchesCompleted" )
-
-
+		return player.GetPersistentVarAsInt( "rankedProvisionalMatchesCompleted" )
 
 
 	unreachable

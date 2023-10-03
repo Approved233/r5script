@@ -5,8 +5,8 @@ global function Loadout_CharacterExecution
 global function Loadout_CharacterIntroQuip
 global function Loadout_CharacterKillQuip
 
-
-
+global function PlayIntroQuipThread
+global function PlayKillQuipThread
 
 global function CharacterExecution_IsNotEquippable
 global function CharacterExecution_ShouldHideIfNotEquippable
@@ -48,8 +48,8 @@ global function CharacterIntroQuip_GetVoiceSoundEvent
 global function CharacterIntroQuip_GetStingSoundEvent
 global function CharacterIntroQuip_GetSortOrdinal
 
-
-
+global function CharacterSkin_Apply
+global function CharacterSkin_WaitForAndApplyFromLoadout
 
 
 
@@ -57,15 +57,15 @@ global function CharacterIntroQuip_GetSortOrdinal
 global function CharacterSkin_ShouldHideIfLocked
 
 
-
-
-
-
 #if DEV
-
-
-
+global function DEV_TestCharacterSkinData
 #endif
+
+
+
+
+
+
 
 
 
@@ -153,12 +153,12 @@ void function OnItemFlavorRegistered_Character( ItemFlavor characterClass )
 		entry.networkTo                 = eLoadoutNetworking.PLAYER_GLOBAL
 		entry.networkVarName            = "CharacterSkin"
 
-
-
-
-
-
-
+			if ( IsLobby() )
+			{
+				AddCallback_ItemFlavorLoadoutSlotDidChange_AnyPlayer( entry, void function( EHI playerEHI, ItemFlavor skin ) {
+					UpdateMenuCharacterModel( FromEHI( playerEHI ) )
+				} )
+			}
 
 		fileLevel.loadoutCharacterSkinSlotMap[characterClass] <- entry
 	}
@@ -286,11 +286,11 @@ void function OnItemFlavorRegistered_Character( ItemFlavor characterClass )
 void function SetupCharacterSkin( ItemFlavor skin )
 {
 
-
-
-
-
-
+		if ( !ItemFlavor_IsTheFavoriteSentinel( skin ) )
+		{
+			PrecacheOnDemandLoadModel( ODL_SKINS, CharacterSkin_GetPakFile( skin ), CharacterSkin_GetBodyModel( skin ), CharacterSkin_GetLoadingBodyModel( skin ) )
+			PrecacheOnDemandLoadModel( ODL_SKINS, CharacterSkin_GetPakFile( skin ), CharacterSkin_GetArmsModel( skin ), CharacterSkin_GetLoadingArmsModel( skin ) )
+		}
 
 }
 
@@ -326,72 +326,72 @@ LoadoutEntry function Loadout_CharacterKillQuip( ItemFlavor characterClass )
 
 
 
+void function PlayIntroQuipThread( entity emitter, EHI playerEHI, entity exceptionPlayer = null )
+{
+	EndSignal( emitter, "OnDestroy" )
 
+		Timeout timeout = BeginTimeout( 4.0 )
+		EndSignal( timeout, "Timeout" )
 
+	ItemFlavor character = LoadoutSlot_WaitForItemFlavor( playerEHI, Loadout_Character() )
+	ItemFlavor quip      = LoadoutSlot_WaitForItemFlavor( playerEHI, Loadout_CharacterIntroQuip( character ) )
 
+		CancelTimeoutIfAlive( timeout )
 
 
+	string quipAlias = CharacterIntroQuip_GetVoiceSoundEvent( quip )
+	PlayQuip( quipAlias, emitter, playerEHI, exceptionPlayer )
+}
 
 
 
 
+void function PlayKillQuipThread( entity emitter, EHI playerEHI, entity exceptionPlayer = null, float delay = 0.0 )
+{
+	EndSignal( emitter, "OnDestroy" )
 
+	wait delay
 
 
+		Timeout timeout = BeginTimeout( 4.0 )
+		EndSignal( timeout, "Timeout" )
 
+	ItemFlavor character = LoadoutSlot_WaitForItemFlavor( playerEHI, Loadout_Character() )
+	ItemFlavor quip      = LoadoutSlot_WaitForItemFlavor( playerEHI, Loadout_CharacterKillQuip( character ) )
 
+		CancelTimeoutIfAlive( timeout )
 
 
+	string quipAlias = CharacterKillQuip_GetVictimVoiceSoundEvent( quip )
+#if DEV
+		entity player = FromEHI( playerEHI )
+		printt( format( "%s(): Kill Quip for %s using quip %s == %s", FUNC_NAME(), string( player ), string( quip ), quipAlias ) )
+#endif
+	PlayQuip( quipAlias, emitter, playerEHI, exceptionPlayer )
+}
 
 
 
 
+void function PlayQuip( string quipAlias, entity emitter, EHI playerEHI, entity exceptionPlayer )
+{
+	Assert( IsValid( emitter ) )
+	if ( !IsValid( emitter ) )
+		return
 
+	if ( quipAlias != "" )
+	{
 
 
 
 
 
 
+			var quipHandle = EmitSoundOnEntity( emitter, quipAlias )
+			SetPlayThroughKillReplay( quipHandle )
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	}
+}
 
 
 
@@ -461,6 +461,43 @@ int function CharacterSkin_GetCamoIndex( ItemFlavor flavor )
 
 
 
+void function CharacterSkin_Apply( entity ent, ItemFlavor skin )
+{
+	Assert( ItemFlavor_GetType( skin ) == eItemType.character_skin )
+
+	if ( IsFiringRangeGameMode() )
+	{
+		printt( "FiringRangeDebug: ApplyAppropriateCharacterSkin called for " + ent )
+	}
+
+	asset bodyModel = CharacterSkin_GetBodyModel( skin )
+	asset armsModel = CharacterSkin_GetArmsModel( skin )
+
+	ent.SetSkin( 0 ) 
+	ent.SetModel( bodyModel )
+
+	int skinIndex = ent.GetSkinIndexByName( CharacterSkin_GetSkinName( skin ) )
+	int camoIndex = CharacterSkin_GetCamoIndex( skin )
+
+	if ( skinIndex == -1 )
+	{
+		skinIndex = 0
+		camoIndex = 0
+	}
+
+	ent.SetSkin( skinIndex )
+	ent.SetCamo( camoIndex )
+
+	if ( bodyModel == $"mdl/humans/class/medium/pilot_medium_bloodhound.rmdl" )
+	{
+		foreach ( entity child in ent.GetChildren() )
+		{
+			if ( child.GetModelName() == BLOODHOUND_BIRD_MDL )
+			{
+				child.SetSkin ( skinIndex == 22 ? 2 : 0 )
+			}
+		}
+	}
 
 
 
@@ -469,60 +506,23 @@ int function CharacterSkin_GetCamoIndex( ItemFlavor flavor )
 
 
 
+}
 
 
 
 
+void function CharacterSkin_WaitForAndApplyFromLoadout( entity player, entity targetEnt )
+{
+	ItemFlavor character = LoadoutSlot_WaitForItemFlavor( ToEHI( player ), Loadout_Character() )
+	if ( !IsValid( player ) || !IsValid( targetEnt ) )
+		return
 
+	ItemFlavor characterSkin = LoadoutSlot_WaitForItemFlavor( ToEHI( player ), Loadout_CharacterSkin( character ) )
+	if ( !IsValid( player ) || !IsValid( targetEnt ) )
+		return
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	CharacterSkin_Apply( targetEnt, characterSkin )
+}
 
 
 
@@ -919,39 +919,39 @@ string function HoloSpray_GetStoryBlurbBodyText( ItemFlavor flavor )
 	return GetGlobalSettingsString( ItemFlavor_GetAsset( flavor ), "customSkinMenuBlurb" )
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 #if DEV
+void function DEV_TestCharacterSkinData()
+{
+	entity model = CreateClientSidePropDynamic( <0, 0, 0>, <0, 0, 0>, $"mdl/dev/empty_model.rmdl" )
 
+	foreach ( character in GetAllCharacters() )
+	{
+		array<ItemFlavor> characterSkins = GetValidItemFlavorsForLoadoutSlot( LocalClientEHI(), Loadout_CharacterSkin( character ) )
 
+		foreach ( skin in characterSkins )
+		{
+			printt( string(ItemFlavor_GetAsset( skin )), "skinName:", CharacterSkin_GetSkinName( skin ) )
+			CharacterSkin_Apply( model, skin )
+		}
+	}
 
-
-
-
-
-
-
-
-
-
-
-
+	model.Destroy()
+}
 #endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

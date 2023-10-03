@@ -280,7 +280,7 @@ void function ShStatsInternals_LevelInit()
 
 
 
-
+		Remote_RegisterServerFunction( "ClientCallback_UpdateSOPMStatValue", "int", 0, INT_MAX )
 
 
 

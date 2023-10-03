@@ -27,8 +27,8 @@ global function Mythics_GetCustomSkydivetrailForCharacterOrSkin
 global function Mythics_IsExecutionUsableOnTier1AndTier2
 
 
-global function Mythics_ToggleTrackChallenge
-global function Mythics_UpdateTrackingButton
+
+
 
 struct FileStruct_LifetimeLevel
 {
@@ -298,39 +298,39 @@ bool function Mythics_IsItemFlavorMythicSkin( ItemFlavor item )
 }
 
 
-void function Mythics_ToggleTrackChallenge( ItemFlavor challenge, var button, bool isSkinPanel = false )
-{
-	fileLevel.currentChallenge = challenge
-	SettingsAssetGUID challengeGUID = ItemFlavor_GetGUID( challenge )
-	var rui = Hud_GetRui( button )
-
-	if ( IsChallengeValidAsFavorite( GetLocalClientPlayer(), challenge ) )
-		Remote_ServerCallFunction( "ClientCallback_ToggleFavoriteChallenge", challengeGUID )
-}
-
-void function Mythics_UpdateTrackingButton()
-{
-	if ( fileLevel.currentChallenge == null )
-		return
-
-	var skinsPanel = GetPanel( "CharacterSkinsPanel" )
-	var celebrationMenu = GetMenu( "LootBoxOpen" )
-
-	var trackChallengeButton = Hud_GetChild( celebrationMenu, "TrackChallengeButton" )
-	var mythicTrackingButton = Hud_GetChild( skinsPanel, "TrackMythicButton" )
-
-	var skinPanelRui = Hud_GetRui( mythicTrackingButton )
-	var celebrationMenuRui = Hud_GetRui( trackChallengeButton )
 
 
-	bool isChallengeTracked = IsFavoriteChallenge( expect ItemFlavor( fileLevel.currentChallenge )  )
 
-	RuiSetString( skinPanelRui, "descText", isChallengeTracked ? "#CHALLENGE_TRACKED"  : "#CHALLENGE_TRACK" )
-	RuiSetString( skinPanelRui, "bigText", isChallengeTracked ? "`1%$rui/hud/check_selected%" : "`1%$rui/borders/key_border%" )
-	HudElem_SetRuiArg( trackChallengeButton, "buttonText", isChallengeTracked ?  "#CHALLENGE_TRACKED" : "#CHALLENGE_TRACK")
-	HudElem_SetRuiArg( trackChallengeButton, "isChallengeTracked", isChallengeTracked )
 
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 int function Mythics_GetSkinTierIntForSkin( ItemFlavor skin )

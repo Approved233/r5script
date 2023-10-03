@@ -1,7 +1,7 @@
 global function ShBattlepassPresaleVoucher_LevelInit
 global function GetDisplayImageAssetFromBPPresaleVoucher
 
-global function GetBPPresaleOfferDescString
+
 
 
 
@@ -63,8 +63,8 @@ asset function GetDisplayImageAssetFromBPPresaleVoucher( ItemFlavor flavor )
 }
 
 
-string function GetBPPresaleOfferDescString()
-{
-	return Localize( "#BP_PRESALE_OFFER_DESC" )
-}
+
+
+
+
 

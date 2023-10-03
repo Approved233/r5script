@@ -35,9 +35,9 @@ global function EventShop_GetLeftPanelOpacity
 
 
 
-global function EventShop_GetCoreItemFlav
-global function EventShop_GetItemPrice
-global function EventShop_GetCoreItemQuantity
+
+
+
 
 
 
@@ -106,13 +106,13 @@ struct FileStruct_LifetimeLevel
 
 
 
+FileStruct_LifetimeLevel fileLevel 
 
 
-FileStruct_LifetimeLevel& fileLevel 
 
-struct {
-	
-} fileVM 
+
+
+
 
 
 
@@ -126,8 +126,8 @@ struct {
 void function EventShop_Init()
 {
 
-		FileStruct_LifetimeLevel newFileLevel
-		fileLevel = newFileLevel
+
+
 
 
 	AddCallback_OnItemFlavorRegistered( eItemType.calevent_event_shop, void function( ItemFlavor event ) {
@@ -536,57 +536,57 @@ float function EventShop_GetLeftPanelOpacity( ItemFlavor event )
 
 
 
-ItemFlavor ornull function EventShop_GetCoreItemFlav( GRXScriptOffer offer )
-{
-	
-	for ( int offerIndex = 0; offerIndex < offer.items.len(); offerIndex++ )
-	{
-		if ( offer.offerType != GRX_OFFERTYPE_BUNDLE || offer.items[offerIndex].itemType == GRX_OFFERITEMTYPE_CORE )
-		{
-			ItemFlavor coreItemFlav = GetItemFlavorByGRXIndex( offer.items[offerIndex].itemIdx )
-
-			if (ItemFlavor_GetGRXMode( coreItemFlav ) == eItemFlavorGRXMode.REGULAR)
-				return coreItemFlav
-		}
-	}
-
-	
-	return GetItemFlavorByGRXIndex( offer.items[0].itemIdx )
-}
 
 
 
-int function EventShop_GetItemPrice( GRXScriptOffer offer )
-{
-	foreach ( ItemFlavorBag price in offer.prices )
-	{
-		Assert( price.flavors.len() == 1, "No price given for ItemFlavor bag in GRX offer." )
-		if ( price.flavors[0] == EventShop_GetEventShopGRXCurrency() )
-		{
-			return price.quantities[0]
-		}
-	}
-	return 0
-}
 
 
 
-int function EventShop_GetCoreItemQuantity( GRXScriptOffer offer )
-{
-	for ( int offerIndex = 0; offerIndex < offer.items.len(); offerIndex++ )
-	{
-		if ( offer.offerType != GRX_OFFERTYPE_BUNDLE || offer.items[offerIndex].itemType == GRX_OFFERITEMTYPE_CORE )
-		{
-			ItemFlavor coreItemFlav = GetItemFlavorByGRXIndex( offer.items[offerIndex].itemIdx )
 
-			if (ItemFlavor_GetGRXMode( coreItemFlav ) == eItemFlavorGRXMode.REGULAR)
-				return offer.items[offerIndex].itemQuantity
-		}
-	}
 
-	
-	return offer.items[0].itemQuantity
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
       

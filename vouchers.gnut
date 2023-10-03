@@ -59,13 +59,13 @@ struct FileStruct_LifetimeLevel
 }
 
 
+FileStruct_LifetimeLevel fileLevel 
 
 
-FileStruct_LifetimeLevel& fileLevel 
 
-struct {
-	
-} fileVM 
+
+
+
 
 
 
@@ -80,8 +80,8 @@ struct {
 void function Vouchers_LevelInit()
 {
 
-		FileStruct_LifetimeLevel newFileLevel
-		fileLevel = newFileLevel
+
+
 
 
 	InitScriptDrivenVoucherCallbacks()

@@ -19,15 +19,15 @@ global function Squads_GetNonLinearSquadColor
 
 
 
+global function Squads_GetSquadUIIndex
 
 
 
+global function Squads_GetTeamsUIId
+global function Squads_GetReorderedTeamsUIId
 
-
-
-
-
-
+global function Squads_SetCustomPlayerInfo
+global function ServerCallback_Squad_SetIsNessie
 
 
 
@@ -99,7 +99,7 @@ void function Sh_Squads_Init()
 
 
 
-
+		Cl_Squads_Init()
 
 
 }
@@ -159,20 +159,20 @@ void function Squads_RegisterNetworking()
 
 
 
+void function Cl_Squads_Init()
+{
+
+}
 
 
 
+int function Squads_GetSquadUIIndex(int squadIndex)
+{
+	int index    = Squads_GetArrayIndexForTeam( squadIndex )
+	Assert( index >= 0, "Local Squad index out of range. Original index = " + squadIndex )
 
-
-
-
-
-
-
-
-
-
-
+	return index
+}
 
 
 
@@ -255,71 +255,71 @@ string function Squads_GetSquadNameLong( int squadIndex, bool forceWinterExpress
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+void function Squads_SetCustomPlayerInfo( entity player )
+{
+	entity localPlayer = GetLocalViewPlayer()
+	if ( !IsValid(player) || player == null || !IsValid(localPlayer) || localPlayer == null)
+		return
+
+	int team   = player.GetTeam()
+	if( team == TEAM_SPECTATOR || team == TEAM_UNASSIGNED )
+		return
+
+	int myTeam = localPlayer.GetTeam()
+	int squadIndex = Squads_GetSquadUIIndex( team )
+	if( squadIndex >= 0 && squadIndex < MAX_NUMBER_SQUADS )
+	{
+		SetCustomPlayerInfoColor( player, Squads_GetNonLinearSquadColor( squadIndex ) )
+		player.SetTargetInfoIcon( Squads_GetSquadIcon( squadIndex ) )
+
+		vector color = Squads_GetSquadColor( squadIndex )
+		player.SetTargetInfoIconColor( color, 1.0 )
+		if( team == myTeam )
+		{
+			SetUnitFrameCustomColor( player, color )
+			Minimap_SetPlayerColorOverride( player, color )
+		}
+	}
+	if ( LoadoutSlot_IsReady( ToEHI( player ), Loadout_Character() ) )
+	{
+		ItemFlavor character = LoadoutSlot_GetItemFlavor( ToEHI( player ), Loadout_Character() )
+		player.SetTargetInfoCharacterPortrait( CharacterClass_GetGalleryPortrait( character ) )
+	}
+}
+
+
+
+void function Alliances_SetCustomPlayerInfo( entity player )
+{
+	entity localPlayer = GetLocalViewPlayer()
+	if ( !IsValid(player) || player == null || !IsValid(localPlayer) || localPlayer == null)
+		return
+
+	int team   = player.GetTeam()
+	if( team == TEAM_SPECTATOR || team == TEAM_UNASSIGNED )
+		return
+
+	int myTeam = localPlayer.GetTeam()
+	int squadIndex = Squads_GetSquadUIIndex( team )
+	if( squadIndex >= 0 && squadIndex < MAX_NUMBER_SQUADS )
+	{
+		SetCustomPlayerInfoColor( player, Squads_GetNonLinearSquadColor( squadIndex ) )
+		player.SetTargetInfoIcon( Squads_GetSquadIcon( squadIndex ) )
+
+		vector color = Squads_GetSquadColor( squadIndex )
+		player.SetTargetInfoIconColor( color, 1.0 )
+		if( team == myTeam )
+		{
+			SetUnitFrameCustomColor( player, color )
+			Minimap_SetPlayerColorOverride( player, color )
+		}
+	}
+	if ( LoadoutSlot_IsReady( ToEHI( player ), Loadout_Character() ) )
+	{
+		ItemFlavor character = LoadoutSlot_GetItemFlavor( ToEHI( player ), Loadout_Character() )
+		player.SetTargetInfoCharacterPortrait( CharacterClass_GetGalleryPortrait( character ) )
+	}
+}
 
 
 int function Squads_GetArrayIndexForTeam( int team )
@@ -328,37 +328,37 @@ int function Squads_GetArrayIndexForTeam( int team )
 }
 
 
+void function ServerCallback_Squad_SetIsNessie( int squadIdIsNessie )
+{
+	file.squadIdIsNessie = squadIdIsNessie
+}
 
 
 
 
 
+int function Squads_GetTeamsUIId( int team )
+{
+	int teamsUIId      = team
+	entity localPlayer = GetLocalViewPlayer()
+	if( IsValid( localPlayer ) )
+	{
+		int localTeam = localPlayer.GetTeam()
+		if( localTeam != TEAM_SPECTATOR ) 
+			if( localTeam == team )       
+				teamsUIId = TEAM_IMC
+			else if ( team == TEAM_IMC )  
+				teamsUIId = localTeam
+	}
+
+	return teamsUIId
+}
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+int function Squads_GetReorderedTeamsUIId( int team )
+{
+	int uiSquad = Squads_GetTeamsUIId( team )
+	return Squads_GetArrayIndexForTeam( uiSquad )
+}
 

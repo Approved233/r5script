@@ -24,7 +24,7 @@ global const DIFFICULTY_HARD = 2
 global const DIFFICULTY_MASTER = 3
 
 
-global const float RUI_BADGAMETIME = -1 * pow( 10, 30 )
+
 
 
 global const bool MEMBER_COLORS = true
@@ -1042,8 +1042,8 @@ global enum eLaunching
 }
 
 
-global const bool MENU_NAV_FORWARD = true
-global const bool MENU_NAV_BACK = false
+
+
 
 
 global const int WEAPONFLAG_AMPED = (1 << 0)
@@ -2592,7 +2592,7 @@ global struct ValkTacTargetData
 	float  downDelay
 	vector normal
 
-
+	int vfxRef
 
 }
 
@@ -2642,7 +2642,7 @@ global struct VortexImpact
 }
 
 
-
+global const FULLMAP_RUI_DRAW_LAYER = RUI_DRAW_POSTEFFECTS
 
 
 global enum eRuiArgType

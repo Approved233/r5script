@@ -1348,7 +1348,7 @@ const array<string> ARENAS_RANKED_PERIODS_REFS = [ "SAID00926519318",
 void function ShStats_LevelInit()
 {
 
-
+		PIN_Init()
 
 
 	FileStruct_LifetimeLevel newFileLevel
@@ -2521,9 +2521,9 @@ bool function IsValidMapForStats()
 	 string mode = ""
 
 
-	 if( IsLobby() )
-		 mode = GetPlaylistVarString( Lobby_GetSelectedPlaylist(), "stats_match_type", "survival" )
-	else
+
+
+
 
 
 	 {
@@ -2540,9 +2540,9 @@ bool function IsValidMapForStats()
 	  string mode = ""
 
 
-	 if( IsLobby() )
-		 mode = GetPlaylistVarString( Lobby_GetSelectedPlaylist(), "pin_match_type", "survival" )
-	else
+
+
+
 
 	 {
 	  	mode = GetCurrentPlaylistVarString( "stats_match_type", "survival" )
@@ -6999,10 +6999,10 @@ StatCalcFuncInfo function SetupGetTwitchPackStatusForStat( StatEntry calcEntry, 
 
 	info.calcFunc_Int = (int function ( entity player, array<StatEntry> sourceEntries, int when ) {
 
+			return player.DoesUserHaveTwitchPrimeReward( "twitch_launch_promo" ) ? 1 : 0
 
 
 
-			return GetConVarInt( "twitch_prime_rewards" ) > 0 ? 1 : 0
 
 	})
 
@@ -7917,9 +7917,9 @@ int function ArenasRanked_GetHistoricalPeakHighScore( entity player )
 	foreach ( string arenasRankedPeriod in ARENAS_RANKED_PERIODS_REFS )
 	{
 
-			int score =  GetPersistentVarAsInt( "arenasRankedData[" + arenasRankedPeriod + "].highestArenasRankedScore" )
 
 
+			int score =  player.GetPersistentVarAsInt( "arenasRankedData[" + arenasRankedPeriod + "].highestArenasRankedScore" )
 
 		if ( score > max )
 			max = score
@@ -7936,11 +7936,11 @@ int function ArenasRanked_GetHistoricalPeakLadderPosition( entity player )
 	foreach ( string arenasRankedPeriod in ARENAS_RANKED_PERIODS_REFS )
 	{
 
-			int pos1 =  GetPersistentVarAsInt( "arenasRankedData[" + arenasRankedPeriod + "].endFirstSplitLadderPosition" )
-			int pos2 =  GetPersistentVarAsInt( "arenasRankedData[" + arenasRankedPeriod + "].endSeriesLadderPosition" )
 
 
 
+			int pos1 =  player.GetPersistentVarAsInt( "arenasRankedData[" + arenasRankedPeriod + "].endFirstSplitLadderPosition" )
+			int pos2 =  player.GetPersistentVarAsInt( "arenasRankedData[" + arenasRankedPeriod + "].endSeriesLadderPosition" )
 
 		if ( pos1 > max || pos2 > max )
 			max = maxint( pos1, pos2 )
