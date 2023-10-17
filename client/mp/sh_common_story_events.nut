@@ -55,6 +55,7 @@ void function ClCommonStoryEvents_Init()
 	{
 		AddCallback_GameStateEnter( eGameState.WaitingForPlayers, OnWaitingForPlayers_Client )
 		AddCallback_GameStateEnter( eGameState.PickLoadout, OnPickLoadout_Client )
+		AddCallback_OnPlayerDisconnected( OnPlayerDisconnected )
 	}
 
 
@@ -112,4 +113,11 @@ void function OnPickLoadout_Client()
 	GfxDesaturateOff()
 
 }
+
+
+void function OnPlayerDisconnected( entity player )
+{
+	StopUISoundByName( "NightMaps_Intro_Static" )
+}
+
       

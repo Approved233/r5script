@@ -1114,6 +1114,7 @@ void function ShadowForm_Start( entity player, entity weapon )
 
 
 
+
 void function ShadowForm_StartClient( entity ent, int statusEffect, bool actuallyChanged )
 {
 	if ( !actuallyChanged && GetLocalViewPlayer() == GetLocalClientPlayer() )
