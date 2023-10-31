@@ -679,7 +679,7 @@ void function ShLoadouts_LevelInit_Finish()
 
 #if DEV
 		if ( DEV_ShouldIgnorePersistence() )
-			Warning( "dev_loadouts_ignore_persistence is enabled" )
+			printt( "LoadoutsDbg: dev_loadouts_ignore_persistence is enabled" )
 #endif
 
 	fileLevel.isInitialized = true
@@ -2587,6 +2587,24 @@ void function ServerToClient_LoadoutSlotSetFailed()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 bool function IsLoadoutSlotActive( EHI playerEHI, LoadoutEntry entry, LoadoutEntry ornull entryToNotCheck = null )
 {
 #if LOADOUTS_DBG
@@ -3233,7 +3251,7 @@ array<string> ornull function GetLoadoutSlotForceResetTo( LoadoutEntry entry )
 	if ( refs.len() == 0 )
 		return null
 
-	printf( "Warning: loadout slot '%s' is being force reset to one of '%s'.", entry.id, playlistVarVal )
+	printf( "LoadoutsDbg: loadout slot '%s' is being force reset to one of '%s'.", entry.id, playlistVarVal )
 	return refs
 }
 

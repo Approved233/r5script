@@ -33,6 +33,10 @@ global function Perks_AddPerk
 
 
 
+
+
+
+global function ServerToClient_UpdatePerkPropVisibility
 global function ServerToClient_HidePerkPropMinimapVisibility
 global function Perks_UpdateHighlightedPerkIcon
 global function Perks_GetPerkPingInfo
@@ -153,6 +157,7 @@ void function Perks_Init()
 
 		AddCallback_PlayerClassActuallyChanged( OnPlayerClassChanged )
 		Remote_RegisterClientFunction( "ServerToClient_HidePerkPropMinimapVisibility", "entity", "int", 0, ePerkIndex.COUNT )
+		Remote_RegisterClientFunction( "ServerToClient_UpdatePerkPropVisibility" )
 		Remote_RegisterServerFunction( "Perks_ClientToServer_MinimapIconPinged", "typed_entity", "prop_script" )
 
 
@@ -415,22 +420,28 @@ void function ApplyPerkWhenCharacterFlavorIsKnown( entity player, EHI playerEHI,
 		}
 	}
 
+	if( !IsLobby() )
+	{
 
 
 
 
 
-		entity localPlayer = GetLocalViewPlayer()
-		if( localPlayer.GetTeam() == player.GetTeam() )
-		{
-			Perks_UpdatePerkPropMinimapVisibility( localPlayer )
-			Perks_UpdatePerkPropMapFeatureVisibility( localPlayer )
-		}
+			entity localPlayer = GetLocalViewPlayer()
+			if ( localPlayer.GetTeam() == player.GetTeam() )
+			{
+				Perks_UpdatePerkPropMinimapVisibility( localPlayer )
+				Perks_UpdatePerkPropMapFeatureVisibility( localPlayer )
+			}
 
+	}
 }
 
 void function Perks_AddPerk( entity player, int perkIndex )
 {
+	if( !Perks_Enabled() )
+		return
+
 	if( player.p.activePerks.contains( perkIndex ) )
 		return
 
@@ -458,6 +469,11 @@ bool function Perks_DoesPlayerHavePerk( entity player, int perkIndex )
 	Assert( IsValid( player ) )
 	if ( !IsValid( player ) )
 		return false
+
+
+		if ( IsPlayerShadowZombie( player ) )
+			return false
+
 
 	return player.p.activePerks.contains( perkIndex )
 }
@@ -494,6 +510,14 @@ bool function Perks_CanTeamSeePerkProp( int team, int perkId )
 		{
 			return true
 		}
+
+
+
+
+
+
+
+
 	}
 	return false
 }
@@ -514,6 +538,19 @@ int function GetPingTypeForEntity( entity ent )
 	}
 	return -1
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -728,6 +765,15 @@ bool function Perks_ShouldLocalPlayerSeeMinimapHudForPerk( int perkId )
 		return Perks_CanTeamSeePerkProp( team, perkId )
 	}
 	return false
+}
+
+void function ServerToClient_UpdatePerkPropVisibility()
+{
+	entity localPlayer = GetLocalViewPlayer()
+	if( !IsValid( localPlayer ) )
+		return
+	Perks_UpdatePerkPropMinimapVisibility( localPlayer )
+	Perks_UpdatePerkPropMapFeatureVisibility( localPlayer )
 }
 
 void function ServerToClient_HidePerkPropMinimapVisibility( entity prop, int perkId )

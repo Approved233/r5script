@@ -14,11 +14,7 @@ const asset FX_SMOKEGRENADE_TRAIL = $"P_SmokeScreen_FD_trail"
 const asset BANGALORE_SMOKE_MODEL = $"mdl/weapons/grenades/w_bangalore_canister_gas_projectile.rmdl"
 
 const float BANGALORE_SMOKE_MAX_SAFE_SPAWN_PELLET_DISTANCE = 32.0
-
-
-
-const float BANGALORE_SMOKE_DURATION = 15.0
-
+const float BANGALORE_SMOKE_DURATION = 10.0
 const float BANGALORE_SMOKE_MIN_EXPLODE_DIST_SQR = 512 * 512
 const float BANGALORE_SMOKE_DISPERSAL_TIME = 3.0
 const float BANGALORE_TACTICAL_AGAIN_TIME = 4.0
@@ -258,6 +254,14 @@ float function Bangalore_GetSmokeDuration( entity player )
 
 	return duration
 }
+
+
+
+
+
+
+
+
 
 
 

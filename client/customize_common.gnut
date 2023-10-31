@@ -166,6 +166,15 @@ global function GetLocalizedItemFlavorDescriptionForPlacard
 
 
 
+
+
+
+
+
+
+
+
+
 const array<vector> skydiveSmokeColors = [
 	<110, 49, 1>, 
 	<10, 88, 106>, 
@@ -1691,6 +1700,10 @@ asset function CustomizeMenu_GetRewardButtonImage( ItemFlavor flavor )
 
 		case eItemType.sticker:
 			buttonImage = $"rui/menu/buttons/battlepass/sticker"
+			break
+
+		case eItemType.event_ability:
+			buttonImage = ItemFlavor_GetIcon( flavor )
 			break
 
 		default:

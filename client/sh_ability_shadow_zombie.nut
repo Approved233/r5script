@@ -19,6 +19,8 @@ global function AreTeammatesShadowZombiesOrRespawning
 
 
 
+
+
 	global function ServerCallback_ShadowAbilitiesClientEffectsEnable
 	global asset SHADOW_SCREEN_FX = $"P_Bshadow_screen"
 
@@ -32,8 +34,13 @@ global asset FX_SHADOW_FORM_EYEGLOW = $"P_BShadow_eye"
 
 
 
+
 struct
 {
+
+
+
+
 
 		table< int, array< int > > playerShadowZombieClientFxHandles
 
@@ -42,6 +49,17 @@ struct
 
 void function ShAbilityShadowZombie_Init()
 {
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -69,11 +87,11 @@ void function ShAbilityShadowZombie_Init()
 bool function IsPlayerShadowZombie( entity player )
 {
 
-
-
-
-	if ( !IsShadowRoyaleMode() && !IsFallLTM() )
+	if ( !IsShadowRoyaleMode() && !IsFallLTM() && !IsShadowArmyGamemode() )
 		return false
+
+
+
 
 
 	if ( !IsValid( player ) )
@@ -90,11 +108,11 @@ bool function IsPlayerShadowZombie( entity player )
 void function Ability_Shadow_Zombie_RegisterNetworking()
 {
 
-
-
-
-		if ( !IsShadowRoyaleMode() )
+		if ( !IsShadowRoyaleMode() && !IsShadowArmyGamemode() )
 			return
+
+
+
 
 
 	RegisterNetworkedVariable( "isPlayerShadowZombie", SNDC_PLAYER_GLOBAL, SNVT_BOOL, false )
@@ -116,6 +134,12 @@ void function ServerCallback_ShadowAbilitiesClientEffectsEnable( entity player, 
 
 void function OnServerVarChanged_IsPlayerShadowZombie( entity player, bool new )
 {
+
+		
+		if ( IsShadowArmyGamemode() )
+			return
+
+
 	
 	
 	entity localViewPlayer = GetLocalViewPlayer()
@@ -277,6 +301,61 @@ void function ShadowAbilitiesClientEffectsEnable( entity player, bool enableFx, 
 
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -37,6 +37,10 @@ global function PlayerHasStealthMovement
 
 global const string MIRAGE_DECOY_DROP_SCRIPTNAME 		= "mirage_decoy_drop"
 const string MIRAGE_DECOY_DROP_MOVER_SCRIPTNAME 		= "mirage_decoy_drop_mover"
+const float UPGRADE_MIRAGE_CLOAK_SPEED_BOOST_AMNT 		= 0.5
+const float MIRAGE_DOWNED_CLOAK_DURATION 				= 5.0
+const float MIRAGE_REVIVE_CLOAK_DURATION 				= 3.0
+
 
 
 
@@ -100,8 +104,10 @@ global enum ePassives
 
 
 
-	PAS_REPAIR,
-	PAS_COVER_FIRE,
+
+
+
+
 	PAS_GUNNER,
 	PAS_LOBA_EYE_FOR_QUALITY,
 
@@ -117,7 +123,7 @@ global enum ePassives
 
 
 
-
+		PAS_CONDUIT,
 
 
 
@@ -259,12 +265,6 @@ global enum ePassives
 
 
 
-
-
-
-
-
-
 	
 	
 	
@@ -292,18 +292,14 @@ global enum ePassives
 	PAS_NOVA,
 	PAS_PARIAH,
 	PAS_FUSE,
+	PAS_AXIOM,
+	PAS_VANTAGE,
+	PAS_LOCKDOWN,
 
 
 
 
-		PAS_AXIOM,
 
-
-
-
-		PAS_VANTAGE,
-
-		PAS_LOCKDOWN,
 
 
 
@@ -335,6 +331,14 @@ global enum ePassives
 
 
 
+
+
+		PAS_EXTRA_ORDINANCE_SLOT,
+		PAS_HEALING_ITEM_HIGHLIGHT,
+		PAS_EXTRA_ALL_MED_INV,
+		PAS_KNOCK_ADRENALINE,
+		PAS_SQUADWIPE,
+		PAS_ORDNANCE_HIGHLIGHT,
 
 
 	_count,
@@ -593,6 +597,56 @@ void function CodeCallback_OnPassiveChanged( entity player, int passiveIdx )
 	foreach ( callback in file.passiveChangedCallbackListMap[passiveIdx] )
 		callback( player, passiveIdx, didHavePassive, nowHasPassive )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

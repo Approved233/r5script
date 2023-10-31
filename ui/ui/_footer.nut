@@ -11,6 +11,11 @@ global function ClearMenuFooterOptions
 const int MAX_LEFT_FOOTERS = 8
 const int MAX_RIGHT_FOOTERS = 8
 
+struct
+{
+	bool initialized = false
+} file
+
 void function InitFooterOptions()
 {
 	RegisterSignal( "EndFooterUpdateFuncs" )
@@ -28,6 +33,8 @@ void function InitFooterOptions()
 	}
 
 	thread UpdateFooterSizes()
+
+	file.initialized = true
 }
 
 InputDef function AddMenuFooterOption( var menu, int alignment, int input, bool clickable, string gamepadLabel, string mouseLabel = "", void functionref( var ) activateFunc = null, bool functionref() conditionCheckFunc = null, void functionref( InputDef ) updateFunc = null )
@@ -169,6 +176,9 @@ void function UpdateFooter_Internal( bool shouldUpdateInputCallbacks )
 {
 	var menu = GetActiveMenu()
 	if ( menu == null )
+		return
+
+	if( !file.initialized )
 		return
 
 	var panel

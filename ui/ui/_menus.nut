@@ -304,7 +304,7 @@ void function UICodeCallback_ToggleInGameMenu()
 	
 	if ( MenuStack_Contains( GetMenu( "CharacterSelectMenu" ) )
 
-
+			|| MenuStack_Contains( GetMenu( "SpecialCharacterSelectMenu" ) )
 
 			|| MenuStack_Contains( GetMenu( "PrivateMatchSpectCharSelectMenu" ) ) )
 		return
@@ -355,6 +355,8 @@ void function ToggleInventoryOrOpenOptions()
 	if( !IsConnected() )
 		 return
 
+	EndSignal( uiGlobal.signalDummy, "LevelShutdown" )
+
 	float startTime = UITime()
 	float duration  = 0.3
 	float endTIme   = startTime + duration
@@ -379,6 +381,14 @@ void function ToggleInventoryOrOpenOptions()
 		RunClientScript( "CommsMenu_HandleKeyInput", KEY_ESCAPE ) 
 		return
 	}
+
+
+
+
+
+
+
+
 
 	if ( (UITime() >= endTIme && InputIsButtonDown( BUTTON_START )) || (InputIsButtonDown( KEY_ESCAPE ) && !SURVIVAL_IsAnInventoryMenuOpened()) )
 	{
@@ -833,8 +843,8 @@ void function UIFullyConnectedInitialization()
 	ShLoadouts_LevelInit_Begin()
 	DeathBoxListPanel_VMInit()
 	SurvivalGroundList_LevelInit()
-	ShSkydiveTrails_LevelInit()
 	ShCharacters_LevelInit()
+	ShSkydiveTrails_LevelInit()
 	ShPassives_Init()
 	ShCharacterAbilities_LevelInit()
 	ShCharacterCosmetics_LevelInit()
@@ -843,6 +853,9 @@ void function UIFullyConnectedInitialization()
 	TimeGatedLoginRewards_Init()
 	CollectionEvents_Init()
 	ThemedShopEvents_Init()
+
+
+
 	BuffetEvents_Init()
 
 
@@ -873,6 +886,9 @@ void function UIFullyConnectedInitialization()
 	ShBattlepassPresaleVoucher_LevelInit()
 	ShBattlepassPurchasableXP_LevelInit()
 
+		ShEventAbilities_Init()
+
+
 		Sh_Boosts_Init()
 
 	ShMusic_LevelInit()
@@ -894,6 +910,9 @@ void function UIFullyConnectedInitialization()
 	ShPing_Init()
 	ShQuickchat_Init()
 	ShChallenges_LevelInit_PreStats()
+
+
+
 	ShItems_LevelInit_Finish()
 	ShItemPerPlayerState_LevelInit()
 	UserInfoPanels_LevelInit()
@@ -902,7 +921,7 @@ void function UIFullyConnectedInitialization()
 	ShStatsInternals_LevelInit()
 	ShStats_LevelInit()
 
-
+		Sh_RankedTrials_Init() 
 
 	ShChallenges_LevelInit_PostStats()
 	ShPlaylist_Init()
@@ -1880,7 +1899,11 @@ void function ShowGameSummaryIfNeeded()
 		}
 
 
-		if ( GetPersistentVar( "showRankedSummary" ) )
+
+		if ( Ranked_GetXProgMergedPersistenceData( GetLocalClientPlayer(), RANKED_SHOW_RANKED_SUMMARY_PERSISTENCE_VAR_NAME ) != 0 )
+
+
+
 		{
 #if DEV
 				printt( "Postgame menu debug: Calling OpenRankedSummary( true )" )
@@ -2297,7 +2320,7 @@ void function InitMenus()
 	AddPanel( mainMenu, "MainMenuPanel", InitMainMenuPanel )
 
 
-
+		var crossProgressionDialog = AddMenu( "CrossProgressionDialog", $"resource/ui/menus/dialog_cross_progression.menu", InitCrossProgressionDialog )
 
 	
 	
@@ -2541,7 +2564,7 @@ void function InitMenus()
 
 	AddMenu( "CharacterSelectMenu", $"resource/ui/menus/character_select.menu", UI_InitCharacterSelectMenu )
 
-
+	AddMenu( "SpecialCharacterSelectMenu", $"resource/ui/menus/special_character_select.menu", InitSpecialCharacterSelectMenu )
 
 
 	var deathScreenMenu = AddMenu( "DeathScreenMenu", $"resource/ui/menus/death_screen.menu", InitDeathScreenMenu )
@@ -2550,7 +2573,9 @@ void function InitMenus()
 	AddPanel( deathScreenMenu, "DeathScreenSpectate", InitDeathScreenSpectatePanel )
 	AddPanel( deathScreenMenu, "DeathScreenSquadSummary", InitDeathScreenSquadSummaryPanel )
 
-	AddMenu( "PostGameRankedMenu", $"resource/ui/menus/post_game_ranked.menu", InitPostGameRankedMenu )
+	var postGameRankedMenu = AddMenu( "PostGameRankedMenu", $"resource/ui/menus/post_game_ranked.menu", InitPostGameRankedMenu )
+	AddPanel( postGameRankedMenu, "MatchSummaryPanel", InitPostGameRankedSummaryPanel )
+
 	AddMenu( "RankedInfoMenu", $"resource/ui/menus/ranked_info.menu", InitRankedInfoMenu )
 	AddMenu( "RankedInfoMoreMenu", $"resource/ui/menus/ranked_info_more.menu", InitRankedInfoMoreMenu ) 
 	AddMenu( "AboutGameModeMenu", $"resource/ui/menus/about_game_mode.menu", InitAboutGameModeMenu )
@@ -2594,7 +2619,11 @@ void function InitMenus()
 	AddMenu( "Notifications", $"resource/ui/menus/notifications.menu", InitNotificationsMenu )
 
 	var postGameMenu = AddMenu( "PostGameMenu", $"resource/ui/menus/postgame.menu", InitPostGameMenu )
-	AddPanel( postGameMenu, "PostGameGeneral", InitPostGameGeneralPanel )
+
+
+
+		AddPanel( postGameMenu, "PostGameGeneral", InitRTKPostGameSummary )
+
 
 		AddPanel( postGameMenu, "PostGameWeapons", InitRTKPostGameWeaponsPanel )
 
@@ -2618,6 +2647,8 @@ void function InitMenus()
 
 	var characterSkillsDialog = AddMenu( "CharacterSkillsDialog", $"resource/ui/menus/dialogs/character_skills.menu", InitCharacterSkillsDialog )
 	AddPanel( characterSkillsDialog,"CharacterAbilitiesPanel", InitCharacterAbilitiesPanel )
+
+
 
 
 		AddPanel( characterSkillsDialog,"CharacterRolesPanel", InitCharacterRolesPanel )
@@ -2666,20 +2697,20 @@ void function InitMenus()
 	AddMenu( "ConfirmPackBundlePurchaseDialog", $"resource/ui/menus/dialogs/confirm_pack_bundle_purchase.menu", InitConfirmPackBundlePurchaseDialog )
 
 
+		var confirmMultiPackBundlePurchaseDialogMenu = AddMenu( "ConfirmMultiPackBundlePurchaseDialog", $"resource/ui/menus/dialogs/confirm_multi_pack_bundle_purchase.menu", InitConfirmMultiPackBundlePurchaseDialog )
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+		AddPanel( confirmMultiPackBundlePurchaseDialogMenu, "DialogContentPackHeader", InitMultiPackDisclosureHeaderPanel )
+		
+		AddPanel( confirmMultiPackBundlePurchaseDialogMenu, "DialogContentApexPackContent", InitApexPackDisclosureDialogContentPanel )
+		
+		AddPanel( confirmMultiPackBundlePurchaseDialogMenu, "DialogContentEventPackContent", InitEventPackDisclosureDialogContentPanel )
+		
+		AddPanel( confirmMultiPackBundlePurchaseDialogMenu, "DialogContentThematicPackContent0", InitThematicPackDisclosureDialogContentPanel0 )
+		AddPanel( confirmMultiPackBundlePurchaseDialogMenu, "DialogContentThematicPackContent1", InitThematicPackDisclosureDialogContentPanel1 )
+		AddPanel( confirmMultiPackBundlePurchaseDialogMenu, "DialogContentThematicPackContent2", InitThematicPackDisclosureDialogContentPanel2 )
+		AddPanel( confirmMultiPackBundlePurchaseDialogMenu, "DialogContentThematicPackContent3", InitThematicPackDisclosureDialogContentPanel3 )
+		
+		AddPanel( confirmMultiPackBundlePurchaseDialogMenu, "DialogContentEventThematicPackContent", InitEventThematicPackDisclosureDialogContentPanel )
 
 
 	AddMenu( "ConfirmBattlepassPurchaseDialog", $"resource/ui/menus/dialogs/confirm_battle_pass_purchase.menu", InitBattlepassPurchaseDialog )
@@ -2779,6 +2810,8 @@ void function InitMenus()
 
 
 		var EventShopTierDialog = AddMenu( "EventShopTierDialog", $"resource/ui/menus/dialog_event_shop.menu", InitEventShopTierDialog )
+		var SweepstakesFlowDialog = AddMenu( "SweepstakesFlowDialog", $"resource/ui/menus/dialog_sweepstakes_flow.menu", InitSweepstakesFlowDialog )
+		var SweepstakesRulesDialog = AddMenu( "SweepstakesRulesDialog", $"resource/ui/menus/dialog_sweepstakes_rules.menu", InitSweepstakesRulesDialog )
 
 
 

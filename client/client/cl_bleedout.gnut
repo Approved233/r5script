@@ -341,10 +341,10 @@ void function ShowWoundedMarker( entity woundedPlayer, float endTime )
 		showTimer = false
 	}
 
-
-
-
-
+		if ( IsStrikeoutGamemode() )
+		{
+			showTimer = false
+		}
 
 
 	RuiSetBool( rui, "showTimer", showTimer )
@@ -481,6 +481,11 @@ void function BleedoutScreenFX_Start( entity woundedPlayer, float startTime, flo
 
 	if ( !IsValid( woundedPlayer.GetCockpit() ) )
 		return
+
+
+	if ( IsStrikeoutGamemode() )
+		return
+
 
 	if ( woundedPlayer.ContextAction_IsMeleeExecutionTarget() )
 		return

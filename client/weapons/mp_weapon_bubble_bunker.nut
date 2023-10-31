@@ -821,32 +821,6 @@ void function OnBubbleBunkerPlanted( entity projectile, DeployableCollisionParam
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 bool function GibraltarIsInDome( entity player )
 {
 	if ( !PlayerHasPassive( player, ePassives.PAS_ADS_SHIELD ) )

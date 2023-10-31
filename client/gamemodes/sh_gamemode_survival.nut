@@ -47,6 +47,7 @@ global function PlayerIsMarkedAsCanBeRespawned
 
 global function IsSurvivalMode
 
+global function Survival_ClampToRing
 
 
 
@@ -209,6 +210,9 @@ global enum ePodiumBanner
 	LTM,
 	MIXTAPE,
 
+	SR_LEGENDS,
+	SR_REV,
+
 	_COUNT
 }
 
@@ -229,6 +233,10 @@ global enum ePodiumBackground
 	MP_RR_DESERTLANDS_NIGHT,
 	MP_RR_CANYONLANDS_MU1_NIGHT,
 
+	SR_LEGENDS,
+	SR_REV,
+
+	MP_RR_TROPICS_ISLAND_MU2,
 	_COUNT
 }
 
@@ -304,6 +312,10 @@ void function GamemodeSurvivalShared_Init()
 
 		MobileRespawnBeacon_Init()
 		Sh_Airdrops_Init()
+
+
+
+
 
 
 
@@ -478,6 +490,9 @@ bool function Survival_PlayerCanDrop( entity player )
 	if ( ExplosiveHold_IsPlayerPlantingGrenade( player ) )
 		return false
 
+
+	if ( player.PlayerMelee_GetState() == PLAYER_MELEE_STATE_SLAM_ATTACK )
+		return false
 
 	return true
 }
@@ -916,10 +931,10 @@ void function Sur_SetPlaneEnt( entity ent )
 
 
 
-
-
-
-
+bool function Survival_ClampToRing()
+{
+	return GetCurrentPlaylistVarBool( "dropship_bounds_clamp_to_ring", false )
+}
 
 
 entity function Sur_GetPlaneCenterEnt()
@@ -1316,6 +1331,46 @@ bool function CanWeaponInspect( entity player, int activity )
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function SetVictorySequencePlatformModel( asset model, vector originOffset, vector modelAngles )
 {
 	VictoryPlatformModelData data
@@ -1336,6 +1391,19 @@ VictoryPlatformModelData function GetVictorySequencePlatformModel()
 string function GetMusicForJump( entity player )
 {
 	string override = GetCurrentPlaylistVarString( "music_override_skydive", "" )
+
+
+		
+		if ( IsShadowArmyGamemode() )
+		{
+			int playerAlliance = AllianceProximity_GetAllianceFromTeam( player.GetTeam() )
+			if ( playerAlliance == SHADOWARMY_LEGEND_ALLIANCE )
+				override = "Music_RevArmy_Jump_Legends"
+			else
+				override = "Music_RevArmy_Jump_Revenants"
+		}
+
+
 	if ( override.len() > 0 )
 		return override
 	return MusicPack_GetSkydiveMusic( GetMusicPackForPlayer( player ) )

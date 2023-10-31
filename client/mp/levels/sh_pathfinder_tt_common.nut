@@ -10,6 +10,7 @@ global function IsPathTTEnabled
 
 
 
+
 global function ClInitPathTTRingTVEntities
 global function SCB_PathTT_SetMessageIdxToCustomSpeakerIdx
 global function SCB_PathTT_PlayRingAnnouncerDialogue
@@ -32,6 +33,7 @@ const string FLAG_UPDATE_RING_TVS = "RingTVUpdate"
 const float RING_TV_TEMP_MESSAGE_DISPLAY_TIME = 5.0
 const float RING_TV_KNOCKOUT_TIME_ELAPSED_CAN_OVERRIDE = 4.0
 
+const asset RING_CSV_DIALOGUE = $"datatable/dialogue/oly_path_tt_ring_announcer_dialogue.rpak"
 const string BOXING_RING_MODEL = "mdl/test/davis_test/pathfinder_tt_ring_shield.rmdl"
 global const string BOXING_RING_SCRIPTNAME = "pathfinder_tt_ring_shield"
 
@@ -137,15 +139,17 @@ void function EntitiesDidLoad()
 	if ( !IsPathTTEnabled() )
 		return
 
+	RegisterCSVDialogue( RING_CSV_DIALOGUE )
 	PrecacheWeapon( $"mp_weapon_melee_boxing_ring" )
 	PrecacheWeapon( $"melee_boxing_ring" )
+
+	InitPathTTBoxingRing()
 
 
 
 
 
 	InitPathTTBoxingRingEntities()
-	InitPathTTBoxingRing()
 }
 
 void function InitPathTTBoxingRing()
@@ -304,6 +308,18 @@ void function InitPathTTBoxingRingEntities()
 
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

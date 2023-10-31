@@ -32,6 +32,7 @@ global function ServerCallback_PlayTurretDestroyFX
 
 
 
+
 global enum eTurretClearUserReason
 {
 	TURRET_USE_FINISHED,
@@ -114,6 +115,7 @@ struct MountedTurretPlaceablePlayerPlacementData
 
 struct
 {
+
 
 
 
@@ -343,6 +345,19 @@ bool function OnWeaponAttemptOffhandSwitch_weapon_mounted_turret_placeable( enti
 {
 	return true
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

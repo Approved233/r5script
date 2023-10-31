@@ -11,6 +11,9 @@ global function OnWeaponAttemptOffhandSwitch_weapon_phase_breach
 global function ServerToClient_PhaseBreachPortalCancelled
 
 
+
+
+
 const string SOUND_PORTAL_ENTRANCE_OPEN_1P = "Ash_PhaseBreach_Activate_1p"
 const string SOUND_PORTAL_ENTRANCE_OPEN_3P = "Ash_PhaseBreach_Activate_3p"
 const string SOUND_PORTAL_EXIT_OPEN = "Ash_PhaseBreach_PortalOpen_Exit_3p"
@@ -30,6 +33,9 @@ const vector BREACH_HULLCHECK_MAXS   = < 5.0,  5.0, 36.0 + 5.0>
 const float PHASE_BREACH_SPEED = 1200.0
 const float PHASE_BREACH_TRAVEL_TIME_MIN = 0.3
 const float PHASE_BREACH_TRAVEL_TIME_MAX = 1.8
+
+
+
 const float PHASE_BREACH_PORTAL_LIFETIME = 15.0
 
 
@@ -124,8 +130,29 @@ void function MpWeaponPhaseBreach_Init()
 
 	Remote_RegisterClientFunction( FUNC_BREACH_FAILED )
 
+
+
+
 	file.breachPersistsWhenAshDies = GetCurrentPlaylistVarBool( "ash_ult_persists_past_ash_death", true )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 void function OnWeaponActivate_weapon_phase_breach( entity weapon )
@@ -218,6 +245,8 @@ var function OnWeaponPrimaryAttackAnimEvent_ability_phase_breach( entity weapon,
 	PhaseBreachTargetInfo info = file.portalTargetTable[player]
 
 	PlayerUsedOffhand( player, weapon, false )
+
+
 
 
 
@@ -356,6 +385,80 @@ var function OnWeaponPrimaryAttackAnimEvent_ability_phase_breach( entity weapon,
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function ServerToClient_PhaseBreachPortalCancelled()
 {
 	entity localPlayer = GetLocalViewPlayer()
@@ -366,12 +469,6 @@ void function ServerToClient_PhaseBreachPortalCancelled()
 
 	StopSoundOnEntity( localPlayer, "Ash_PhaseBreach_Enter_1p" )
 }
-
-
-
-
-
-
 
 
 

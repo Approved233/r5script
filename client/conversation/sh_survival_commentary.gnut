@@ -3,6 +3,7 @@ global function CommentaryDebugText
 global function CommentaryDebugSphere
 global function ToggleCommentaryDebug
 global function PickCommentaryLineFromBucket
+global function PickCommentaryLineFromBucketAndHost
 global function AreWeSquadMembers
 global function TryFindSpeakingPlayerOnTeam
 global function TryFindSpeakingPlayerOnTeamDisallowSelf
@@ -36,6 +37,7 @@ global function PlayBattleChatterToSelfOnClientAndTeamOnServer
 
 global function PlayBattleChatterToSelfOnClient
 
+global function RegisterCommentaryBuckets
 
 
 global const float MAX_SPEAKER_DISTANCE_FROM_EVENT_FOR_CROWD = 6000
@@ -323,7 +325,33 @@ global enum eSurvivalCommentaryBucket
 	FREEDM_BEAR_WINNING,
 	FREEDM_EAGLE_WINNING,
 	FREEDM_TIGER_WINNING,
-	FREEDM_NESSIE_WINNING
+	FREEDM_NESSIE_WINNING,
+
+
+
+	SHADOWARMY_MATCH_START,
+	SHADOWARMY_BEGIN_ROUND,
+	SHADOWARMY_EVAC_SUCCESS,
+	SHADOWARMY_EVAC_FAILED,
+	SHADOWARMY_EVAC_SHIP_BOARDED,
+	SHADOWARMY_EVAC_SHIP_INCOMING,
+	SHADOW_ARMY_NEW_KILL_LEADER_REV,
+	SHADOW_ARMY_NEW_KILL_LEADER_LEGEND,
+	SHADOW_ARMY_BEACON_SABOTAGED,
+	SHADOW_ARMY_BEACON_USING,
+	SHADOW_ARMY_BEACON_COMPLETE,
+	SHADOW_ARMY_LAST_SQUAD,
+	SHADOW_ARMY_FEW_SQUADS,
+	SHADOW_ARMY_FEW_SQUADS_REV,
+	SHADOW_ARMY_HALF_SQUADS,
+	SHADOW_ARMY_HALF_SQUADS_REV,
+	SHADOW_ARMY_LOBA_RESPAWNED,
+	SHADOW_ARMY_CRYPTO_INTRO,
+	SHADOW_ARMY_LOBA_CRYPTO_RESPONSE,
+	SHADOW_ARMY_LOBA_EVAC_INCOMING,
+	SHADOW_ARMY_LOBA_EVAC_ARRIVED,
+	SHADOW_ARMY_LOBA_EVAC_COMPLETE,
+	SHADOW_ARMY_LOBA_EVAC_NEARMISS,
 
 
 	_count
@@ -343,6 +371,12 @@ global enum eSurvivalHostType
 
 
 	MAGGIE,
+	OCTANE,
+	LOBA,
+	CRYPTO,
+
+	REV_ARMY,
+
 	_count
 }
 
@@ -421,6 +455,7 @@ void function ShSurvivalCommentary_Init()
 	RegisterCSVDialogue( $"datatable/dialogue/survival_host_dialogue.rpak" )
 	RegisterCSVDialogue( $"datatable/battle_chatter_dialogue.rpak" )
 	RegisterCommentaryBuckets( $"datatable/dialogue/survival_host_dialogue.rpak" )
+
 
 		RegisterConditionalAltDialogue( $"datatable/conditional_alt_dialogue_map.rpak" )
 
@@ -864,7 +899,25 @@ string function PickCommentaryLineFromBucket( int bucket )
 
 	if ( ! ( bucket in file.commentaryTables[host] ) )
 	{
-		Warning( "Invalid bucket for host, attempting AI Host. Bug this!" )
+		Warning( "Invalid bucket ( " + GetEnumString( "eSurvivalCommentaryBucket", bucket ) + " ) for host, attempting AI Host. Bug this!" )
+
+		host = eSurvivalHostType.AI
+
+		if ( ! ( bucket in file.commentaryTables[host] ) )
+		{
+			Assert( false, "AI Host does not have line for bucket" )
+			return ""
+		}
+	}
+
+	return file.commentaryTables[host][bucket].getrandom()
+}
+
+string function PickCommentaryLineFromBucketAndHost( int bucket, int host )
+{
+	if ( ! ( bucket in file.commentaryTables[host] ) )
+	{
+		Warning( "Invalid bucket ( " + GetEnumString( "eSurvivalCommentaryBucket", bucket ) + " ) for host, attempting AI Host. Bug this!" )
 
 		host = eSurvivalHostType.AI
 
@@ -910,6 +963,16 @@ int function ConvertHostStringToEnum( string hostName )
 
 		case "#HOST_MAGGIE":
 			return eSurvivalHostType.MAGGIE
+		case "#HOST_OCTANE":
+			return eSurvivalHostType.OCTANE
+		case "#HOST_LOBA":
+			return eSurvivalHostType.LOBA
+		case "#HOST_CRYPTO":
+			return eSurvivalHostType.CRYPTO
+
+		case "#HOST_REV_ARMY":
+			return eSurvivalHostType.REV_ARMY
+
 
 		default:
 			return eSurvivalHostType.INVALID
@@ -1068,8 +1131,8 @@ bool function CanPlayerSpeak( entity player )
 		return false
 
 
-
-
+		
+		if ( !IsShadowArmyGamemode() )
 
 		{
 			if ( IsPlayerShadowZombie( player ) )

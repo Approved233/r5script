@@ -103,6 +103,9 @@ const string PERSISTENCE_REWARDSEQ_SUFFIX = "rewardseq"
 const string PERSISTENCE_XP_MODIFIER_LIST = "xp_modifier_list"
 const string PERSISTENCE_TRIAL_LIST = "trial_list"
 
+const string PERSISTENCE_PROGRESSION_MODIFIER_SUFFIX = "pm_bonus"
+
+
 
 const string ACTION_PLACEMENT_BONUS = "Placement_Bonus"
 
@@ -231,6 +234,9 @@ struct MasteryWeaponConfig
 	string persistenceKey_XP
 	string persistenceKey_SopmXP
 	string persistenceKey_Level
+
+	string persistenceKey_ProgMod_Bonus
+
 }
 
 global struct MasteryTrialData
@@ -355,6 +361,9 @@ global struct MasteryWeapon_ActionXP
 global struct MasteryWeapon_MatchXPPerWeapon
 {
 	int                                    lastXP
+
+		int									   lastBonusXP
+
 	int                                    currentXP
 	array<TrialConfig>                     unlockTrialList
 	table<string, MasteryWeapon_ActionXP>  actionXPMap
@@ -397,6 +406,26 @@ global struct MasteryWeapon_TrialStatusChangesPerWeapon
 	ItemFlavor&                            weapon
 	array<MasteryWeapon_TrialStatusChange> trialStatusChangeList
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -674,6 +703,9 @@ string function DEV_GetWeaponName( ItemFlavor weapon )
 	return DEV_ItemFlavor_GetCleanedAssetPath( weapon ).slice( 17 )
 }
 #endif
+
+
+
 
 
 
@@ -1296,6 +1328,12 @@ bool function Mastery_IsLocalPlayerInfoReady()
 
 
 
+
+
+
+
+
+
 void function BuildValidStatList()
 {
 	fileLevel.validStatList.clear()
@@ -1504,10 +1542,11 @@ void function LoadConfig()
 		weaponConfig.persistenceKey_XP = BuildPdefKey_WeaponStruct( weapon ) + PERSISTENCE_XP_SUFFIX
 		weaponConfig.persistenceKey_SopmXP = BuildPdefKey_WeaponStruct( weapon ) + PERSISTENCE_SOPM_XP_SUFFIX
 		weaponConfig.persistenceKey_Level = BuildPdefKey_WeaponStruct( weapon ) + PERSISTENCE_LEVEL_SUFFIX
+
+		weaponConfig.persistenceKey_ProgMod_Bonus = BuildPdefKey_WeaponStruct( weapon ) + PERSISTENCE_PROGRESSION_MODIFIER_SUFFIX
+
 	}
 }
-
-
 
 
 
@@ -1800,7 +1839,10 @@ StatInstance function CreateStatInstance( int targetTag, string pdefKey, string 
 	statInstance.persistenceKey = pdefKey
 	statInstance.statType = statType
 
-
+#if DEV
+	statInstance.cacheIndex = fileLevel.allStatsList.len()
+	fileLevel.allStatsList.append( statInstance )
+#endif
 
 
 
@@ -2161,11 +2203,17 @@ table<ItemFlavor, MasteryWeapon_MatchXPPerWeapon> function Mastery_GetPreviousMa
 	{
 		int currentXP = player.GetPersistentVarAsInt( weaponConfig.persistenceKey_XP )
 		int lastXP    = player.GetPersistentVarAsInt( weaponConfig.persistenceKey_SopmXP )
+
+			int lastBonusXP =  player.GetPersistentVarAsInt( weaponConfig.persistenceKey_ProgMod_Bonus )
+
 		if ( currentXP > lastXP )
 		{
 			MasteryWeapon_MatchXPPerWeapon matchXPPerWeapon
 			matchXPPerWeapon.currentXP = currentXP
 			matchXPPerWeapon.lastXP = lastXP
+
+				matchXPPerWeapon.lastBonusXP = lastBonusXP
+
 			
 			int lastLevel = Mastery_CalculateLevelFromXP( lastXP )
 			int currentLevel = Mastery_CalculateLevelFromXP( currentXP )

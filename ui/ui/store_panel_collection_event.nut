@@ -283,15 +283,15 @@ void function CollectionEventPanel_UpdateGRXDependantElements()
 	bool isPackOfferPurchasable = currentMaxEventPackPurchaseCount > 0
 
 
-
-
-
-
-
-
-
-
-
+	if ( GetConVarBool( "mtx_useIneligibilityCode" ) && isPackOfferPurchasable )
+	{
+		array<GRXScriptOffer> ornull packOffers = CollectionEvent_GetPackOffers( expect ItemFlavor( activeCollectionEvent ) )
+		if ( packOffers != null )
+		{
+			GRXScriptOffer offer = expect array<GRXScriptOffer>( packOffers )[0]
+			isPackOfferPurchasable = GRXOffer_IsEligibleForPurchase( offer )
+		}
+	}
 
 
 	Hud_SetLocked( file.purchaseButton, !isPackOfferPurchasable )

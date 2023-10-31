@@ -126,16 +126,16 @@ const vector RUI_COOLDOWN_COLOR = MEDBAY_COOLDOWN_COLOR / RUI_COLOR_DIVISOR
 const string RUI_MEDBAY_INDICATOR_RING = "ui/medbay_cooldown.rpak"
 
 
-const string MDL_MEDBAY_RING = "mdl/fx/LifelineTT_medbay_ring.rmdl"
-const string MDL_MEDBAY_EYE_JOINT = "mdl/olympus/olympus_ll_tt_building_interior_medbay_eye_01.rmdl"
-const string MDL_MEDBAY_EYE_STALK = "mdl/olympus/olympus_ll_tt_building_interior_medbay_eye_02.rmdl"
+global const string MDL_MEDBAY_RING = "mdl/fx/LifelineTT_medbay_ring.rmdl"
+global const string MDL_MEDBAY_EYE_JOINT = "mdl/olympus/olympus_ll_tt_building_interior_medbay_eye_01.rmdl"
+global const string MDL_MEDBAY_EYE_STALK = "mdl/olympus/olympus_ll_tt_building_interior_medbay_eye_02.rmdl"
 
 
-const string VFX_MEDBAY_HEAL_COCKPIT_1P = "P_heal_loop_screen"
-const string VFX_MEDBAY_SPARKS = "P_lifelineTT_medbay_sparks"
-const string VFX_MEDBAY_PLATFORM = "P_LifelineTT_medbay_platform"
-const string VFX_MEDBAY_CROSS = "P_LifelineTT_medbay_cross"
-const string VFX_MEDBAY_CROSS_PULSE = "P_LifelineTT_medbay_cross_pulse"
+global const string VFX_MEDBAY_HEAL_COCKPIT_1P = "P_heal_loop_screen"
+global const string VFX_MEDBAY_SPARKS = "P_lifelineTT_medbay_sparks"
+global const string VFX_MEDBAY_PLATFORM = "P_LifelineTT_medbay_platform"
+global const string VFX_MEDBAY_CROSS = "P_LifelineTT_medbay_cross"
+global const string VFX_MEDBAY_CROSS_PULSE = "P_LifelineTT_medbay_cross_pulse"
 
 
 const string SFX_MEDBAY_REGEN_POWER_DOWN = "Olympus_LifelineTT_MedBay_PowerDown"
@@ -543,6 +543,12 @@ void function MedBay_InitEye()
 {
 	if ( !GetCurrentPlaylistVarBool( MEDBAY_PLAYLIST_EYE_ENABLED, true ) )
 		return
+
+#if DEV
+	
+	if ( Dev_CommandLineHasParm( "-survival_preprocess" ) )
+		return
+#endif
 
 	entity eyeJoint
 	entity eyeStalk

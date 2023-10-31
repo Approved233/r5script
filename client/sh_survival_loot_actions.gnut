@@ -326,6 +326,12 @@ bool function TryPickupItem( int action, entity pickup, entity player, int picku
 
 
 
+
+
+
+
+
+
 		case eLootType.MARVIN_ARM:
 			shouldDestroy = PickupCustomItem( pickup, player, pickupFlags, deathBox, desiredCount )
 			break
@@ -998,7 +1004,6 @@ bool function EquipEquipment( entity pickup, entity player, string equipSlot, en
 
 	if ( as.action == eLootAction.NONE )
 		return false
-
 
 
 

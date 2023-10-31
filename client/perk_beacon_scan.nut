@@ -565,8 +565,6 @@ entity function GetTeamSurveyBeaconUser( int team )
 
 
 
-
-
 void function OnDeactivate_BeaconScan( entity player )
 {
 	if ( !( player in file.surveyBeaconData ) )

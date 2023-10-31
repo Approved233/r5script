@@ -70,6 +70,7 @@ global struct ClientEntityStruct
 	array<void functionref( entity vehicle )>                              onVehicleCollideCallbacks
 	array<void functionref( entity vehicle )>                              onPlayerUseButtonPressed
 	array<void functionref( entity vehicle )>                              onPlayerUseButtonReleased
+	array<void functionref( entity player )>                               onPlayerLandedCallbacks
 	array<void functionref( entity )>                                      onEntityDestroyedCallbacks
 
 	string enemyHighlight = ""
@@ -93,9 +94,7 @@ global struct ClientEntityStruct
 
 	int cameraMaxRangeFXHandle = -1
 
-
-		bool castleWallIsEnergized = false
-
+	bool castleWallIsEnergized = false
 
 
 
@@ -103,13 +102,6 @@ global struct ClientEntityStruct
 
 
 	bool munitionsDropSpawned = false
-
-
-
-
-
-
-
 
 
 	bool                       eyeForQuality_isScanned

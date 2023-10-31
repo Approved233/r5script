@@ -4,9 +4,11 @@
 global function Vouchers_LevelInit
 global function Voucher_GetEffectBattlepassLevels
 global function Voucher_GetEffectBattlepassStars
+global function Voucher_GetEffectAccountXP
 global function Voucher_GetEffectStatRef
 global function Voucher_GetEffectStatAmount
 global function Voucher_GetModel
+global function Voucher_GetVoucherActiveCount
 
 
 
@@ -309,6 +311,15 @@ int function Voucher_GetEffectBattlepassStars( ItemFlavor flav )
 
 
 
+int function Voucher_GetEffectAccountXP( ItemFlavor flav )
+{
+	Assert( ItemFlavor_GetType( flav ) == eItemType.voucher )
+
+	return GetGlobalSettingsInt( ItemFlavor_GetAsset( flav ), "effectAccountXP" )
+}
+
+
+
 string ornull function Voucher_GetEffectStatRef( ItemFlavor flav )
 {
 	Assert( ItemFlavor_GetType( flav ) == eItemType.voucher )
@@ -341,7 +352,7 @@ asset function Voucher_GetModel( ItemFlavor flav )
 
 
 
-int function GetVoucherActiveCount( entity player, ItemFlavor voucherFlav )
+int function Voucher_GetVoucherActiveCount( entity player, ItemFlavor voucherFlav )
 {
 	switch ( Voucher_GetBehavior( voucherFlav ) )
 	{
@@ -403,6 +414,12 @@ int function GetVoucherRedeemedCount( entity player, ItemFlavor voucherFlav )
 	Assert( false )
 	return 0
 }
+
+
+
+
+
+
 
 
 

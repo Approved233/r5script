@@ -405,7 +405,8 @@ void function OnSelectedWeaponChanged( entity selectedWeapon )
 void function AmmoStatusHint_OnCommsMenu( bool menuOpened )
 {
 	
-	RuiSetVisible( file.ammo_status_hint, ShouldAmmoStatusBeVisible() )
+	if( file.ammo_status_hint != null )
+		RuiSetVisible( file.ammo_status_hint, ShouldAmmoStatusBeVisible() )
 }
 
 
@@ -1197,6 +1198,11 @@ void function PrimaryWeapon_UpdateFireSelectHUD( entity weapon )
 
 
 
+			if( weapon.HasMod("altfire_shatter") )
+			{
+				 SetWeaponToggleHUD( $"rui/hud/weapon_toggle/shatter_caps_enabled_bow", "#FIRE_MODE_SHATTER", 2, 1 )
+			}
+			else
 			{
 				SetWeaponToggleHUD( $"rui/hud/weapon_toggle/single_shot", "#FIRE_MODE_SINGLE", 2, currentFireModeIndex )
 			}
@@ -1578,7 +1584,8 @@ bool function WeaponHasFireModeSelect( entity weapon )
 	else if ( DoesModExist( weapon, "hopup_paintball" ) && IsModActive( weapon, "hopup_paintball" ) )
 		return true
 
-
+	else if ( DoesModExist(weapon, "hopup_shatter_rounds" ) && IsModActive( weapon, "hopup_shatter_rounds" ) )
+		return true
 	else if ( DoesModExist( weapon, "altfire" ) )
 		return true
 	else if ( DoesModExist( weapon, "alt_ammo" ) ) 
@@ -1649,6 +1656,15 @@ int function GetWeaponCurrentFireModeIndex( entity weapon )
 		{
 			return -1
 		}
+	}
+
+
+	if ( DoesModExist( weapon, "hopup_shatter_rounds" ) && IsModActive( weapon, "hopup_shatter_rounds" ) )
+	{
+		if ( IsModActive( weapon, "altfire_shatter" ) )
+			return 1
+		else
+			return 0
 	}
 
 	if ( DoesModExist( weapon, "altfire" ) )
@@ -1743,7 +1759,10 @@ void function UpdateFireSelectHint( entity player, entity weapon, string mod )
 
 
 
-		message = "#FIRE_MODE_SINGLE"
+		if ( weapon.HasMod("altfire_shatter" ) )
+			message = "#FIRE_MODE_SHATTER"
+		else
+			message = "#FIRE_MODE_SINGLE"
 	}
 	else if ( IsWeaponInBurstMode( weapon ) )
 	{
@@ -1766,13 +1785,13 @@ void function UpdateFireSelectHint( entity player, entity weapon, string mod )
 	}
 
 
-
-
-
-
-
-
-
+		if ( weapon.GetWeaponClassName() == SHIELD_MINES_WEAPON_NAME )
+		{
+			if ( weapon.HasMod( "use_patterns" ) )
+				message = "Pattern"
+			else
+				message = "Free Fire"
+		}
 
 
 	if ( message != "" )
@@ -1832,7 +1851,7 @@ bool function IsModAltfireMod( string mod )
 
 
 
-	if ( mod == "shatter_rounds_mode" )
+	if ( mod == "altfire_shatter" )
 		return true
 
 	return false
@@ -1901,6 +1920,9 @@ void function WeaponStatusSetWeaponInspect( bool inspect )
 	additionalWeaponInspectRuis.append( GetVantageTacticalRui() )
 
 		additionalWeaponInspectRuis.append( GetSlingPassiveRui() )
+
+
+		additionalWeaponInspectRuis.append( GetConduitShieldRui() )
 
 	foreach ( rui in additionalWeaponInspectRuis )
 	{

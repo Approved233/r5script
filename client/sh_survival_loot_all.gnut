@@ -47,12 +47,6 @@ global function SURVIVAL_Loot_IsUniqueAmmoWeapon
 global function GetRarityColor
 
 
-
-
-
-
-
-
 #if DEV
 global function DumpModdedKeyColors
 global function DiffKeyColors
@@ -82,6 +76,7 @@ global enum eLootTier
 	EPIC
 	LEGENDARY
 	MYTHIC
+	ICONIC
 
 	_count
 }
@@ -217,6 +212,10 @@ global enum eLootType
 
 
 
+
+
+
+
 	_count
 }
 
@@ -253,15 +252,6 @@ struct RestrictedLootInfo
 
 
 }
-
-
-
-
-
-
-global const int HAS_DEATHBOX_OVERRIDE_FRIEND_PROFILES_TO_SEND = 3
-
-
 
 
 
@@ -318,18 +308,8 @@ struct
 	table<int, RestrictedLootInfo> restrictedLootInfo
 
 
-		table<EHI, array< OverrideDeathBoxRUI_NetworkOptimizedStruct > > EHIToOverrideDeathBoxRUIProfilesTable
-		table<string, EHI>                                               corpseToEHITable
 		array< OverrideDeathBoxRUI_NetworkOptimizedStruct >              handcraftedProfiles
 		array< OverrideDeathBoxRUI_NetworkOptimizedStruct >              handcraftedProfilesMasterList 
-
-
-
-
-
-
-
-
 
 
 
@@ -430,6 +410,14 @@ void function SURVIVAL_Loot_All_InitShared()
 
 
 	string disabledRefs = GetCurrentPlaylistVarString( "survival_disabled_loot", " " )
+
+
+
+
+
+
+
+
 	file.disabledRefs.extend( split( disabledRefs, WHITESPACE_CHARACTERS ) )
 
 	disabledRefs = GetCurrentPlaylistVarString( "survival_disabled_weapons", " " )
@@ -700,12 +688,6 @@ void function SURVIVAL_Loot_All_InitShared()
 
 
 
-
-
-
-
-
-
 	SURVIVAL_Loot_InitRestrictedLoot()
 
 	file.initialized = true
@@ -875,6 +857,10 @@ int function SURVIVAL_Loot_GetLootTypeFromString( string lootTypeString )
 
 		case "candy_pickup":
 			return eLootType.CANDY_PICKUP
+
+
+
+
 
 
 
@@ -1066,8 +1052,12 @@ vector function GetRarityColor( entity ent )
 
 
 
+
 vector function GetFXRarityColorForTier( int tier )
 {
+
+
+
 
 
 
@@ -1105,6 +1095,9 @@ vector function GetFXRarityColorForTier( int tier )
 
 vector function GetFXRarityColorForUnlockable( int tier )
 {
+
+
+
 
 
 
@@ -1288,272 +1281,6 @@ void function RemoveCallback_EditLootDesc( string functionref( string, entity, s
 	Assert( file.editLootDescCallbacks.contains( callback ), "Tried to remove a callback that was not added" )
 	file.editLootDescCallbacks.fastremovebyvalue( callback )
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

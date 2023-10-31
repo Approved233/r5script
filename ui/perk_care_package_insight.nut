@@ -49,6 +49,7 @@ const bool CARE_PACKAGE_INSIGHT_PERF_TESTING = false
 
 
 
+
 global function S16_PathfinderSkirmisherPassiveActive
 
 struct
@@ -197,6 +198,57 @@ bool function S16_PathfinderSkirmisherPassiveActive()
 {
 	return GetCurrentPlaylistVarBool( "s16_pathfinder_skirmisher_passive_active", true )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

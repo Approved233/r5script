@@ -709,6 +709,11 @@ var function OnWeaponTossReleaseAnimEvent_ability_portable_auto_loader( entity w
 
 
 
+
+
+
+
+
 void function OnPrimaryWeaponStatusUpdate_FastReloadIcon( entity player, var weaponRui, bool turnOn )
 {
 	if( turnOn )
@@ -738,10 +743,14 @@ void function AttemptSwapToSlingWhileUltIsActive( entity player )
 void function AutoLoaderScreenVFXEnabled( entity ent, int statusEffect, bool actuallyChanged )
 {
 	entity viewPlayer = GetLocalViewPlayer()
-	if( viewPlayer != GetLocalClientPlayer() || ent != viewPlayer )
+
+	if ( !actuallyChanged && viewPlayer == GetLocalClientPlayer() )
 		return
 
-	thread AutoLoader_1PFX_Thread( ent )
+	if ( ent != viewPlayer )
+		return
+
+	thread AutoLoader_1PFX_Thread( viewPlayer )
 }
 
 void function AutoLoaderScreenVFXDisabled( entity ent, int statusEffect, bool actuallyChanged )

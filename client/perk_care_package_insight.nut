@@ -45,6 +45,7 @@ struct RevealEntData
 {
 	float revealProgress
 	bool hasLos
+	bool revealed
 }
 
 
@@ -528,6 +529,29 @@ bool function S16_PathfinderSkirmisherPassiveActive()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function ClientCodeCallback_OnCarePackageInsightDataChanged( entity carePackageInsightEnt )
 {
 	if( carePackageInsightEnt.GetAreContentsTaken() )
@@ -667,6 +691,14 @@ void function AddCarePackageInsightRui( entity ent, bool revealed )
 	else
 	{
 		file.revealEntityToRui[ent] <- fullmapRui
+		entity carePackage = ent.GetLinkEnt()
+		foreach( revealEnt, data in file.revealEntitiesToData )
+		{
+			if( carePackage == revealEnt.GetLinkEnt() )
+			{
+				data.revealed = true
+			}
+		}
 	}
 
 	bool addMinimapEnt = true
@@ -776,6 +808,9 @@ void function UpdateCarePackageLootAtReveal( entity player )
 		foreach( ent, data in file.revealEntitiesToData )
 		{
 			if( !IsValid( ent ) )
+				continue
+
+			if( data.revealed && !player.HasPassive( ePassives.PAS_PATHFINDER ) )
 				continue
 
 			int playerIndex = player.GetEntIndex()
@@ -951,7 +986,8 @@ void function Perk_CarePackageInsight_UpdateLookAtRevealRuiVisibility( var rui, 
 		}
 		prevWithinGroundRevealDist = withinGroundRevealDist
 
-		bool visible = file.revealEntitiesToData[carePackage].hasLos || file.revealEntitiesToData[carePackage].revealProgress > 0 || withinGroundRevealDist
+		bool shouldHideFromNotPathfinders = !player.HasPassive( ePassives.PAS_PATHFINDER ) && file.revealEntitiesToData[carePackage].revealed
+		bool visible = !shouldHideFromNotPathfinders && ( file.revealEntitiesToData[carePackage].hasLos || file.revealEntitiesToData[carePackage].revealProgress > 0 || withinGroundRevealDist )
 		if( visible )
 		{
 			RuiSetBool( rui, "doAdsFade", false )
@@ -977,58 +1013,65 @@ void function Perk_CarePackageInsight_UpdateLookatRevealProgressRui( var rui, en
 	if( revealEnt.GetScriptName() == HIDDEN_CARE_PACKAGE_ENT_NAME )
 	{
 		entity carePackage = revealEnt.GetLinkEnt()
-		RuiTrackFloat3( rui, "pos", carePackage, RUI_TRACK_ABSORIGIN_FOLLOW  )
-		thread Perk_CarePackageInsight_UpdateLookAtRevealRuiVisibility( rui, revealEnt )
-
-		float currentProgress = 0
-		float targetProgress = 0
-
-		RuiSetFloat( rui, "arcFill", 0.0 )
-		RuiSetBool( rui, "clampToScreen", true )
-		RuiSetBool( rui, "ignoreDistanceFade", true )
-		RuiSetBool( rui, "isUnrevealedCarePackageInsight", true )
-
-		while( currentProgress < 1.0 && revealEnt in file.revealEntitiesToData )
+		if( IsValid( carePackage ) )
 		{
-			entity localPlayer = GetLocalViewPlayer()
-			targetProgress = file.revealEntitiesToData[revealEnt].revealProgress
-			RuiSetFloat( rui, "arcFill", targetProgress )
-			WaitFrame()
-		}
+			RuiTrackFloat3( rui, "pos", carePackage, RUI_TRACK_ABSORIGIN_FOLLOW  )
+			thread Perk_CarePackageInsight_UpdateLookAtRevealRuiVisibility( rui, revealEnt )
 
-		revealEnt.WaitSignal( "OnDestroy" )
+			float currentProgress = 0
+			float targetProgress = 0
+
+			RuiSetFloat( rui, "arcFill", 0.0 )
+			RuiSetBool( rui, "clampToScreen", true )
+			RuiSetBool( rui, "ignoreDistanceFade", true )
+			RuiSetBool( rui, "isUnrevealedCarePackageInsight", true )
+
+			while( currentProgress < 1.0 && revealEnt in file.revealEntitiesToData )
+			{
+				entity localPlayer = GetLocalViewPlayer()
+				targetProgress = file.revealEntitiesToData[revealEnt].revealProgress
+				RuiSetFloat( rui, "arcFill", targetProgress )
+				WaitFrame()
+			}
+
+			revealEnt.WaitSignal( "OnDestroy" )
+		}
 	}
 	else
 	{
-		int lootIndex = revealEnt.GetLootIndex()
-		LootData ld = SURVIVAL_Loot_GetLootDataByIndex( lootIndex )
-		if( ld.lootType == eLootType.MAINWEAPON )
-		{
-			RuiSetFloat2( rui, "sizeScale", <2.0,1.0,0.0> )
-		}
-		RuiSetString( rui, "descriptiveTextLocString", ld.pickupString )
-		RuiSetImage( rui, "beaconImage", ld.hudIcon )
-		RuiSetInt( rui, "lootTier", ld.tier )
-		RuiSetFloat( rui, "arcFill", 0.0 )
-		RuiSetBool( rui, "playConfirmAnim", true )
-		RuiSetBool( rui, "clampToScreen", false )
-		RuiSetBool( rui, "isVisibleOverride", true )
-		RuiSetBool( rui, "isRevealedCarePackageInsight", true )
-
-		
-		entity player = GetLocalViewPlayer()
 		entity carePackageEnt = revealEnt.GetLinkEnt()
-		vector viewVector = player.GetViewVector()
-		vector eyePosition = player.EyePosition()
-		vector carePackagePos = carePackageEnt.GetOrigin()
-		vector dirToCarePackage = Normalize( carePackagePos - eyePosition )
-		if( DotProduct( dirToCarePackage, viewVector ) > deg_cos( PERK_HIGHLIGHT_DEGREES ) )
+		if( IsValid( carePackageEnt ) )
 		{
-			Perks_SetHighlightedPerkIcon( revealEnt, ePerkIndex.CARE_PACKAGE_INSIGHT )
-		}
+			int lootIndex = revealEnt.GetLootIndex()
+			LootData ld = SURVIVAL_Loot_GetLootDataByIndex( lootIndex )
+			if( ld.lootType == eLootType.MAINWEAPON )
+			{
+				RuiSetFloat2( rui, "sizeScale", <2.0,1.0,0.0> )
+			}
+			RuiSetString( rui, "descriptiveTextLocString", ld.pickupString )
+			RuiSetImage( rui, "beaconImage", ld.hudIcon )
+			RuiSetInt( rui, "lootTier", ld.tier )
+			RuiSetFloat( rui, "arcFill", 0.0 )
+			RuiSetBool( rui, "playConfirmAnim", true )
+			RuiSetBool( rui, "clampToScreen", false )
+			RuiSetBool( rui, "isVisibleOverride", true )
+			RuiSetBool( rui, "isRevealedCarePackageInsight", true )
 
-		thread Perk_CarePackageInsight_ResetRevealDistance( rui, revealEnt )
-		RuiTrackFloat3( rui, "pos", carePackageEnt, RUI_TRACK_ABSORIGIN_FOLLOW  )
+			
+			entity player = GetLocalViewPlayer()
+
+			vector viewVector = player.GetViewVector()
+			vector eyePosition = player.EyePosition()
+			vector carePackagePos = carePackageEnt.GetOrigin()
+			vector dirToCarePackage = Normalize( carePackagePos - eyePosition )
+			if( DotProduct( dirToCarePackage, viewVector ) > deg_cos( PERK_HIGHLIGHT_DEGREES ) )
+			{
+				Perks_SetHighlightedPerkIcon( revealEnt, ePerkIndex.CARE_PACKAGE_INSIGHT )
+			}
+
+			thread Perk_CarePackageInsight_ResetRevealDistance( rui, revealEnt )
+			RuiTrackFloat3( rui, "pos", carePackageEnt, RUI_TRACK_ABSORIGIN_FOLLOW  )
+		}
 	}
 }
 
@@ -1099,7 +1142,16 @@ void function ServerToClient_NotifyPathfinderCooldownReduction()
 	if ( IsValid( localViewPlayer ) && PlayerHasPassive( localViewPlayer, ePassives.PAS_PATHFINDER ) )
 	{
 		HidePlayerHint( "#CARE_PACKAGE_INSIGHT_REVEAL_HINT" )
-		AddPlayerHint( 2.5, 0.25, $"rui/hud/ultimate_icons/ultimate_pathfinder", "#SURVEY_PATHFINDER_SUCCESS" )
+		string hintStr = "#SURVEY_PATHFINDER_SUCCESS"
+
+
+
+
+
+
+
+
+		AddPlayerHint( 2.5, 0.25, $"rui/hud/ultimate_icons/ultimate_pathfinder", hintStr )
 	}
 }
 

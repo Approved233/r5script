@@ -16,15 +16,18 @@ global struct RTKPagination_Properties
 	rtk_behavior nextButton
 	rtk_behavior prevButton
 	rtk_panel paginationButtons
-	rtk_panel hint
+	rtk_behavior hintAnimator
 
 	int pages
 	int startPageIndex = 0
+
+	float containerSizeOffset 
 
 	array< string > pageNames = []
 
 	bool vertical
 	bool autoPagesByContainerContent
+	bool useContentSizeAsTotalSize
 	bool panelsAlwaysStartNewPages = false
 	bool fillEmptySpace = true
 	bool canWrap = false
@@ -169,37 +172,37 @@ void function RTKPagination_OnKeyCodePressed( rtk_behavior self, int code )
 	}
 }
 
-void function RTKPagination_OnHoverEnter( rtk_behavior self )
+void function RTKPagination_OnHoverEnter( rtk_behavior self, rtk_behavior area )
 {
-	rtk_panel ornull hintPanel = self.PropGetPanel( "hint" )
 	bool showNav = RTKPagination_GetShowNav( self )
-	if ( showNav && hintPanel != null )
-	{
-		expect rtk_panel( hintPanel )
-		rtk_behavior animator = hintPanel.FindBehaviorByTypeName( "Animator" )
+	if ( !showNav )
+		return
 
-		if( animator != null )
-		{
-			if ( RTKAnimator_HasAnimation( animator, "FadeIn" ) )
-				RTKAnimator_PlayAnimation( animator, "FadeIn" )
-		}
+	bool controlTypeIsActive = area.PropGetBool( IsControllerModeActive() ? "controllerEnabled" : "mouseEnabled" )
+	if ( !controlTypeIsActive )
+		return
+
+	rtk_behavior animator = self.PropGetBehavior( "hintAnimator" )
+	if( animator != null && RTKAnimator_HasAnimation( animator, "FadeIn" ) )
+	{
+		RTKAnimator_PlayAnimation( animator, "FadeIn" )
 	}
 }
 
-void function RTKPagination_OnHoverLeave( rtk_behavior self )
+void function RTKPagination_OnHoverLeave( rtk_behavior self, rtk_behavior area )
 {
-	rtk_panel ornull hintPanel = self.PropGetPanel( "hint" )
 	bool showNav = RTKPagination_GetShowNav( self )
-	if ( showNav && hintPanel != null )
-	{
-		expect rtk_panel( hintPanel )
-		rtk_behavior animator = hintPanel.FindBehaviorByTypeName( "Animator" )
+	if ( !showNav )
+		return
 
-		if( animator != null )
-		{
-			if ( RTKAnimator_HasAnimation( animator, "FadeOut" ) )
-				RTKAnimator_PlayAnimation( animator, "FadeOut" )
-		}
+	bool controlTypeIsActive = area.PropGetBool( IsControllerModeActive() ? "controllerEnabled" : "mouseEnabled" )
+	if ( !controlTypeIsActive )
+		return
+
+	rtk_behavior animator = self.PropGetBehavior( "hintAnimator" )
+	if( animator != null && RTKAnimator_HasAnimation( animator, "FadeOut" ) )
+	{
+		RTKAnimator_PlayAnimation( animator, "FadeOut" )
 	}
 }
 
@@ -310,6 +313,7 @@ void function RTKPagination_RefreshActivePage( rtk_behavior self )
 	else 
 		RTKPagination_SetPositionToPageNoAnim( self  )
 
+	RTKPagination_UpdateCurrentPage( self )
 	RTKPagination_RefreshPaginationButtons( self )
 }
 
@@ -328,14 +332,24 @@ void function RTKPagination_RefreshPaginationButtons( rtk_behavior self )
 	if( nextButton != null )
 	{
 		expect rtk_behavior( nextButton )
-		nextButton.PropSetBool( "interactive", canWrap || p.currentPageIndex + 1 < pageCount )
+		bool interactive = canWrap || p.currentPageIndex + 1 < pageCount
+
+		
+		if ( nextButton.PropGetBool( "interactive" ) != interactive )
+			nextButton.PropSetBool( "interactive", interactive )
+
 		nextButton.GetPanel().SetVisible( showNav )
 	}
 
 	if( prevButton != null )
 	{
 		expect rtk_behavior( prevButton )
-		prevButton.PropSetBool( "interactive", canWrap || p.currentPageIndex > 0 )
+		bool interactive = canWrap || p.currentPageIndex > 0
+
+		
+		if ( prevButton.PropGetBool( "interactive" ) != interactive )
+			prevButton.PropSetBool( "interactive", interactive )
+
 		prevButton.GetPanel().SetVisible( showNav )
 	}
 
@@ -403,7 +417,6 @@ void function RTKPagination_SetPositionToPageNoAnim( rtk_behavior self )
 
 void function RTKPagination_OnAnimFinished( rtk_behavior self, string animName )
 {
-	RTKPagination_UpdateCurrentPage( self )
 	RTKPagination_RefreshPaginationButtons( self )
 }
 
@@ -456,18 +469,18 @@ struct PaginationPositionData
 
 PaginationPositionData function RTKPagination_GetDynamicPaginationPositionData( rtk_behavior self , int searchForPage = -1)
 {
-	array< float >  contentSizes = RTKPagination_GetContentSizes( self )
-	float containerSize = RTKPagination_GetContainerSize( self )
-	float contentSpacing = RTKPagination_GetContentSpacing( self )
+	float containerSizeOffset = self.PropGetFloat( "containerSizeOffset" )
+	float containerSize = RTKPagination_GetContainerSize( self ) + containerSizeOffset
 	bool panelsAlwaysStartNewPages = self.PropGetBool( "panelsAlwaysStartNewPages" )
-
 	PaginationPositionData data
-
-	float childContentUsedSpace      = 0
-	int lastIndex                    = 0
 
 	if( panelsAlwaysStartNewPages )
 	{
+		array< float >  contentSizes = RTKPagination_GetContentSizes( self )
+		float contentSpacing = RTKPagination_GetContentSpacing( self )
+		float childContentUsedSpace      = 0
+		int lastIndex                    = 0
+
 		
 		
 		for ( int i = 0; i < contentSizes.len(); i++ )
@@ -522,19 +535,34 @@ PaginationPositionData function RTKPagination_GetDynamicPaginationPositionData( 
 	{
 		
 		
-		float totalSize = 0
-		for ( int i = 0; i < contentSizes.len(); i++ )
-		{
-			totalSize += contentSizes[i]
-		}
+		float totalSize = RTK_Pagination_GetContentTotalSize( self ) + containerSizeOffset
 
-		data.offset = ( searchForPage == -1 )? totalSize: containerSize * float( searchForPage )
-		data.pages = ( searchForPage == -1 )? int( ceil( totalSize / containerSize ) ): searchForPage
+		data.offset = ( searchForPage == -1 ) ? totalSize : containerSize * float( searchForPage )
+		data.pages = ( searchForPage == -1 ) ? int( ceil( totalSize / containerSize ) ) : searchForPage
 	}
 
 	data.pages = int( max( data.pages, 0 ) )
 
 	return data
+}
+
+float function RTK_Pagination_GetContentTotalSize( rtk_behavior self )
+{
+	if ( self.PropGetBool( "useContentSizeAsTotalSize" ) )
+	{
+		rtk_panel content = self.PropGetPanel( "content" )
+		return self.PropGetBool( "vertical" ) ? content.GetHeight() : content.GetWidth()
+	}
+
+	array< float > contentSizes = RTKPagination_GetContentSizes( self )
+	float spacing = RTKPagination_GetContentSpacing( self )
+	float totalSize = 0
+	for ( int i = 0; i < contentSizes.len(); i++ )
+	{
+		totalSize += ( i == 0 ) ? contentSizes[i] : contentSizes[i] + spacing
+	}
+
+	return totalSize
 }
 
 int function RTKPagination_GetTotalPages( rtk_behavior self )
@@ -599,15 +627,22 @@ float function RTKPagination_GetContentSpacing( rtk_behavior self )
 {
 	rtk_panel ornull content = self.PropGetPanel( "content" )
 	float spacing = 0
-	if( content != null )
-	{
-		expect rtk_panel( content )
+	if( content == null )
+		return spacing
 
-		if( content.HasLayoutBehavior() )
-		{
-			rtk_behavior behavior = content.GetLayoutBehavior()
-			spacing = behavior.PropGetFloat( "spacing" )
-		}
+	expect rtk_panel( content )
+	if( !content.HasLayoutBehavior() )
+		return spacing
+
+	rtk_behavior behavior = content.GetLayoutBehavior()
+	if ( RTKStruct_HasProperty( behavior.GetProperties(), "spacing" ) )
+	{
+		spacing = behavior.PropGetFloat( "spacing" )
+	}
+	else if ( RTKStruct_HasProperty( behavior.GetProperties(), "slotSpacing" ) )
+	{
+		vector slotSpacing = RTKStruct_GetFloat2( behavior.GetProperties(), "slotSpacing" )
+		spacing = self.PropGetBool( "vertical" ) ? slotSpacing.y : slotSpacing.x
 	}
 
 	return spacing
@@ -651,7 +686,7 @@ void function RTKPagination_UpdateKeycodes( rtk_behavior self, rtk_behavior area
 }
 
 
-void function RTKPagination_SetupCursorInteractArea( rtk_behavior  self, rtk_behavior ornull area )
+void function RTKPagination_SetupCursorInteractArea( rtk_behavior self, rtk_behavior ornull area )
 {
 	if ( area != null )
 	{
@@ -674,16 +709,16 @@ void function RTKPagination_SetupCursorInteractArea( rtk_behavior  self, rtk_beh
 		)
 
 		RTKCursorInteract_AutoSubscribeOnHoverEnterListener( self, area,
-			void function() : ( self )
+			void function() : ( self, area )
 			{
-				RTKPagination_OnHoverEnter( self )
+				RTKPagination_OnHoverEnter( self, area )
 			}
 		)
 
 		RTKCursorInteract_AutoSubscribeOnHoverLeaveListener( self, area,
-			void function() : ( self )
+			void function() : ( self, area )
 			{
-				RTKPagination_OnHoverLeave( self )
+				RTKPagination_OnHoverLeave( self, area )
 			}
 		)
 	}

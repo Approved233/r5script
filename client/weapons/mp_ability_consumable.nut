@@ -377,6 +377,7 @@ void function Consumable_Init()
 
 
 
+
 	file.consumableUseOrder.append( eConsumableType.SHIELD_LARGE )
 
 
@@ -629,6 +630,10 @@ void function OnWeaponActivate_Consumable( entity weapon )
 
 
 
+
+
+
+
 		
 		
 		if ( weapon.GetOwner() != GetLocalClientPlayer() && GetLocalViewPlayer() == weapon.GetOwner() )		
@@ -640,6 +645,11 @@ void function OnWeaponActivate_Consumable( entity weapon )
 
 		if ( weapon.GetOwner() != GetLocalClientPlayer() && !IsSpectatorSpectatingPlayer( weapon.GetOwner() ) )
 			return
+
+
+
+
+
 
 
 
@@ -1404,6 +1414,10 @@ void function AddModAndFireWeapon_Thread( entity player, string modName )
 
 	if ( player.IsBot() )
 		return
+
+
+
+
 
 
 
@@ -2204,6 +2218,10 @@ void function ServerToClient_DoUltAccelScreenFx()
 
 
 
+
+
+
+
 bool function Consumable_CanUseUltAccel( entity player )
 {
 	entity ult = player.GetOffhandWeapon( OFFHAND_ULTIMATE )
@@ -2211,6 +2229,10 @@ bool function Consumable_CanUseUltAccel( entity player )
 		return false
 
 	int minToFire = ult.GetWeaponSettingInt( eWeaponVar.ammo_min_to_fire )
+	int burstCount = ult.GetWeaponSettingInt( eWeaponVar.burst_fire_count )
+	if ( burstCount > 0 )
+		minToFire *= burstCount
+
 	if ( ult.GetWeaponPrimaryClipCount() >= minToFire )
 		return false
 
@@ -2613,6 +2635,10 @@ string function GetConsumableModOnWeapon( entity weapon )
 			{
 				return mod
 			}
+
+
+
+
 
 
 

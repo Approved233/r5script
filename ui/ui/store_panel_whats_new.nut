@@ -308,15 +308,15 @@ void function ThemedShop_UpdateGRXDependantElements()
 	bool offerIsPurchasable = true
 
 
+	if ( GetConVarBool( "mtx_useIneligibilityCode" ) && activeThemedShopEvent != null )
+	{
+		GRXScriptOffer ornull offer = ThemedShopEvent_GetPackOffer( expect ItemFlavor( activeThemedShopEvent ) )
 
-
-
-
-
-
-
-
-
+		if ( offer != null )
+		{
+			offerIsPurchasable = GRXOffer_IsEligibleForPurchase( expect GRXScriptOffer( offer ) )
+		}
+	}
 
 
 	Hud_SetLocked( file.purchaseSinglePackButton, !offerIsPurchasable || remainingPacksAvailable < 1  )

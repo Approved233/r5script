@@ -412,7 +412,7 @@ void function OnValkTrackingChanged( entity player, bool new )
 	if ( player.GetTeam() != GetLocalViewPlayer().GetTeam() )
 	{
 		
-		if ( !AllianceProximity_IsUsingAllianceProximity() || !IsValid( player ) || !IsFriendlyTeam( player.GetTeam(), GetLocalViewPlayer().GetTeam() ) || !IsPositionWithinRadius( AllianceProximity_GetMaxDistForProximity(), GetLocalViewPlayer().GetOrigin(), player.GetOrigin() ) )
+		if ( !AllianceProximity_ShouldTryToTransmitPingOrIconToAlliance( false ) || !IsValid( player ) || !IsFriendlyTeam( player.GetTeam(), GetLocalViewPlayer().GetTeam() ) || !IsPositionWithinRadius( AllianceProximity_GetMaxDistForProximity(), GetLocalViewPlayer().GetOrigin(), player.GetOrigin() ) )
 			return
 	}
 

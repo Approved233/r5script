@@ -220,31 +220,6 @@ void function CryptoTT_OnNetworkRegistration()
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 void function RegisterCLCryptoCallbacks()
 {
 
@@ -261,6 +236,41 @@ void function CryptoTT_Init()
 		RegisterCLCryptoCallbacks()
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -500,6 +510,11 @@ void function EntitiesDidLoad()
 		return
 
 	PrecacheScriptString( CRYPTO_TT_MAP_MOVER_SCRIPTNAME )
+
+
+
+
+
 
 
 

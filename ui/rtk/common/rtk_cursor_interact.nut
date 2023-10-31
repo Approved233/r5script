@@ -137,7 +137,8 @@ bool function RTKCursorInteract_OnKeyCodePressed( rtk_behavior self, int code )
 	array< int > keycodes
 	RTKArray_GetValue(  self.PropGetArray( "keycodes" ), keycodes )
 
-	if( RTKCursorInteract_InputInteractable( self ) && keycodes.contains(code) )
+	
+	if( RTKCursorInteract_InputInteractable( self ) && keycodes.contains(code) || keycodes.len() == 0 )
 	{
 		self.InvokeEvent( "onKeyCodePressed", code )
 		return self.PropGetBool( "absorbOnKeyCodePressed" )

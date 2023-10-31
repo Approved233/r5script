@@ -115,6 +115,37 @@ global struct CommunityFriends
 	array<string> names
 }
 
+global struct CupsMatchStatInformation
+{
+	string statRef
+	int statChange
+	int pointsGained
+}
+
+global struct CupsPlayerMatchSummary
+{
+	int									playerPlacement
+	string								playerLegendName
+	string								playerUID
+	string								playerHardware
+	int 								playerCalculatedScore
+	array< CupsMatchStatInformation > 	statInformation
+}
+
+global struct CupMatchSummary
+{
+	int								squadCalculatedScore
+	array< CupsPlayerMatchSummary >	playerSummaries
+}
+
+global struct CupEntry
+{
+	int cupID
+	string squadID
+	int currSquadPosition
+	int currSquadScore
+	array<CupMatchSummary> matchSummaryData
+}
 
 global struct CommunityUserInfo
 {

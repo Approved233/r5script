@@ -57,6 +57,10 @@ global function JoinMatchAsPartySpectatorFailedAddedToWaitlistDialog
 
 global function JoinMatchAsWaitlistedPartySpectatorDialog
 
+global function IsPlaylistLockedForEvent
+global function HasEventTakeOverActive
+global function GetEventTakeoverPlaylist
+
 #if DEV
 global function DEV_PrintPartyInfo
 global function DEV_PrintUserInfo
@@ -106,6 +110,7 @@ global enum ePlaylistState
 	ACCOUNT_LEVEL_REQUIRED,
 	ROTATION_GROUP_MISMATCH,
 	DEV_PLAYTEST,
+	LOCKED_FOR_EVENT,
 	_COUNT
 }
 
@@ -127,6 +132,7 @@ const table< int, string > playlistStateMap = {
 	[ ePlaylistState.ROTATION_GROUP_MISMATCH ] = "#PLAYLIST_UNAVAILABLE",
 	[ ePlaylistState.ACCOUNT_LEVEL_REQUIRED ] = "#PLAYLIST_STATE_RANKED_LEVEL_REQUIRED",
 	[ ePlaylistState.DEV_PLAYTEST ] = "#PLAYLIST_STATE_PLAYTEST",
+	[ ePlaylistState.LOCKED_FOR_EVENT ] = "#PLAYSTATE_STATE_EVENTLOCKED"
 }
 
 struct BattlePassInfo
@@ -692,6 +698,13 @@ void function UpdateLobbyButtons()
 		UpdateLowerLeftButtonPositions()
 		UpdateFooterOptions()
 	}
+
+
+	if ( AreLanguagePacksSupported() && !IsLanguageInBaseGame() )
+	{
+		CheckAndShowLanguageDLCDialog()
+	}
+
 
 
 
@@ -1386,6 +1399,13 @@ void function UpdateLowerLeftButtonPositions()
 		Hud_SetPinSibling( msgLabel, Hud_GetHudName( file.modeButton ) )
 	}
 
+
+		bool hasPromoTrial = RankedTrials_PlayerHasIncompleteTrial( GetLocalClientPlayer() )
+		bool shouldShowRankedPromoPanel = IsRankedPlaylist( Lobby_GetSelectedPlaylist() ) && hasPromoTrial
+		var rankedPromosPanel = Hud_GetChild( file.panel, "RTKRankedPromosTrials" )
+		Hud_SetVisible( rankedPromosPanel, shouldShowRankedPromoPanel )
+
+
 	if ( shouldShowRankedBadge )
 	{
 		Hud_SetVisible( rankedBadge, shouldShowRankedBadge )
@@ -1409,6 +1429,7 @@ void function UpdateLowerLeftButtonPositions()
 
 		SharedRankedDivisionData data = GetCurrentRankedDivisionFromScoreAndLadderPosition( score, ladderPosition )
 		SharedRankedTierData currentTier = data.tier
+		SharedRankedDivisionData ornull nextData = GetNextRankedDivisionFromScore( score )
 
 
 
@@ -1424,8 +1445,14 @@ void function UpdateLowerLeftButtonPositions()
 
 		SharedRankedDivisionData currentRank = GetCurrentRankedDivisionFromScore ( score )  
 		int entryCost = Ranked_GetCostForEntry ()
+
+		if ( currentRank.tier.isTopEnd )
+		{
+			entryCost = int ( entryCost * GetHighEndLostMultiplier() )
+		}
+
 		int tierFloor = currentRank.tier.scoreMin
-		bool showDemotionProtection = ((score - tierFloor) < entryCost && currentRank.tier.allowsDemotion ) && !isProvisional
+		bool showDemotionProtection = ((score - tierFloor) <= entryCost && currentRank.tier.allowsDemotion ) && !isProvisional
 
 		RuiSetBool ( rui, "showProtection" , showDemotionProtection )
 
@@ -1436,7 +1463,19 @@ void function UpdateLowerLeftButtonPositions()
 
 		RuiSetBool( rui, "inSeason", IsRankedInSeason() )
 		RuiSetBool( rui, "inProvisional", isProvisional )
-		RuiSetFloat( rui, "iconTextScale", currentTier.isLadderOnlyTier ? 0.66 : 0.75 )
+
+			RuiSetBool( rui, "inPromoTrials", hasPromoTrial )
+			RuiSetBool( rui, "showPromoPip", RankedTrials_NextRankHasTrial( data, nextData ) )
+
+			asset promoCapImage = $""
+			if ( nextData != null )
+			{
+				expect SharedRankedDivisionData( nextData )
+				promoCapImage = nextData.tier.promotionalMetallicImage
+			}
+			RuiSetAsset( rui, "promoCapImage", promoCapImage )
+
+		RuiSetFloat( rui, "iconTextScale", currentTier.isLadderOnlyTier ? 0.66 : 1.0 )
 
 
 
@@ -1452,9 +1491,7 @@ void function UpdateLowerLeftButtonPositions()
 		ToolTipData tooltip
 		tooltip.titleText = data.divisionName
 
-		SharedRankedDivisionData ornull nextData = GetNextRankedDivisionFromScore( score )
-
-		if (isProvisional )
+		if ( isProvisional )
 		{
 			tooltip.descText = Localize( "#RANKED_PLACEMENT_TOOLTIP")
 			tooltip.titleText = ""
@@ -1464,6 +1501,21 @@ void function UpdateLowerLeftButtonPositions()
 			RuiSetString( rui, "rankName", Localize( "#RANKED_TIER_PROVISIONAL"))
 
 		}
+
+		else if ( hasPromoTrial )
+		{
+			entity player            	= GetLocalClientPlayer()
+			ItemFlavor currentTrial  	= RankedTrials_GetAssignedTrial( player )
+			int trialsAttempts 		 	= RankedTrials_GetGamesPlayedInTrialsState( player )
+			int maxAttempts 			= RankedTrials_GetGamesAllowedInTrialsState( player, currentTrial )
+			int attemptsRemaining = maxAttempts - trialsAttempts
+
+			RuiSetInt( rui, "score", trialsAttempts )
+			RuiSetInt( rui, "scoreMax", maxAttempts )
+			RuiSetString( rui, "rankName", Localize( "#RANKED_PROMOTION_FINALS") )
+			tooltip.descText += Localize( "#RANKED_PROMOTION_ACTIVE_TOOLTIP", attemptsRemaining )
+		}
+
 		else if ( nextData != null )
 		{
 			expect SharedRankedDivisionData( nextData )
@@ -1472,6 +1524,13 @@ void function UpdateLowerLeftButtonPositions()
 			RuiSetInt( rui, "scoreMax", nextData.scoreMin )
 			RuiSetFloat( rui, "scoreFrac", float( score - data.scoreMin ) / float( nextData.scoreMin - data.scoreMin ) )
 		}
+
+
+		if ( !hasPromoTrial )
+		{
+			tooltip.descText += Localize( "#RANKED_PROMOTION_NOT_ACTIVE_TOOLTIP" )
+		}
+
 
 
 
@@ -1896,6 +1955,37 @@ string function GetSelectedPlaylist()
 }
 
 
+bool function IsPlaylistLockedForEvent( string playlistName )
+{
+	if ( IsRankedPlaylist( playlistName ) )
+		return false
+
+
+	if ( playlistName == PLAYLIST_NEW_PLAYER_ORIENTATION )
+	{
+		
+		if ( HasLocalPlayerCompletedNewPlayerOrientation() )
+			return true
+		else
+			return false
+	}
+
+
+	if ( playlistName == PLAYLIST_TRAINING )
+	{
+		
+		if ( HasLocalPlayerCompletedTraining() )
+			return true
+		else
+			return false
+	}
+
+	if ( playlistName == GetEventTakeoverPlaylist() )
+		return false
+
+	return ( GetPlaylistVarBool( playlistName, "lockedForEvent", true ) )
+}
+
 int function Lobby_GetPlaylistState( string playlistName )
 {
 	if ( playlistName == "" )
@@ -1907,6 +1997,12 @@ int function Lobby_GetPlaylistState( string playlistName )
 			return ePlaylistState.AVAILABLE
 		else
 			return ePlaylistState.LOCKED
+	}
+
+	if ( HasEventTakeOverActive() )
+	{
+		if ( IsPlaylistLockedForEvent( playlistName ) )
+			return ePlaylistState.LOCKED_FOR_EVENT
 	}
 
 
@@ -3429,6 +3525,25 @@ bool function IsLocalPlayerExemptFromTraining()
 	return ( file.isLocalPlayerExemptFromTraining == eTrainingExemptionState.TRUE )
 }
 
+bool function HasEventTakeOverActive()
+{
+	if ( GetCurrentPlaylistVarString( "event_takeover_playlist", "" ) == "" )
+		return false
+
+	int eventTakeoverStartTime = expect int(GetCurrentPlaylistVarTimestamp( "event_takeover_start_timestamp", UNIX_TIME_FALLBACK_2038 ))
+	int eventTakeoverEndTime = expect int(GetCurrentPlaylistVarTimestamp( "event_takeover_end_timestamp", UNIX_TIME_FALLBACK_2038 ))
+	int now = GetUnixTimestamp()
+
+	if ( now >= eventTakeoverStartTime && now < eventTakeoverEndTime )
+		return true
+
+	return false
+}
+
+string function GetEventTakeoverPlaylist()
+{
+	return GetCurrentPlaylistVarString( "event_takeover_playlist", "" )
+}
 
 bool function DoesPlaylistRequireTraining( string playlist )
 {
@@ -3798,6 +3913,12 @@ void function Lobby_UpdatePlayPanelPlaylists()
 
 	if ( isPartyLeader )
 	{
+		if ( HasEventTakeOverActive() )
+		{
+			Lobby_SetSelectedPlaylist( GetEventTakeoverPlaylist() )
+			return
+		}
+
 		if ( GetPartySize() == 1 && !IsLocalPlayerExemptFromTraining() && !HasLocalPlayerCompletedTraining() )
 		{
 			Lobby_SetSelectedPlaylist( PLAYLIST_TRAINING )
@@ -4214,7 +4335,7 @@ void function Ranked_OnUserInfoUpdatedInPanelPlay( string hardware, string id )
 
 bool function Lobby_OpenBattlePassMilestoneDialog( bool forceShow = false )
 {
-	if ( !IsBattlepassMilestoneEnabled() || !GRX_IsInventoryReady() )
+	if ( !IsBattlepassMilestoneEnabled() || !GRX_IsInventoryReady() || !GRX_AreOffersReady() )
 		return false
 
 	ItemFlavor ornull activeBattlePass = GetActiveBattlePass()
@@ -4261,7 +4382,7 @@ bool function Lobby_OpenBattlePassMilestoneDialog( bool forceShow = false )
 		{
 			wait 0.2
 
-			if ( IsLobby() && IsBattlePassEnabled() && GRX_IsInventoryReady() )
+			if ( IsLobby() && IsBattlePassEnabled() && GRX_IsInventoryReady() && GRX_AreOffersReady() )
 				AdvanceMenu( GetMenu( "BattlePassMilestoneMenu" ) )
 		}()
 	}

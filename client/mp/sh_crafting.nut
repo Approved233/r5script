@@ -7,6 +7,7 @@ global function Crafting_IsEnabled
 
 
 
+
 global function Crafting_GetPlayerCraftingMaterials
 global function Crafting_GetLootDataFromIndex
 global function Crafting_GetCraftingDataArray
@@ -14,6 +15,8 @@ global function Crafting_IsItemCurrentlyOwnedByAnyPlayer
 global function Crafting_DoesPlayerOwnItem
 
 global function Crafting_IsPingMapIconEnabled
+
+
 
 
 
@@ -292,6 +295,9 @@ global enum eCraftingRotationStyle
 	SEASONAL,
 
 		PERK,
+
+
+
 
 	
 
@@ -584,6 +590,8 @@ void function Crafting_Init()
 
 
 
+
+
 		AddCallback_GameStateEnter( eGameState.WaitingForPlayers, OnWaitingForPlayers_Client )
 		AddCallback_GameStateEnter( eGameState.Playing, OnGameStartedPlaying_Client )
 		
@@ -645,8 +653,14 @@ void function Crafting_RegisterNetworking()
 
 	file.isEnabled = true
 
-	RegisterNetworkedVariable( "craftingMaterials", SNDC_PLAYER_GLOBAL, SNVT_BIG_INT, 0 )
-	RegisterNetworkedVariable( "Crafting_NumHarvesters", SNDC_GLOBAL, SNVT_INT, 0 )
+
+
+
+	{
+		RegisterNetworkedVariable( "craftingMaterials", SNDC_PLAYER_GLOBAL, SNVT_BIG_INT, 0 )
+		RegisterNetworkedVariable( "Crafting_NumHarvesters", SNDC_GLOBAL, SNVT_INT, 0 )
+	}
+
 	RegisterNetworkedVariable( "Crafting_NumWorkbenches", SNDC_GLOBAL, SNVT_INT, 0 )
 	RegisterNetworkedVariable( "Crafting_StartTime", SNDC_GLOBAL, SNVT_TIME, -1 )
 
@@ -670,7 +684,7 @@ void function Crafting_RegisterNetworking()
 	Remote_RegisterClientFunction( "ServerCallback_Crafting_Notify_Player_On_Obit", "entity", "int", 0, eCrafting_Obit_NotifyType.COUNT_, "int", 0, 256, "int", 0, 128, "int", -1, MAX_ARMOR_EVO_TIER + 1 )
 	Remote_RegisterServerFunction( "ClientCallback_Crafting_Notify_Teammates_On_Obit", 		  "int", 0, eCrafting_Obit_NotifyType.COUNT_, "int", 0, 256, "int", 0, 128, "int", -1, MAX_ARMOR_EVO_TIER + 1 )
 
-	Remote_RegisterServerFunction( FUNCNAME_PingCrafterFromMap, "entity" )
+	Remote_RegisterServerFunction( FUNCNAME_PingCrafterFromMap, "typed_entity", "prop_dynamic" )
 
 
 
@@ -695,6 +709,11 @@ bool function Crafting_PlaylistVar_IsEnabled()
 {
 	return( GetCurrentPlaylistVarBool( "crafting_enabled", true ))
 }
+
+
+
+
+
 
 
 
@@ -877,6 +896,26 @@ void function RegisterCraftingDistribution()
 	}
 }
 
+array<string> function Crafting_GetCraftingItemsByCategoryName( string categoryToCheck )
+{
+	array<string> validItemsInBundle
+
+	for ( int i = 0; i < file.craftingDataArray.len(); i++ )
+	{
+		CraftingCategory group = file.craftingDataArray[i]
+
+		if( group.category != categoryToCheck )
+			continue
+
+		if ( group.exclusivityStyle == eCraftingExclusivityStyle.RARITY || group.exclusivityStyle == eCraftingExclusivityStyle.FLOOR )
+		{
+			validItemsInBundle.extend( GenerateCraftingItemsInCategory( null, group ) )
+		}
+	}
+
+	return validItemsInBundle
+}
+
 
 void function HandleCraftingExclusivity()
 {
@@ -1018,6 +1057,12 @@ void function Crafting_OnGameStatePlaying_Thread()
 
 	FlagSet( "CraftingInitialized" )
 }
+
+
+
+
+
+
 
 
 
@@ -1753,6 +1798,12 @@ void function TryCloseCraftingMenuFromDamage( float damage, vector damageOrigin,
 	if ( GetConVarBool( "player_setting_damage_closes_deathbox_menu" ) )
 		TryCloseCraftingMenu()
 }
+
+
+
+
+
+
 
 
 
@@ -2795,9 +2846,18 @@ void function Crafting_Obit_Notify_Single( entity notifyingPlayer, int notifyTyp
 
 
 
+
+
+
+
+
 int function Crafting_GetPlayerCraftingMaterials( entity player )
 {
-	if( !IsValid( player ) )
+
+
+
+
+	if( !IsValid( player ) || !Crafting_IsEnabled() )
 		return 0
 
 	int playerMaterials = ( Crafting_PlaylistVar_IsEnabled() && file.isNetworkingRegistered ) ? player.GetPlayerNetInt( "craftingMaterials" ) : 0
@@ -4491,6 +4551,26 @@ ExtendedUseSettings function WorkbenchExtendedUseSettings( entity ent, entity pl
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 int function EnsureValidEvoTier( int evoTier )
 {
 
@@ -4552,7 +4632,7 @@ array< string > function GenerateCraftingItemsInCategory( entity player, Craftin
 
 	if ( craftingRotation == eCraftingRotationStyle.PERK )
 	{
-		if ( categoryToCheck.category == "banner" && ( Perk_CanBuyBanners( player ) || Perks_DoesPlayerHavePerk( player, ePerkIndex.BANNER_CRAFTING ) ) )
+		if ( categoryToCheck.category == "banner" && ( Perk_CanBuyBanners( player ) && ( GetRespawnStyle() == eRespawnStyle.RESPAWN_CHAMBERS ) || Perks_DoesPlayerHavePerk( player, ePerkIndex.BANNER_CRAFTING ) ) )
 		{
 			CraftingBundle bundle = GetBundleForCategory( categoryToCheck )
 			return bundle.itemsInBundle
@@ -4562,6 +4642,21 @@ array< string > function GenerateCraftingItemsInCategory( entity player, Craftin
 			return []
 		}
 	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 	if ( craftingRotation == eCraftingRotationStyle.LOADOUT_BASED )
@@ -4683,6 +4778,11 @@ bool function CheckCraftingRotation( int craftingRotation )
 
 	return false
 }
+
+
+
+
+
 
 
 
@@ -5148,6 +5248,15 @@ void function OnWaitingForPlayers_Client()
 	
 	if ( file.gameStartRuiCreated )
 		return
+
+
+	if ( IsShadowArmyGamemodeCineVersion() )
+	{
+		thread GameStart_CleanupThread()
+		return
+	}
+
+
 
 
 
@@ -5913,7 +6022,7 @@ void function Crafting_PopulateItemRuiAtIndex( var rui, int index )
 		}
 	}
 
-		else if ( validItemList.len() != 0 && item.category == "banner" )
+		else if ( validItemList.len() != 0 && item.category == "banner" && ( GetRespawnStyle() == eRespawnStyle.RESPAWN_CHAMBERS ))
 		{
 			cost = item.itemToCostTable[validItemList[0]]
 			RuiSetImage( rui, "icon", $"rui/hud/gametype_icons/survival/perk_craftable_banner_double_generic" )
@@ -6462,6 +6571,8 @@ bool function PingCrafterUnderAim( entity crafter )
 
 	return true
 }
+
+
 
 
 

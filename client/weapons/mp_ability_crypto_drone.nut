@@ -793,6 +793,14 @@ void function AttemptDroneRecall( entity player )
 {
 	if ( !TryCharacterButtonCommonReadyChecks( player ) )
 		return
+
+	
+	if ( IsControllerModeActive() )
+	{
+		if ( TryOnscreenPromptFunction( player, "quickchat" ) )
+			return
+	}
+
 	Remote_ServerCallFunction( "ClientCallback_AttemptDroneRecall" )
 }
 
@@ -1012,8 +1020,6 @@ void function CryptoDrone_WeaponInputThink( entity player, entity weapon )
 			weapon.RemoveMod( "crypto_drone_access" )
 	}
 }
-
-
 
 
 
@@ -2753,12 +2759,10 @@ void function TempUpdateRuiDistance( entity player )
 				{
 					targetString = "#CAMERA_INTERACT_DOOR"
 				}
-
 				else if ( trace.hitEnt.GetTargetName() == PASSIVE_REINFORCE_REBUILT_DOOR_SCRIPT_NAME && IsReinforced( trace.hitEnt ) && IsFriendlyTeam( activeCamera.GetTeam(), trace.hitEnt.GetTeam() ) )
 				{
 					targetString = "#ABL_REINFORCE_BREAK_REBUILT"
 				}
-
 
 				else if ( (IsVaultPanel( trace.hitEnt ) || IsVaultPanel( parentEnt )) )
 				{
@@ -2890,10 +2894,6 @@ bool function PlayerCanUseCamera( entity ownerPlayer, bool needsValidCamera )
 
 	return true
 }
-
-
-
-
 
 
 
@@ -3734,10 +3734,8 @@ bool function DroneCanOpenDoor( entity drone, entity door )
 	if ( IsVaultDoor( door ) )
 		return false
 
-
 	if( IsReinforced( door ) && !IsFriendlyTeam( drone.GetTeam(), door.GetTeam() ) )
 		return false
-
 
 	return !IsDoorLocked( door )
 }

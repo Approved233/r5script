@@ -210,9 +210,12 @@ bool function Newness_IsItemFlavorNew( ItemFlavor flavor )
 void function Newness_IfNecessaryMarkItemFlavorAsNoLongerNewAndInformServer( ItemFlavor flavor )
 {
 	Assert( IsItemFlavorStructValid( flavor.guid, eValidation.ASSERT ) )
+	Assert( Remote_ServerCallFunctionAllowed() )
 
-	
 	if ( !(flavor in fileLevel.newItemFlavorSet) )
+		return
+
+	if ( !Remote_ServerCallFunctionAllowed() ) 
 		return
 
 	delete fileLevel.newItemFlavorSet[flavor]
@@ -230,11 +233,8 @@ void function Newness_IfNecessaryMarkItemFlavorAsNoLongerNewAndInformServer( Ite
 		}
 	}
 
-	if ( IsValid( GetLocalClientPlayer() ) )
-	{
-		SettingsAssetGUID guid = ItemFlavor_GetGUID( flavor )
-		Remote_ServerCallFunction( "ClientCallback_newness_clear", guid )
-	}
+	SettingsAssetGUID guid = ItemFlavor_GetGUID( flavor )
+	Remote_ServerCallFunction( "ClientCallback_newness_clear", guid )
 }
 
 array<ItemFlavor> function Newness_GetNewItemFlavorSet()

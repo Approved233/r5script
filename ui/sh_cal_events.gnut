@@ -82,6 +82,9 @@ global int UNIX_TIME_FALLBACK_2038 = 2145916800
 
 
 
+
+
+
 struct FileStruct_LifetimeLevel
 {
 	table<ItemFlavor, ItemFlavor> seasonBattlePassMap
@@ -435,12 +438,21 @@ bool function CalEvent_HasFinished( ItemFlavor event, int t )
 
 
 
-
 bool function CalEvent_IsActive( ItemFlavor event, int t )
 {
 	Assert( IsItemFlavorRegistrationFinished() )
 	int finishUnixTime = CalEvent_GetFinishUnixTime( event )
-	return CalEvent_HasStarted( event, t ) && (t < finishUnixTime)
+
+	bool hasStarted = CalEvent_HasStarted( event, t )
+	bool hasNotFinished = ( t < finishUnixTime )
+
+
+
+
+
+
+
+	return hasStarted && hasNotFinished
 }
 
 

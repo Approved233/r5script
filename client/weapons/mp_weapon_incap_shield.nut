@@ -430,8 +430,6 @@ void function OnWeaponActivate_incap_shield( entity weapon )
 
 
 
-
-
 }
 
 void function OnWeaponDeactivate_incap_shield( entity weapon )

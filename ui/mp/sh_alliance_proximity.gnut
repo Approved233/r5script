@@ -60,6 +60,11 @@ global function AddCallback_AllianceProximity_OnTeamPutIntoAlliance
 
 
 
+
+
+
+
+
 global function AllianceProximity_GetAllianceColor
 global function AllianceProximity_GetAllianceColorFromTeam
 
@@ -75,6 +80,11 @@ struct {
 	table< int, int > teamToAllianceTable
 	table< int, array< int > > allianceToTeamsTable
 	array<void functionref( int, int )> callbacks_AllianceProximity_OnTeamPutIntoAlliance
+
+
+
+
+
 
 
 
@@ -105,6 +115,15 @@ void function AllianceProximity_Init()
 	
 	if ( !AllianceProximity_IsUsingAlliances() )
 		return
+
+	
+	
+	
+	
+	
+	
+	
+	
 
 	file.isMidMatchAllianceSwitchEnabled = GetCurrentPlaylistVarBool( "allow_mid_match_alliance_switching", false )
 	Remote_RegisterClientFunction( "AllianceProximity_ServerCallback_SetTeamToAllianceOnClient", "int", TEAM_MULTITEAM_FIRST, TEAM_MULTITEAM_LAST, "int", ALLIANCE_NONE, file.maxAlliances + 1 )
@@ -164,6 +183,52 @@ bool function AllianceProximity_IsUsingAllianceProximityDistanceChecks()
 {
 	return file.maxDistAllianceProximity > 0.0 && AllianceProximity_IsUsingAllianceProximity()
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 bool function AllianceProximity_IsTeamInAnAlliance( int team )
@@ -344,6 +409,58 @@ float function AllianceProximity_GetMaxDistForProximity()
 {
 	return file.maxDistAllianceProximity
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -786,6 +903,17 @@ void function AllianceProximity_SetTeamToAlliance_Internal( int team, int allian
 		func( team, alliance )
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
 
 
 

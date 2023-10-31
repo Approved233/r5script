@@ -727,10 +727,18 @@ void function Ranked_OnSpectateTargetChanged( entity spectatingPlayer, entity pr
 
 
 
-void function PopulateRuiWithRankedProvisionalBadgeDetails( var rui, int numMatchesCompleted, int rankScore, int ladderPosition,  bool isNested = false)
+
+
+
+
+void function PopulateRuiWithRankedProvisionalBadgeDetails( var rui, int numMatchesCompleted, int rankScore, int ladderPosition, bool isNested = false, int maxPips = 10, bool useDynamicPips = false, bool isPromotional = false )
 {
 	
 	RuiSetInt( rui, "startPip", 0 )
+	RuiSetInt( rui, "maxPips", maxPips )
+	RuiSetBool( rui, "useDynamicPips", useDynamicPips )
+	RuiSetBool( rui, "isPromotional", isPromotional )
+
 	RuiSetInt( rui, "placementProgress", numMatchesCompleted )
 	for ( int i = 0; i < numMatchesCompleted; i++ )
 		RuiSetBool( rui, format("wonGame%d", i ) , true )
@@ -871,6 +879,19 @@ var function CreateNestedRankedRui( var pRui, SharedRankedTierData tier, string 
 		PopulateRuiWithRankedProvisionalBadgeDetails( rui, numMatchesCompleted, score, ladderPosition, true )
 		return rui
 	}
+
+	else if ( RankedTrials_PlayerHasIncompleteTrial( uiPlayer ) )
+	{
+		var rui = RuiCreateNested( pRui, varName, RANKED_PLACEMENT_BADGE )
+
+		ItemFlavor currentTrial = RankedTrials_GetAssignedTrial( uiPlayer )
+		int numMatchesCompleted = RankedTrials_GetGamesPlayedInTrialsState( uiPlayer )
+		int maxMatches = RankedTrials_GetGamesAllowedInTrialsState( uiPlayer, currentTrial )
+
+		PopulateRuiWithRankedProvisionalBadgeDetails( rui, numMatchesCompleted, score, ladderPosition, true, maxMatches, true, true )
+		return rui
+	}
+
 	else
 	{
 		var rui = RuiCreateNested( pRui, varName, tier.iconRuiAsset )
@@ -896,7 +917,12 @@ void function SharedRanked_FillInRuiEmblemText( var rui, SharedRankedDivisionDat
 {
 	
 	entity uiPlayer = GetLocalClientPlayer()
-	if ( !Ranked_HasCompletedProvisionalMatches( uiPlayer ) )
+	bool useProvisionalFix = !Ranked_HasCompletedProvisionalMatches( uiPlayer )
+
+		useProvisionalFix = !Ranked_HasCompletedProvisionalMatches( uiPlayer ) || RankedTrials_PlayerHasIncompleteTrial( uiPlayer )
+
+
+	if ( useProvisionalFix )
 	{
 		RuiSetInt( rui, "emblemDisplayMode" + ruiArgumentPostFix, emblemDisplayMode.NONE )
 		RuiSetString( rui, "emblemText" + ruiArgumentPostFix, "" )

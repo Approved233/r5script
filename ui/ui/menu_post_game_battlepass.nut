@@ -559,6 +559,10 @@ void function UpdateChallengeProgressbutton( entity player, var button, Challeng
 
 	RuiSetGameTime( rui, "flareRewardStartTime", RUI_BADGAMETIME )
 
+
+	RuiSetBool( rui, "showMythicBoostIndicator",  challengeData.progressBonus != 0 )
+
+
 	int gameMode = Challenge_GetGameMode( challengeFlav, isAlt )
 	RuiSetString( rui, "challengeModeTag", Challenge_GetGameModeTag( gameMode ) )
 	RuiSetFloat3( rui, "challengeModeTagColor", Challenge_GetGameModeTagColor( gameMode ) )
@@ -584,7 +588,11 @@ void function UpdateChallengeProgressbutton( entity player, var button, Challeng
 void function WaitToUpdateUntilReady( entity player )
 {
 	
-	bool showRankedSummary = GetPersistentVarAsInt( "showRankedSummary" ) != 0
+
+	bool showRankedSummary = Ranked_GetXProgMergedPersistenceData( GetLocalClientPlayer(), RANKED_SHOW_RANKED_SUMMARY_PERSISTENCE_VAR_NAME ) != 0
+
+
+
 	if ( showRankedSummary )
 	{
 		WaitFrame() 
@@ -765,7 +773,7 @@ void function OnContinue_Activate( var button )
 
 void function UpdateProgressionModifiersElements( int bonusStars )
 {
-	BoostTable boosts = Boost_GetPreviousActiveBoosts( GetLocalClientPlayer() )
+	BoostTable boosts = Boost_GetPreviousAppliedBoosts( GetLocalClientPlayer() )
 	Hud_ClearToolTipData( file.progressionModifiersButton )
 	ToolTipData toolTipData
 	toolTipData.titleText = Localize( "#PROGRESSION_MODIFIERS_BATTLEPASS" )

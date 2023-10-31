@@ -443,6 +443,15 @@ void function AddRemoveSonarOverviewScanRUI( entity highlightEnt, int oldContext
 
 
 
+
+
+
+
+
+
+
+
+
 const float AR_EFFECT_SIZE = 192.0 
 const float AR_EFFECT_SIZE_CONE = 80.0
 

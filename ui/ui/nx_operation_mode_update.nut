@@ -116,6 +116,11 @@ void function UICodeCallback_OperationModeChanged()
 		}
 	}
 
+#if PC_PROG_NX_UI
+	foreach ( func in uiGlobal.nxOperationModeChangedCallbacks )
+		func()
+#endif
+
 	printt( "UIScript: Switch Completed" )
 }
 

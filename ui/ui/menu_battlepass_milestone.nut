@@ -58,6 +58,8 @@ void function InitBattlepassMilestoneMenu( var newMenuArg )
 	AddButtonEventHandler( file.bundleToggleButton, UIE_CLICK, BundleButton_OnClick )
 	AddButtonEventHandler( file.premiumToggleButton, UIE_GET_FOCUS, PremiumButton_OnFocused )
 	AddButtonEventHandler( file.premiumToggleButton, UIE_CLICK, PremiumButton_OnClick )
+
+	RegisterSignal( "ConfirmPurchaseClosed" );
 }
 
 void function BattlepassMilestoneMenu_OnOpen()
@@ -65,7 +67,7 @@ void function BattlepassMilestoneMenu_OnOpen()
 	Lobby_AdjustScreenFrameToMaxSize( Hud_GetChild( file.menu, "ScreenFrame" ), true )
 
 	ItemFlavor ornull activeBattlePass = GetActiveBattlePass()
-	if ( activeBattlePass == null || !GRX_IsInventoryReady() )
+	if ( activeBattlePass == null || !GRX_IsInventoryReady() || !GRX_AreOffersReady() )
 		return
 
 	expect ItemFlavor( activeBattlePass )
@@ -341,7 +343,7 @@ void function BattlepassMilestone_UpdatePurchaseButtons()
 	entity player = GetLocalClientPlayer()
 	ItemFlavor ornull activeBattlePass = GetPlayerActiveBattlePass( ToEHI( player ) )
 
-	if ( activeBattlePass == null || !GRX_IsInventoryReady() )
+	if ( activeBattlePass == null || !GRX_IsInventoryReady() || !GRX_AreOffersReady() )
 	{
 		Hud_SetEnabled( file.purchaseButton, false )
 		Hud_SetVisible( file.purchaseButton, false )
@@ -400,10 +402,10 @@ void function BattlepassMilestone_UpdatePurchaseButtons()
 	bool isOfferPurchasable = DoesPlayerOwnBattlePass( player, activeBattlePass )
 
 
-
-
-
-
+	if ( GetConVarBool( "mtx_useIneligibilityCode" ) && isOfferPurchasable && purchaseOffer != null )
+	{
+		isOfferPurchasable = GRXOffer_IsEligibleForPurchase( expect GRXScriptOffer( purchaseOffer ) )
+	}
 
 
 	Hud_SetLocked( file.purchaseButton, isOfferPurchasable )
@@ -414,8 +416,14 @@ void function PremiumButton_OnClick( var button )
 	if ( GetActiveMenu() != file.menu )
 		return
 
-	if ( !file.isShowingBundle || !GRX_IsInventoryReady() )
+	if ( !file.isShowingBundle || !GRX_IsInventoryReady() || !GRX_AreOffersReady() )
 		return
+
+	if ( file.hasPurchasedBattlepass )
+	{
+		EmitUISound( "menu_deny" )
+		return
+	}
 
 	ClearAwardsTooltips()
 	file.isShowingBundle = false
@@ -433,10 +441,10 @@ void function BundleButton_OnClick( var button )
 	if ( GetActiveMenu() != file.menu )
 		return
 
-	if ( file.isShowingBundle || !GRX_IsInventoryReady() )
+	if ( file.isShowingBundle || !GRX_IsInventoryReady() || !GRX_AreOffersReady() )
 		return
 
-	if ( file.isBundleDisabled )
+	if ( file.isBundleDisabled || file.hasPurchasedBattlepass )
 	{
 		EmitUISound( "menu_deny" )
 		return
@@ -476,7 +484,7 @@ void function PurchaseButton_OnClick( var button )
 	}
 
 	ItemFlavor ornull activeBattlePass = GetPlayerActiveBattlePass( ToEHI( GetLocalClientPlayer() ) )
-	if ( activeBattlePass == null || !GRX_IsInventoryReady() )
+	if ( activeBattlePass == null || !GRX_IsInventoryReady() || !GRX_AreOffersReady() )
 		return
 
 	expect ItemFlavor( activeBattlePass )
@@ -506,13 +514,23 @@ void function OnBattlePassPurchaseResults( bool wasSuccessful )
 	if ( wasSuccessful )
 	{
 		file.hasPurchasedBattlepass = true
-		Hud_SetLocked( file.purchaseButton, file.hasPurchasedBattlepass )
-	}
 
-	PIN_BattlepassPurchase(
-		GetActiveMenuName(),
-		file.isShowingBundle
-	)
+		Hud_SetLocked( file.purchaseButton, file.hasPurchasedBattlepass )
+
+		PIN_BattlepassPurchase(
+			GetActiveMenuName(),
+			file.isShowingBundle
+		)
+
+		thread JumpToBattlePassMenuThread()
+	}
+}
+
+void function JumpToBattlePassMenuThread( )
+{
+	WaitSignal( uiGlobal.signalDummy, "ConfirmPurchaseClosed" );
+
+	JumpToSeasonTab( "PassPanel" )
 }
 
 array<string> function GetRewardStringsForPIN( )

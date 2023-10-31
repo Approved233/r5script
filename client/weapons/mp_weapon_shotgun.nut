@@ -21,11 +21,19 @@ void function OnWeaponActivate_weapon_shotgun( entity weapon )
 	OnWeaponActivate_weapon_basic_bolt( weapon )
 
 	UpdateDoubleTapShotgunBoltPairing( weapon )
+
+
+
+
 }
 
 void function OnWeaponDeactivate_weapon_shotgun( entity weapon )
 {
 	UpdateDoubleTapShotgunBoltPairing( weapon )
+
+
+
+
 }
 
 void function UpdateDoubleTapShotgunBoltPairing( entity weapon )

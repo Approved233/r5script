@@ -132,4 +132,8 @@ void function OnWeaponActivate_weapon_lstar( entity weapon )
 
 
 
+
+
+
+
 }

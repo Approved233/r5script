@@ -145,6 +145,8 @@ void function FreelanceNPCs_Init()
 	AddCreateCallback( "npc_spectre", OnNPCCreatedClient )
 
 
+	PrecacheSkinName( "ShadowSqaud" )
+
 
 
 

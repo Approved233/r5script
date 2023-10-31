@@ -132,7 +132,7 @@ void function StoreInspectMenu_OnOpen()
 	AddCallbackAndCallNow_OnGRXInventoryStateChanged( StoreInspectMenu_OnGRXUpdated )
 	AddCallback_OnGRXOffersRefreshed( StoreInspectMenu_OnGRXUpdated )
 
-
+	if ( !GetConVarBool( "mtx_useOffersV2" ) )
 
 	{
 		AddCallback_OnGRXBundlesRefreshed( StoreInspectMenu_OnGRXBundlesUpdated )
@@ -155,7 +155,7 @@ void function StoreInspectMenu_OnShow()
 	StoreInspectMenu_OnUpdate()
 	StoreInspectMenu_OnGRXUpdated()
 
-
+		if ( !GetConVarBool( "mtx_useOffersV2" ) )
 
 		{
 			StoreInspectMenu_OnGRXBundlesUpdated()
@@ -173,7 +173,7 @@ void function StoreInspectMenu_OnClose()
 	RemoveCallback_OnGRXOffersRefreshed( StoreInspectMenu_OnGRXUpdated )
 
 
-
+	if ( !GetConVarBool( "mtx_useOffersV2" ) )
 
 	{
 		RemoveCallback_OnGRXBundlesRefreshed( StoreInspectMenu_OnGRXBundlesUpdated )
@@ -200,11 +200,11 @@ void function StoreInspectMenu_OnUpdate()
 void function StoreInspectMenu_UpdatePrices( StoreInspectOfferData offerData ,GRXScriptOffer storeOffer, bool isBundlesRefresh, StoreInspectUIData uiData )
 {
 
-
-
-
-
-
+	if ( !GetConVarBool( "mtx_useOffersV2" ) )
+	{
+		if ( isBundlesRefresh && storeOffer.offerType != GRX_OFFERTYPE_BUNDLE )
+			return
+	}
 
 
 	bool isMarketplaceBundle = storeOffer.offerType == GRX_OFFERTYPE_BUNDLE
@@ -217,12 +217,12 @@ void function StoreInspectMenu_UpdatePrices( StoreInspectOfferData offerData ,GR
 	int purchaseCount = -1
 
 
-
-
-
-
-
-
+	if ( GetConVarBool( "mtx_useOffersV2" ) )
+	{
+		Assert( storeOffer.purchaseCount >= 0, "Store offer " + storeOffer.offerAlias +
+		" is missing a purchase count. When OffersV2 is enabled, all offers must have a purchase count." )
+		purchaseCount = storeOffer.purchaseCount;
+	}
 
 
 	if ( purchaseCount == -1 )
@@ -302,7 +302,7 @@ void function StoreInspectMenu_UpdatePrices( StoreInspectOfferData offerData ,GR
 	offerData.isPurchasable = !isOfferFullyClaimed && !hasBundleRestrictions && !isPurchaseLimitReached
 						      && storeOffer.isAvailable && !isOverActiveBPLevelLimit
 
-
+							  && GRXOffer_IsEligibleForPurchase( storeOffer )
 
 
 
@@ -355,8 +355,8 @@ void function StoreInspectMenu_UpdatePrices( StoreInspectOfferData offerData ,GR
 	}
 	else if ( isPurchaseLimitReached )
 	{
-		offerData.purchaseText = Localize( "#UNAVAILABLE" )
-		offerData.purchaseDescText = Localize( "#PURCHASE_LIMIT_REACHED" )
+		offerData.purchaseText = Localize( "#PURCHASE_LIMIT_REACHED" )
+		offerData.purchaseDescText = Localize( "#STORE_AVAILABLE_N_N", offerData.purchaseLimit - storeOffer.purchaseCount, offerData.purchaseLimit )
 	}
 	else if ( isOverActiveBPLevelLimit )
 	{
@@ -364,64 +364,64 @@ void function StoreInspectMenu_UpdatePrices( StoreInspectOfferData offerData ,GR
 		offerData.purchaseDescText = Localize( "#BUNDLE_OVER_ACTIVE_BP_LEVEL_LIMIT" )
 	}
 
+	else if ( GetConVarBool( "mtx_useOffersV2" ) && !GRXOffer_IsEligibleForPurchase( storeOffer ) )
+	{
+		
 
 
+		bool usingIneligibilityCode = GetConVarBool( "mtx_useIneligibilityCode" )
+		bool ineligibilityHandled = usingIneligibilityCode
 
+		if ( usingIneligibilityCode )
+		{
+			Assert( storeOffer.ineligibilityCode != eIneligibilityCode.ELIGIBLE )
+			switch ( storeOffer.ineligibilityCode )
+			{
+				case eIneligibilityCode.PURCHASE_LIMIT:
+				{
+					offerData.purchaseText = Localize( "#PURCHASE_LIMIT_REACHED" )
+					offerData.purchaseDescText = Localize( "#STORE_LIMIT_N_N", offerData.purchaseLimit - storeOffer.purchaseCount, offerData.purchaseLimit )
+					break
+				}
 
+				case eIneligibilityCode.CONTENTS_NOT_GRANTABLE:
+				{
+					offerData.purchaseText = Localize( "#LOCKED" )
+					offerData.purchaseDescText = ""
+					break
+				}
 
+				case eIneligibilityCode.BUNDLE_ITEMS_OWNED:
+				{
+					offerData.purchaseText = Localize( "#OWNED" )
+					offerData.purchaseDescText = Localize( "#BUNDLE_OWNED_DESC" )
+					break
+				}
 
+				case eIneligibilityCode.PURCHASE_CONDITIONS:
+				case eIneligibilityCode.UNKNOWN:
+				{
+					
+					ineligibilityHandled = false
+					break
+				}
 
+				default:
+				{
+					Assert( false, "Unhandled ineligibility code: " + storeOffer.ineligibilityCode )
+					ineligibilityHandled = false
+					break
+				}
+			}
+		}
 
+		if ( !ineligibilityHandled )
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+		{
+			offerData.purchaseText = Localize( "#UNAVAILABLE" )
+			offerData.purchaseDescText = ""
+		}
+	}
 
 
 	if ( isGiftable )
@@ -472,9 +472,15 @@ void function StoreInspectMenu_UpdatePrices( StoreInspectOfferData offerData ,GR
 			offerData.giftTooltipTitleText = Localize( "#ENABLE_TWO_FACTOR" )
 			offerData.giftTooltipDescText = Localize( "#TWO_FACTOR_NEEDED_DETAILS" )
 		}
-		HudElem_SetRuiArg( uiData.discountInfo, "isBundle", isBundle )
+
 		HudElem_SetRuiArg( uiData.discountInfo, "canAfford", offerData.canAfford )
 	}
+
+	if ( offerData.purchaseLimit > 0 )
+	{
+		offerData.purchaseDescText = Localize( "#STORE_AVAILABLE_N_N", offerData.purchaseLimit - storeOffer.purchaseCount, offerData.purchaseLimit )
+	}
+
 	
 	
 }
@@ -527,7 +533,7 @@ void function StoreInspectMenu_UpdatePurchaseButton( GRXScriptOffer storeOffer, 
 			{
 				offerData.isPurchasable =	currentMaxEventPackPurchaseCount > 0 && !isOfferFullyClaimed
 
-
+											&& GRXOffer_IsEligibleForPurchase( storeOffer )
 
 			}
 			else
@@ -546,10 +552,10 @@ void function StoreInspectMenu_UpdatePurchaseButton( GRXScriptOffer storeOffer, 
 											&& ( HeirloomEvent_GetCurrentRemainingItemCount( activeCollectionEvent, GetLocalClientPlayer() ) - ownedPackCount ) >= 1
 											&& storeOffer.isAvailable
 
-
+											&& GRXOffer_IsEligibleForPurchase( storeOffer )
 
 			}
-			if ( !offerData.isPurchasable )
+			if ( !offerData.isPurchasable && !offerData.isOwnedItemEquippable )
 			{
 				ToolTipData toolTipData
 				toolTipData.titleText = Localize( "#CANNOT_PURCHASE" ).toupper()
@@ -560,9 +566,28 @@ void function StoreInspectMenu_UpdatePurchaseButton( GRXScriptOffer storeOffer, 
 			}
 		}
 	}
-	HudElem_SetRuiArg( uiData.discountInfo, "discountedPrice", isGiftable ? Localize( offerData.displayedPriceStr ) : "" )
+
+	HudElem_SetRuiArg( uiData.discountInfo, "discountedPrice", Localize( offerData.displayedPriceStr ) )
 	HudElem_SetRuiArg( uiData.discountInfo, "isGiftable", isGiftable )
+
 	isExtraInfoVisible = ( offerData.isPurchasable && offerData.discountPct > 0.0 ) || isGiftable
+
+
+	if ( GetConVarBool( "mtx_useOffersV2" ) )
+	{
+		bool hasPurchaseLimit = offerData.purchaseLimit > 0
+		HudElem_SetRuiArg( uiData.discountInfo, "hasPurchaseLimit", hasPurchaseLimit )
+
+		if ( !isExtraInfoVisible )
+		{
+			isExtraInfoVisible = hasPurchaseLimit
+		}
+	}
+	else
+	{
+		HudElem_SetRuiArg( uiData.discountInfo, "hasPurchaseLimit", false )
+	}
+
 
 	Hud_SetVisible( uiData.discountInfo, isExtraInfoVisible )
 	HudElem_SetRuiArg( uiData.purchaseButton, "buttonText", offerData.purchaseText )
@@ -735,7 +760,7 @@ void function StoreInspectMenu_OnGRXUpdated()
 	foreach ( ItemFlavor flav in storeOffer.output.flavors )
 		s_inspectOffers.itemFlavors.append( flav )
 
-	s_inspectOffers.purchaseLimit = ( "purchaselimit" in storeOffer.attributes ? storeOffer.attributes["purchaselimit"].tointeger() : -1 )
+	s_inspectOffers.purchaseLimit = ( "purchaselimit" in storeOffer.attributes && GRXOffer_ContainsStackablesOnly( storeOffer ) ) ? storeOffer.attributes["purchaselimit"].tointeger() : -1
 
 	s_inspectOffers.exclusiveItems.clear()
 	string exclusiveItemsAttr = ( "offerexclusives" in storeOffer.attributes ? storeOffer.attributes["offerexclusives"] : "" )
@@ -789,23 +814,7 @@ void function StoreInspectMenu_OnGRXUpdated()
 	
 	OnStoreGridItemHover( null, null, 0 )
 	GridPanel_Refresh( file.itemGrid )
-	bool hasPurchaseLimit = s_inspectOffers.purchaseLimit > 0 && !storeOffer.isGiftable
 
-	if ( hasPurchaseLimit )
-	{
-
-
-
-
-
-
-
-		{
-			HudElem_SetRuiArg( file.purchaseLimit, "limitText", Localize( "#STORE_LIMIT_N", s_inspectOffers.purchaseLimit ) )
-		}
-	}
-
-	Hud_SetVisible( file.purchaseLimit, hasPurchaseLimit )
 	UpdateFooterOptions()
 }
 
@@ -1060,6 +1069,7 @@ bool function IsOwnedItemOfferEquippable( GRXScriptOffer offer )
 void function StoreInspectMenu_EquipOwnedItem( ItemFlavor itemFlavToEquip, StoreInspectUIData uiData )
 {
 	int itemType = ItemFlavor_GetType( itemFlavToEquip )
+	int itemRarity = ItemFlavor_HasQuality( itemFlavToEquip ) ? ItemFlavor_GetQuality( itemFlavToEquip ) : 0
 	array<LoadoutEntry> entries = EquipButton_GetItemLoadoutEntries( itemFlavToEquip, false )
 
 	EmitUISound( "UI_Menu_Equip_Generic" )
@@ -1082,6 +1092,7 @@ void function StoreInspectMenu_EquipOwnedItem( ItemFlavor itemFlavToEquip, Store
 	var rui = Hud_GetRui( uiData.purchaseButton )
 	RuiSetString( rui, "buttonText", "#EQUIPPED_LOOT_REWARD" )
 	RuiSetString( rui, "buttonDescText", Localize( "#CURRENTLY_EQUIPPED_ITEM", Localize( ItemFlavor_GetLongName( itemFlavToEquip ) ) ) )
+	RuiSetInt( rui, "buttonDescRarity", itemRarity )
 	Hud_SetLocked( uiData.purchaseButton, true )
 	bool isMythic = ItemFlavor_GetQuality( itemFlavToEquip ) == eRarityTier.MYTHIC
 	if ( isMythic )
@@ -1089,6 +1100,7 @@ void function StoreInspectMenu_EquipOwnedItem( ItemFlavor itemFlavToEquip, Store
 	var ruiSmall = Hud_GetRui( uiData.giftablePurchaseButton )
 	RuiSetString( ruiSmall, "buttonText", "#EQUIPPED_LOOT_REWARD" )
 	RuiSetString( ruiSmall, "buttonDescText", Localize( "#CURRENTLY_EQUIPPED_ITEM", Localize( ItemFlavor_GetLongName( itemFlavToEquip ) ) ) )
+	RuiSetInt( ruiSmall, "buttonDescRarity", itemRarity )
 	Hud_SetLocked( uiData.giftablePurchaseButton, true )
 }
 

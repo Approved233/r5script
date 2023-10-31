@@ -264,9 +264,6 @@ const GIBRALTAR_PASSIVE_ICON = $"rui/hud/character_abilities/gibraltar_passive_t
 const RAMPART_AMPED_WALL_ICON = $"rui/hud/character_abilities/rampart_amped_wall_transparent"
 const DUMMY_SHIELD_ICON = $"rui/hud/loot/loot_armor_1"
 
-
-
-
 const STUN_GRENADE_ICON = $"rui/hud/character_abilities/fuse_stun_indicator" 
 const float STUN_GRENADE_ICON_TIMESCALE = 0.3
 
@@ -350,7 +347,6 @@ void function DamageFlyout( float damageAmount, vector damagePosition, entity vi
 			isStructure = true
 		}
 
-
 		else if ( IsMobileShieldEnt( victim ) )
 		{
 			shieldIcon = $""
@@ -365,12 +361,11 @@ void function DamageFlyout( float damageAmount, vector damagePosition, entity vi
 		}
 
 
-		else if ( IsResinShard( victim ) )
-		{
-			shieldIcon = $""
-			shieldLevel = 1
-			shieldFrac = isKillShot ? 0.0 : max( 0, ( victim.GetHealth() - damageAmount ) / victim.GetMaxHealth() )
-		}
+
+
+
+
+
 
 
 
@@ -416,12 +411,10 @@ void function DamageFlyout( float damageAmount, vector damagePosition, entity vi
 	}
 
 
-
-
-
-
-
-
+	if ( victim.IsPlayer() && isOvershieldShot )
+	{
+		overshield = true
+	}
 
 
 	if ( victim.IsPlayer() && isStunned )
@@ -457,7 +450,10 @@ void function DamageFlyout( float damageAmount, vector damagePosition, entity vi
 			RuiSetInt( rui, "shieldTier", 0 )
 		}
 
-		RuiSetBool( rui, "isOvershieldShot", isOvershieldShot )
+		if ( isOvershieldShot )
+			RuiSetImage( rui, "shieldStatusIcon", $"rui/hud/character_abilities/conduit_tactical_enemy_shielded" )
+		else
+			RuiSetImage( rui, "shieldStatusIcon", $"" )
 
 
 		RuiSetFloat( rui, "timeScale", timeScale )
@@ -545,11 +541,21 @@ void function DamageFlyout( float damageAmount, vector damagePosition, entity vi
 		RuiSetBool( stackingRui, "isStructure", isStructure )
 
 
-
+			if ( overshield )
+				RuiSetImage( stackingRui, "shieldStatusIcon", $"rui/hud/character_abilities/conduit_tactical_enemy_shielded" )
+			else
+				RuiSetImage( stackingRui, "shieldStatusIcon", $"" )
 
 
 
 			RuiSetBool( stackingRui, "isShadowForm", isShadowForm )
+
+
+
+
+
+
+
 
 
 		flyoutData.stackingDamageRui = stackingRui
@@ -586,11 +592,18 @@ void function DamageFlyout( float damageAmount, vector damagePosition, entity vi
 			RuiSetBool( floatingRui, "isStructure", isStructure )
 
 
-
+				RuiSetBool( floatingRui, "overshield", overshield )
 
 
 
 				RuiSetBool( floatingRui, "isShadowForm", isShadowForm )
+
+
+
+
+
+
+
 
 
 			DamageData newDamageData

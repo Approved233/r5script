@@ -44,6 +44,8 @@ void function Perk_ExtraBinLoot_Init()
 	Perks_RegisterClassPerk( bannerCrafting )
 
 	RegisterSignal( "RecoveredExpiredDNA" )
+	RegisterSignal( "BannerCraftingDisabled" )
+
 
 
 
@@ -71,6 +73,39 @@ float function Perk_Get_CraftedBannerTimeoutDuration()
 {
 	return GetCurrentPlaylistVarFloat( "perk_crafted_banner_timeout_duration", 90.0 )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

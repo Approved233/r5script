@@ -814,6 +814,8 @@ bool function PlayerIsLinkedToDeathbox( entity player, entity deathbox )
 
 
 
+
+
 void function DeathboxNetwork_ServerToClient_ForceUsable()
 {
 #if DEV

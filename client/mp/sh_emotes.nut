@@ -92,12 +92,13 @@ const string EMOTE_PIN_ACTION_INTERRUPT 			= "interrupted"
 
 
 
-const float SPAWNEDPROP_MOVEDIST_DEFAULT = 7874.02
-const float SPAWNEDPROP_MOVESPEED_DEFAULT = 39.37
 
-const float SPAWNEDPROP_LANTERN_MOVE_SPEED 		= 39.37	
-const float SPAWNEDPROP_LANTERN_MOVE_EASEIN 	= 0.05	
-const float SPAWNEDPROP_LANTERN_MOVE_EASEOUT 	= 0.0	
+
+
+
+
+
+
 
 
 
@@ -239,6 +240,8 @@ void function ShEmotes_Init()
 
 	Remote_RegisterServerFunction( CMD_REQUEST_EMOTE_START, "int", INT_MIN, INT_MAX )
 	Remote_RegisterServerFunction( CMD_REQUEST_EMOTE_STOP )
+
+
 
 
 
@@ -473,7 +476,7 @@ bool function CanLocalClientPerformPodiumScreenEmote()
 	EHI playerEHI = LocalClientEHI()
 	ItemFlavor character = LoadoutSlot_GetItemFlavor( playerEHI, Loadout_Character() )
 
-	if ( ItemFlavor_GetQuipArrayForCharacter( character, true ).len() == 0 && ItemFlavor_GetFavoredQuipArrayForCharacter( character, true ).len() == 0 )
+	if ( ItemFlavor_GetQuipArrayForCharacter( localClientPlayer, character, true ).len() == 0 && ItemFlavor_GetFavoredQuipArrayForCharacter( character, true ).len() == 0 )
 		return false
 
 	if ( IsEmoteEnabledForPodiumScreen() )
@@ -1801,6 +1804,45 @@ float function DEV_CharacterEmote_GetCustomAnimSequenceTime( string animName )
 
 	unreachable
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

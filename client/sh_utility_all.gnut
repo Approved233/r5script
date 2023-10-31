@@ -835,6 +835,13 @@ bool function Halloween18_IsModeEnabled()
 
 
 
+
+
+
+
+
+
+
 bool function GunGame_IsModeEnabled()
 {
 	return GetCurrentPlaylistVarBool( "freedm_gun_game_active", false)
@@ -2019,10 +2026,10 @@ vector function OriginToGround( vector origin, int traceMask = TRACE_MASK_NPCWOR
 	return traceResult.endPos
 }
 
-WallToTopResults function TraceFromWallToTop(vector wallPos, vector wallNormal, array<entity> ignoreEnts, float checkBackDistance, float checkUpDistance, int traceMask, int collisionGroup, bool doHullTrace = false, vector hullBoundsMin = ZERO_VECTOR, vector hullBoundsMax = ZERO_VECTOR )
+WallToTopResults function TraceFromWallToTop(vector wallPos, vector wallNormal, array<entity> ignoreEnts, float checkBackDistance, float checkUpDistance, int traceMask, int collisionGroup, float DEBUG_DRAW_TIME = 0.0, bool doHullTrace = false, vector hullBoundsMin = ZERO_VECTOR, vector hullBoundsMax = ZERO_VECTOR )
 {
-	const bool DEBUG_DRAW = false
 	WallToTopResults results
+	results.found = false
 
 	vector flattenedNormal = FlattenNormalizeVec( wallNormal )
 	
@@ -2032,9 +2039,9 @@ WallToTopResults function TraceFromWallToTop(vector wallPos, vector wallNormal, 
 	TraceResults trUp = TraceLine( traceUpStart, traceUpEnd, ignoreEnts, traceMask , collisionGroup )
 
 #if DEV
-		if ( DEBUG_DRAW )
+		if ( DEBUG_DRAW_TIME > 0.0 )
 		{
-			DebugDrawArrow( traceUpStart, trUp.endPos, 10, COLOR_ORANGE, false, 5.0 )
+			DebugDrawArrow( traceUpStart, trUp.endPos, 10, COLOR_ORANGE, false, DEBUG_DRAW_TIME )
 		}
 #endif
 
@@ -2049,9 +2056,9 @@ WallToTopResults function TraceFromWallToTop(vector wallPos, vector wallNormal, 
 
 #if DEV
 
-			if ( DEBUG_DRAW )
+			if ( DEBUG_DRAW_TIME > 0.0 )
 			{
-				DebugDrawArrow( traceBackStart, trBack.endPos, 10, COLOR_YELLOW, false, 5.0 )
+				DebugDrawArrow( traceBackStart, trBack.endPos, 10, COLOR_YELLOW, false, DEBUG_DRAW_TIME )
 			}
 #endif
 
@@ -2068,9 +2075,9 @@ WallToTopResults function TraceFromWallToTop(vector wallPos, vector wallNormal, 
 
 #if DEV
 
-				if ( DEBUG_DRAW )
+				if ( DEBUG_DRAW_TIME > 0.0 )
 				{
-					DebugDrawArrow( ledgeStartTrace, ledgeEndTrace, 10, COLOR_LIGHT_GREEN, false, 5.0 )
+					DebugDrawArrow( ledgeStartTrace, trLedge.endPos, 10, COLOR_LIGHT_GREEN, false, DEBUG_DRAW_TIME )
 				}
 #endif
 
@@ -2078,10 +2085,10 @@ WallToTopResults function TraceFromWallToTop(vector wallPos, vector wallNormal, 
 			{
 				
 #if DEV
-					if ( DEBUG_DRAW )
+					if ( DEBUG_DRAW_TIME > 0.0 )
 					{
-						DebugDrawText( trLedge.endPos,"CornerPos", false, 5.0 )
-						DebugDrawSphere( trLedge.endPos, 8,COLOR_LIGHT_GREEN,false, 5.0 )
+						DebugDrawText( trLedge.endPos,"CornerPos", false, DEBUG_DRAW_TIME )
+						
 					}
 #endif
 
@@ -2218,8 +2225,10 @@ bool function IsLobbyEvent1Active()
 		}
 #endif
 
-	if ( IsHarbingersEventActive() )
+
+	if ( IsAcidWraithEventActive() )
 		return true
+
 
 	return false
 }
@@ -2238,28 +2247,38 @@ bool function IsLobbyEvent2Active()
 		}
 #endif
 
-	if ( IsDoppleGangersEventActive() )
+
+	if ( IsUprisingEventActive() )
 		return true
+
 
 	return false
 
 }
 
-bool function IsHarbingersEventActive()
+
+bool function IsUprisingEventActive()
 {
-	if ( CalEvent_IsActive( GetItemFlavorByAsset( $"settings/itemflav/calevent/s18ce02/collection.rpak" ), GetUnixTimestamp() ) )
+	if ( CalEvent_IsActive( GetItemFlavorByAsset( $"settings/itemflav/calevent/s19ce01/collection.rpak" ), GetUnixTimestamp() ) )
 		return true
 
 	return false
 }
 
 
-bool function IsDoppleGangersEventActive()
+
+bool function IsAcidWraithEventActive()
 {
-	if ( CalEvent_IsActive( GetItemFlavorByAsset( $"settings/itemflav/calevent/s18ce03/collection.rpak" ), GetUnixTimestamp() ) )
+	if ( CalEvent_IsActive( GetItemFlavorByAsset( $"settings/itemflav/calevent/s19fe01/event_shop.rpak" ), GetUnixTimestamp() ) )
 		return true
 
 	return false
+}
+
+
+bool function IsVDUDialogueEnabled()
+{
+	return GetCurrentPlaylistVarBool( "enable_vdu_dialogue", false )
 }
 
 bool function IsSurvivalTraining()
@@ -2314,7 +2333,7 @@ bool function FreelanceSystemsAreEnabled()
 
 bool function SpectreShacksAreEnabled()
 {
-	return GetCurrentPlaylistVarBool( "spectre_shacks_enabled", true )
+	return GetCurrentPlaylistVarBool( "spectre_shacks_enabled", false ) 
 }
 
 
@@ -3477,21 +3496,21 @@ void function SetConVarFloatFromPlaylist( string varName, float floatVal )
 }
 
 
+string function GetMergedPlatformIdForPlayer( entity player )
+{
+
+	Assert( player == GetLocalClientPlayer() )
+
+
+	string platformId = ""
+
+	platformId = HARDWARE_TO_MERGED_PLATFORM[GetHardwareFromName( player.GetHardwareName() )]
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
+	Assert( platformId != "" )
+	return platformId
+}
 
 
 
@@ -4050,6 +4069,10 @@ bool function DEV_ForceLoadAllEntityTypes()
 #endif
 
 
+bool function IsRevTakeover()
+{
+	return GetCurrentPlaylistVarBool("rev_takeover", false)
+}
 
 
 
@@ -4061,5 +4084,14 @@ bool function DEV_ForceLoadAllEntityTypes()
 
 
 
+bool function IsInBleedoutOrRevive( entity player )
+{
+	if( !player.IsPlayer() )
+		return false
 
+	bool bleedingOut = Bleedout_IsBleedingOut( player )
+	bool reviveRelated = player.ContextAction_IsBeingRevived() || player.ContextAction_IsReviving()
+
+	return( bleedingOut || reviveRelated )
+}
 

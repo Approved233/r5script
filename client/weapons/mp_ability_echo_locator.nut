@@ -25,9 +25,7 @@ const float MINIMAP_MARKER_DEBOUNCE_TIME = 0.75
 const float LOCK_FX_LIFETIME = 1.25
 const float TOTAL_FIRE_TIME_BUFFER = 1.75
 const float ECHO_LOCATOR_TUNING_DEATHFIELD_DAMAGE_SCALAR = 1.0
-
 const float ECHO_LOCATOR_MOVEMENT_SPEED_CHECK = 170 
-
 const float ECHO_LOCATOR_DUMMIE_SPEED_CHECK = 100 
 
 const asset ECHO_LOCATOR_HEART_MODEL = $"mdl/props/pariah_heart/pariah_heart.rmdl"
@@ -111,9 +109,7 @@ struct
 	int echoLocatorRadiusSqr
 	int echoLocatorHP
 	float echoLocatorSphereModelScale
-
 	bool useWalkSpeedForMovementCheck
-
 
 	array<entity> playersInsideEchoLocators
 	table<entity, int> enemiesInsideEchoLocator
@@ -160,9 +156,7 @@ void function MpWeaponEchoLocator_Init()
 	file.echoLocatorRadiusSqr        = int( pow( file.echoLocatorRadius, 2 ) )
 	file.echoLocatorSphereModelScale = file.echoLocatorRadius / 1050.0 
 	file.echoLocatorHP 		 = GetEchoLocatorHP()
-
 	file.useWalkSpeedForMovementCheck = GetEchoLocatorUseWalkSpeed()
-
 
 
 		StatusEffect_RegisterEnabledCallback( eStatusEffect.inside_echo_locator, EchoLocator_StartVisualEffect )
@@ -1469,7 +1463,6 @@ bool function DoesPlayerPassEchoLocatorMovementCheck( entity player, float playe
 	
 	if ( playerSpeed > 0 )
 	{
-
 		if ( file.useWalkSpeedForMovementCheck )
 		{
 			bool isADS = false
@@ -1496,7 +1489,6 @@ bool function DoesPlayerPassEchoLocatorMovementCheck( entity player, float playe
 		}
 		else
 		{
-
 			bool isTrainingDummie = IsTrainingDummie( player )
 
 			if ( player.IsPlayerDecoy() )
@@ -1528,9 +1520,7 @@ bool function DoesPlayerPassEchoLocatorMovementCheck( entity player, float playe
 					return true
 				}
 			}
-
 		}
-
 	}
 
 	return false
@@ -1815,26 +1805,6 @@ void function EchoLocatorFootstepVFX_Thread( entity echoLocator )
 				}
 			}
 		}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 		file.enemiesInsideEchoLocator[echoLocator] = validTouchingEnts.len()
 
@@ -2275,12 +2245,10 @@ int function GetEchoLocatorHP()
 	return GetCurrentPlaylistVarInt( "seer_ult_hp", ECHO_LOCATOR_HP )
 }
 
-
 bool function GetEchoLocatorUseWalkSpeed()
 {
 	return GetCurrentPlaylistVarBool( "seer_ult_speed_override", false )
 }
-
 
 
 

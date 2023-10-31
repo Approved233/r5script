@@ -2733,13 +2733,13 @@ void function UpdatePassPurchaseButtons()
 		GRXScriptOffer basicPurchaseOffer = basicPurchaseOffers[0]
 
 
-
-
-
-
-
-
-
+		if ( GetConVarBool( "mtx_useIneligibilityCode" ) )
+		{
+			if ( canPurchasePass )
+			{
+				canPurchasePass = GRXOffer_IsEligibleForPurchase( basicPurchaseOffer )
+			}
+		}
 
 
 		Assert( basicPurchaseOffer.prices.len() == 1 )
@@ -2775,13 +2775,13 @@ void function UpdatePassPurchaseButtons()
 		GRXScriptOffer bundlePurchaseOffer = bundlePurchaseOffers[0]
 
 
-
-
-
-
-
-
-
+		if ( GetConVarBool( "mtx_useIneligibilityCode" ) )
+		{
+			if ( canPurchaseBundle )
+			{
+				canPurchaseBundle = GRXOffer_IsEligibleForPurchase( bundlePurchaseOffer )
+			}
+		}
 
 
 		Assert( bundlePurchaseOffer.prices.len() == 1 )
@@ -2817,9 +2817,9 @@ void function UpdatePassPurchaseButtons()
 	array<bool> canAffordPremiumAndCraft = [true, true]
 
 
+	UpdateGiftButtonToolTip( file.giftButton, bundlePurchaseOffers[0].prices[0], canAffordPremiumAndCraft, null, 1, false, true )
 
 
-	UpdateGiftButtonToolTip( file.giftButton, bundlePurchaseOffers[0].prices[0], canAffordPremiumAndCraft, null, 1, true )
 
 
 }
@@ -2956,6 +2956,42 @@ int function SortByAwardLevel( BattlePassReward a, BattlePassReward b )
 
 	return 0
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

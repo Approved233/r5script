@@ -92,6 +92,7 @@ global function TeamShouldSeeBeaconMarker
 
 
 
+
 global function Cl_Deathfield_GetRadiusScale
 global function Cl_Deathfield_GetFXIDForRadius
 #if DEV
@@ -609,6 +610,51 @@ bool function TeamShouldSeeBeaconMarker( int team, entity beacon )
 
 	return shouldSee
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4340,6 +4386,9 @@ void function DisplayHolsterWeaponHint()
 		return
 
 	if ( Bleedout_IsBleedingOut( viewPlayer ) )
+		return
+
+	if ( viewPlayer.GetPlayerNetBool( "isHealing" ) )
 		return
 
 	AddPlayerHint( HINT_DURATION, HINT_FADEOUT, $"", "#HINT_HOLSTER_WEAPON" )

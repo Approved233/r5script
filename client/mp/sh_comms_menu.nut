@@ -899,12 +899,19 @@ array<CommsMenuOptionData> function BuildMenuOptions( int chatPage )
 
 					if( data.category == "banner" )
 					{
-						if ( Perk_CanBuyBanners( player ) || Perks_DoesPlayerHavePerk( player, ePerkIndex.BANNER_CRAFTING ) )
+						if ( ( Perk_CanBuyBanners( player ) || Perks_DoesPlayerHavePerk( player, ePerkIndex.BANNER_CRAFTING ) ) && ( GetRespawnStyle() == eRespawnStyle.RESPAWN_CHAMBERS ) )
 						{
 							results.append( MakeOption_CraftItem( counter ) )
 						}
 					}
 					else
+
+
+
+
+
+
+
 
 
 
@@ -1592,6 +1599,10 @@ void function SetRuiOptionsForChatPage( var rui, int chatPage )
 			RuiSetString( file.menuRui, "descText", Crafting_GetWorkbenchDescString() )
 			labelText = "#CRAFTING_WORKBENCH"
 			promptText = "#CRAFTING_USE"
+
+
+
+
 
 
 
@@ -2547,9 +2558,9 @@ void function HandleQuipPick( ItemFlavor quip, int choice )
 	if ( CharacterQuip_UseHoloProjector( quip ) )
 	{
 
-
-
-
+		if ( player.Player_IsSkydiving() && !player.Player_IsSkydiveAnticipating())
+			SkydiveEmoteProjector_ActivateEmoteProjector( player, quip )
+		else
 
 			ActivateEmoteProjector( player, quip )
 	}

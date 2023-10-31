@@ -1123,7 +1123,9 @@ void function GunGame_ScoreboardSetup()
 	clGlobal.hideScoreboardFunc = HideScoreboardOrMap_Teams
 	Teams_AddCallback_ScoreboardData( GunGame_GetScoreboardData )
 	Teams_AddCallback_Header( GunGame_ScoreboardUpdateHeader )
-	Teams_AddCallback_GetTeamColor( GunGame_ScoreboardGetTeamColor )
+	Teams_AddCallback_GetTeamColor( GunGame_GetTeamColor )
+	Teams_AddCallback_GetTeamName( GunGame_GetTeamName )
+	Teams_AddCallback_GetTeamIcon( GunGame_GetTeamIcon )
 	Teams_AddCallback_PlayerScores( GunGame_GetPlayerScores )
 	Teams_AddCallback_SortScoreboardPlayers( GunGame_SortPlayersByScore )
 }
@@ -1223,11 +1225,29 @@ void function GunGame_ScoreboardUpdateHeader( var headerRui, var frameRui, int t
 
 
 
-vector function GunGame_ScoreboardGetTeamColor( int team )
+vector function GunGame_GetTeamColor( int team )
 {
 	int squadIndex = Squads_GetSquadUIIndex( team )
 
-	return Squads_GetSquadColor( team - TEAM_IMC )
+	return Squads_GetSquadColor( squadIndex )
+}
+
+
+
+string function GunGame_GetTeamName( int team )
+{
+	int squadIndex = Squads_GetSquadUIIndex( team )
+
+	return Squads_GetSquadName( squadIndex )
+}
+
+
+
+asset function GunGame_GetTeamIcon( int team )
+{
+	int squadIndex = Squads_GetSquadUIIndex( team )
+
+	return Squads_GetSquadIcon( squadIndex )
 }
 
 

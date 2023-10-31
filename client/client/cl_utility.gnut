@@ -10,10 +10,6 @@ global struct AttackerDisplayNameStruct
 	int damageSourceId
 }
 
-
-string dev_messageString = ""
-string dev_messageSubString = ""
-
 string dev_infoPanelTitleString = ""
 string dev_infoPanelTextString = ""
 
@@ -696,28 +692,6 @@ void function MMR_RemotePrintTeams()
 	Remote_ServerCallFunction( "ClientCallback_Dev_PrintTeamsMMR" )
 }
 
-void function Dev_BuildClientMessage( bool isMainMessage, string msg )
-{
-	if ( isMainMessage )
-		dev_messageString += msg
-	else
-		dev_messageSubString += msg
-}
-
-void function Dev_PrintClientMessage( float duration )
-{
-	entity player = GetLocalClientPlayer()
-	AnnouncementData announcement = Announcement_Create( dev_messageString )
-	Announcement_SetSubText( announcement, dev_messageSubString )
-	Announcement_SetHideOnDeath( announcement, false )
-	Announcement_SetDuration( announcement, duration )
-	Announcement_SetPurge( announcement, true )
-	AnnouncementFromClass( player, announcement )
-
-	dev_messageString = ""
-	dev_messageSubString = ""
-}
-
 void function ClientCodeCallback_OnDevnetBugScreenshot()
 {
 	printt( "(devnet screenshot client script callback)" )
@@ -968,14 +942,6 @@ var function CreateRUITopology_Worldspace( vector org, vector ang, float width, 
 	return topo
 }
 
-void function Dev_BuildTextInfoPanel( bool isTitleString, string msg )
-{
-	if ( isTitleString )
-		dev_infoPanelTitleString += msg
-	else
-		dev_infoPanelTextString += msg
-}
-
 void function Dev_CreateTextInfoPanel( vector org, vector ang, bool showPin, float textScale )
 {
 	__Dev_CreateTextInfoPanel( org, ang, showPin, textScale )
@@ -1172,7 +1138,7 @@ void function AddOverheadIconThread( entity prop, var rui )
 		{
 			if ( IsValid( prop ) )
 				prop.e.overheadRui = null
-			RuiDestroy( rui )
+			RuiDestroyIfAlive( rui )
 		}
 	)
 

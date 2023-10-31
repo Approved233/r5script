@@ -99,9 +99,6 @@ void function SetDefaultLoadouts()
 
 
 
-
-
-
 		file.weaponLoadoutDefault = GetTrimmedSplitString( defaultweaponLoadoutsPlaylist, " " )
 		file.consumableLoadoutDefault = GetTrimmedSplitString( defaultconsumableLoadoutPlaylist, " " )
 		file.equipmentLoadoutDefault = GetTrimmedSplitString( defaultequipmentLoadoutPlaylist, " " )
@@ -421,6 +418,9 @@ void function Init_CharacterClassToLoadoutNameTable()
 		file.characterClassToLoadoutNameTable[ value ] <- loadoutName
 	}
 }
+
+
+
 
 
 

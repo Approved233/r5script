@@ -117,18 +117,6 @@ void function PassiveReinforce_Init()
 	file.maxDoorways					= GetCurrentPlaylistVarInt( "catalyst_barricade_maxDoorways", PASSIVE_REINFORCE_MAX_DOORWAYS )
 }
 
-int function GetMaxDoorways( entity player )
-{
-	int result = file.maxDoorways
-
-
-
-
-
-
-	return result
-}
-
 
 void function PassiveReinforce_Toggle( entity player, int passive, bool didHave, bool nowHas )
 {

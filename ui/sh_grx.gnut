@@ -17,6 +17,7 @@ global function ItemFlavor_GetGRXIndex
 global function ItemFlavor_GetGRXAlias
 global function ItemFlavor_GetGRXOwnershipTarget
 global function ItemFlavor_GetGRXOwnershipTargettedBy
+global function GRXCurrency_RegisterNewCurrencyAssetInEventSlot
 global function GRXCurrency_GetCurrencyIndex
 global function GRXCurrency_GetPurchaseSound
 global function GRXCurrency_GetPreviewModel
@@ -51,11 +52,17 @@ global function DEV_IsValidGRXRef
 global function GRXOffer_IsFullyClaimed
 
 
+global function GRXOffer_IsPurchaseLimitReached
+global function GRXOffer_IsEligibleForPurchase
+global function GRXOffer_RemainingOfferPurchaseCount
+
+global int OFFER_HAS_NO_LIMIT = -1
 
 
 global function GRXOffer_GetOwnedItemsCount
 global function GRXOffer_GetActiveBPPLevelCount
 global function GRXOffer_ContainsBattlePassLevel
+global function GRXOffer_ContainsStackablesOnly
 global function GRXOffer_ContainsPack
 global function GRXOffer_ContainsOnlySinglePack
 global function GRXOffer_ContainsApexPack
@@ -65,9 +72,11 @@ global function GRXOffer_ContainsEventThematicPack
 global function GRXOffer_GetSpecialPackName
 global function GRXOffer_GetSpecialPackContainsStickers
 global function GRXOffer_GetSpecialPackContainsSkydives
+global function GRXOffer_GetSpecialPackContainsHolosprays
 global function GRXOffer_GetSpecialPackCountShownOnMOTD
 global function GRXOffer_GetBundleOfferRestrictions
 global function GRXOffer_IsHeirloomPack
+global function GRXOffer_GetPremiumPriceQuantity
 global function GRX_PurchaseOffer
 global function GRX_MakeItemFlavorBagFromPriceArray
 global function GRX_CheckBundleAndUpdateOfferPrices
@@ -77,7 +86,6 @@ global function GRX_IsLocationActive
 global function GRX_ScriptOfferFromCraftingOffer
 global function GRX_GetPostGameRewards
 global function GRX_MarkRewardAcknowledged
-global function GRX_IsOfferRestrictedByOfferAttributes
 global function GRX_IsLegendOffer
 
 
@@ -85,7 +93,8 @@ global function GRX_IsLegendOffer
 global function GRXCurrency_GetPlayerBalance
 global function QueueGRXOperation
 global function IsGRXOperationDone
-
+global function ItemFlavorIsStackable
+global function GRX_IsOfferRestrictedByOfferAttributes
 
 
 
@@ -146,6 +155,7 @@ global function ShowGRXErrorDialogue
 global function DEV_GRX_DescribeOffer
 global function GRX_IsBadLuckProtectionActive
 global function GRXPack_GetOpenButtonIcon
+global function GRX_InitScriptOfferFromStoreOffer
 
 
 
@@ -323,9 +333,9 @@ global struct GRXScriptOffer
 	bool isGiftable = false
 
 
-
-
-
+	int	ineligibilityCode = 0
+	array<string> priceAliases
+	int purchaseCount = 0
 
 
 	
@@ -574,10 +584,10 @@ FileStruct_LifetimeVM& fileVM
 
 struct FileStruct_LifetimeLevel
 {
-	array<ItemFlavor>      packFlavorList
-	table<ItemFlavor, int> currencyIndexMap
-	table<int, ItemFlavor> grxIndexItemFlavorMap
-	table<string, int>     grxRefToGRXIndexMap
+	array<ItemFlavor>      	packFlavorList
+	table<string, int> 	   	currencyIndexMap
+	table<int, ItemFlavor> 	grxIndexItemFlavorMap
+	table<string, int>     	grxRefToGRXIndexMap
 
 	array<ItemFlavor> stickerPacksWithRewards
 
@@ -662,7 +672,9 @@ void function ShGRX_LevelInit()
 
 		
 		
-		GRX_CURRENCIES[GRX_CURRENCY_SEASON02_EVENT01] = expect ItemFlavor(RegisterItemFlavorFromSettingsAsset( $"settings/itemflav/grx_currency/season02_event01.rpak" )) 
+		
+		
+		GRX_CURRENCIES[GRX_CURRENCY_EVENT] = expect ItemFlavor(RegisterItemFlavorFromSettingsAsset( $"settings/itemflav/grx_currency/s19fe01_coin.rpak" )) 
 
 		foreach ( int currencyIndex, ItemFlavor flav in GRX_CURRENCIES )
 		{
@@ -799,7 +811,6 @@ void function ShGRX_RegisterItemFlavor( ItemFlavor flavor )
 
 void function OnAllItemFlavorsRegistered()
 {
-	
 }
 
 
@@ -922,6 +933,27 @@ array<ItemFlavor> function ItemFlavor_GetGRXOwnershipTargettedBy( ItemFlavor fla
 		}
 	}
 	return out
+}
+
+
+
+void function GRXCurrency_RegisterNewCurrencyAssetInEventSlot( ItemFlavor newCurrencyFlav )
+{
+	Assert( ItemFlavor_GetType( newCurrencyFlav ) == eItemType.account_currency )
+	ItemFlavor oldCurrencyFlav = GRX_CURRENCIES [ GRX_CURRENCY_EVENT ]
+	GRX_CURRENCIES[ GRX_CURRENCY_EVENT ] = newCurrencyFlav
+
+	int targetIndex = GRXCurrency_GetCurrencyIndex( oldCurrencyFlav )
+	delete fileLevel.currencyIndexMap[ ItemFlavor_GetGUIDString( oldCurrencyFlav ) ]
+	fileLevel.currencyIndexMap[ ItemFlavor_GetGUIDString( newCurrencyFlav ) ] <- targetIndex
+
+
+
+
+
+
+
+
 }
 
 
@@ -1125,10 +1157,10 @@ bool function IsItemOwnedByPlayerInternal( ItemFlavor flav, entity player = null
 		return ItemFlavor_PassesUnlockFunc( flav, player )
 
 
-
-
-
-
+		if( ItemFlavor_HasExclusiveFunc( flav ) )
+		{
+			return ItemFlavor_PassesExclusiveFunc( flav, player )
+		}
 
 
 	if ( grxMode == GRX_ITEMFLAVORMODE_NONE )
@@ -1263,16 +1295,29 @@ bool function GRXOffer_IsFullyClaimed( GRXScriptOffer offer )
 }
 
 
+bool function GRXOffer_IsPurchaseLimitReached( GRXScriptOffer offer )
+{
+	return offer.purchaseLimit > 0 && offer.purchaseCount >= offer.purchaseLimit
+}
 
+bool function GRXOffer_IsEligibleForPurchase( GRXScriptOffer scriptOffer )
+{
+	return scriptOffer.ineligibilityCode == 0
+}
 
+int function GRXOffer_RemainingOfferPurchaseCount( GRXScriptOffer offer )
+{
+	
+	if ( offer.purchaseLimit == 0 )
+	{
+		return OFFER_HAS_NO_LIMIT
+	}
 
+	int remainingPurchases = offer.purchaseLimit - offer.purchaseCount
+	Assert( remainingPurchases >= 0, FUNC_NAME() + ": " + offer.offerAlias + " reports negative purchases remaining and is not unlimited." )
 
-
-
-
-
-
-
+	return remainingPurchases
+}
 
 
 
@@ -1350,11 +1395,37 @@ bool function GRXOffer_IsHeirloomPack( GRXScriptOffer offer  )
 	return true
 }
 
+int function GRXOffer_GetPremiumPriceQuantity( GRXScriptOffer offer )
+{
+	foreach ( ItemFlavorBag price in offer.prices )
+	{
+		if ( price.flavors[0] == GRX_CURRENCIES[GRX_CURRENCY_PREMIUM] )
+		{
+			return price.quantities[0]
+		}
+	}
+	return 0
+}
+
+bool function GRXOffer_ContainsStackablesOnly( GRXScriptOffer offer )
+{
+	foreach ( ItemFlavor itemFlavor in offer.output.flavors )
+	{
+		if ( !ItemFlavorIsStackable( itemFlavor ) )
+		{
+			return false
+		}
+	}
+
+	return true
+}
+
 bool function GRXOffer_ContainsPack( GRXScriptOffer offer )
 {
 	foreach ( ItemFlavor outputFlav in offer.output.flavors )
 		if ( ItemFlavor_GetGRXMode( outputFlav ) == eItemFlavorGRXMode.PACK && !ItemFlavor_IsBattlepass( outputFlav ) )
 		{
+			
 			
 			if ( !ItemFlavor_HasQuality( outputFlav ) || ItemFlavor_GetQuality( outputFlav ) != eRarityTier.MYTHIC )
 				return true
@@ -1473,6 +1544,22 @@ bool function GRXOffer_GetSpecialPackContainsSkydives( GRXScriptOffer offer )
 
 
 
+bool function GRXOffer_GetSpecialPackContainsHolosprays( GRXScriptOffer offer )
+{
+	bool hasHolosprays = false
+	foreach ( ItemFlavor flavIterator in offer.output.flavors )
+	{
+		if ( ItemFlavor_GetGRXMode( flavIterator ) == eItemFlavorGRXMode.PACK && ItemFlavor_GetAccountPackType( flavIterator ) != eAccountPackType.APEX )
+		{
+			hasHolosprays = GetGlobalSettingsBool( ItemFlavor_GetAsset( flavIterator ), "hasHolosprays" )
+		}
+	}
+
+	return hasHolosprays
+}
+
+
+
 bool function GRXOffer_GetSpecialPackCountShownOnMOTD( GRXScriptOffer offer )
 {
 	bool usesMOTDButtonForCount = false
@@ -1545,19 +1632,19 @@ string function GRXOffer_GetBundleOfferRestrictions( GRXScriptOffer offer )
 
 
 
+string function GRXOffer_GetPriceAliasForPrice( GRXScriptOffer offer, ItemFlavorBag price )
+{
+	for ( int i = 0; i < offer.prices.len(); ++i )
+	{
+		if ( offer.prices[i] == price )
+		{
+			return offer.priceAliases[i]
+		}
+	}
 
-
-
-
-
-
-
-
-
-
-
-
-
+	Assert( false, "Failed to lookup price alias for offer: " + offer.offerAlias )
+	return ""
+}
 
 
 
@@ -1665,11 +1752,11 @@ void function GRX_WaitXprogressMigrateStatus_GiftOffer( int opId, string offerAl
 void function GRX_PurchaseOffer( int opId, int queryGoal, GRXScriptOffer offer, ItemFlavorBag price, int quantity, GiftingFriend ornull friend )
 {
 
-
-
-
-
-
+	if ( GetConVarBool( "mtx_useOffersV2" ) )
+	{
+		GRX_PurchaseOfferV2_Internal( opId, queryGoal, offer, price, quantity, friend )
+		return
+	}
 
 
 	if ( offer.isCraftingOffer )
@@ -1708,32 +1795,32 @@ void function GRX_PurchaseOffer( int opId, int queryGoal, GRXScriptOffer offer, 
 
 
 
+void function GRX_PurchaseOfferV2_Internal( int opId, int queryGoal, GRXScriptOffer offer, ItemFlavorBag price, int quantity, GiftingFriend ornull friend )
+{
+	int craftingItemIdx = GRX_ITEM_INDEX_INVALID;
 
+	if ( friend != null )
+	{
+		GRX_PurchaseOfferForFriend( expect GiftingFriend( friend ), opId, offer, price )
+		return
+	}
 
+	string priceAlias
 
+	if ( offer.isCraftingOffer )
+	{
+		Assert( queryGoal == GRX_HTTPQUERYGOAL_CRAFT_ITEM )
+		Assert( quantity == 1 )
 
+		craftingItemIdx = ItemFlavor_GetGRXIndex( offer.output.flavors[0] )
+	}
+	else
+	{
+		priceAlias = GRXOffer_GetPriceAliasForPrice( offer, price )
+	}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	GRX_PurchaseOfferV2( opId, queryGoal, offer.offerAlias, craftingItemIdx, quantity, priceAlias, GRX_GetCurrencyArrayFromBag( price ) )
+}
 
 
 
@@ -2410,10 +2497,10 @@ void function RemoveCallback_OnGRXOffersRefreshed( void functionref() cb )
 void function AddCallback_OnGRXBundlesRefreshed( void functionref() cb )
 {
 
-
-
-
-
+		if ( GetConVarBool( "mtx_useOffersV2" ) )
+		{
+			Assert( false, "GetOffersV2 eliminates bundle-specific refreshes. Please register your callback using AddCallback_OnGRXOffersRefreshed instead." )
+		}
 
 	Assert( !fileLevel.onGRXBundlesRefreshedCallbacks.contains( cb ), "Tried to add a callback that was already added" )
 	fileLevel.onGRXBundlesRefreshedCallbacks.append( cb )
@@ -2424,10 +2511,10 @@ void function AddCallback_OnGRXBundlesRefreshed( void functionref() cb )
 void function RemoveCallback_OnGRXBundlesRefreshed( void functionref() cb )
 {
 
-
-
-
-
+	if ( GetConVarBool( "mtx_useOffersV2" ) )
+	{
+		Assert( false, "GetOffersV2 eliminates bundle-specific refreshes. Please ensure you are not calling this function when mtx_useOffersV2 is enabled." )
+	}
 
 
 	Assert( fileLevel.onGRXBundlesRefreshedCallbacks.contains( cb ), "Tried to remove a callback that was not added" )
@@ -3808,10 +3895,10 @@ void function UICodeCallback_GRXQueryCompleted( int queryScriptId, int queryGoal
 void function UICodeCallback_GRXBundlesUpdated()
 {
 
-
-
-
-
+		if ( GetConVarBool( "mtx_useOffersV2" ) )
+		{
+			Assert( false, "GetOffersV2 removes bundle-specific refresh flows, yet some function in code called UICodeCallback_GRXBundlesUpdated. No one should call this function while GetOffersV2 is active." )
+		}
 
 	foreach ( void functionref() cb in fileLevel.onGRXBundlesRefreshedCallbacks )
 		cb()
@@ -4276,11 +4363,14 @@ void function SetOriginalPriceForGRXScriptOffer( GRXScriptOffer scriptOffer, GRX
 			ItemFlavorBag originalPriceBag = scriptOffer.prices[1]
 			if( originalPriceBag.flavors.len() > 0 )
 			{
+				
+				
 				scriptOffer.originalPrice = originalPriceBag
+				scriptOffer.prices.pop()
 			}
 		}
 	}
-	else if ( scriptOffer.offerType == GRX_OFFERTYPE_DEFAULT )
+	else if ( scriptOffer.offerType == GRX_OFFERTYPE_DEFAULT || scriptOffer.offerType == GRX_OFFERTYPE_PYS )
 	{
 		
 		
@@ -4296,6 +4386,251 @@ void function SetOriginalPriceForGRXScriptOffer( GRXScriptOffer scriptOffer, GRX
 				[singleCurrencyFlav] = int(codeOffer.attrs.originalprice),
 			} )
 		}
+	}
+}
+
+
+
+void function GRX_InitScriptOfferFromStoreOffer( GRXStoreOffer codeOffer, GRXScriptOffer scriptOffer )
+{
+	bool isOfferRestricted = GRX_IsOfferRestricted()
+	array<string> offerProblems = []
+	foreach ( GRXStoreOfferItem item in codeOffer.items )
+	{
+		if ( !IsValidItemFlavorGRXIndex( item.itemIdx ) )
+		{
+			offerProblems.append( format( "Invalid GRX index: %d", item.itemIdx ) )
+			continue
+		}
+
+		ItemFlavor outputFlav = GetItemFlavorByGRXIndex( item.itemIdx )
+
+		if ( ItemFlavor_GetType( outputFlav ) == eItemType.grx_sentinel )
+		{
+			scriptOffer.WORKAROUND_claimedSentinel = outputFlav
+			continue
+		}
+
+		scriptOffer.items.append( item )
+
+		bool foundMatchingOutputBagEntry = false
+		foreach ( int existingOutputIdx, ItemFlavor existingOutputFlav in scriptOffer.output.flavors )
+		{
+			if ( outputFlav == existingOutputFlav )
+			{
+				foundMatchingOutputBagEntry = true
+				scriptOffer.output.quantities[existingOutputIdx] += item.itemQuantity
+			}
+		}
+		if ( !foundMatchingOutputBagEntry )
+		{
+			scriptOffer.output.flavors.append( outputFlav )
+			scriptOffer.output.quantities.append( item.itemQuantity )
+		}
+	}
+
+	scriptOffer.attributes = clone codeOffer.attrs
+
+	if ( isOfferRestricted && GRX_IsOfferRestrictedByOfferAttributes( scriptOffer ) )
+		scriptOffer.isAvailable = false
+
+	if( scriptOffer.items.len() > 1 )
+		scriptOffer.items.sort( SortStoreOfferItems )
+
+	foreach ( int priceIdx, GRXStoreOfferPrice storeOfferPrice in codeOffer.prices )
+	{
+		ItemFlavorBag price
+		foreach ( int currencyIndex, int currencyQuantity in storeOfferPrice.currencies )
+		{
+			ItemFlavor currencyFlav = GRX_CURRENCIES[currencyIndex]
+
+			if ( currencyQuantity <= 0 )
+			{
+				if ( currencyQuantity < 0 )
+				{
+					offerProblems.append( format( "Price #%d currency '%s' has bad quantity: %d", priceIdx, string(ItemFlavor_GetAsset( currencyFlav )), currencyQuantity ) )
+				}
+				continue
+			}
+
+			price.flavors.append( currencyFlav )
+			price.quantities.append( currencyQuantity )
+		}
+		if ( price.flavors.len() == 0 )
+		{
+			continue
+		}
+
+
+		if ( GetConVarBool( "mtx_useOffersV2" ) )
+		{
+			if ( storeOfferPrice.priceAlias == "" )
+			{
+				offerProblems.append( format( "Missing alias for price #%d", priceIdx ) )
+				continue
+			}
+
+			scriptOffer.priceAliases.append( storeOfferPrice.priceAlias )
+		}
+
+
+		scriptOffer.prices.append( price )
+	}
+
+	if ( scriptOffer.prices.len() == 0 )
+	{
+		offerProblems.append( "No prices" )
+	}
+
+	if ( !("location" in codeOffer.attrs) && codeOffer.offerType != GRX_OFFERTYPE_PYS )
+	{
+		offerProblems.append( "Missing 'location' attribute" )
+	}
+
+	if ( offerProblems.len() > 0 )
+	{
+		Warning( "Offer %s has problems:\n - %s", DEV_GRX_DescribeOffer( scriptOffer ), offerProblems.join( "\n - " ) )
+		return 
+	}
+
+	ItemFlavor flav = GetItemFlavorByGRXIndex( codeOffer.items[0].itemIdx )
+#if DEV
+		if ( fileVM.grxStorePreviewItem != "" )
+			flav = DEV_GetItemFlavorByGRXRef( fileVM.grxStorePreviewItem )
+#endif
+
+	string storeLocation = ""
+
+	if ( "location" in codeOffer.attrs )
+	{
+		storeLocation = codeOffer.attrs.location
+		ItemFlavorPurchasabilityInfo ifpi = fileLevel.itemFlavorPurchasabilityInfoMap[flav]
+		if ( !(storeLocation in ifpi.locationToDedicatedStoreOffersMap) )
+			ifpi.locationToDedicatedStoreOffersMap[storeLocation] <- []
+	}
+
+	scriptOffer.offerAlias = codeOffer.offerAlias
+	scriptOffer.offerType = codeOffer.offerType
+	scriptOffer.isGiftable = codeOffer.isSparkable
+
+
+	if ( GetConVarBool( "mtx_useOffersV2" ) )
+	{
+		scriptOffer.purchaseCount = codeOffer.purchaseCount
+		scriptOffer.ineligibilityCode = codeOffer.ineligibilityCode
+	}
+
+
+	
+	if ( "offertitleloc" in codeOffer.attrs )
+	{
+		scriptOffer.titleText = "#" + codeOffer.attrs["offertitleloc"];
+	}
+	else
+	{
+		scriptOffer.titleText = ( "offertitle" in scriptOffer.attributes ? scriptOffer.attributes["offertitle"] : ItemFlavor_GetLongName( flav ) )
+	}
+
+	if ( "offerdescription" in scriptOffer.attributes )
+	{
+		scriptOffer.descText = scriptOffer.attributes["offerdescription"]
+	}
+	else if ( scriptOffer.output.flavors.len() > 1 )
+	{
+		scriptOffer.descText= ItemFlavor_GetRewardShortDescription( flav )
+	}
+	else
+	{
+		scriptOffer.descText = ItemFlavor_GetTypeName( flav )
+	}
+
+
+	if ( !GetConVarBool( "mtx_useOffersV2" ) )
+
+	{
+		if( GRX_HasUpToDateBundleOffers() )
+			GRX_CheckBundleAndUpdateOfferPrices( scriptOffer )
+	}
+
+	scriptOffer.imageRef = ("imageref" in codeOffer.attrs ? codeOffer.attrs.imageref : "")
+	scriptOffer.tagText = ("tag" in codeOffer.attrs ? codeOffer.attrs.tag : "")
+	scriptOffer.seasonTag = ("seasontag" in codeOffer.attrs ? codeOffer.attrs.seasontag : "")
+
+
+
+	if ( GetConVarBool( "mtx_useOffersV2" ) )
+	{
+		SetOriginalPriceForGRXScriptOffer( scriptOffer, codeOffer )
+	}
+	else
+
+	{
+		if ( scriptOffer.offerType != GRX_OFFERTYPE_BUNDLE )
+		{
+			scriptOffer.originalPrice = null
+
+			if ( "originalprice" in codeOffer.attrs && codeOffer.attrs.originalprice != "0" )
+			{
+				Assert( scriptOffer.prices.len() == 1, "NYI!" )
+				Assert( scriptOffer.prices[0].flavors.len() == 1, "NYI!" )
+				ItemFlavor singleCurrencyFlav = scriptOffer.prices[0].flavors[0]
+
+				scriptOffer.originalPrice = MakeItemFlavorBag( {
+					[singleCurrencyFlav] = int(codeOffer.attrs.originalprice),
+				} )
+			}
+		}
+	}
+
+	scriptOffer.tooltipTitle = ("tooltiptitle" in codeOffer.attrs ? codeOffer.attrs.tooltiptitle : "")
+	scriptOffer.tooltipDesc = ("tooltipdesc" in codeOffer.attrs ? codeOffer.attrs.tooltipdesc : "")
+	scriptOffer.prereqText = ("prereqtext" in codeOffer.attrs ? codeOffer.attrs.prereqtext : "")
+	scriptOffer.purchaseLimit = ( "purchaselimit" in scriptOffer.attributes ? scriptOffer.attributes["purchaselimit"].tointeger() : 0 )
+	scriptOffer.displayPriority = ( "displaypriority" in codeOffer.attrs ? int(codeOffer.attrs.displaypriority) : 0 )
+	scriptOffer.expireTime = ("expireSeconds" in codeOffer.attrs ? int(codeOffer.attrs.expireSeconds) + GetUnixTimestamp() : 0)
+
+	if ( GetConVarBool( "assetdownloads_enabled" ) && IsLobby() && scriptOffer.imageRef != "" )
+		RunClientScript( "RequestDownloadedImagePakLoad", scriptOffer.imageRef, ePakType.DL_STORE_TALL )
+
+	if ( storeLocation != "" )
+	{
+		ItemFlavorPurchasabilityInfo ifpi = fileLevel.itemFlavorPurchasabilityInfoMap[flav]
+		ifpi.locationToDedicatedStoreOffersMap[storeLocation].append( scriptOffer )
+
+		if ( !(storeLocation in fileLevel.locationOffersMap) )
+			fileLevel.locationOffersMap[storeLocation] <- []
+
+		fileLevel.locationOffersMap[storeLocation].append( scriptOffer )
+	}
+
+	bool hasPrereq = ("prereq" in codeOffer.attrs)
+	if ( hasPrereq )
+	{
+		string ref = codeOffer.attrs["prereq"]
+
+		
+		ItemFlavor prereqFlav
+		bool foundPrereq
+		foreach ( ItemFlavor iterFlav in GetAllItemFlavorsCosmetic() )
+		{
+			if ( ItemFlavor_GetGRXMode( iterFlav ) != eItemFlavorGRXMode.NONE && ItemFlavor_GetGRXAlias( iterFlav ) == ref )
+			{
+				prereqFlav = iterFlav
+				foundPrereq = true
+				break
+			}
+		}
+
+		Assert( foundPrereq, "Store offer has invalid prereq: " + ref )
+		if ( !foundPrereq )
+			return
+
+		scriptOffer.prereq = prereqFlav
+	}
+
+	if( storeLocation != "" )
+	{
+		ProcessColumnData( storeLocation, scriptOffer, codeOffer )
 	}
 }
 
@@ -4340,241 +4675,10 @@ void function HandleGRXOffersRefreshed( int offersState, array< GRXCraftingOffer
 		}
 	}
 
-	const bool TEMP_collapsePrereqOffers = false
-
-	array<GRXScriptOffer> tempPrereqOffers = []
 	foreach ( GRXStoreOffer codeOffer in storeOffers )
 	{
 		GRXScriptOffer scriptOffer
-
-		array<string> offerProblems = []
-		foreach ( GRXStoreOfferItem item in codeOffer.items )
-		{
-			if ( !IsValidItemFlavorGRXIndex( item.itemIdx ) )
-			{
-				offerProblems.append( format( "Invalid GRX index: %d", item.itemIdx ) )
-				continue
-			}
-
-			ItemFlavor outputFlav = GetItemFlavorByGRXIndex( item.itemIdx )
-
-			if ( isOfferRestricted && GRX_IsItemCoveredByOfferRestrictions( outputFlav ) )
-				scriptOffer.isAvailable = false
-
-			if ( ItemFlavor_GetType( outputFlav ) == eItemType.grx_sentinel )
-			{
-				scriptOffer.WORKAROUND_claimedSentinel = outputFlav
-				continue
-			}
-
-			scriptOffer.items.append( item )
-
-			bool foundMatchingOutputBagEntry = false
-			foreach ( int existingOutputIdx, ItemFlavor existingOutputFlav in scriptOffer.output.flavors )
-			{
-				if ( outputFlav == existingOutputFlav )
-				{
-					foundMatchingOutputBagEntry = true
-					scriptOffer.output.quantities[existingOutputIdx] += item.itemQuantity
-				}
-			}
-			if ( !foundMatchingOutputBagEntry )
-			{
-				scriptOffer.output.flavors.append( outputFlav )
-				scriptOffer.output.quantities.append( item.itemQuantity )
-			}
-		}
-
-		scriptOffer.attributes = clone codeOffer.attrs
-
-		if ( isOfferRestricted && GRX_IsOfferRestrictedByOfferAttributes( scriptOffer ) )
-			scriptOffer.isAvailable = false
-
-		if( scriptOffer.items.len() > 1 )
-			scriptOffer.items.sort( SortStoreOfferItems )
-
-		foreach ( int priceIdx, GRXStoreOfferPrice storeOfferPrice in codeOffer.prices )
-		{
-			ItemFlavorBag price
-			foreach ( int currencyIndex, int currencyQuantity in storeOfferPrice.currencies )
-			{
-				ItemFlavor currencyFlav = GRX_CURRENCIES[currencyIndex]
-
-				if ( currencyQuantity <= 0 )
-				{
-					if ( currencyQuantity < 0 )
-						offerProblems.append( format( "Price #%d currency '%s' has bad quantity: %d", priceIdx, string(ItemFlavor_GetAsset( currencyFlav )), currencyQuantity ) )
-					continue
-				}
-
-				price.flavors.append( currencyFlav )
-				price.quantities.append( currencyQuantity )
-			}
-			if ( price.flavors.len() == 0 )
-				continue
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-			scriptOffer.prices.append( price )
-		}
-
-		if ( scriptOffer.prices.len() == 0 )
-			offerProblems.append( "No prices" )
-
-		if ( !("location" in codeOffer.attrs) )
-			offerProblems.append( "Missing 'location' attribute" )
-
-		if ( offerProblems.len() > 0 )
-		{
-			Warning( "Offer %s has problems:\n - %s", DEV_GRX_DescribeOffer( scriptOffer ), offerProblems.join( "\n - " ) )
-			continue 
-		}
-
-		ItemFlavor flav = GetItemFlavorByGRXIndex( codeOffer.items[0].itemIdx )
-#if DEV
-			if ( fileVM.grxStorePreviewItem != "" )
-				flav = DEV_GetItemFlavorByGRXRef( fileVM.grxStorePreviewItem )
-#endif
-
-		string storeLocation              = codeOffer.attrs.location
-		ItemFlavorPurchasabilityInfo ifpi = fileLevel.itemFlavorPurchasabilityInfoMap[flav]
-		if ( !(storeLocation in ifpi.locationToDedicatedStoreOffersMap) )
-			ifpi.locationToDedicatedStoreOffersMap[storeLocation] <- []
-
-		scriptOffer.offerAlias = codeOffer.offerAlias
-		scriptOffer.offerType = codeOffer.offerType
-		scriptOffer.isGiftable = codeOffer.isSparkable
-
-
-
-
-
-
-
-
-
-		
-		scriptOffer.titleText = ( "offertitle" in scriptOffer.attributes ? scriptOffer.attributes["offertitle"] : ItemFlavor_GetLongName( flav ) )
-
-		if ( "offerdescription" in scriptOffer.attributes )
-		{
-			scriptOffer.descText = scriptOffer.attributes["offerdescription"]
-		}
-		else if ( scriptOffer.output.flavors.len() > 1 )
-		{
-			scriptOffer.descText= ItemFlavor_GetRewardShortDescription( flav )
-		}
-		else
-		{
-			scriptOffer.descText = ItemFlavor_GetTypeName( flav )
-		}
-
-
-
-
-		{
-			if( GRX_HasUpToDateBundleOffers() )
-				GRX_CheckBundleAndUpdateOfferPrices( scriptOffer )
-		}
-
-		scriptOffer.imageRef = ("imageref" in codeOffer.attrs ? codeOffer.attrs.imageref : "")
-		scriptOffer.tagText = ("tag" in codeOffer.attrs ? codeOffer.attrs.tag : "")
-		scriptOffer.seasonTag = ("seasontag" in codeOffer.attrs ? codeOffer.attrs.seasontag : "")
-
-
-
-
-
-
-
-
-
-		{
-			if ( scriptOffer.offerType != GRX_OFFERTYPE_BUNDLE )
-			{
-				scriptOffer.originalPrice = null
-
-				if ( "originalprice" in codeOffer.attrs && codeOffer.attrs.originalprice != "0" )
-				{
-					Assert( scriptOffer.prices.len() == 1, "NYI!" )
-					Assert( scriptOffer.prices[0].flavors.len() == 1, "NYI!" )
-					ItemFlavor singleCurrencyFlav = scriptOffer.prices[0].flavors[0]
-
-					scriptOffer.originalPrice = MakeItemFlavorBag( {
-						[singleCurrencyFlav] = int(codeOffer.attrs.originalprice),
-					} )
-				}
-			}
-		}
-
-		scriptOffer.tooltipTitle = ("tooltiptitle" in codeOffer.attrs ? codeOffer.attrs.tooltiptitle : "")
-		scriptOffer.tooltipDesc = ("tooltipdesc" in codeOffer.attrs ? codeOffer.attrs.tooltipdesc : "")
-		scriptOffer.prereqText = ("prereqtext" in codeOffer.attrs ? codeOffer.attrs.prereqtext : "")
-		scriptOffer.purchaseLimit = ( "purchaselimit" in scriptOffer.attributes ? scriptOffer.attributes["purchaselimit"].tointeger() : 0 )
-		scriptOffer.displayPriority = ( "displaypriority" in codeOffer.attrs ? int(codeOffer.attrs.displaypriority) : 0 )
-		scriptOffer.expireTime = ("expireSeconds" in codeOffer.attrs ? int(codeOffer.attrs.expireSeconds) + GetUnixTimestamp() : 0)
-
-		if ( GetConVarBool( "assetdownloads_enabled" ) && IsLobby() && scriptOffer.imageRef != "" )
-			RunClientScript( "RequestDownloadedImagePakLoad", scriptOffer.imageRef, ePakType.DL_STORE_TALL )
-
-		ifpi.locationToDedicatedStoreOffersMap[storeLocation].append( scriptOffer )
-
-		if ( !(storeLocation in fileLevel.locationOffersMap) )
-			fileLevel.locationOffersMap[storeLocation] <- []
-
-		
-			fileLevel.locationOffersMap[storeLocation].append( scriptOffer )
-
-		bool hasPrereq = ("prereq" in codeOffer.attrs)
-		if ( hasPrereq )
-		{
-			string ref = codeOffer.attrs["prereq"]
-
-			
-			ItemFlavor prereqFlav
-			bool foundPrereq
-			foreach ( ItemFlavor iterFlav in GetAllItemFlavorsCosmetic() )
-			{
-				if ( ItemFlavor_GetGRXMode( iterFlav ) != eItemFlavorGRXMode.NONE && ItemFlavor_GetGRXAlias( iterFlav ) == ref )
-				{
-					prereqFlav = iterFlav
-					foundPrereq = true
-					break
-				}
-			}
-
-			Assert( foundPrereq, "Store offer has invalid prereq: " + ref )
-			if ( !foundPrereq )
-				continue
-
-			scriptOffer.prereq = prereqFlav
-
-			if ( TEMP_collapsePrereqOffers )
-				tempPrereqOffers.append( scriptOffer )
-		}
-
-
-		if( !hasPrereq || !TEMP_collapsePrereqOffers )
-			ProcessColumnData( storeLocation, scriptOffer, codeOffer )
-
-	}
-
-	foreach ( scriptOffer in tempPrereqOffers )
-	{
-		if( !ProcessPrereqOffer( scriptOffer, fileLevel.storeOfferColumns ) )
-			if( !ProcessPrereqOffer( scriptOffer, fileLevel.specialsStoreOfferColumns ) )
-				ProcessPrereqOffer( scriptOffer, fileLevel.seasonalStoreOfferColumns )
+		GRX_InitScriptOfferFromStoreOffer( codeOffer, scriptOffer )
 	}
 
 	SortAllScriptOffers()
@@ -5451,20 +5555,32 @@ bool function GRX_IsOfferRestricted( entity player = null )
 
 
 
-bool function GRX_IsOfferRestrictedByOfferAttributes( GRXScriptOffer scriptOffer )
+bool function GRX_IsOfferRestrictedByOfferAttributes( GRXScriptOffer offer )
+
+
+
+
 {
+
+	table<string, string> attributes = offer.attributes
+
+
+
+
 	bool isOfferRestricted = false
 	bool hasUnavailableReason =  false
 
-	if ( "unavailableReason" in scriptOffer.attributes )
+	if ( "unavailableReason" in attributes )
 	{
 		hasUnavailableReason = true
-		scriptOffer.unavailableReason = scriptOffer.attributes.unavailableReason
+
+		offer.unavailableReason = attributes.unavailableReason
+
 	}
 
-	if ( "restrict" in scriptOffer.attributes )
+	if ( "restrict" in attributes )
 	{
-		string restrictVal = scriptOffer.attributes["restrict"]
+		string restrictVal = attributes["restrict"]
 		if ( restrictVal == "true" )
 			isOfferRestricted = true
 	}
@@ -5764,12 +5880,12 @@ int function GRX_GetGiftingLimitResetDate()
 
 
 
-
-
-
-
-
-
+bool function ItemFlavorIsStackable( ItemFlavor itemFlav )
+{
+	return ItemFlavor_GetGRXMode( itemFlav ) == eItemFlavorGRXMode.PACK ||
+	ItemFlavor_GetGRXMode( itemFlav ) == eItemFlavorGRXMode.CONSUMABLE ||
+	ItemFlavor_GetGRXMode( itemFlav ) == eItemFlavorGRXMode.CURRENCY
+}
 
 
 

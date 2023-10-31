@@ -1401,6 +1401,12 @@ string function SURVIVAL_Loot_GetDetailTypeString( LootData lootData )
 
 
 
+
+
+
+
+
+
 		case eLootType.HELMET:
 			return "#ITEM_TYPE_DEFENSE"
 
@@ -1464,6 +1470,10 @@ string function SURVIVAL_Loot_GetGeneralTypeString( LootData data )
 
 		case eLootType.CANDY_PICKUP:
 			return "#SURVIVAL_SPECIAL"
+
+
+
+
 
 
 
@@ -2634,6 +2644,14 @@ void function SURVIVAL_Loot_UpdateHighlightForLoot( entity prop )
 				break
 		}
 
+
+			string passiveHighlight = GetLootHighlightStringForItem( data, prop )
+			if( passiveHighlight != "" )
+			{
+				highlight = passiveHighlight
+			}
+
+
 		if ( prop.e.eyeForQuality_isScanned && PlayerHasPassive( GetLocalViewPlayer(), ePassives.PAS_LOBA_EYE_FOR_QUALITY ) )
 		{
 			if ( data.tier - 1 == eRarityTier.MYTHIC )
@@ -2643,35 +2661,6 @@ void function SURVIVAL_Loot_UpdateHighlightForLoot( entity prop )
 			else if ( data.tier - 1 == eRarityTier.EPIC )
 				highlight = "survival_item_epic_loba"
 		}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -4875,6 +4864,13 @@ void function ServerCallback_AttachedMod( int wIdx, int mIdx )
 
 
 
+
+
+
+
+
+
+
 void function SURVIVAL_UpdateIcons( string weaponName, string category )
 {
 	LootData data
@@ -5004,7 +5000,19 @@ bool function SurvivalLoot_PlayerLookingAtLine( entity player, entity ent )
 	expect vector( pointOnLinePlane )
 
 	if ( pointOnLinePlane.z > topPos.z )
-		return false
+	{
+		vector entToViewVector = viewPos - entPos
+		if( DotProduct( entToViewVector, planeAngles ) < 0 )
+			return false
+
+		vector viewPos2D = viewPos
+		viewPos2D.z = 0
+		vector entPos2D = entPos
+		entPos2D.z = 0
+		float entBehindOffset2DSqr = 400
+		if( DistanceSqr( viewPos2D, entPos2D ) > entBehindOffset2DSqr )
+			return false
+	}
 
 	bool isMainWeapon = SURVIVAL_Loot_GetLootDataByIndex( ent.GetSurvivalInt() ).lootType == eLootType.MAINWEAPON
 	bool lookingBelow = pointOnLinePlane.z < botPos.z
@@ -5039,8 +5047,9 @@ bool function SurvivalLoot_PlayerLookingAtLine( entity player, entity ent )
 	vector pointOnLine = GetClosestPointOnLineSegment( topPos, botPos, pointOnLinePlane )
 
 	float minDist = 14.0
+	float maxAngle = 80
 
-	if ( Distance( pointOnLinePlane, pointOnLine ) > minDist )
+	if ( viewAngles.x <= maxAngle && Distance( pointOnLinePlane, pointOnLine ) > minDist )
 		return false
 
 	
@@ -5425,11 +5434,7 @@ int function EvolvingArmor_GetCharacterShieldHealthMaxForArmorTier( entity playe
 	switch ( tier )
 	{
 		case 0:
-
-
-
 			shieldMaxHealth += 0
-
 			break
 
 
@@ -5904,6 +5909,9 @@ int function GetPriorityForLootType( LootData lootData )
 		case eLootType.CUSTOMPICKUP:
 
 		case eLootType.CANDY_PICKUP:
+
+
+
 
 
 		case eLootType.DATAKNIFE:
@@ -6551,6 +6559,10 @@ int function SURVIVAL_GetInventorySlotCountForPlayer( entity player, LootData da
 
 
 
+			if( PlayerHasPassive( player, ePassives.PAS_EXTRA_ORDINANCE_SLOT ) )
+				result++
+
+
 	}
 	else if ( data.lootType == eLootType.AMMO )
 	{
@@ -6584,6 +6596,13 @@ int function SURVIVAL_GetInventorySlotCountForPlayer( entity player, LootData da
 			if ( data.ref == "health_pickup_health_large" || data.ref == "health_pickup_combo_large" || data.ref == "health_pickup_combo_full" )
 				result++
 		}
+
+		if ( PlayerHasPassive( player, ePassives.PAS_EXTRA_ALL_MED_INV ) )
+		{
+			if ( data.ref == "health_pickup_health_small" || data.ref == "health_pickup_health_large" || data.ref == "health_pickup_combo_small" || data.ref == "health_pickup_combo_large" )
+				result++
+		}
+
 	}
 
 	return result

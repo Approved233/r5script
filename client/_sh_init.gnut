@@ -126,8 +126,8 @@ void function SV_CL_Init()
 	ShGRX_LevelInit()
 	Entitlements_LevelInit()
 	ShLoadouts_LevelInit_Begin()
-	ShSkydiveTrails_LevelInit()
 	ShCharacters_LevelInit()
+	ShSkydiveTrails_LevelInit()
 	ShPassives_Init()
 	ShCharacterAbilities_LevelInit()
 
@@ -185,7 +185,7 @@ void function SV_CL_Init()
 	ShQuips_LevelInit()
 	ShSkydiveEmotes_LevelInit()
 
-
+		ShSkydiveEmoteProjector_LevelInit()
 
 	ShStickers_LevelInit()
 	ShMythics_LevelInit()
@@ -196,6 +196,12 @@ void function SV_CL_Init()
 	ShBattlepassPurchasableXP_LevelInit()
 
 		Sh_Boosts_Init()
+
+
+		ShEventAbilities_Init()
+		ShPassiveLootHighlight_Init()
+		ShPassiveKnockAdrenaline_Init()
+		ShPassiveSquadwipeBoost_Init()
 
 	ShMusic_LevelInit()
 	ShBattlePass_LevelInit()
@@ -210,11 +216,11 @@ void function SV_CL_Init()
 	VendingMachine_LevelInit()
 
 
+
+
+
 	PassiveGrenadier_Init()
-
-
-		PassiveReinforce_Init()
-
+	PassiveReinforce_Init()
 
 
 
@@ -238,6 +244,9 @@ void function SV_CL_Init()
 	ShPing_Init()
 	ShQuickchat_Init()
 	ShChallenges_LevelInit_PreStats()
+
+
+
 	ShItems_LevelInit_Finish()
 	ShItemPerPlayerState_LevelInit()
 	ShLoadouts_LevelInit_Finish()
@@ -279,11 +288,9 @@ void function SV_CL_Init()
 	ShFRC_p2020_Init()
 	PanicButton_Init()
 	ShGas_Init()
+	ShResin_Init()
 
 
-
-
-		ShResin_Init()
 
 
 
@@ -401,7 +408,7 @@ void function SV_CL_Init()
 
 
 
-
+		Sh_Survival_Strikeout_Init()
 
 
 
@@ -415,7 +422,7 @@ void function SV_CL_Init()
 
 
 
-
+		ShAbilityShadowZombie_Init()
 
 
 
@@ -439,8 +446,7 @@ void function SV_CL_Init()
 
 
 
-
-
+		ShPassiveConduit_Init()
 
 
 
@@ -617,6 +623,10 @@ void function SV_CL_Init()
 	CryptoTT_Init()
 
 
+		Wattson_TT_Init()
+
+
+
 		Caustic_TT_Init()
 
 
@@ -635,8 +645,8 @@ void function SV_CL_Init()
 	
 
 
-
-
+		ShadowArmy_Init() 
+		ShadowArmy_RespawnBeacon_Init()
 
 
 	TimedEvents_Init()
@@ -656,7 +666,7 @@ void function SV_CL_Init()
 	SuicideSpectres_Init()
 
 
-
+		Sh_EvacShip_Init()
 
 
 
@@ -916,10 +926,6 @@ void function SV_CL_Init()
 
 
 
-
-
-
-
 void function Client_Init()
 {
 	
@@ -948,6 +954,7 @@ void function Client_Init()
 	CLGoblinDropship_Init()
 	ClPlayer_Init()
 	ClMainHud_Init()
+	ClKillReplayFX_Init()
 	ClWeaponStatus_Init()
 	ClCustomUsePrompt_Init()
 	ClScreenfade_Init()
@@ -1004,8 +1011,10 @@ void function Client_Init()
 
 
 
-	CLPassiveRepair_Init()
-	CLPassiveCoverFire_Init()
+
+
+
+
 	CLChroma_Init()
 	CLPassiveSoftLandings_Init()
 
@@ -1070,8 +1079,8 @@ void function Shared_Lobby_Init()
 
 	Entitlements_LevelInit()
 	ShLoadouts_LevelInit_Begin()
-	ShSkydiveTrails_LevelInit()
 	ShCharacters_LevelInit()
+	ShSkydiveTrails_LevelInit()
 	ShPassives_Init()
 	ShCharacterAbilities_LevelInit()
 
@@ -1115,6 +1124,9 @@ void function Shared_Lobby_Init()
 	ShBattlepassPresaleVoucher_LevelInit()
 	ShBattlepassPurchasableXP_LevelInit()
 
+		ShEventAbilities_Init()
+
+
 		Sh_Boosts_Init()
 
 	ShMusic_LevelInit()
@@ -1143,6 +1155,9 @@ void function Shared_Lobby_Init()
 
 
 	LootBoxCeremony_SharedInit()
+
+
+
 	ShItems_LevelInit_Finish()
 	ShItemPerPlayerState_LevelInit()
 	ShLoadouts_LevelInit_Finish()
@@ -1195,6 +1210,10 @@ void function Shared_Lobby_Init()
 
 
 		Sh_Mastery_Init()
+
+
+
+		AcidWraith_SharedInit()
 
 }
 

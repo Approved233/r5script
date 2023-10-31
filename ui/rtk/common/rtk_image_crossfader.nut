@@ -1,5 +1,6 @@
 global function RTKImageCrossfader_SetImage
 global function RTKImageCrossfader_FadeNewImage
+global function RTKImageCrossfader_FadeScrollNewImage
 
 global struct RTKImageCrossfader_Properties
 {
@@ -31,36 +32,43 @@ void function RTKImageCrossfader_SetImage( rtk_behavior self, asset imageAsset )
 void function RTKImageCrossfader_FadeNewImage( rtk_behavior self, asset imageAsset, float duration = 0.5 )
 {
 	rtk_behavior ornull animator = self.PropGetBehavior( "animator" )
-	rtk_behavior ornull imageBottom = self.PropGetBehavior( "imageBottom" )
-	rtk_behavior ornull imageTop = self.PropGetBehavior( "imageTop" )
-	if ( animator == null || imageBottom == null || imageTop == null )
+	if ( animator == null )
 		return
 
 	expect rtk_behavior( animator )
+	string animName = imageAsset != $"" ? "FadeIn" : "FadeOut"
+
+	RTKImageCrossfader_SwapImage( self, imageAsset )
+	RTKAnim_SetAnimationDuration( animator, animName, duration )
+	RTKAnimator_PlayAnimation( animator, animName )
+}
+
+
+void function RTKImageCrossfader_FadeScrollNewImage( rtk_behavior self, asset imageAsset, float duration = 0.5, bool scrollDown = true )
+{
+	rtk_behavior ornull animator = self.PropGetBehavior( "animator" )
+	if ( animator == null )
+		return
+
+	expect rtk_behavior( animator )
+	string animName = imageAsset != $"" ? ( scrollDown ? "FadeInDown" : "FadeInUp" ) : "FadeOut"
+
+	RTKImageCrossfader_SwapImage( self, imageAsset )
+	RTKAnim_SetAnimationDuration( animator, animName, duration )
+	RTKAnimator_PlayAnimation( animator, animName )
+}
+
+void function RTKImageCrossfader_SwapImage( rtk_behavior self, asset imageAsset )
+{
+	rtk_behavior ornull imageBottom = self.PropGetBehavior( "imageBottom" )
+	rtk_behavior ornull imageTop = self.PropGetBehavior( "imageTop" )
+	if ( imageBottom == null || imageTop == null )
+		return
+
 	expect rtk_behavior( imageBottom )
 	expect rtk_behavior( imageTop )
 
 	asset imageAssetOld = imageTop.PropGetAssetPath( "assetPath" )
 	imageBottom.PropSetAssetPath( "assetPath", imageAssetOld )
 	imageTop.PropSetAssetPath( "assetPath", imageAsset )
-
-	rtk_array anims  = animator.PropGetArray( "tweenAnimations" )
-	int animCount = RTKArray_GetCount( anims )
-	string animName = imageAsset != $"" ? "FadeIn" : "FadeOut"
-
-	for ( int i = 0; i < animCount; i++ )
-	{
-		rtk_struct anim = RTKArray_GetStruct( anims, i )
-		if ( RTKStruct_GetString( anim, "name" ) != animName )
-			continue
-
-		rtk_array tweens = RTKStruct_GetArray( anim, "tweens" )
-		int tweenCount = RTKArray_GetCount( tweens )
-		for ( int j = 0; j < tweenCount; j++ )
-		{
-			RTKStruct_SetFloat( RTKArray_GetStruct( tweens, j ), "duration", duration )
-		}
-	}
-
-	RTKAnimator_PlayAnimation( animator, animName )
 }

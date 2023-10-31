@@ -580,5 +580,3 @@ int function GetRingConsoleGoalNumber()
 
 
 
-
-

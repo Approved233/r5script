@@ -48,6 +48,10 @@ global function Perks_GetSettingsInfoForPerk
 
 
 
+
+
+
+
 global enum ePerkIndex
 {
 	
@@ -149,6 +153,7 @@ void function Perks_Init()
 
 	RegisterSignal( "UpdatePerkMinimapVisibility" )
 	RegisterSignal( "HidePerkMinimapVisibility" )
+
 
 
 
@@ -341,6 +346,47 @@ void function Perks_RegisterClassPerk( PerkInfo perkToRegister )
 
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

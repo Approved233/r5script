@@ -5,10 +5,14 @@ global function MpWeaponPDW_Init
 void function OnWeaponActivate_weapon_pdw( entity weapon )
 {
 
+
+
 }
 
 void function OnWeaponDeactivate_weapon_pdw( entity weapon )
 {
+
+
 
 }
 

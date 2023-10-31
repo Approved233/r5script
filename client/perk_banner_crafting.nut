@@ -44,6 +44,8 @@ void function Perk_ExtraBinLoot_Init()
 	Perks_RegisterClassPerk( bannerCrafting )
 
 	RegisterSignal( "RecoveredExpiredDNA" )
+	RegisterSignal( "BannerCraftingDisabled" )
+
 
 
 
@@ -158,8 +160,41 @@ void function OnActivate_ExpiredBannerRecoveryPerk( entity player, string charac
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function OnDeactivate_ExpiredBannerRecoveryPerk( entity player )
 {
+
+
 
 
 

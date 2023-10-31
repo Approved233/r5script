@@ -452,6 +452,12 @@ array<string> function GetSubjectNamesForCommsAction( int commsAction, entity su
 		{
 			return [Localize( "#NPC_LOOT_TICK_UI_TITLE" )]
 		}
+
+
+
+
+
+
 		else if ( commsAction == eCommsAction.PING_ENEMY_NPC_PROWLER )
 		{
 			return [Localize( "#NPC_PROWLER_UI_TITLE" )]
@@ -880,13 +886,19 @@ bool function ShouldMuteCommsActionForCooldown( entity player, int commsAction, 
 	if ( delta < cooldownTime )
 		return true
 
+	bool isEnemyNearbyComm = commsAction == eCommsAction.QUICKCHAT_SKYDIVE_ENEMIES_NEARBY
 
-		if ( commsAction == eCommsAction.QUICKCHAT_SKYDIVE_ENEMIES_NEARBY )
-		{
-			float teamDelta = GetTeamLastSaid( player.GetTeam(), commsAction )
-			if ( teamDelta < cooldownTime )
-				return true
-		}
+
+		if ( IsShadowArmyGamemode() )
+			isEnemyNearbyComm = commsAction == eCommsAction.QUICKCHAT_SKYDIVE_ENEMIES_NEARBY || commsAction == eCommsAction.QUICKCHAT_SKYDIVE_REV_NEARBY || commsAction == eCommsAction.QUICKCHAT_SKYDIVE_SKINBAG_NEARBY
+
+
+	if ( isEnemyNearbyComm )
+	{
+		float teamDelta = GetTeamLastSaid( player.GetTeam(), commsAction )
+		if ( teamDelta < cooldownTime )
+			return true
+	}
 
 
 	return false
@@ -1095,7 +1107,11 @@ void function HandleBroadcastCommsAction( entity player, int commsAction, entity
 				commsAction == eCommsAction.PING_VANTAGE_ENEMY_SPOTTED_2 ||
 				commsAction == eCommsAction.PING_VANTAGE_ENEMY_SPOTTED_3 ||
 				commsAction == eCommsAction.PING_VANTAGE_ENEMY_SPOTTED_4 ||
-				commsAction == eCommsAction.PING_VANTAGE_ENEMY_SPOTTED_5 )
+				commsAction == eCommsAction.PING_VANTAGE_ENEMY_SPOTTED_5
+
+
+
+			)
 		{
 			if ( IsValid( subjectEnt ) )
 			{
@@ -1215,7 +1231,7 @@ void function PlaySoundForCommsAction( entity player, entity subjectEnt, CommsAc
 		}
 
 		if ( sound.find( "_cond" ) >= 0 || sound.find( "_flavor" ) >= 0 )  {
-			Remote_ServerCallFunction("ClientCallback_SendDynDiagPIN", sound)
+			PIN_DynamicDialogue( sound )
 		}
 
 		player.p.sayLineLatestSound = sound
@@ -1283,6 +1299,10 @@ bool function ShouldCommsActionDialogBeMuted( entity subjectEnt, CommsAction act
 
 CommsAction function GetCommsAction( int index )
 {
+
+
+
+
 	CommsAction blankAction
 	if ( (index < 0) || (index >= eCommsAction._count) )
 		return blankAction
@@ -1402,7 +1422,10 @@ void function PromptReplyWhenPrimaryFinishes( entity playerSpeakingPrimary, int 
 
 string function GetMenuOptionTextForCommsAction( int commsAction )
 {
-	Assert( commsAction < eCommsAction._count )
+
+
+
+
 	CommsAction data = file.actions[commsAction]
 	return Localize( data.menuText )
 }
@@ -1412,7 +1435,10 @@ string function GetMenuOptionTextForCommsAction( int commsAction )
 
 string function GetShortTextForCommsAction( int commsAction )
 {
-	Assert( commsAction < eCommsAction._count )
+
+
+
+
 	CommsAction data = file.actions[commsAction]
 	return Localize( data.shortText )
 }
@@ -1422,7 +1448,10 @@ string function GetShortTextForCommsAction( int commsAction )
 
 asset function GetDefaultIconForCommsAction( int commsAction )
 {
-	Assert( commsAction < eCommsAction._count )
+
+
+
+
 	CommsAction data = file.actions[commsAction]
 	return data.defaultIcon
 }
@@ -1432,9 +1461,10 @@ asset function GetDefaultIconForCommsAction( int commsAction )
 
 asset function GetPingAssetForCommsAction( int commsAction )
 {
-	Assert( commsAction < eCommsAction._count )
-	string enumStr = IsValidEnumValue( "eCommsAction", commsAction ) ? GetEnumString( "eCommsAction", commsAction ) : "Unknown eCommsAction!"
-	Assert( commsAction in file.actions, "Unhandled commsAction " + enumStr + " (" + commsAction + ")" ) 
+
+
+
+
 	CommsAction data = file.actions[commsAction]
 	return data.pingAsset
 }
@@ -1959,5 +1989,15 @@ void function ServerCallback_BroadcastPlayerKicked( int entIdx, bool isAnonymous
 
 	Obituary_Print_Localized( Localize( "#ANTICHEAT_REMOVED_FROM_MATCH", name ), <255, 255, 255> )
 }
+
+
+
+
+
+
+
+
+
+
 
 

@@ -87,6 +87,8 @@ void function ShGameModeShadowRoyale_Init()
 
 	AddCallback_EntitiesDidLoad( EntitiesDidLoad )
 
+	PrecacheSkinName( "ShadowSqaud" )
+
 
 
 

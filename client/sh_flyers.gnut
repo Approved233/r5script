@@ -1381,47 +1381,6 @@ bool function EvilFlyersEnabled()
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 void function ServerCallback_PlayLootRarityFXOnDeathboxDrop( entity deathBox  )
 {
 	thread PlayLootRarityFXOnDeathboxDrop_threaded( deathBox  )

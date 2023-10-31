@@ -84,7 +84,7 @@ void function ClSurvivalCommentary_Init()
 	ShSurvivalCommentary_Init()
 	ShAmbientDialogue_Init()
 
-	if ( IsPVEMode() )
+	if ( IsVDUDialogueEnabled() )
 		SetUseDialogueVDU( true )
 
 	AddCallback_KillReplayStarted( KillReplayStarted )

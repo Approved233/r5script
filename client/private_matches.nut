@@ -1121,28 +1121,12 @@ void function OnSpectatorTargetChanged( entity observer, entity prevTarget, enti
 	if ( observer.GetTeam() != TEAM_SPECTATOR )
 		return
 
-	bool showTeamName = true
-
-	if (GunGame_IsModeEnabled())
-		showTeamName = false
-
-
-
-	if (WinterExpress_IsModeEnabled())
-		showTeamName = false
-
-
-	if ( IsValid( newTarget ) && ( newTarget.IsPlayer() || newTarget.IsBot() ) && (newTarget != prevTarget) && showTeamName)
+	if ( IsValid( newTarget ) && ( newTarget.IsPlayer() || newTarget.IsBot() ) && (newTarget != prevTarget) )
 	{
 		printf( "PrivateMatchObserver: Observer %s changed target to %s", observer.GetPINNucleusPid(), newTarget.GetPINNucleusPid() )
 		Remote_ServerCallFunction( "ClientCallback_PrivateMatchReportObserverTargetChanged" )
 		Remote_ServerCallFunction( "ClientCallback_PrivateMatchRefreshSurveyRing" )
 		PrivateMatch_UpdateChatTarget()
-		ShowTeamNameInHud()
-	}
-	else
-	{
-		HideTeamNameInHud()
 	}
 }
 

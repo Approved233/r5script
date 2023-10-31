@@ -20,6 +20,8 @@ const float ULTIMATE_DECOY_DURATION = 5.0
 const float BAMBOOZLE_DURATION = 3.5
 
 
+
+
 global const vector HOLOPILOT_ANGLE_SEGMENT = <0, 60, 0>
 global function Decoy_Init
 
@@ -266,6 +268,7 @@ var function OnWeaponPrimaryAttack_holopilot( entity weapon, WeaponPrimaryAttack
 
 
 
+
 		if ( chargeLevel == 1 )
 			CreateARIndicator( weaponOwner )
 
@@ -274,6 +277,16 @@ var function OnWeaponPrimaryAttack_holopilot( entity weapon, WeaponPrimaryAttack
 
 	return weapon.GetWeaponSettingInt( eWeaponVar.ammo_min_to_fire ) 
 }
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1320,6 +1333,13 @@ void function AttemptToggleDecoys( entity player )
 {
 	if ( !TryCharacterButtonCommonReadyChecks( player ) )
 		return
+
+	
+	if ( IsControllerModeActive() )
+	{
+		if ( TryOnscreenPromptFunction( player, "quickchat" ) )
+			return
+	}
 
 	Remote_ServerCallFunction( "ClientCallback_ToggleDecoys" )
 }

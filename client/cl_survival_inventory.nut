@@ -37,6 +37,7 @@ global function UIToClient_GroundlistClosed
 
 
 
+
 global function UICallback_UpdateInventoryButton
 global function UICallback_OnInventoryButtonAction
 global function UICallback_OnInventoryButtonAltAction
@@ -1019,6 +1020,21 @@ void function OpenSurvivalGroundList( entity player, entity deathBox = null, int
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function UICallback_UpdateInventoryButton( var button, int position )
 {
 	entity player = GetLocalClientPlayer()
@@ -1554,7 +1570,7 @@ void function EquipmentButtonInit( var button, string equipmentSlot, LootData lo
 
 
 	{
-		asset icon      = lootData.fakeAmmoIcon
+		asset icon      = lootData.fakeAmmoIcon == $"" ? $"rui/hud/gametype_icons/survival/sur_ammo_unique" : lootData.fakeAmmoIcon
 
 		int slot 		= isMainWeapon ? Survival_GetEquipmentSlotDataByRef( equipmentSlot ).weaponSlot : SLING_WEAPON_SLOT
 
@@ -1562,17 +1578,19 @@ void function EquipmentButtonInit( var button, string equipmentSlot, LootData lo
 
 		entity weapon   = player.GetNormalWeapon( slot )
 
-		Assert( IsValid( weapon ), "Weapon entity must be valid if the equipment slot data is valid as well" )
+		bool weaponEntIsValid = IsValid( weapon )
+		Assert( weaponEntIsValid, "Weapon entity must be valid if the equipment slot data is valid as well" )
 
-		string ammoTypeRef = AmmoType_GetRefFromIndex( weapon.GetWeaponAmmoPoolType() )
-		if( SURVIVAL_Loot_IsRefValid( ammoTypeRef ) && ( weapon.GetWeaponSettingBool( eWeaponVar.uses_ammo_pool ) || GetInfiniteAmmo( weapon ) ) )
+		string ammoTypeRef = GetWeaponAmmoType( lootData.ref )
+		if ( GetWeaponInfoFileKeyField_GlobalBool( lootData.baseWeapon, "uses_ammo_pool" ) )
 		{
 			LootData ammoData = SURVIVAL_Loot_GetLootDataByRef( ammoTypeRef )
 			icon = ammoData.hudIcon
 		}
 
 		RuiSetImage( rui, "ammoTypeImage", icon )
-		Weapon_UpdateAltAmmoRui( rui, player, weapon, false )
+		if( weaponEntIsValid )
+			Weapon_UpdateAltAmmoRui( rui, player, weapon, false )
 	}
 	ToolTipData dt
 	PopulateTooltipWithTitleAndDesc( lootData, dt )
@@ -3404,6 +3422,9 @@ void function UICallback_UpdateTeammateInfo( var elem, bool isCompact )
 
 
 
+		
+		team.sort( SquadMemberIndexSort )
+
 		if ( teammateIndex < team.len() )
 		{
 			Hud_SetHeight( elem, Hud_GetBaseHeight( elem ) )
@@ -3619,6 +3640,12 @@ void function TEMP_UpdatePlayerRui( var rui, entity player )
 		RuiSetFloat( rui, "cameraViewFrac", StatusEffect_GetSeverity( player, eStatusEffect.camera_view ) )
 		RuiSetBool( rui, "useShadowFormFrame", StatusEffect_HasSeverity( player, eStatusEffect.death_totem_visual_effect ) )
 
+
+			RuiSetInt( rui, "playerOvershield", player.GetPlayerNetInt( TEMPSHIELD_NETVAR ) )
+			int arcFlashState = GetArcFlashState( player )
+			RuiSetBool( rui, "playerOvershieldCharging", arcFlashState == eArcFlashState.CHARGE )
+
+
 		RuiSetInt( rui, "micStatus", GetPlayerMicStatus( player ) )
 
 
@@ -3676,6 +3703,9 @@ void function TEMP_UpdateTeammateRui( var elem, bool isCompact )
 
 
 		}
+
+		
+		team.sort( SquadMemberIndexSort )
 
 		RuiSetBool( rui, "isJIP", false )
 
@@ -3757,7 +3787,13 @@ void function TEMP_UpdateTeammateRui( var elem, bool isCompact )
 			RuiSetFloat( rui, "bleedoutEndTime", ent.GetPlayerNetTime( "bleedoutEndTime" ) )
 			RuiSetInt( rui, "respawnStatus", ent.GetPlayerNetInt( "respawnStatus" ) )
 			RuiSetFloat( rui, "respawnStatusEndTime", ent.GetPlayerNetTime( "respawnStatusEndTime" ) )
-			RuiSetBool( rui, "useShadowFormFrame", ent.IsShadowForm() )
+			RuiSetBool( rui, "useShadowFormFrame", ent.IsShadowForm() && !IsPlayerShadowZombie( ent ) )
+
+
+				RuiSetInt( rui, "overshield", ent.GetPlayerNetInt( TEMPSHIELD_NETVAR ) )
+				int arcFlashState = GetArcFlashState( ent )
+				RuiSetBool( rui, "overshieldCharging", arcFlashState == eArcFlashState.CHARGE )
+
 
 			RuiSetInt( rui, "micStatus", GetPlayerMicStatus( ent ) )
 
@@ -3782,7 +3818,7 @@ void function TEMP_UpdateTeammateRui( var elem, bool isCompact )
 
 			bool showBleedoutTimer = true
 
-
+				showBleedoutTimer = !IsStrikeoutGamemode()
 
 			RuiSetBool( rui, "showBleedoutTimer", showBleedoutTimer )
 
@@ -3796,13 +3832,7 @@ void function TEMP_UpdateTeammateRui( var elem, bool isCompact )
 
 				RuiSetString( rui, "name", Localize( "#JIP_SEARCHING_FOR_SHORT" ))
 
-				vector playerColor
-				if( GetCurrentPlaylistVarBool("has_squad_based_ui", false) )
-				{
-					playerColor = SrgbToLinear( GetPlayerInfoColor(player ) / 255.0 )
-				}
-				else
-					playerColor = SrgbToLinear( GetKeyColor( COLORID_MEMBER_COLOR0, 1 + teammateIndex ) / 255.0 )
+				vector playerColor = Teams_GetTeamColor( player.GetTeam() )
 
 				RuiSetBool( rui, "useCustomCharacterColor", true )
 				RuiSetColorAlpha( rui, "customCharacterColor", playerColor, 1.0 )

@@ -5,7 +5,6 @@ global function InitRTKProgressionModifiersMenu
 global function OpenProgressionModifiersMenu
 global function InitRTKProgressionModifiersInfoPanel
 global function InitRTKProgressionModifiersBoostPanel
-global function GetLegacyXPBoostPercentage
 struct
 {
 	var menu = null
@@ -39,8 +38,6 @@ void function RTKProgressionModifiersBoost_OnDestroy( rtk_behavior self )
 void function BuildProgressionModifiersBoostDataModel( rtk_behavior self, rtk_struct xpModifiersModel )
 {
 	array<RTKProgressionModifiersBoostModel> boostModel = []
-	AppendLegacyBoostsToModel( boostModel )
-
 	BoostTable boosts = Boost_GetActiveBoosts( GetLocalClientPlayer() )
 	foreach( Boost boost in boosts )
 	{
@@ -54,6 +51,7 @@ void function BuildProgressionModifiersBoostDataModel( rtk_behavior self, rtk_st
 		boostData.icon = Boost_GetBoostEventCategoryIcon( boost )
 		boostModel.append( boostData )
 	}
+	AppendLegacyBoostsToModel( boostModel )
 
 	rtk_array xpBoostsModel = RTKStruct_GetOrCreateScriptArrayOfStructs( xpModifiersModel, "boosts", "RTKProgressionModifiersBoostModel" )
 	RTKArray_SetValue( xpBoostsModel, boostModel )
@@ -138,20 +136,5 @@ void function AppendLegacyBoostsToModel( array<RTKProgressionModifiersBoostModel
 {
 	model.append( GenerateLegacyPartyUpBoostModel() )
 	model.append( GenerateLegacyXPBoostModel( GetLegacyXPBoostPercentage() ) )
-}
-
-const int MAX_XP_BOOST_SACKING_PERCENTAGE = 300
-const int XP_BOOST_AMOUNT = int(BATTLEPASS_XP_BOOST_AMOUNT * 100.0)
-int function GetLegacyXPBoostPercentage()
-{
-	int boostCount = 0
-	Party party = GetParty()
-
-	foreach ( member in party.members )
-	{
-		boostCount += member.boostCount
-	}
-
-	return ClampInt(boostCount * XP_BOOST_AMOUNT, 0, MAX_XP_BOOST_SACKING_PERCENTAGE)
 }
       

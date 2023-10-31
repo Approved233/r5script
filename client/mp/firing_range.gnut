@@ -1194,6 +1194,7 @@ int function FRS_PVar_Get_Int( entity player, int settingType )
 
 void function SCB_CloseCharacterSelectMenu()
 {
+	RunUIScript( "CloseAllDialogs" )
 	CloseCharacterSelectMenu()
 }
 

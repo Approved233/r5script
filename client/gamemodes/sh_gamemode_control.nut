@@ -1151,11 +1151,13 @@ void function Control_RegisterNetworking()
 
 }
 
+
 bool function Control_ShouldShow2DMapIcons()
 {
 	
-	return !( GetCurrentPlaylistVarBool( "disable_minimap", false ) ) && !Control_IsModeEnabled()
+	return !MiniMapIsDisabled() && !Control_IsModeEnabled()
 }
+
 
 float function Control_GetDefaultExpPercentToAwardForPointSpawn()
 {
@@ -9630,10 +9632,10 @@ void function Control_UpdatePlayerInfo_thread( var elem )
 			break
 
 
-
-
-
-
+		if ( IsRevTakeover() && ( AllianceProximity_GetAllianceFromTeam( player.GetTeam() ) == ALLIANCE_B ) )
+		{
+			Hud_Hide( elem )
+		}
 
 
 		RuiSetImage( rui, "playerPortrait", CharacterClass_GetCharacterLockedPortrait( character ) )
@@ -10503,7 +10505,7 @@ void function Control_CreateTeammateDeathIcon_3DMap_Thread( entity victimWP )
 
 	if ( isLocalPlayerObserver )
 	{
-		RuiSetColorAlpha( rui, "deathIconColor", Teams_GetTeamColor( AllianceProximity_GetAllianceFromTeam( victimTeam ) ), 1.0 )
+		RuiSetColorAlpha( rui, "deathIconColor", Teams_GetTeamColor( victimTeam ), 1.0 )
 	}
 	else if ( isVictimSquadmate )
    	{
@@ -10584,11 +10586,11 @@ void function Control_TeamLocationWaypointThink_Thread( entity wp )
 		bool isTeammateSquadmate = localPlayerTeam == teammateTeam
 		if ( isLocalPlayerObserver ) 
 		{
-			RuiSetColorAlpha( rui, "teammateIconColor", Teams_GetTeamColor( AllianceProximity_GetAllianceFromTeam( teammateTeam ) ), 1.0 )
+			RuiSetColorAlpha( rui, "teammateIconColor", Teams_GetTeamColor( teammateTeam ), 1.0 )
 		}
 		else if ( isTeammateSquadmate )
 		{
-			RuiSetColorAlpha( rui, "teammateIconColor", SrgbToLinear( GetTeammateIconColor( teammate ) / 255.0 ), 1.0 )
+			RuiSetFloat2( rui, "teammateIconScale", <1.5, 1.5, 0.0> )
 		}
 
 		RuiTrackFloat3( rui, "teammateLocation", teammate, RUI_TRACK_ABSORIGIN_FOLLOW )
@@ -11602,7 +11604,9 @@ void function Control_ScoreboardSetup()
 	Teams_AddCallback_PlayerScores( Control_GetPlayerScores )
 	Teams_AddCallback_SortScoreboardPlayers( Control_SortPlayersByScore )
 	Teams_AddCallback_Header( Control_ScoreboardUpdateHeader )
-	Teams_AddCallback_GetTeamColor( Control_ScoreboardGetTeamColor )
+	Teams_AddCallback_GetTeamColor( Control_GetTeamColor )
+	Teams_AddCallback_GetTeamName( Control_GetTeamName )
+	Teams_AddCallback_GetTeamIcon( Control_GetTeamIcon )
 }
 
 
@@ -12027,7 +12031,12 @@ void function Control_ScoreboardUpdateHeader( var headerRui, var frameRui,  int 
 	}
 	else if ( headerRui != null )
 	{
-		RuiSetString( headerRui, "headerText", Localize( isFriendly ? "#ALLIES" : "#ENEMIES" ) )
+		string nameOverride = Control_GetTeamName( team )
+		if( nameOverride == "" )
+			RuiSetString( headerRui, "headerText", Localize( isFriendly ? "#ALLIES" : "#ENEMIES" ) )
+		else
+			RuiSetString( headerRui, "headerText", Localize( nameOverride ) )
+
 	}
 
 	int winningTeam = -1
@@ -12050,9 +12059,22 @@ void function Control_ScoreboardUpdateHeader( var headerRui, var frameRui,  int 
 
 
 
-vector function Control_ScoreboardGetTeamColor( int team )
+vector function Control_GetTeamColor( int team )
 {
 	bool isFriendly = team == AllianceProximity_GetAllianceFromTeam( GetLocalViewPlayer().GetTeam() )
+
+
+		if ( IsRevTakeover() )
+		{
+			if( team != SHADOWARMY_REVENANT_ALLIANCE )
+			{
+				return SrgbToLinear( GetKeyColor( COLORID_ALLIANCE_0 ) / 255.0 )
+			}
+			else
+			{
+				return SrgbToLinear( GetKeyColor( COLORID_ALLIANCE_1 ) / 255.0 )
+			}
+		}
 
 	if ( Control_IsPlayerPrivateMatchObserver( GetLocalClientPlayer() ) )
 		isFriendly = team == ALLIANCE_A
@@ -12062,6 +12084,24 @@ vector function Control_ScoreboardGetTeamColor( int team )
 		color  = GamemodeUtility_GetColorVectorForCaptureObjectiveState( eGamemodeUtilityCaptureObjectiveColorState.ENEMY_OWNED, true )
 
 	return color
+}
+
+
+
+string function Control_GetTeamName( int team )
+{
+	string teamName = Survival_GetTeamName( team )
+
+	return teamName
+}
+
+
+
+asset function Control_GetTeamIcon( int team )
+{
+	asset teamIcon = Survival_GetTeamIcon( team )
+
+	return teamIcon
 }
 
 
@@ -13451,16 +13491,19 @@ void function Control_PlayWeaponEvoVFX_Thread( entity player, int expTier,  asse
 	if ( !IsValid( activePrimaryWeapon ) )
 		return
 
-	int fxHandle
+	int fpFXHandle
 
 	EndSignal( player, "OnDestroy", "OnDeath" )
 	EndSignal( activePrimaryWeapon, "OnDestroy" )
 
 	OnThreadEnd(
-		function() : ( fxHandle )
+		function() : ( fpFXHandle, activePrimaryWeapon, thirdPersonVFXAsset )
 		{
-			if ( EffectDoesExist( fxHandle ) )
-				EffectStop( fxHandle, true, false )
+			if ( EffectDoesExist( fpFXHandle ) )
+				EffectStop( fpFXHandle, true, false )
+
+			if ( IsValid( activePrimaryWeapon ) )
+				activePrimaryWeapon.StopWeaponEffect( $"", thirdPersonVFXAsset )
 		}
 	)
 
@@ -13470,8 +13513,8 @@ void function Control_PlayWeaponEvoVFX_Thread( entity player, int expTier,  asse
 	int attachmentID = activePrimaryWeapon.LookupAttachment( "hcog" )
 	if ( attachmentID != 0 )
 	{
-		fxHandle = activePrimaryWeapon.PlayWeaponEffectReturnViewEffectHandle( firstPersonVFXAsset, thirdPersonVFXAsset, "hcog", true )
-		EffectSetControlPointVector( fxHandle, 1, tierColor )
+		fpFXHandle = activePrimaryWeapon.PlayWeaponEffectReturnViewEffectHandle( firstPersonVFXAsset, thirdPersonVFXAsset, "hcog", true )
+		EffectSetControlPointVector( fpFXHandle, 1, tierColor )
 	}
 
 	wait VFX_LIFETIME

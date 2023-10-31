@@ -1151,11 +1151,13 @@ void function Control_RegisterNetworking()
 
 }
 
-bool function Control_ShouldShow2DMapIcons()
-{
-	
-	return !( GetCurrentPlaylistVarBool( "disable_minimap", false ) ) && !Control_IsModeEnabled()
-}
+
+
+
+
+
+
+
 
 float function Control_GetDefaultExpPercentToAwardForPointSpawn()
 {
@@ -7850,6 +7852,47 @@ bool function Control_IsSpawnWaypointIndexAnObjective( int waypointIndex )
 {
 	return waypointIndex == eControlWaypointTypeIndex.OBJECTIVE_A || waypointIndex == eControlWaypointTypeIndex.OBJECTIVE_B || waypointIndex == eControlWaypointTypeIndex.OBJECTIVE_C
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

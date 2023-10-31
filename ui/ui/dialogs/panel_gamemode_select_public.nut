@@ -344,6 +344,22 @@ void function UpdateGameModes()
 
 			bool isEnabled = false
 
+		if ( HasEventTakeOverActive() )
+		{
+			if ( button == file.slotToButtonMap["ltm"] )
+				isEnabled = true
+
+			if ( !file.hasLocalPlayerCompletedNewPlayerOrientation && button == file.slotToButtonMap["regular_1"] )
+				isEnabled = true
+
+			if ( !file.hasLocalPlayerCompletedTraining && button == file.slotToButtonMap["training"] )
+				isEnabled = true
+
+			if ( file.hasLocalPlayerCompletedNewPlayerOrientation && file.hasLocalPlayerCompletedTraining && isRankedBR )
+				isEnabled = true
+		}
+		else
+		{
 			if ( file.hasLocalPlayerCompletedNewPlayerOrientation )
 			{
 				
@@ -361,6 +377,7 @@ void function UpdateGameModes()
 				if ( button == file.slotToButtonMap["training"] )
 					isEnabled = true
 			}
+		}
 
 
 
@@ -394,6 +411,10 @@ void function UpdateGameModes()
 	string rotationMapName = GetPlaylistMapVarString( playlistName, mapIdx, "map_name", "" )
 
 	asset panelImageAsset = GetImageFromImageMap( panelImageKey )
+	if ( HasEventTakeOverActive() && IsPlaylistLockedForEvent( playlistName ) )
+	{
+		panelImageAsset = GetImageFromImageMap("play_apex_panel_locked")
+	}
 
 	int remainingTimeSeconds = GetPlaylistRotationNextTime() - GetUnixTimestamp()
 
@@ -620,6 +641,16 @@ void function GamemodeSelect_UpdateSelectButton( var button, string playlistName
 	string imageKey  = GetPlaylistMapVarString( playlistName, mapIdx, "image", "" )
 	asset imageAsset = GetImageFromImageMap( imageKey )
 	asset thumbnailAsset = GetThumbnailImageFromImageMap( imageKey )
+	if ( HasEventTakeOverActive() && IsPlaylistLockedForEvent( playlistName ) )
+	{
+		if ( GetPlaylistVarString( playlistName, "ui_slot", "" ) == "mixtape" )
+			imageAsset = GetImageFromImageMap( "mixtape_locked" )
+		else
+			imageAsset = GetImageFromImageMap( imageKey + "_event_locked" )
+
+		thumbnailAsset = GetThumbnailImageFromImageMap( "event_locked" )
+		RuiSetBool( rui, "eventLocked", true )
+	}
 	string iconKey = GetPlaylistMapVarString( playlistName, mapIdx, "lobby_mini_icon", "" )
 	asset iconAsset = GetImageFromMiniIconMap( iconKey )
 	RuiSetImage( Hud_GetRui( button ), "modeImage", imageAsset )

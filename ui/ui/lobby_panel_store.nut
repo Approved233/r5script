@@ -47,6 +47,7 @@ const int MAX_OFFER_COLUMNS = 5
 global const string FEATURED_STORE_PANEL = "ECPanel"
 global const string SEASONAL_STORE_PANEL = "SeasonalPanel"
 global const string SPECIALS_STORE_PANEL = "SpecialsPanel"
+global const string PERSONALIZED_STORE_PANEL = "PersonalizedStorePanel"
 
 global struct bpPresaleOfferData
 {
@@ -305,11 +306,10 @@ void function OnStorePanel_Show( var panel )
 	SetCurrentHubForPIN( Hud_GetHudName( panel ) )
 	UI_SetPresentationType( ePresentationType.WEAPON_CATEGORY )
 
-
 	TabData tabData = GetTabDataForPanel( panel )
 	tabData.centerTabs = true
 	SetTabBackground( tabData, Hud_GetChild( file.storePanel, "TabsBackground" ), eTabBackground.STANDARD )
-	SetTabDefsToSeasonal(tabData)
+	SetTabDefsToSeasonal( tabData )
 
 	if ( GetLastMenuNavDirection() == MENU_NAV_FORWARD )
 		thread AnimateInSmallTabBar( tabData )
@@ -336,8 +336,6 @@ void function OnStorePanel_Show( var panel )
 
 	RegisterButtonPressedCallback( KEY_TAB, ToggleVCPopUp )
 	RegisterButtonPressedCallback( BUTTON_BACK, ToggleVCPopUp )
-
-
 }
 
 
@@ -418,7 +416,6 @@ void function OnGRXStoreUpdate()
 		bool haveActiveCollectionEvent          = ( activeCollectionEvent != null )
 		ItemFlavor ornull activeThemedShopEvent = GetActiveThemedShopEvent( GetUnixTimestamp() )
 		bool haveActiveThemedShopEvent          = ( activeThemedShopEvent != null )
-
 		bool haveActiveHeirloomTab				= HeirloomShop_IsVisibleWithoutCurrency() || GRXCurrency_GetPlayerBalance( GetLocalClientPlayer(), GRX_CURRENCIES[GRX_CURRENCY_HEIRLOOM] ) > 0
 
 		SetTabNavigationEnabled( file.storePanel, true )
@@ -484,6 +481,14 @@ void function OnGRXStoreUpdate()
 				showTab = GRX_IsLocationActive( "seasonal" )
 				enableTab = showTab
 			}
+
+
+
+
+
+
+
+
 
 			SetTabDefVisible( tabDef, showTab )
 			SetTabDefEnabled( tabDef, enableTab )
@@ -1343,7 +1348,7 @@ void function UpdateOffersPanel()
 		if ( GRX_AreOffersReady() )
 		{
 
-
+			if ( !GetConVarBool( "mtx_useOffersV2" ) )
 
 			{
 				if( GRX_HasUpToDateBundleOffers() )
@@ -2123,10 +2128,19 @@ void function OfferButton_SetDisplay( var button, GRXScriptOffer offerData, bool
 		priceText = "#OWNED"
 	}
 
+	else if ( GRXOffer_IsPurchaseLimitReached( offerData ) )
+	{
+		bool canGift = offerData.isGiftable && IsGiftingEnabled() && CanLocalPlayerGift()
 
-
-
-
+		if ( !canGift )
+		{
+			priceText = "#LIMIT_REACHED"
+		}
+		else
+		{
+			priceText = "#PURCHASE_AS_GIFT"
+		}
+	}
 
 	else if ( offerData.prices.len() > 0 )
 	{
@@ -2183,7 +2197,7 @@ void function OfferButton_SetDisplay( var button, GRXScriptOffer offerData, bool
 	RuiSetInt( rui, "numCollected", packCollectionInfo.numCollected )
 	RuiSetInt( rui, "numTotalInCollection", packCollectionInfo.numTotalInCollection )
 
-
+	if ( !GetConVarBool( "mtx_useOffersV2" ) )
 
 	{
 		RuiSetBool( rui, "isPriceLoading", ( offerData.offerType == GRX_OFFERTYPE_BUNDLE ) && !GRX_HasUpToDateBundleOffers() )

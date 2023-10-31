@@ -679,7 +679,7 @@ void function ShLoadouts_LevelInit_Finish()
 
 #if DEV
 		if ( DEV_ShouldIgnorePersistence() )
-			Warning( "dev_loadouts_ignore_persistence is enabled" )
+			printt( "LoadoutsDbg: dev_loadouts_ignore_persistence is enabled" )
 #endif
 
 	fileLevel.isInitialized = true
@@ -2561,6 +2561,12 @@ array<ItemFlavor> function GetLoadoutItemsSortedForMenu( array<LoadoutEntry> loa
 
 		int aQuality = ItemFlavor_HasQuality( a ) ? ItemFlavor_GetQuality( a ) : -1
 		int bQuality = ItemFlavor_HasQuality( b ) ? ItemFlavor_GetQuality( b ) : -1
+
+		
+		aQuality = SwapIconicAndMythicQuality_HACK( aQuality )
+		bQuality = SwapIconicAndMythicQuality_HACK( bQuality )
+
+
 		if ( aQuality > bQuality )
 			return -1
 		else if ( aQuality < bQuality )
@@ -2582,6 +2588,18 @@ array<ItemFlavor> function GetLoadoutItemsSortedForMenu( array<LoadoutEntry> loa
 	} )
 
 	return items
+}
+
+
+
+
+int function SwapIconicAndMythicQuality_HACK( int a )
+{
+	if ( a == 5 ) 
+		return 4
+	else if( a == 4 ) 
+		return 5
+	return a
 }
 
 
@@ -3233,7 +3251,7 @@ array<string> ornull function GetLoadoutSlotForceResetTo( LoadoutEntry entry )
 	if ( refs.len() == 0 )
 		return null
 
-	printf( "Warning: loadout slot '%s' is being force reset to one of '%s'.", entry.id, playlistVarVal )
+	printf( "LoadoutsDbg: loadout slot '%s' is being force reset to one of '%s'.", entry.id, playlistVarVal )
 	return refs
 }
 

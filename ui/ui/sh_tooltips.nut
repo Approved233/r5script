@@ -445,6 +445,12 @@ void function UpdateToolTipElement( var toolTipElement, var focusElement )
 	{
 		RuiSetFloat3( rui, "descTextAltColor", dt.storeTooltipData.tooltipAltDescColor )
 	}
+
+	if ( dt.tooltipStyle == eTooltipStyle.CURRENCY )
+	{
+		RuiSetBool( rui, "premiumCurrencyIsNegative", dt.currencyToolTipData.premiumCurrencyIsNegative )
+	}
+
 }
 
 void function AddCallback_OnUpdateTooltip( int style, void functionref(int style, ToolTipData) func )

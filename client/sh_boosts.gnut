@@ -6,11 +6,14 @@ global function Boost_GetBoostEvent
 global function Boost_GetActiveBoostEvents
 global function Boost_GetUpcomingBoostEvents
 global function Boost_GetActiveBoosts
-global function Boost_GetPreviousActiveBoosts
+global function Boost_GetPreviousActiveBoosts 
+global function Boost_GetPreviousAppliedBoosts 
 
 
 
 
+
+global function Boost_OnPlaylistsRegistered
 global function Boost_RefreshBoosts
 global function Boost_RefreshBoostEvents
 global function Boost_RefreshPlayerBoosts
@@ -19,7 +22,6 @@ global function Boost_GetBoostEventCategoryColor
 global function Boost_GetBoostEventCategoryColorFromCategory
 global function Boost_GetBoostEventCategoryIcon
 global function Boost_GetBoostEventCategoryIconFromCategory
-global function Boost_GetBoostEventQuantityFromCategory
 global function Boost_IsNew
 global function Boost_ConditionsMet
 global function Boost_IsPropertyModified
@@ -29,8 +31,18 @@ global function Boost_IsAccountXPPropertyModified
 
 
 
+
+
 global function Boost_GetPostGameChallengeBonus
 global function Boost_GetBonusPostGameAccountXP
+global function Boost_GetBonusPostGameTotalAccountXP
+global function Boost_GetBonusPostGameMythicProgressBonus
+
+
+
+
+
+
 
 
 
@@ -52,20 +64,45 @@ global function Boost_GetBonusPostGameAccountXP
 
 
 
+const bool DEBUG_PRINT_BOOSTS = true
+
+const int MAX_BOOSTS = 15 
 const string PERSISTENCE_PLAYLIST_VER = "progressionBoostPlaylistVer"
 const string PERSISTENCE_ACTIVE_BOOSTS = "seenProgressionBoosts"
+const string PERSISTENCE_APPLIED_BOOSTS = "appliedProgressionBoosts"
 const string PROG_MODIFIER_PLAYLIST_SOURCE = "defaults"
+
+
 const string BP_MODIFIER_PREFIX = "BP_"
 const string ACCXP_MODIFIER_PREFIX = "ACCXP_"
 const string MYTHIC_MODIFIER_PREFIX = "MYTHIC_"
+const string WEAPON_MODIFIER_PREFIX = "MASTERY_WEAPON_"
 
 const vector DEFAULT_COLOR = <0, 0, 0>
 const int DEFAULT_PLAYLIST_BOOST_VERSION = 1
 const int EXPECTED_MIN_BAKERY_GUID = 9999
 
 
+table< string, string > WeaponCategoryKeyToSAID = {
+	MASTERY_WEAPON_AR = "SAID00481026934",
+	MASTERY_WEAPON_LMG = "SAID00796940323",
+	MASTERY_WEAPON_MARKSMAN = "SAID00929188277",
+	MASTERY_WEAPON_PISTOL = "SAID01658891962",
+	MASTERY_WEAPON_SHOTGUN = "SAID01400639519",
+	MASTERY_WEAPON_SMG = "SAID00813223296",
+	MASTERY_WEAPON_SNIPER = "SAID00143499586"
+}
 
 
+
+
+
+global enum eBoolInheritable
+{
+	INHERIT = -1,
+	FALSE = 0,
+	TRUE = 1
+}
 
 
 global enum eBoostCategory
@@ -77,11 +114,14 @@ global enum eBoostCategory
 }
 
 
+
+
 global enum eBoostModifierType
 {
 	ACCOUNT_XP,
 	BP_STARS,
-	MYTHIC_PROGRESS
+	MYTHIC_PROGRESS,
+	MASTERY_WEAPON,
 }
 
 global enum eBoostCalculationType
@@ -89,6 +129,7 @@ global enum eBoostCalculationType
 	MULTIPLICATION,
 	ADDITION
 }
+
 
 
 global enum eModifierPropertyKeys
@@ -99,6 +140,14 @@ global enum eModifierPropertyKeys
 	BP_WEEKLY,
 	BP_RECURRING,
 	MYTHIC_PROGRESS,
+	MASTERY_WEAPON_ALL,
+	MASTERY_WEAPON_AR,
+	MASTERY_WEAPON_LMG,
+	MASTERY_WEAPON_MARKSMAN,
+	MASTERY_WEAPON_PISTOL,
+	MASTERY_WEAPON_SHOTGUN,
+	MASTERY_WEAPON_SMG,
+	MASTERY_WEAPON_SNIPER,
 }
 
 global struct BoostModifier
@@ -126,6 +175,8 @@ global struct BoostConfig
 
 	
 	array< string > gamemodeConditions = []
+	array< string > regionConditions = []
+	int partyCondition = eBoolInheritable.INHERIT
 }
 
 global struct BoostType
@@ -172,7 +223,10 @@ global struct Boost
 	string uiModifierSummary = "" 
 	float  uiModifierSummaryAmount = 0 
 
+	
 	array< string > gamemodeConditions = []
+	array< string > regionConditions = []
+	bool partyCondition = false
 
 	
 	int    duration = -1
@@ -190,7 +244,10 @@ struct BoostPlaylistData
 	string eventId = ""
 	int startDate = 0
 	int endDate = 0
+	
 	array< string > gamemodeConditions = []
+	array< string > regionConditions = []
+	int partyCondition = eBoolInheritable.INHERIT
 
 	
 	string boostNameLong = ""
@@ -207,7 +264,7 @@ struct BoostPlaylistData
 
 global struct BoostCachedModifier
 {
-	int boostGuid = 0
+	array< int > boostGuids = []
 	float amount = 0
 }
 
@@ -222,6 +279,10 @@ global typedef BoostGuidTable table< int, bool >
 
 struct FileStruct_Boosts
 {
+	bool itemFlavsRegistered = false
+	bool playlistsRegistered = false
+	bool initialized = false
+
 	table< string, BoostType > boostTypes
 	table< string, BoostEvent > boostEvents
 	table< string, BoostEvent > activeBoostEvents
@@ -230,13 +291,15 @@ struct FileStruct_Boosts
 	table< entity, BoostTable > playerBoosts
 	table< entity, ModifierCache > playerModifierCache
 	table< entity, BoostGuidTable > playerSeenBoosts
+	table< entity, BoostGuidTable > playerAppliedBoosts
 
-
+	
 	table < string, int > prefixToType =
 	{
 		[ ACCXP_MODIFIER_PREFIX ] = eBoostModifierType.ACCOUNT_XP,
 		[ BP_MODIFIER_PREFIX ] = eBoostModifierType.BP_STARS,
 		[ MYTHIC_MODIFIER_PREFIX ] = eBoostModifierType.MYTHIC_PROGRESS,
+		[ WEAPON_MODIFIER_PREFIX ] = eBoostModifierType.MASTERY_WEAPON
 	}
 
 	int activePlaylistBoostVersion = DEFAULT_PLAYLIST_BOOST_VERSION
@@ -268,6 +331,9 @@ void function Sh_Boosts_Init()
 	file = newFileBoosts
 #if DEV
 		file.useDevBoosts = GetConVarBool( "mtx_progression_modifier_dev_boosts_enabled" )
+
+
+
 #endif
 
 	
@@ -283,6 +349,21 @@ void function Sh_Boosts_Init()
 
 	
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -359,6 +440,9 @@ void function DeregisterPlayerBoosts( entity player )
 
 	if ( player in file.playerSeenBoosts )
 		delete file.playerSeenBoosts[ player ]
+
+	if ( player in file.playerAppliedBoosts )
+		delete file.playerAppliedBoosts[ player ]
 }
 
 void function RegisterBoostType( BoostType boostType )
@@ -422,8 +506,37 @@ void function RegisterBoostItemFlavs()
 
 void function OnAllItemFlavorsRegistered()
 {
+	file.itemFlavsRegistered = true
+	CheckIfAllItemsRegistered()
+}
+
+void function OnPlaylistsRegistered()
+{
+	file.playlistsRegistered = true
+	CheckIfAllItemsRegistered()
+}
+
+bool function AllItemsRegistered()
+{
+	return file.itemFlavsRegistered && file.playlistsRegistered
+}
+
+void function CheckIfAllItemsRegistered()
+{
+	if( !file.initialized && AllItemsRegistered() )
+	{
+		OnAllItemsRegistered()
+	}
+}
+
+void function OnAllItemsRegistered()
+{
 	ImportPlaylistData()
 	Boost_RefreshBoosts()
+
+
+
+	file.initialized = true
 }
 
 
@@ -508,6 +621,7 @@ int function InferModifierTypeFromProperty( string property )
 
 bool function ModifierIsValid( BoostModifier modifier )
 {
+	
 	string property = modifier.property
 	switch ( modifier.type )
 	{
@@ -529,6 +643,15 @@ bool function ModifierIsValid( BoostModifier modifier )
 				return true
 			}
 			break
+		case eBoostModifierType.MASTERY_WEAPON:
+			if ( PropertyHasPrefix( property, WEAPON_MODIFIER_PREFIX ) && property in eModifierPropertyKeys )
+			{
+				return true
+			}
+			else
+			{
+				Assert( false, format( "Key '%s' is not a valid MASTERY_WEAPON key. Check spelling or do you need to add a new weapon class?", property ) )
+			}
 	}
 
 	Assert( false, format( " \tModifier '%s' is not a valid property", property ) )
@@ -537,11 +660,9 @@ bool function ModifierIsValid( BoostModifier modifier )
 
 void function ProcessModifierProperty( BoostModifier modifier )
 {
+	
 	switch ( modifier.type )
 	{
-		case eBoostModifierType.BP_STARS:
-			
-			break
 		case eBoostModifierType.ACCOUNT_XP:
 			
 			if ( !( modifier.property in eModifierPropertyKeys ) )
@@ -549,7 +670,14 @@ void function ProcessModifierProperty( BoostModifier modifier )
 				modifier.property = replace( modifier.property, "ACCXP_", "" )
 			}
 			break
-		case eBoostModifierType.MYTHIC_PROGRESS:
+		case eBoostModifierType.MASTERY_WEAPON:
+			
+			if ( eModifierPropertyKeys[ modifier.property ] != eModifierPropertyKeys.MASTERY_WEAPON_ALL )
+			{
+				modifier.property = WeaponCategoryKeyToSAID[ modifier.property ]
+			}
+			break
+		default:
 			
 			break
 	}
@@ -576,11 +704,23 @@ void function ApplyBoostConfigDataFromBakery( BoostConfig boostConfig, asset boo
 	boostConfig.uiModifierSummaryAmount = GetGlobalSettingsFloat( boostEventOrBoostTypeAsset, "uiModifierSummaryAmount" )
 	boostConfig.uiColor                 = GetGlobalSettingsVector( boostEventOrBoostTypeAsset, "uiColor" )
 
+	
 	boostConfig.gamemodeConditions = []
 	foreach ( var gamemodeConditionData in IterateSettingsAssetArray( boostEventOrBoostTypeAsset, "conditions_gamemode" ) )
 	{
 		boostConfig.gamemodeConditions.push( GetSettingsBlockString( gamemodeConditionData, "pin_match_type" ) )
 	}
+
+	boostConfig.regionConditions = []
+	foreach ( var gamemodeConditionData in IterateSettingsAssetArray( boostEventOrBoostTypeAsset, "conditions_region" ) )
+	{
+		string countryCode = GetSettingsBlockString( gamemodeConditionData, "region" )
+		Assert( countryCode != "", format( "Empty country code found while importing region conditions for asset %i!", ItemFlavor_GetGUID( boostEventOrBoostTypeItemFlavor) ) )
+		Assert( boostConfig.regionConditions.find( countryCode ) < 0, format( "Duplicate country code condition found while importing region conditions for asset %i!", ItemFlavor_GetGUID( boostEventOrBoostTypeItemFlavor) ) )
+		boostConfig.gamemodeConditions.push( countryCode )
+	}
+
+	boostConfig.partyCondition = ParseBoolInheritableString( GetGlobalSettingsString( boostEventOrBoostTypeAsset, "condition_party" ) )
 }
 
 void function ImportBoostEventFromBakery( asset boostEventAsset, ItemFlavor ornull boostEventCalEvent )
@@ -647,8 +787,11 @@ void function RegisterPlaylistData()
 
 		int ornull startDateRaw            = GetCurrentPlaylistVarTimestamp( "progboost_startDate_" + i, 0 ) 
 		string effectsRaw                  = GetPlaylistVarString( PROG_MODIFIER_PLAYLIST_SOURCE, "progboost_effects_" + i, "" ) 
+		
 		string gamemodeConditionsRaw       = GetPlaylistVarString( PROG_MODIFIER_PLAYLIST_SOURCE, "progboost_gamemodeConditions_" + i, "" ) 
 		array< string > gamemodeConditions = split( gamemodeConditionsRaw, WHITESPACE_CHARACTERS )
+		string regionConditionsRaw         = GetPlaylistVarString( PROG_MODIFIER_PLAYLIST_SOURCE, "progboost_regionConditions_" + i, "" ) 
+		array< string > regionConditions   = split( regionConditionsRaw, WHITESPACE_CHARACTERS )
 
 		playlistData.guid = i + 1 
 		playlistData.typeId = GetPlaylistVarString( PROG_MODIFIER_PLAYLIST_SOURCE, "progboost_typeId_" + i, "" )
@@ -657,6 +800,8 @@ void function RegisterPlaylistData()
 		playlistData.endDate = expect int( GetCurrentPlaylistVarTimestamp( "progboost_endDate_" + i, UNIX_TIME_FALLBACK_2038 ) )
 		playlistData.gamemodeConditions = gamemodeConditions
 		playlistData.effects = ParsePlaylistModifierString( effectsRaw )
+		playlistData.regionConditions = regionConditions
+		playlistData.partyCondition = GetPlaylistVarInt( PROG_MODIFIER_PLAYLIST_SOURCE, "progboost_partyCondition_" + i, eBoolInheritable.INHERIT )
 
 		
 		array< string > uiColorRaw = split( GetPlaylistVarString( PROG_MODIFIER_PLAYLIST_SOURCE, "progboost_uiColor_" + i, "0 0 0" ), WHITESPACE_CHARACTERS )
@@ -671,7 +816,7 @@ void function RegisterPlaylistData()
 		
 		playlistData.uiColor = uiColor
 		playlistData.uiModifierSummary = GetPlaylistVarString( PROG_MODIFIER_PLAYLIST_SOURCE, "progboost_uiModifierSummary_" + i, "" )
-		playlistData.uiModifierSummaryAmount = GetPlaylistVarFloat( PROG_MODIFIER_PLAYLIST_SOURCE, "progboost_uiModifierSummaryAmount_" + i, 0 )
+		playlistData.uiModifierSummaryAmount = GetPlaylistVarFloat( PROG_MODIFIER_PLAYLIST_SOURCE, "progboost_uiModifierSummaryAmount_" + i, InferUISummaryAmountFromEffects( playlistData.effects ) )
 		file.playlistData[playlistData.eventId] <- playlistData
 	}
 }
@@ -757,7 +902,12 @@ void function ApplyPlaylistData( BoostEvent boostEvent, BoostPlaylistData playli
 	boostConfig.uiColor = playlistData.uiColor != DEFAULT_COLOR ? playlistData.uiColor : boostConfig.uiColor
 	boostConfig.uiModifierSummary = playlistData.uiModifierSummary != "" ? playlistData.uiModifierSummary : boostConfig.uiModifierSummary
 	boostConfig.uiModifierSummaryAmount = playlistData.uiModifierSummaryAmount != 0 ? playlistData.uiModifierSummaryAmount : boostConfig.uiModifierSummaryAmount
+
+	
+	
 	boostConfig.gamemodeConditions = playlistData.gamemodeConditions 
+	boostConfig.regionConditions = playlistData.regionConditions 
+	boostConfig.partyCondition = playlistData.partyCondition
 }
 
 void function ImportBoostTypesFromPlaylist()
@@ -827,6 +977,33 @@ array< BoostModifier > function ParsePlaylistModifierString( string str )
 }
 
 
+float function InferUISummaryAmountFromEffects( array< BoostModifier > effects )
+{
+	if ( effects.len() == 0 )
+		return 0 
+
+	BoostModifier firstEffect = effects[ 0 ]
+	float amount = firstEffect.amount
+	if ( firstEffect.calculationType == eBoostCalculationType.MULTIPLICATION )
+	{
+		
+		return ConvertMultiplierToAddedEffectPercent( amount )
+	}
+
+	
+	return amount
+}
+
+float function ConvertMultiplierToAddedEffectPercent( float multiplier )
+{
+	return multiplier * 100 - 100
+}
+
+float function ConvertAddedEffectPercentToMultiplier( float effectPercent )
+{
+	return ( effectPercent + 100 ) / 100
+}
+
 BoostTable function BuildPlayerActiveBoosts( entity player )
 {
 
@@ -845,6 +1022,12 @@ BoostTable function BuildPlayerActiveBoosts( entity player )
 		BuildBoostFromBoostEvent( boostEvent, boost )
 
 		Assert( boost.boostCategory != eBoostCategory.INHERIT, format( "Boost Category for boost %i (%s) was not set properly!", boost.guid, boost.boostId ) )
+
+		
+		if ( !RegionConditionsMet( player, boost, true ) )
+		{
+			continue
+		}
 
 
 			ApplyLocalizationToBoost( boost )
@@ -882,10 +1065,19 @@ ModifierCache function BuildModifierCacheFromBoosts( entity player )
 			if ( !( index in modifiers ) )
 			{
 				BoostCachedModifier newCachedModifier
-				newCachedModifier.boostGuid = boost.guid
 				modifiers[ index ] <- newCachedModifier
 			}
-			float modifierAmount = modifiers[ index ].amount
+
+			BoostCachedModifier cachedModifier = modifiers[ index ]
+
+			
+			if ( cachedModifier.boostGuids.find( boost.guid ) < 0 )
+			{
+				cachedModifier.boostGuids.push( boost.guid )
+			}
+
+			
+			float modifierAmount = cachedModifier.amount
 			switch ( effect.calculationType )
 			{
 				
@@ -897,7 +1089,7 @@ ModifierCache function BuildModifierCacheFromBoosts( entity player )
 				default:
 					modifierAmount += effect.amount - 1
 			}
-			modifiers[ index ].amount = modifierAmount
+			cachedModifier.amount = modifierAmount
 		}
 	}
 	return modifiers
@@ -909,21 +1101,42 @@ string function GetModifierKey( int boostModifierType, int boostCalculationType,
 	return format("%i_%i_%s", boostModifierType, boostCalculationType, property.toupper() )
 }
 
-float function GetCachedModifierForPlayer( entity player, int boostModifierType, int boostCalculationType, string property )
+BoostCachedModifier ornull function GetCachedModifierForPlayer( entity player, int boostModifierType, int boostCalculationType, string property )
 {
-	Assert( player in file.playerModifierCache )
-
-	string key = GetModifierKey( boostModifierType, boostCalculationType, property )
-	if ( key in file.playerModifierCache[ player ] )
+	if ( player in file.playerModifierCache )
 	{
-		BoostCachedModifier cachedModifier = file.playerModifierCache[ player ][ key ]
-		return cachedModifier.amount
+		string key = GetModifierKey( boostModifierType, boostCalculationType, property )
+		if ( key in file.playerModifierCache[ player ] )
+		{
+			return file.playerModifierCache[ player ][ key ]
+		}
+
+
+
+
 	}
-	return 0
+	else
+	{
+
+
+
+	}
+	return null
 }
 
   
  
+
+
+
+
+
+
+
+
+
+
+
 
 
 int function GetMaxPlaylistBoosts()
@@ -941,6 +1154,7 @@ void function LoadPersistentData( entity player )
 
 
 
+	LoadPersistentAppliedBoosts( player )
 	LoadPersistentSeenBoosts( player, playlistVersionChanged )
 }
 
@@ -977,6 +1191,34 @@ void function LoadPersistentSeenBoosts( entity player, bool playlistVersionChang
 	}
 }
 
+BoostGuidTable function GetPersistentAppliedBoosts( entity player )
+{
+	BoostGuidTable playerAppliedBoosts
+	for ( int i = 0 ; i < MAX_BOOSTS ; i++ )
+	{
+	string pkeyAtIndex = format( "%s[%i]", PERSISTENCE_APPLIED_BOOSTS, i )
+	int boostGuid = player.GetPersistentVarAsInt( pkeyAtIndex )
+	if ( boostGuid > 0 )
+		playerAppliedBoosts[ boostGuid ] <- true
+	}
+	return playerAppliedBoosts
+}
+
+void function LoadPersistentAppliedBoosts( entity player )
+{
+	int persistentListSize = MAX_BOOSTS
+	file.playerAppliedBoosts[ player ] <- GetPersistentAppliedBoosts( player )
+
+
+
+
+
+
+
+
+
+}
+
 bool function PersistentPlaylistVersionMismatch( entity player )
 {
 	return GetPlaylistBoostVersion() != player.GetPersistentVarAsInt( PERSISTENCE_PLAYLIST_VER )
@@ -986,6 +1228,60 @@ bool function StoredPlaylistVersionMismatch( entity player )
 {
 	return GetPlaylistBoostVersion() != GetStoredPlaylistBoostVersion()
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1059,7 +1355,10 @@ void function CopyBoostConfig( BoostConfig from, BoostConfig to )
 	to.uiModifierSummary = from.uiModifierSummary
 	to.uiModifierSummaryAmount = from.uiModifierSummaryAmount
 
+	
 	to.gamemodeConditions = from.gamemodeConditions.slice( 0 )
+	to.regionConditions = from.regionConditions.slice( 0 )
+	to.partyCondition = from.partyCondition
 }
 
 Boost function ApplyBoostConfigToBoost( BoostConfig boostConfig, Boost boost )
@@ -1075,7 +1374,12 @@ Boost function ApplyBoostConfigToBoost( BoostConfig boostConfig, Boost boost )
 	boost.uiModifierSummaryAmount = boostConfig.uiModifierSummaryAmount != 0 ? boostConfig.uiModifierSummaryAmount : boost.uiModifierSummaryAmount
 	boost.uiBadgeIconSmall        = boostConfig.uiBadgeIconSmall != $"" ? boostConfig.uiBadgeIconSmall : boost.uiBadgeIconSmall
 	boost.uiColor                 = boostConfig.uiColor != < 0, 0, 0 > ? boostConfig.uiColor : boost.uiColor
+
+	
 	boost.gamemodeConditions      = boostConfig.gamemodeConditions.len() > 0 ? boostConfig.gamemodeConditions : boost.gamemodeConditions
+	boost.regionConditions        = boostConfig.regionConditions.len() > 0 ? boostConfig.regionConditions : boost.regionConditions
+	
+	boost.partyCondition          = boostConfig.partyCondition != eBoolInheritable.INHERIT ? boostConfig.partyCondition == eBoolInheritable.TRUE : boost.partyCondition
 
 	return boost
 }
@@ -1085,16 +1389,109 @@ Boost function ApplyLocalizationToBoost( Boost boost )
 {
 	
 	int boostCalculationType = boost.effects.len() > 0 ? boost.effects[ 0 ].calculationType : eBoostCalculationType.MULTIPLICATION
-	string descSummaryAmount = string( boostCalculationType == eBoostCalculationType.MULTIPLICATION ? ( boost.uiModifierSummaryAmount + 100 ) / 100 : boost.uiModifierSummaryAmount )
+	string multiplierOrAddedAmount = string( boostCalculationType == eBoostCalculationType.MULTIPLICATION ? ConvertAddedEffectPercentToMultiplier( boost.uiModifierSummaryAmount ) : boost.uiModifierSummaryAmount )
+	string uiModifierSummaryAmount = string( boost.uiModifierSummaryAmount )
 
-	boost.boostNameLong           = Localize( boost.boostNameLong )
-	boost.boostNameShort          = Localize( boost.boostNameShort )
-	boost.boostDescriptionLong    = Localize( boost.boostDescriptionLong, descSummaryAmount )
-	boost.boostDescriptionShort   = Localize( boost.boostDescriptionShort, descSummaryAmount )
-	boost.boostReqDescription     = Localize( boost.boostReqDescription )
+	
+	string partyUpReq = boost.partyCondition && GetPartySize() < 2 ? Localize( "#PROGRESSION_MODIFIERS_LEGACY_PARTY_UP_NOT_APPLIED" ) : ""
+	string boostReqDescription = partyUpReq != ""? partyUpReq : Localize( boost.boostReqDescription )
+
+	string gameModeName = LocalizeGamemodeConditions( boost )
+	string weaponClass = LocalizeWeaponClass( boost )
+
+	
+	
+	
+	
+	
+	
+
+	boost.boostNameLong           = Localize( boost.boostNameLong, multiplierOrAddedAmount, uiModifierSummaryAmount, gameModeName, weaponClass )
+	boost.boostNameShort          = Localize( boost.boostNameShort, multiplierOrAddedAmount, uiModifierSummaryAmount, gameModeName, weaponClass )
+	boost.boostDescriptionLong    = Localize( boost.boostDescriptionLong, multiplierOrAddedAmount, uiModifierSummaryAmount, gameModeName, weaponClass )
+	boost.boostDescriptionShort   = Localize( boost.boostDescriptionShort, multiplierOrAddedAmount, uiModifierSummaryAmount, gameModeName, weaponClass )
+	boost.boostReqDescription     = boostReqDescription
+
+	
 	boost.uiModifierSummary       = Localize( boost.uiModifierSummary, boost.uiModifierSummaryAmount )
 
 	return boost
+}
+
+
+
+string function LocalizeWeaponClass( Boost boost )
+{
+	array< string > weaponClasses = []
+	foreach ( BoostModifier modifier in boost.effects )
+	{
+		if ( modifier.type == eBoostModifierType.MASTERY_WEAPON )
+		{
+			if ( modifier.property in eModifierPropertyKeys && eModifierPropertyKeys[ modifier.property ] == eModifierPropertyKeys.MASTERY_WEAPON_ALL )
+			{
+				return Localize( "#PROGRESSION_MODIFIERS_MASTERY_WEAPON_CLASS_ANY" ) 
+			}
+			
+			ItemFlavor weaponCategory = GetItemFlavorByGUID( ConvertItemFlavorGUIDStringToGUID( modifier.property ) )
+			weaponClasses.push( ItemFlavor_GetLongName( weaponCategory ) )
+		}
+	}
+	return LocalizeList( weaponClasses )
+}
+
+
+
+string function LocalizeList( array< string > locIds )
+{
+	const MAX_LOC = 5 
+	int numStr = locIds.len()
+	Assert( numStr <= MAX_LOC )
+	if ( numStr == 0 )
+		return ""
+
+	string listLocId = format( "#PROGRESSION_MODIFIER_LIST_%i", numStr )
+	array< string > args = []
+	foreach ( string locId in locIds )
+	{
+		if ( locId != "" )
+		{
+			args.push( Localize(locId) )
+		}
+	}
+	args.resize( MAX_LOC )
+	string localized = Localize( listLocId, args[0], args[1], args[2], args[3], args[4] )
+	return localized
+}
+
+
+
+string function LocalizeGamemodeConditions( Boost boost )
+{
+	if ( boost.gamemodeConditions.len() == 0 )
+		return ""
+
+	array< string > matches = []
+	array< string > playlists = GetVisiblePlaylistNames()
+
+	foreach ( string playlistName in playlists )
+	{
+		string pinMatchType = GetPlaylistVarString( playlistName, "pin_match_type", "" )
+		string locId = GetPlaylistVarString( playlistName, "name", "" )
+		if ( pinMatchType != "" && locId != "" && boost.gamemodeConditions.find( pinMatchType ) >= 0 && matches.find( locId ) < 0 )
+		{
+			matches.push( locId )
+			continue
+		}
+	}
+
+	if ( matches.len() == 0 )
+	{
+		Warning( format( "Boost %s had no matching playlist for gamemode conditions!", boost.boostId ) )
+		return ""
+	}
+
+	string localized = LocalizeList( matches )
+	return localized
 }
 
 
@@ -1115,19 +1512,53 @@ Boost function BuildBoostFromBoostType( BoostType boostType, Boost boost )
 	boost.typeId          = boostType.typeId
 	boost.effects         = boostType.effects
 
-	Assert( boost.effects.len() > 0, format( "Boost %s has no effects!", boost.boostId ) )
+	Assert( boost.effects.len() > 0, format( "Boost '%s' has no effects! (Type: '%s')", boost.boostId, boost.typeId ) )
 
 	ApplyBoostConfigToBoost( boostType.boostConfig, boost )
 
 	return boost
 }
 
-float function GetTotalModifiersForProperty( entity player, int modifierType, string property, int calculationType )
+BoostCachedModifier ornull function GetGlobalModifierForModifierType( entity player, int modifierType, int calculationType )
 {
-	float effect = GetCachedModifierForPlayer( player, modifierType, calculationType, property )
+	switch ( modifierType )
+	{
+		case eBoostModifierType.ACCOUNT_XP:
+			return GetCachedModifierForPlayer( player, modifierType, calculationType, GetModifierPropertyKey( eModifierPropertyKeys.ACCXP_GLOBAL ) )
+		case eBoostModifierType.MASTERY_WEAPON:
+			return GetCachedModifierForPlayer( player, modifierType, calculationType, GetModifierPropertyKey( eModifierPropertyKeys.MASTERY_WEAPON_ALL ) )
+	}
+	return null
+}
 
-	
-	effect += GetCachedModifierForPlayer( player, modifierType, calculationType, GetModifierPropertyKey( eModifierPropertyKeys.ACCXP_GLOBAL ) )
+array< BoostCachedModifier > function GetModifiersForProperty( entity player, int modifierType, string property, int calculationType )
+{
+	array< BoostCachedModifier > modifiers = []
+
+	BoostCachedModifier ornull cachedModifier = GetCachedModifierForPlayer( player, modifierType, calculationType, property )
+	BoostCachedModifier ornull globalModifier = GetGlobalModifierForModifierType( player, modifierType, calculationType )
+
+	if ( cachedModifier != null )
+	{
+		expect BoostCachedModifier( cachedModifier )
+		modifiers.push( cachedModifier )
+	}
+
+	if ( globalModifier != null )
+	{
+		expect BoostCachedModifier( globalModifier )
+		modifiers.push( globalModifier )
+	}
+	return modifiers
+}
+
+float function SumCachedModifiers( array< BoostCachedModifier > cachedModifiers )
+{
+	float effect = 0
+	foreach ( BoostCachedModifier modifier in cachedModifiers )
+	{
+		effect += modifier.amount
+	}
 	return effect
 }
 
@@ -1265,6 +1696,19 @@ BoostGuidTable function GetPlayerSeenBoosts( entity player )
 	return blank
 }
 
+
+BoostGuidTable function GetPlayerAppliedBoosts( entity player )
+{
+	Assert( player in file.playerAppliedBoosts, "file.playerAppliedBoosts not initialized for player!" )
+	if ( player in file.playerAppliedBoosts )
+	{
+		return file.playerAppliedBoosts[ player ]
+	}
+	
+	BoostGuidTable blank
+	return blank
+}
+
 void function ClearSeenBoosts( entity player )
 {
 	GetPlayerSeenBoosts( player ).clear()
@@ -1330,6 +1774,8 @@ void function CheckAndNotifyBoostsEnded( entity player, BoostTable currentActive
 }
 
 
+
+
 bool function GamemodeConditionsMet( entity player, Boost boost, bool currentMatch )
 {
 	if ( boost.gamemodeConditions.len() == 0 )
@@ -1342,6 +1788,180 @@ bool function GamemodeConditionsMet( entity player, Boost boost, bool currentMat
 
 	return boost.gamemodeConditions.find( pinMatchType ) >= 0
 }
+
+bool function IsClientRegionInList( entity player, array< string > countryCodes )
+{
+
+
+
+
+
+
+	return false
+}
+
+bool function RegionConditionsMet( entity player, Boost boost, bool currentMatch )
+{
+	if ( boost.regionConditions.len() == 0 )
+	{
+		return true
+	}
+
+	bool playerInRegion = IsClientRegionInList( player, boost.regionConditions )
+#if DEV
+		string regions = ""
+		foreach ( string region in boost.regionConditions )
+		{
+			regions += format( "%s ", region )
+		}
+
+		printf( "%s: %s, [%s]: %s", FUNC_NAME(), boost.boostNameLong, regions, playerInRegion? "Yes" : "No" )
+#endif
+	return playerInRegion
+}
+
+int function PlayerPartySize( entity player )
+{
+
+
+
+		return GetPartySize()
+
+}
+
+bool function PartyConditionMet( entity player, Boost boost, bool currentMatch )
+{
+	
+	if ( !boost.partyCondition )
+	{
+		return true
+	}
+
+	int partySize = currentMatch ? PlayerPartySize( player ) : player.GetPersistentVarAsInt( "lastPartySize" )
+#if DEV
+		printf( "%s(): LastPartySize (%s): %i", FUNC_NAME(), currentMatch ? "cur" : "prev", partySize )
+#endif
+	return partySize > 1
+}
+
+int function ParseBoolInheritableString( string itemFlavVal )
+{
+	if ( itemFlavVal in eBoolInheritable )
+	{
+		return eBoolInheritable[itemFlavVal]
+	}
+
+	Assert( false, format( "Invalid value '%s' for eBoolInheritable" ) )
+	return eBoolInheritable.INHERIT
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1409,14 +2029,23 @@ bool function GamemodeConditionsMet( entity player, Boost boost, bool currentMat
 
 		expect entity( player )
 		BoostTable boosts = Boost_GetActiveBoosts( player )
-		printf( "---- db_pab ACTIVE BOOSTS: %i ----\n", boosts.len() )
+
+
+
+			printf( "---- db_pab ACTIVE BOOSTS: %i ----\n", boosts.len() )
+
 		foreach ( Boost boost in boosts )
 		{
-
+			
 			string gamemodeConditions = ""
 			foreach ( string pinmatchtype in boost.gamemodeConditions )
 			{
 				gamemodeConditions += format( "\t\t db_pab: %s \n", pinmatchtype )
+			}
+			string regionConditions = ""
+			foreach ( string pinmatchtype in boost.regionConditions )
+			{
+				regionConditions += format( "\t\t db_pab: %s \n", pinmatchtype )
 			}
 
 			string modifiers = ""
@@ -1434,7 +2063,10 @@ bool function GamemodeConditionsMet( entity player, Boost boost, bool currentMat
 				+ "\t db_pab: startDate: %i \n"
 				+ "\t db_pab: endDate: %i \n"
 				+ "\t db_pab: gamemodeConditions:\n%s"
-				+ "\t db_pab: modifiers: \n%s\n",
+				+ "\t db_pab: regionConditions:\n%s"
+				+ "\t db_pab: partyCondition: %s\n"
+				+ "\t db_pab: modifiers: \n%s\n"
+				+ "\t db_pab: desc: %s \n",
 				boost.guid,
 				boost.typeId,
 				boost.boostId,
@@ -1442,7 +2074,10 @@ bool function GamemodeConditionsMet( entity player, Boost boost, bool currentMat
 				boost.startDate,
 				boost.endDate,
 				gamemodeConditions,
-				modifiers
+				regionConditions,
+				boost.partyCondition ? "Yes" : "No",
+				modifiers,
+				boost.boostDescriptionLong
 			)
 			print( boostInfoStr )
 		}
@@ -1453,12 +2088,19 @@ bool function GamemodeConditionsMet( entity player, Boost boost, bool currentMat
 	{
 		foreach ( BoostPlaylistData playlistData in file.playlistData )
 		{
-
+			
 			string gamemodeConditions = ""
 			foreach ( string pinmatchtype in playlistData.gamemodeConditions )
 			{
 				gamemodeConditions += format( "\t\t db_ppd: %s \n", pinmatchtype )
 			}
+			string regionConditions = ""
+			foreach ( string pinmatchtype in playlistData.regionConditions )
+			{
+				regionConditions += format( "\t\t db_ppd: %s \n", pinmatchtype )
+			}
+			string partyCondition = GetEnumString( "eBoolInheritable", playlistData.partyCondition )
+
 			string modifiers = ""
 			foreach ( BoostModifier effect in playlistData.effects )
 			{
@@ -1473,6 +2115,8 @@ bool function GamemodeConditionsMet( entity player, Boost boost, bool currentMat
 				+ "\t db_ppd: startDate: %i \n"
 				+ "\t db_ppd: endDate: %i \n"
 				+ "\t db_ppd: gamemodeConditions:\n%s"
+				+ "\t db_ppd: regionConditions:\n%s"
+				+ "\t db_ppd: partyCondition:%s\n"
 				+ "\t db_ppd: modifiers: \n%s\n",
 					FUNC_NAME(),
 					playlistData.guid,
@@ -1481,6 +2125,8 @@ bool function GamemodeConditionsMet( entity player, Boost boost, bool currentMat
 					playlistData.startDate,
 					playlistData.endDate,
 					gamemodeConditions,
+					regionConditions,
+					partyCondition,
 					modifiers
 			)
 			print(playlistDataString)
@@ -1515,8 +2161,11 @@ bool function GamemodeConditionsMet( entity player, Boost boost, bool currentMat
 
 		expect entity( player )
 
+		int lastPartySize = player.GetPersistentVarAsInt( "lastPartySize" )
 		int curPlaylistVersion = GetPlaylistBoostVersion()
 		int storedPlaylistVersion = GetStoredPlaylistBoostVersion()
+
+		printf( "db_pp lastPartySize: %i ", lastPartySize )
 
 
 
@@ -1548,6 +2197,16 @@ bool function GamemodeConditionsMet( entity player, Boost boost, bool currentMat
 		{
 			int bonus = Boost_GetBonusPostGameAccountXP( player, xpType )
 			printf( "\tdb_pp eXPType %i: %i", xpType, bonus )
+		}
+
+		BoostGuidTable playerAppliedBoosts = GetPlayerAppliedBoosts( player )
+		printt( "db_pp applied boosts #: ", playerAppliedBoosts.len() )
+		foreach ( int guid, bool applied in playerAppliedBoosts )
+		{
+			if ( applied )
+			{
+				printf("\tdb_pp: %i\n", guid )
+			}
 		}
 	}
 
@@ -1610,11 +2269,31 @@ BoostTable function Boost_GetPreviousActiveBoosts( entity player )
 	return previousMatchBoosts
 }
 
-Boost function Boost_GetBoost( entity player, int guid )
+
+BoostTable function Boost_GetPreviousAppliedBoosts( entity player )
+{
+	BoostGuidTable appliedBoostGuids = GetPlayerAppliedBoosts( player )
+	BoostTable previousAppliedBoosts
+	foreach ( guid, applied in appliedBoostGuids )
+	{
+		if ( applied )
+		{
+			Boost ornull boost = Boost_GetBoost( player, guid )
+			if ( boost == null )
+				continue
+			expect Boost( boost )
+			previousAppliedBoosts[ guid ] <- boost
+		}
+	}
+	return previousAppliedBoosts
+}
+
+Boost ornull function Boost_GetBoost( entity player, int guid )
 {
 	Assert( player in file.playerBoosts && guid in file.playerBoosts[ player ], format( "Boost %i is not invalid!", guid) )
-
-	return file.playerBoosts[ player ][ guid ]
+	if( player in file.playerBoosts && guid in file.playerBoosts[ player ] )
+		return file.playerBoosts[ player ][ guid ]
+	return null
 }
 
 
@@ -1641,6 +2320,41 @@ Boost function Boost_GetBoost( entity player, int guid )
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+void function Boost_OnPlaylistsRegistered()
+{
+	OnPlaylistsRegistered()
+}
 
 
 
@@ -1776,22 +2490,11 @@ asset function Boost_GetBoostEventCategoryIconFromCategory( int category )
 		case eBoostCategory.BP_STARS:
 			return $"ui_image/rui/menu/xp_boost/BoostBP_sm.rpak"
 		case eBoostCategory.MASTERY:
-			return $""
+			return $"ui_image/rui/menu/xp_boost/BoostMastery_sm.rpak"
 		default:
 			return $""
 	}
 	unreachable
-}
-
-int function Boost_GetBoostEventQuantityFromCategory( int category, BoostTable boosts )
-{
-	int quantity = 0
-	foreach ( Boost boost in boosts )
-	{
-		if ( boost.boostCategory == category )
-			quantity++
-	}
-	return quantity
 }
 
 bool function Boost_IsNew( entity player, int guid )
@@ -1807,22 +2510,25 @@ bool function Boost_IsNew( entity player, int guid )
 bool function Boost_ConditionsMet( entity player, Boost boost, bool currentMatch = true )
 {
 	
-	bool allConditionsMet = GamemodeConditionsMet( player, boost, currentMatch ) 
+	
+	bool allConditionsMet = RegionConditionsMet( player, boost, currentMatch )
+		&& GamemodeConditionsMet( player, boost, currentMatch )
+		&& PartyConditionMet( player, boost, currentMatch )
 	return allConditionsMet
 }
 
 bool function Boost_IsPropertyModified( entity player, int boostModifierType, string property )
 {
 	
-	float multModifiers = GetTotalModifiersForProperty( player, boostModifierType, property, eBoostCalculationType.MULTIPLICATION )
-	float addedModifiers = GetTotalModifiersForProperty( player, boostModifierType, property, eBoostCalculationType.ADDITION )
+	float multModifiers = SumCachedModifiers( GetModifiersForProperty( player, boostModifierType, property, eBoostCalculationType.MULTIPLICATION ) )
+	float addedModifiers = SumCachedModifiers( GetModifiersForProperty( player, boostModifierType, property, eBoostCalculationType.ADDITION ) )
 	return multModifiers != 0 || addedModifiers != 0
 }
 
 
 array< Boost > function Boost_GetBoostsAffectingXPType( entity player, int xpType )
 {
-	BoostTable boosts = Boost_GetPreviousActiveBoosts( player )
+	BoostTable boosts = Boost_GetPreviousAppliedBoosts( player )
 	array< Boost > affectingBoosts = []
 	foreach ( Boost boost in boosts )
 	{
@@ -1872,6 +2578,23 @@ bool function Boost_IsAccountXPPropertyModified( entity player, int xpType )
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 int function Boost_GetPostGameChallengeBonus( entity player, int pIdx )
 {
 	string pKey = format( "postGameChallengesProgress[%i].bonus", pIdx )
@@ -1885,6 +2608,121 @@ int function Boost_GetBonusPostGameAccountXP( entity player, int xpType )
 	int bonus   = player.GetPersistentVarAsInt( pKey )
 	return bonus
 }
+
+int function Boost_GetBonusPostGameTotalAccountXP( entity player, array<int> xpTypes )
+{
+	int bonus = 0
+	foreach( int xpType in xpTypes )
+	{
+		bonus += Boost_GetBonusPostGameAccountXP( player, xpType )
+	}
+	return bonus
+}
+
+int function Boost_GetBonusPostGameMythicProgressBonus( entity player, int pIdx )
+{
+	string pKey = format( "postGameChallengesProgress[%i].mythicProgressBonus", pIdx )
+	int bonusProgress = player.GetPersistentVarAsInt( pKey )
+	return bonusProgress
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

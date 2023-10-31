@@ -9,6 +9,7 @@ global function GamemodeUtility_IsJIPEnabledInPlaylist
 global function GamemodeUtility_GetMixtapeAbandonPenaltyActive
 global function GamemodeUtility_ParseCircleString 
 global function GamemodeUtility_ParseVectorString 
+global function GamemodeUtility_ParseStringOfVectors 
 
 
 
@@ -124,6 +125,10 @@ struct {
 
 
 
+
+
+		bool isLoweringDVSForGamemode = false 
+
 } file
 
 void function GamemodeUtility_Init()
@@ -169,6 +174,8 @@ void function GamemodeUtility_Init()
 
 
 
+	if ( GamemodeUtility_GetShouldTweakDVSForGamemode() )
+		AddCreateCallback( "player", GamemodeUtility_OnPlayerCreated_DVSCallback_Client ) 
 
 
 
@@ -230,6 +237,10 @@ bool function GamemodeUtility_IsJIPEnabledInPlaylist()
 }
 
 
+bool function GamemodeUtility_GetShouldTweakDVSForGamemode()
+{
+	return GetCurrentPlaylistVarBool( "should_tweak_dvs_for_gamemode", false )
+}
 
 
 
@@ -432,6 +443,23 @@ bool function GamemodeUtility_IsJIPEnabledInPlaylist()
 
 
 
+
+
+
+
+
+
+void function GamemodeUtility_OnPlayerCreated_DVSCallback_Client( entity player )
+{
+	
+	if ( GetGameState() <= eGameState.Playing )
+	{
+		entity localClientPlayer = GetLocalClientPlayer()
+
+		if ( IsValid( player ) && IsValid( localClientPlayer ) && player == GetLocalClientPlayer() )
+			thread GamemodeUtility_ManageDVSTweakOnPlayer_Thread()
+	}
+}
 
 
 
@@ -468,6 +496,12 @@ void function GamemodeUtility_OnLeaverPenaltyStatusChanged( entity player, bool 
 	if ( !isLeaverPenaltyEnabled )
 		Obituary_Print_Localized( Localize( "#GAMEMODES_LEAVER_PENALTY_DEACTIVATED" ).toupper() )
 }
+
+
+
+
+
+
 
 
 
@@ -934,6 +968,11 @@ int function GamemodeUtility_GetAllianceScoreFromTeam( int team )
 	int allianceIndex = AllianceProximity_GetAllianceFromTeam( team )
 	return GetAllianceTeamsScore( allianceIndex )
 }
+
+
+
+
+
 
 
 
@@ -1703,9 +1742,114 @@ int function GamemodeUtility_GetMaxDroppedGrenadesOnDeath()
 
 
 
+
 float function GetPlaylistVar_DeathboxDuration()
 {
 	return GetCurrentPlaylistVarFloat( "deathbox_duration", 60.0 )
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+void function GamemodeUtility_ManageDVSTweakOnPlayer_Thread()
+{
+#if DEV
+		Assert( IsNewThread(), "Must be threaded off" )
+#endif
+
+	entity localPlayer = GetLocalClientPlayer()
+	if ( !IsValid( localPlayer ) )
+		return
+
+	printt( "GAMEMODE UTILITY: " +  FUNC_NAME() + " is running for " + localPlayer )
+
+	EndSignal( localPlayer, "OnDestroy" )
+
+	OnThreadEnd(
+		function() : ( localPlayer )
+		{
+			printt( "GAMEMODE UTILITY: GamemodeUtility_ManageDVSTweakOnPlayer_Thread is going to set LowerDVSForGameMode to false from thread end function" )
+			GamemodeUtility_SetDVSSettingsForGamemode( false )
+		}
+	)
+
+	
+	if ( localPlayer.GetPlayerNetBool( "isJumpingWithSquad" ) || localPlayer.GetPlayerNetBool( "isJumpmaster" ) ||  GetGameState() < eGameState.Playing )
+		localPlayer.WaitSignal( "DroppodLanded" )
+
+	if ( GetGameState() < eGameState.WinnerDetermined )
+	{
+		printt( "GAMEMODE UTILITY: " +  FUNC_NAME() + " is going to set LowerDVSForGameMode to true ( player landed from free fall )" )
+		GamemodeUtility_SetDVSSettingsForGamemode( true )
+	}
+
+	
+	ClWaittillGameStateOrHigher( eGameState.WinnerDetermined )
+}
+
+
+
+
+
+
+
+
+
+void function GamemodeUtility_SetDVSSettingsForGamemode( bool shouldEnableForcedDVSSettings )
+{
+	printt( "GAMEMODE UTILITY: " +  FUNC_NAME() + " Running with shouldEnableForcedDVSSettings : " + shouldEnableForcedDVSSettings )
+
+	
+	if ( shouldEnableForcedDVSSettings && GamemodeUtility_GetShouldTweakDVSForGamemode() && !file.isLoweringDVSForGamemode )
+	{
+		LowerDVSForGameMode ( true )
+		file.isLoweringDVSForGamemode = true
+		printt( "GAMEMODE UTILITY: " +  FUNC_NAME() + " Set LowerDVSForGameMode to : true" )
+	}
+
+	
+	if ( !shouldEnableForcedDVSSettings && file.isLoweringDVSForGamemode)
+	{
+		LowerDVSForGameMode ( false )
+		file.isLoweringDVSForGamemode = false
+		printt( "GAMEMODE UTILITY: " +  FUNC_NAME() + " Set LowerDVSForGameMode to : false" )
+	}
 }
 
 
@@ -1752,33 +1896,18 @@ float function GetPlaylistVar_DeathboxDuration()
 
 
 
+array< vector > function GamemodeUtility_ParseStringOfVectors( string positionsRawString )
+{
+	array<string> positionStrings = GetTrimmedSplitString( positionsRawString, "," )
+	array<vector> positions
+	foreach( positionString in positionStrings )
+	{
+		vector pos = GamemodeUtility_ParseVectorString( positionString )
+		positions.append( pos )
+	}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	return positions
+}
 
 vector function GamemodeUtility_ParseVectorString( string vectorString )
 {

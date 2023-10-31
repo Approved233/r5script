@@ -489,6 +489,9 @@ var function OnWeaponTossCancel_DebuffZone( entity weapon, WeaponPrimaryAttackPa
 
 void function DebuffZone_OnPlayerOverheat( entity player, entity weapon )
 {
+	if( !StatusEffect_HasSeverity( player, eStatusEffect.has_overheat_debuff ) )
+		return
+
 	StatusEffect_StopAllOfType( player, eStatusEffect.has_overheat_debuff )
 	player.Signal( "EndDebuff" )
 
@@ -514,8 +517,6 @@ void function DebuffZone_OnPlayerOverheat( entity player, entity weapon )
 
 	weapon.PlayWeaponEffect( DEBUFF_EXPLOSION, $"", "muzzle_flash" )
 }
-
-
 
 
 

@@ -246,6 +246,14 @@ void function SURVIVAL_EquipmentSlot_InitShared()
 
 
 
+
+
+
+
+
+
+
+
 	e = RegisterEquipslot( "helmet", eEquipmentSlotType.HELMET )
 	e.title = "#SURVIVAL_HELMET"
 	e.emptyCommsAction = eCommsAction.INVENTORY_NEED_HELMET
@@ -269,6 +277,14 @@ void function SURVIVAL_EquipmentSlot_InitShared()
 	e = RegisterEquipslot( "armor", eEquipmentSlotType.ARMOR )
 	e.title = "#SURVIVAL_ARMOR"
 	e.emptyCommsAction = eCommsAction.INVENTORY_NEED_ARMOR
+
+
+
+
+
+
+
+
 
 	e.filledCommsActionFunc = FilledCommsAction_Equipment
 
@@ -930,6 +946,13 @@ int function FilledCommsAction_Equipment( string equipmentSlotRef, string itemRe
 				break
 		}
 	}
+
+
+
+
+
+
+
 
 
 	if ( lootData.tier < maxTier )

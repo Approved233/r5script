@@ -180,9 +180,7 @@ global enum eWaypoint
 	VOID_RING_TROPHY_TIMER,
 	VOID_RING_TROPHY_LIFE,
 
-
-		NEWCASTLE_MOBILE_SHIELD_LOCATOR,
-
+	NEWCASTLE_MOBILE_SHIELD_LOCATOR,
 
 
 
@@ -616,10 +614,8 @@ bool function ShouldHighlightForPing( entity wp, entity pingedEnt )
 	if ( pingedEnt.IsPlayerDecoy() )
 		return false
 
-
-		if( pingedEnt.GetTargetName() == FERRO_WALL_SEGMENT_TARGET_NAME || pingedEnt.GetTargetName() == SPIKE_STRIP_CORE_SPIKE_NAME )
-			return false
-
+	if( pingedEnt.GetTargetName() == FERRO_WALL_SEGMENT_TARGET_NAME || pingedEnt.GetTargetName() == SPIKE_STRIP_CORE_SPIKE_NAME )
+		return false
 
 	int pingType = Waypoint_GetPingTypeForWaypoint( wp )
 	switch( pingType )
@@ -633,10 +629,8 @@ bool function ShouldHighlightForPing( entity wp, entity pingedEnt )
 
 
 
-
 		case ePingType.ABILITY_PIERCING_SPIKES:
 		case ePingType.ABILITY_DARK_VEIL:
-
 
 
 
@@ -810,7 +804,7 @@ bool function Waypoint_ShowPingWheel( entity wp )
 
 	entity player = GetLocalViewPlayer()
 
-	if ( wp.GetWaypointType() == eWaypoint.EMOTE_ICON && Distance( player.GetOrigin(), wp.GetOrigin() ) < PING_EMOTE_REPLY_CULL_DISTANCE )
+	if ( ( wp.GetWaypointType() == eWaypoint.EMOTE_ICON || wp.GetWaypointType() == eWaypoint.SKYDIVE_EMOTE_ICON )&& Distance( player.GetOrigin(), wp.GetOrigin() ) < PING_EMOTE_REPLY_CULL_DISTANCE )
 
 
 
@@ -916,7 +910,7 @@ void function InstanceWP_Basic( entity wp )
 
 				
 				
-				if ( AllianceProximity_IsUsingAllianceProximity() )
+				if ( AllianceProximity_ShouldTryToTransmitPingOrIconToAlliance( true, Waypoint_GetPingTypeForWaypoint( wp ) ) )
 				{
 					thread AllianceProximity_ManageIconVisibility_Thread( wp, wp.wp.ruiFullmap, true, false ) 
 				}
@@ -2081,8 +2075,17 @@ void function PingPerkEnt( entity wp )
 		if ( !IsValid( wp ) )
 			return
 
-		if ( AllianceProximity_GetAllianceFromTeam( viewPlayer.GetTeam() ) != AllianceProximity_GetAllianceFromTeam( wp.GetTeam() ) )
-			return
+		int waypointTeam = wp.GetTeam()
+		int viewPlayerTeam = viewPlayer.GetTeam()
+
+		if ( AllianceProximity_IsTeamInAnAlliance( waypointTeam ) && waypointTeam != viewPlayerTeam )
+		{
+			if ( !AllianceProximity_ShouldTryToTransmitPingOrIconToAlliance( true, pingType ) )
+				return
+
+			if ( AllianceProximity_GetAllianceFromTeam( viewPlayerTeam ) != AllianceProximity_GetAllianceFromTeam( waypointTeam ) )
+				return
+		}
 	}
 
 
@@ -2174,7 +2177,7 @@ void function PingPerkEnt( entity wp )
 
 	
 	
-	if ( AllianceProximity_IsUsingAllianceProximity() )
+	if ( AllianceProximity_ShouldTryToTransmitPingOrIconToAlliance( true, pingType ) )
 	{
 		if ( !IsValid( owner ) )
 		{
@@ -2305,6 +2308,8 @@ void function InstanceLocationPing_Thread( entity wp )
 	
 	if ( AllianceProximity_IsUsingAllianceProximity() && !IsPVEMode() )
 	{
+		int waypointTeam = wp.GetTeam()
+		int viewPlayerTeam = viewPlayer.GetTeam()
 		bool isSpecialCasePingType = false
 
 
@@ -2312,8 +2317,14 @@ void function InstanceLocationPing_Thread( entity wp )
 			isSpecialCasePingType = pingType == ePingType.NON_PINGABLE_SPAWN_LOCATION && Control_IsModeEnabled()
 
 
-		if ( AllianceProximity_IsTeamInAnAlliance( wp.GetTeam() ) && AllianceProximity_GetAllianceFromTeam( viewPlayer.GetTeam() ) != AllianceProximity_GetAllianceFromTeam( wp.GetTeam() ) && !isSpecialCasePingType )
-			return
+		if ( AllianceProximity_IsTeamInAnAlliance( waypointTeam ) && !isSpecialCasePingType && waypointTeam != viewPlayerTeam )
+		{
+			if ( !AllianceProximity_ShouldTryToTransmitPingOrIconToAlliance( true, pingType ) )
+				return
+
+			if ( AllianceProximity_GetAllianceFromTeam( viewPlayerTeam ) != AllianceProximity_GetAllianceFromTeam( waypointTeam ) )
+				return
+		}
 	}
 
 	entity wpParent = wp.GetParent()
@@ -2377,7 +2388,7 @@ void function InstanceLocationPing_Thread( entity wp )
 	bool isSameTeam     = (owner.GetTeam() == viewPlayer.GetTeam())
 
 	
-	if ( AllianceProximity_IsUsingAlliances() && !isSameTeam )
+	if ( !isSameTeam && AllianceProximity_ShouldTryToTransmitPingOrIconToAlliance( true, pingType ) )
 	{
 		int viewPlayerAlliance = AllianceProximity_GetAllianceFromTeam( viewPlayer.GetTeam() )
 		if ( viewPlayerAlliance != -1 )
@@ -2461,7 +2472,7 @@ void function InstanceLocationPing_Thread( entity wp )
 			}
 
 			
-			if ( AllianceProximity_IsUsingAllianceProximity() )
+			if ( AllianceProximity_ShouldTryToTransmitPingOrIconToAlliance( true, pingType ) )
 			{
 				completeAdsFade = true
 				RuiSetImage( rui, "animImage", $"rui/hud/unitframes/frame_status_fill" )
@@ -2472,7 +2483,7 @@ void function InstanceLocationPing_Thread( entity wp )
 
 			bool isCountdownInfinite = false
 
-
+				isCountdownInfinite = IsStrikeoutGamemode()
 
 
 			RuiSetBool( rui, "isCountdownInfinite", isCountdownInfinite )
@@ -2608,7 +2619,7 @@ void function InstanceLocationPing_Thread( entity wp )
 
 	
 	
-	if ( AllianceProximity_IsUsingAllianceProximity() && viewPlayer.GetTeam() != owner.GetTeam() )
+	if ( AllianceProximity_ShouldTryToTransmitPingOrIconToAlliance( true, pingType ) && viewPlayer.GetTeam() != owner.GetTeam() )
 	{
 		float maxProximity = AllianceProximity_GetMaxDistForProximity()
 		if ( !IsPositionWithinRadius( maxProximity, viewPlayer.GetOrigin(), owner.GetOrigin() ) && !IsPositionWithinRadius( maxProximity, viewPlayer.GetOrigin(), wp.GetOrigin() ) )
@@ -2687,7 +2698,7 @@ void function InstanceLocationPing_Thread( entity wp )
 	}
 
 	
-	if ( AllianceProximity_IsUsingAllianceProximity() )
+	if ( AllianceProximity_ShouldTryToTransmitPingOrIconToAlliance( true, pingType ) )
 	{
 
 			
@@ -2761,7 +2772,7 @@ void function InstanceObjectivePing( entity wp )
 	bool isSameTeam     = (owner.GetTeam() == viewPlayer.GetTeam())
 
 	
-	if ( AllianceProximity_IsUsingAlliances() && !isSameTeam )
+	if ( !isSameTeam && AllianceProximity_ShouldTryToTransmitPingOrIconToAlliance( true, pingType ) )
 	{
 		int viewPlayerAlliance = AllianceProximity_GetAllianceFromTeam( viewPlayer.GetTeam() )
 		if ( viewPlayerAlliance != -1 )
@@ -2890,8 +2901,17 @@ void function InstanceLootPing( entity wp )
 		if ( !IsValid( wp ) )
 			return
 
-		if ( AllianceProximity_GetAllianceFromTeam( viewPlayer.GetTeam() ) != AllianceProximity_GetAllianceFromTeam( wp.GetTeam() ) )
-			return
+		int waypointTeam = wp.GetTeam()
+		int viewPlayerTeam = viewPlayer.GetTeam()
+
+		if ( AllianceProximity_IsTeamInAnAlliance( waypointTeam ) && waypointTeam != viewPlayerTeam )
+		{
+			if ( !AllianceProximity_ShouldTryToTransmitPingOrIconToAlliance( true, pingType ) )
+				return
+
+			if ( AllianceProximity_GetAllianceFromTeam( viewPlayerTeam ) != AllianceProximity_GetAllianceFromTeam( waypointTeam ) )
+				return
+		}
 	}
 
 	bool isDirectlyOnItem = (wp.GetParent() == lootItem)
@@ -2979,7 +2999,7 @@ void function InstanceLootPing( entity wp )
 
 	
 	
-	if ( AllianceProximity_IsUsingAllianceProximity() )
+	if ( AllianceProximity_ShouldTryToTransmitPingOrIconToAlliance( true, pingType ) )
 	{
 		if ( !IsValid( owner ) )
 		{
@@ -3047,6 +3067,9 @@ array<entity> function Waypoints_GetActiveLootPings()
 {
 	return s_activeLootPings
 }
+
+
+
 
 
 

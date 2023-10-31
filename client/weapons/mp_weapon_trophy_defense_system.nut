@@ -515,7 +515,7 @@ TrophyPlacementInfo function _GetPlacementInfo( entity player, entity proxy, vec
 	if ( success && IsValid( useResults.hitEnt ) && IsEntInvalidForPlacingPermanentOnto( useResults.hitEnt ) )
 		success = false
 
-	if ( success && IsOriginInvalidForPlacingPermanentOnto( useResults.endPos ) )
+	if ( success && IsOriginInvalidForPlacingPermanentOnto( useResults.endPos, proxy ) )
 		success = false
 
 

@@ -306,8 +306,7 @@ global enum eDamageSourceId
 
 
 
-
-
+	mp_ability_conduit_shield_mines
 
 
 
@@ -428,6 +427,10 @@ global enum eDamageSourceId
 
 
 
+
+	mp_ability_rise_from_the_ashes
+
+
 	mp_weapon_spectre_spawner
 
 
@@ -513,20 +516,16 @@ global enum eDamageSourceId
 
 
 
+
+
+
+
 	mp_ability_shield_throw
 	mp_ability_armored_leap
 	mp_ability_castle_wall
-
 	mp_ability_sniper_ult
-
-	mp_weapon_cryo_cloud
-	mp_weapon_grenade_cryo
-	mp_weapon_cryo_wall
 	mp_weapon_ferro_wall
-	mp_weapon_ferrofluid_grenade
-	mp_weapon_resin_shot
 	mp_ability_spike_strip
-
 
 
 
@@ -609,6 +608,10 @@ global enum eDamageSourceId
 
 
 	_count
+
+
+
+
 
 
 
@@ -762,6 +765,10 @@ void function DamageTypes_Init()
 
 
 
+
+			[ eDamageSourceId.mp_ability_rise_from_the_ashes ] = "#SHADOW_ARMY_RISE_FROM_THE_ASHES",
+
+
 		[ eDamageSourceId.mp_ability_valk_cluster_missile ] = "#DEATH_VALK_CLUSTER_MISSILE",
 		[ eDamageSourceId.mp_ability_sniper_ult ] = "#ABL_ULT_SNIPER_SHORT",
 		
@@ -863,22 +870,20 @@ void function DamageTypes_Init()
 		[ eDamageSourceId.mp_weapon_cluster_bomb ] = "#WPN_CLUSTER_BOMB",
 		[ eDamageSourceId.mp_weapon_mortar_ring ] = "#WPN_MORTAR_RING",
 
-
-			[ eDamageSourceId.mp_ability_armored_leap ] = "#WPN_ARMORED_LEAP",
-			[ eDamageSourceId.mp_ability_castle_wall ] = "#WPN_ARMORED_LEAP",
-			[ eDamageSourceId.mp_ability_shield_throw ] = "#WPN_SHIELD_THROW",
-
-
-			[ eDamageSourceId.mp_weapon_grenade_cryo ] = "#WPN_CRYO_GRENADE",
-			[ eDamageSourceId.mp_weapon_cryo_wall ] = "#WPN_CRYO_WALL",
-			[ eDamageSourceId.mp_weapon_ferro_wall ] = "#WPN_FERRO_WALL",
-			[ eDamageSourceId.mp_ability_spike_strip ] = "#WPN_SPIKES",
-
+		[ eDamageSourceId.mp_ability_armored_leap ] = "#WPN_ARMORED_LEAP",
+		[ eDamageSourceId.mp_ability_castle_wall ] = "#WPN_ARMORED_LEAP",
+		[ eDamageSourceId.mp_ability_shield_throw ] = "#WPN_SHIELD_THROW",
+		[ eDamageSourceId.mp_weapon_ferro_wall ] = "#WPN_FERRO_WALL",
+		[ eDamageSourceId.mp_ability_spike_strip ] = "#WPN_SPIKES",
 
 
 			[ eDamageSourceId.mp_ability_debuff_zone ] = "#WPN_DEBUFF_ZONE",
 			[ eDamageSourceId.mp_ability_debuff_zone_aoe ] = "#WPN_DEBUFF_ZONE",
 			[ eDamageSourceId.overheat_explosion ] = "#WPN_DEBUFF_ZONE_OVERHEAT",
+
+
+
+			[ eDamageSourceId.mp_ability_conduit_shield_mines ] = "#ABL_CONDUIT_ULTIMATE",
 
 
 
@@ -913,6 +918,11 @@ void function DamageTypes_Init()
 
 		[ eDamageSourceId.vault_defense ] = "#VAULT_DEFENSE",
 		[ eDamageSourceId.mp_weapon_mobile_hmg ] = "#WPN_MOBILE_HMG",
+
+
+
+
+
 
 
 

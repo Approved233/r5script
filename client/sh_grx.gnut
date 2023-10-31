@@ -17,6 +17,7 @@ global function ItemFlavor_GetGRXIndex
 global function ItemFlavor_GetGRXAlias
 global function ItemFlavor_GetGRXOwnershipTarget
 global function ItemFlavor_GetGRXOwnershipTargettedBy
+global function GRXCurrency_RegisterNewCurrencyAssetInEventSlot
 global function GRXCurrency_GetCurrencyIndex
 global function GRXCurrency_GetPurchaseSound
 global function GRXCurrency_GetPreviewModel
@@ -104,7 +105,16 @@ global function DEV_IsValidGRXRef
 
 
 
+
+
+
+
+
+
+
+
 global function GRXPack_GetTickSoundAlias
+
 
 
 
@@ -574,10 +584,10 @@ struct PlayerGRXScriptState
 
 struct FileStruct_LifetimeLevel
 {
-	array<ItemFlavor>      packFlavorList
-	table<ItemFlavor, int> currencyIndexMap
-	table<int, ItemFlavor> grxIndexItemFlavorMap
-	table<string, int>     grxRefToGRXIndexMap
+	array<ItemFlavor>      	packFlavorList
+	table<string, int> 	   	currencyIndexMap
+	table<int, ItemFlavor> 	grxIndexItemFlavorMap
+	table<string, int>     	grxRefToGRXIndexMap
 
 	array<ItemFlavor> stickerPacksWithRewards
 
@@ -662,7 +672,9 @@ void function ShGRX_LevelInit()
 
 		
 		
-		GRX_CURRENCIES[GRX_CURRENCY_SEASON02_EVENT01] = expect ItemFlavor(RegisterItemFlavorFromSettingsAsset( $"settings/itemflav/grx_currency/season02_event01.rpak" )) 
+		
+		
+		GRX_CURRENCIES[GRX_CURRENCY_EVENT] = expect ItemFlavor(RegisterItemFlavorFromSettingsAsset( $"settings/itemflav/grx_currency/s19fe01_coin.rpak" )) 
 
 		foreach ( int currencyIndex, ItemFlavor flav in GRX_CURRENCIES )
 		{
@@ -799,7 +811,6 @@ void function ShGRX_RegisterItemFlavor( ItemFlavor flavor )
 
 void function OnAllItemFlavorsRegistered()
 {
-	
 }
 
 
@@ -922,6 +933,27 @@ array<ItemFlavor> function ItemFlavor_GetGRXOwnershipTargettedBy( ItemFlavor fla
 		}
 	}
 	return out
+}
+
+
+
+void function GRXCurrency_RegisterNewCurrencyAssetInEventSlot( ItemFlavor newCurrencyFlav )
+{
+	Assert( ItemFlavor_GetType( newCurrencyFlav ) == eItemType.account_currency )
+	ItemFlavor oldCurrencyFlav = GRX_CURRENCIES [ GRX_CURRENCY_EVENT ]
+	GRX_CURRENCIES[ GRX_CURRENCY_EVENT ] = newCurrencyFlav
+
+	int targetIndex = GRXCurrency_GetCurrencyIndex( oldCurrencyFlav )
+	delete fileLevel.currencyIndexMap[ ItemFlavor_GetGUIDString( oldCurrencyFlav ) ]
+	fileLevel.currencyIndexMap[ ItemFlavor_GetGUIDString( newCurrencyFlav ) ] <- targetIndex
+
+
+
+
+
+
+
+
 }
 
 
@@ -1125,10 +1157,10 @@ bool function IsItemOwnedByPlayerInternal( ItemFlavor flav, entity player = null
 		return ItemFlavor_PassesUnlockFunc( flav, player )
 
 
-
-
-
-
+		if( ItemFlavor_HasExclusiveFunc( flav ) )
+		{
+			return ItemFlavor_PassesExclusiveFunc( flav, player )
+		}
 
 
 	if ( grxMode == GRX_ITEMFLAVORMODE_NONE )
@@ -1174,6 +1206,61 @@ bool function IsItemOwnedByPlayerInternal( ItemFlavor flav, entity player = null
 
 	return has
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4889,6 +4976,23 @@ void function UIToClient_GRXInventoryCleanStateChange( bool isClean, int marketp
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function ClientCodeCallback_GRXPackOpened( array<int> balanceDiffs, array<int> newItems, int packError )
 {
 	ItemFlavorBag bag
@@ -5448,6 +5552,18 @@ bool function GRX_IsOfferRestricted( entity player = null )
 
 	return grxState.isOfferRestricted
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

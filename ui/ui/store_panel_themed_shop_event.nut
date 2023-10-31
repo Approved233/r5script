@@ -62,7 +62,7 @@ void function ThemedShopPanel_OnShow( var panel )
 	AddCallbackAndCallNow_OnGRXOffersRefreshed( ThemedShopPanel_UpdateGRXDependantElements )
 
 
-
+	if ( !GetConVarBool( "mtx_useOffersV2" ) )
 
 	{
 		AddCallback_OnGRXBundlesRefreshed( ThemedShopPanel_UpdateBundleOffers )
@@ -84,7 +84,7 @@ void function ThemedShopPanel_OnHide( var panel )
 	RemoveCallback_OnGRXOffersRefreshed( ThemedShopPanel_UpdateGRXDependantElements )
 
 
-
+	if ( !GetConVarBool( "mtx_useOffersV2" ) )
 
 	{
 		RemoveCallback_OnGRXBundlesRefreshed( ThemedShopPanel_UpdateBundleOffers )

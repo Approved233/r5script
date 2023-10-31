@@ -645,6 +645,9 @@ void function Chroma_LootPickupEffects( LootData lootData )
 
 
 
+
+
+
 		case eLootType.MARVIN_ARM:
 
 

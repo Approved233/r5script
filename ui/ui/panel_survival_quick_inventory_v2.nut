@@ -352,20 +352,6 @@ void function SurvivalQuickInventory_OnUpdate()
 {
 	GridPanel_Refresh( file.inventoryGridStatic )
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	if ( !IsFullyConnected() )
 		return
 
@@ -374,6 +360,20 @@ void function SurvivalQuickInventory_OnUpdate()
 
 	if ( IsLobby() )
 		return
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 	foreach ( button in file.equipmentButtons )
 	{
@@ -854,6 +854,39 @@ void function SurvivalInventoryMenu_SetSpaceForSling( bool hasSling )
 
 	Hud_SetVisible(Hud_GetChild( file.mainInventoryPanel, "SlingDecorations" ), hasSling)
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

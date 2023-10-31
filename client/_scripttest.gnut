@@ -497,8 +497,21 @@ void function TestOptimizations( array<entity> testEmptyTypedArray = [] )
 	array<string> testEmptyArrayAssignment
 	testEmptyArrayAssignment = []
 
-	int zero = 0
-	int notnottest = int(!!(bool(zero))) 
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 
 

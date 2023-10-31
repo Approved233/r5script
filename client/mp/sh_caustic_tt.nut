@@ -10,6 +10,7 @@ global function CausticTT_SetGasFunctionInvertedValue
 
 
 
+
 global function Caustic_TT_ServerCallback_SetCanistersOpen
 global function Caustic_TT_ServerCallback_SetCanistersClosed
 global function Caustic_TT_ServerCallback_SetSwitchesEnabled
@@ -128,7 +129,7 @@ struct
 
 
 
-}file
+} file
 
 void function Caustic_TT_Init()
 {
@@ -789,6 +790,18 @@ void function SetCanistersOpen()
 
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

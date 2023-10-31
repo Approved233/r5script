@@ -1,6 +1,7 @@
 
 global function LifelineTT_Init
 global function IsLifelineTTEnabled
+global function GetLifelineTTAssetsToPrecache
 
 
 const string LIFELINETT_PLAYLIST_ENABLE_MEDKIT_SPAWNS = "lifeline_tt_medkit_spawns"
@@ -102,7 +103,32 @@ struct
 
 
 
+
 } file
+
+bool function GetLifelineTTAssetsToPrecache( array< string > models, array< string > particles )
+{
+	if ( IsLifelineTTEnabled() == false )
+	{
+		return false
+	}
+
+	
+	models.append( MDL_JAMROOM_DRUMS )
+
+	
+	models.append( MDL_MEDBAY_EYE_JOINT )
+	models.append( MDL_MEDBAY_EYE_STALK )
+	models.append( MDL_MEDBAY_RING )
+
+	particles.append( VFX_MEDBAY_HEAL_COCKPIT_1P )
+	particles.append( VFX_MEDBAY_PLATFORM )
+	particles.append( VFX_MEDBAY_SPARKS )
+	particles.append( VFX_MEDBAY_CROSS )
+	particles.append( VFX_MEDBAY_CROSS_PULSE )
+
+	return true
+}
 
 void function LifelineTT_Init()
 {
@@ -131,6 +157,8 @@ void function EntitiesDidLoad()
 
 
 }
+
+
 
 
 
@@ -516,7 +544,11 @@ bool function IsLifelineTTEnabled()
 {
 	if ( GetCurrentPlaylistVarBool( "lifeline_tt_enabled", true ) )
 	{
-		return HasEntWithScriptName( JAMROOM_INSTRUMENT_SCRIPT_NAME )
+
+
+
+			return HasEntWithScriptName( JAMROOM_MUSIC_SPLINE_SCRIPT_NAME )
+
 	}
 
 	return false

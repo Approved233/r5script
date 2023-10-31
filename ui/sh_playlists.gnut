@@ -92,6 +92,7 @@ global const table<string, asset> GAMEMODE_IMAGE_MAP = {
 
 	panel_storm_point = $"rui/menu/gamemode/playlist_bg_storm_point",
 	panel_storm_point_mu1 = $"rui/menu/gamemode/playlist_bg_storm_point_mu1",
+	panel_storm_point_mu2 = $"rui/menu/gamemode/playlist_bg_storm_point_mu2",
 
 	panel_divided_moon = $"rui/menu/gamemode/playlist_bg_divided_moon",
 
@@ -190,6 +191,12 @@ global const table<string, asset> GAMEMODE_IMAGE_MAP = {
 		mixtape_moon_core = $"rui/menu/gamemode/playlist_bg_divided_moon_the_core",
 
 
+
+		mixtape_wattson = $"rui/menu/gamemode/playlist_bg_mixtape_wattson",
+		mixtape_amps = $"rui/menu/gamemode/playlist_bg_mixtape_amps",
+
+
+
 		heatwave_storm_point = $"rui/menu/gamemode/playlist_bg_heatwave_storm_point",
 		heatwave_divided_moon = $"rui/menu/gamemode/playlist_bg_heatwave_divided_moon",
 
@@ -197,9 +204,19 @@ global const table<string, asset> GAMEMODE_IMAGE_MAP = {
 		s17_chronicle = $"rui/menu/gamemode/playlist_bg_s17_chronicle",
 
 
+		strikeout_divided_moon = $"rui/menu/gamemode/playlist_bg_strikeout_divided_moon",
+		strikeout_olympus_mu2 = $"rui/menu/gamemode/playlist_bg_strikeout_olympus_mu2",
+		strikeout_storm_point_mu2 = $"rui/menu/gamemode/playlist_bg_strikeout_storm_point_mu2",
 
 
-
+		shadow_army = $"rui/menu/gamemode/playlist_bg_shadowarmy"
+		shadow_army_cine = $"rui/menu/gamemode/playlist_bg_shadowarmy_cine",
+		training_event_locked = $"rui/menu/gamemode/playlist_bg_training_event_locked",
+		firing_range_event_locked = $"rui/menu/gamemode/playlist_bg_firing_range_event_locked",
+		duos_event_locked = $"rui/menu/gamemode/playlist_bg_duos_event_locked",
+		trios_event_locked = $"rui/menu/gamemode/playlist_bg_trios_event_locked",
+		play_apex_panel_locked = $"rui/menu/gamemode/playlist_bg_play_apex_panel_locked",
+		mixtape_locked = $"rui/menu/gamemode/playlist_bg_mixtape_event_locked",
 
 }
 
@@ -228,6 +245,10 @@ global const table<string, asset> GAMEMODE_THUMBNAIL_IMAGE_MAP = {
 		trios_halloween = $"rui/menu/gamemode/playlist_bg_sq_trios_halloween",
 
 
+
+
+
+
 	panel_worlds_edge = $"rui/menu/gamemode/playlist_bg_sq_worldsedge_mu3",
 	panel_worlds_edge_mu1 = $"rui/menu/gamemode/playlist_bg_sq_worldsedge_mu3",
 	panel_worlds_edge_mu2 = $"rui/menu/gamemode/playlist_bg_sq_worldsedge_mu3",
@@ -250,6 +271,7 @@ global const table<string, asset> GAMEMODE_THUMBNAIL_IMAGE_MAP = {
 
 	panel_storm_point = $"rui/menu/gamemode/playlist_bg_sq_storm_point_mu1",
 	panel_storm_point_mu1 = $"rui/menu/gamemode/playlist_bg_sq_storm_point_mu1",
+	panel_storm_point_mu2 = $"rui/menu/gamemode/playlist_bg_sq_storm_point_mu2",
 
 	panel_divided_moon = $"rui/menu/gamemode/playlist_bg_sq_divided_moon",
 
@@ -351,6 +373,11 @@ global const table<string, asset> GAMEMODE_THUMBNAIL_IMAGE_MAP = {
 
 
 
+		mixtape_wattson = $"rui/menu/gamemode/playlist_bg_sq_mixtape_wattson",
+		mixtape_amps = $"rui/menu/gamemode/playlist_bg_sq_mixtape_amps",
+
+
+
 		heatwave_storm_point = $"rui/menu/gamemode/playlist_bg_sq_heatwave_storm_point",
 		heatwave_divided_moon = $"rui/menu/gamemode/playlist_bg_sq_heatwave_divided_moon",
 
@@ -360,9 +387,15 @@ global const table<string, asset> GAMEMODE_THUMBNAIL_IMAGE_MAP = {
 
 
 
+		strikeout_divided_moon = $"rui/menu/gamemode/playlist_bg_sq_strikeout_divided_moon",
+		strikeout_olympus_mu2 = $"rui/menu/gamemode/playlist_bg_sq_strikeout_olympus_mu2",
+		strikeout_storm_point_mu2 = $"rui/menu/gamemode/playlist_bg_sq_strikeout_storm_point_mu2",
 
 
 
+		shadow_army = $"rui/menu/gamemode/playlist_bg_sq_shadowarmy",
+		shadow_army_cine = $"rui/menu/gamemode/playlist_bg_sq_shadowarmy_cine",
+		event_locked = $"rui/menu/gamemode/playlist_bg_sq_event_locked",
 
 }
 
@@ -817,6 +850,9 @@ void function ShPlaylist_CacheData()
 		file.cachedPlaylistArray[index] = playlistData
 		file.cachedPlaylistMap[name] <- playlistData
 	}
+
+	Boost_OnPlaylistsRegistered()
+
 }
 
 
@@ -1013,6 +1049,18 @@ const table<string, asset> GAMEMODE_EMBLEM_MAP = {
 
 		emblem_halloween = $"rui/menu/gamemode_emblem/emblem_halloween",
 
+
+
+		emblem_3strikes = $"rui/menu/gamemode_emblem/emblem_three_strikes",
+
+
+
+		emblem_revenant_army = $"rui/menu/gamemode_emblem/emblem_revenant_army",
+
+
+
+		emblem_uprising = $"rui/menu/gamemode_emblem/emblem_uprising",
+
 }
 
 
@@ -1151,6 +1199,9 @@ string function GetCurrentPlaylistInUiSlot( string uiSlot )
 
 string function GetDefaultPlaylist()
 {
+	if ( HasEventTakeOverActive() )
+		return GetEventTakeoverPlaylist()
+
 
 	if ( GetPartySize() == 1 )
 	{

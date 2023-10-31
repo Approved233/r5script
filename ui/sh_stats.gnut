@@ -264,6 +264,23 @@ global function CurrentModeIsSurvival
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 global function ArenasRanked_GetHistoricalPeakLadderPosition
 global function ArenasRanked_GetHistoricalPeakHighScore
 
@@ -304,9 +321,14 @@ global const array<string> STATS_ALTERNATE_MODE_REFS = [
 "swat",
 "aprilfools_s16",
 
+	"shadowarmy",
+
+
 
 
 ]
+
+global const string STATS_SOPM_MODE_REF = "last_played_mode"
 
 const string STATS_MATCH_TYPE_NONE = "none"
 global const array<string> STATS_MATCH_TYPES = [
@@ -329,6 +351,9 @@ STATS_MATCH_TYPE_NONE,
 "aprilfools_s16",
 
 "armeddangerous",
+
+
+	"shadowarmy",
 
 
 
@@ -365,6 +390,9 @@ global enum eChallengeGameMode
 	EXPIRED, 
 	APRILFOOLS_S16,
 
+		SHADOWARMY,
+
+
 
 
 }
@@ -391,6 +419,9 @@ global const table<int, string> GAME_MODE_TO_STAT_REF_MAP =
 
 	[eChallengeGameMode.SWAT] = "swat",
 	[eChallengeGameMode.APRILFOOLS_S16] = "aprilfools_s16",
+
+		[eChallengeGameMode.SHADOWARMY] = "shadowarmy",
+
 
 
 
@@ -766,22 +797,21 @@ global struct CareerStats
 	StatTemplate& maggie_wrecking_ball_boost_distance
 	StatTemplate& maggie_warlords_ire_highlight_time
 
+	
+	StatTemplate& newcastle_revive_distance
+	StatTemplate& newcastle_mobile_shield_damage
+	StatTemplate& newcastle_allies_rescued
 
-		StatTemplate& newcastle_revive_distance
-		StatTemplate& newcastle_mobile_shield_damage
-		StatTemplate& newcastle_allies_rescued
+	StatTemplate& vantage_tactical_distance
+	StatTemplate& vantage_ultimate_damage
+	StatTemplate& vantage_passive_enemies_pinged
+	StatTemplate& vantage_ultimate_marked_hits 
 
 
+		StatTemplate& conduit_boosted_distance
+		StatTemplate& conduit_temp_shields_applied
+		StatTemplate& conduit_ult_damage
 
-
-
-
-
-
-		StatTemplate& vantage_tactical_distance
-		StatTemplate& vantage_ultimate_damage
-		StatTemplate& vantage_passive_enemies_pinged
-		StatTemplate& vantage_ultimate_marked_hits 
 
 
 		StatTemplate& ballistic_passive_sling_kills
@@ -790,11 +820,9 @@ global struct CareerStats
 		StatTemplate& ballistic_tactical_enemies_hit
 
 
-
 		StatTemplate& catalyst_doors_barricaded
 		StatTemplate& catalyst_spikes_damage
 		StatTemplate& catalyst_dark_veil_enemies_crossed
-
 
 
 		
@@ -1116,65 +1144,6 @@ global struct CareerStats
 	StatTemplate& s13_flash_01_buffet_points
 
 
-	
-	
-
-
-
-	StatTemplate& s16ce01_buffet_points
-    StatTemplate& s16ce01_damage_done_any_mode
-    StatTemplate& s16ce01_kills_or_assists_any_mode
-    StatTemplate& s16ce01_wins_any_mode
-    StatTemplate& s16ce01_combined_badge_earned
-
-	
-	
-
-
-
-	StatTemplate& s16ace_buffet_points
-	StatTemplate& s16ace_damage_done_any_mode
-	StatTemplate& s16ace_kills_or_assists_any_mode
-
-		StatTemplate& s16ace_wins_tdm
-
-	StatTemplate& s16ace_combined_badge_earned
-
-
-	
-	StatTemplate& s16ce02_buffet_points
-	StatTemplate& s16ce02_damage_done_any_mode
-	StatTemplate& s16ce02_kills_or_assists_any_mode
-
-
-	StatTemplate& s16ce02_top5_heatwave
-
-
-	StatTemplate& s16ce02_combined_badge_earned
-
-	
-	StatTemplate& s16ce03_buffet_points
-	StatTemplate& s16ce03_damage_done_any_mode
-	StatTemplate& s16ce03_kills_or_assists_any_mode
-
-		StatTemplate& s16ce03_wins_tdm
-
-	StatTemplate& s16ce03_combined_badge_earned
-
-
-	StatTemplate& s17fe01_buffet_points
-	StatTemplate& s17fe01_damage_done_any_mode
-	StatTemplate& s17fe01_kills_or_assists_any_mode
-	StatTemplate& s17fe01_health_restored_any_mode
-	StatTemplate& s17fe01_combined_badge_earned
-
-
-
-	StatTemplate& s17ce01_buffet_points
-	StatTemplate& s17ce01_damage_done_any_mode
-	StatTemplate& s17ce01_kills_or_assists_any_mode
-	StatTemplate& s17ce01_shotgun_damage_done_any_mode
-	StatTemplate& s17ce01_combined_badge_earned
 	StatTemplate& s17_eventrefactor_currency 
 
 
@@ -1218,6 +1187,28 @@ global struct CareerStats
 	StatTemplate& s18ce03_combined_badge_earned
 
 
+
+
+
+	StatTemplate& s19aw_event_currency_total
+	StatTemplate& s19aw_revives_any_mode
+
+
+
+
+
+	StatTemplate& s19ce01_01_buffet_points
+	StatTemplate& s19ce01_02_buffet_points
+	StatTemplate& s19ce01_03_buffet_points
+	StatTemplate& s19ce01_04_buffet_points
+
+	StatTemplate& s19ce01_wins_any_mode
+
+
+
+
+
+
 	
 
 	StatTemplate& hovervehicle_occupant_meters_traveled
@@ -1256,13 +1247,25 @@ global struct CareerStats
 	StatTemplate& slide_count
 	StatTemplate& armor_upgaraded_count
 	StatTemplate& doors_broken_by_melee
-	StatTemplate& health_items_used
-	StatTemplate& shield_items_used
 	StatTemplate& phoenix_kits_used
 	StatTemplate& beginner_distance_kill
-	StatTemplate& looted_weapon
-	StatTemplate& looted_ammo
-	StatTemplate& looted_backpack
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1399,6 +1402,11 @@ void function ShStats_LevelInit()
 
 
 
+
+
+
+
+
 }
 
 
@@ -1440,7 +1448,7 @@ void function RegisterAllStats()
 		allWeaponsRefs.append( weaponRef )
 		string category = WeaponItemFlavor_GetStatsCategory( weapon )
 
-		bool isGold = (category == WEAPON_STAT_CATEGORY_GOLD_WEAPON)
+		bool isGold = (category == WEAPON_STAT_CATEGORY_CRATE_WEAPON)
 
 
 
@@ -1631,7 +1639,7 @@ void function RegisterAllStats()
 
 	StatTemplate temp_statTemplateReference 
 
-	StatEnumStruct modes_SES = RegisterStatEnumStruct( null, "modes", "eModesFlavors", STATS_ALTERNATE_MODE_REFS ) 
+	StatEnumStruct modes_SES = RegisterStatEnumStruct( null, "modes", "eModesFlavors", STATS_ALTERNATE_MODE_REFS, "eSopmModesFlavors", STATS_SOPM_MODE_REF ) 
 	CAREER_STATS.modes_games_played = RegisterAccumulatedStat_Int( modes_SES, "games_played", MODE_SPECIFIC, CHALLENGES_NEED ) 
 	CAREER_STATS.modes_kills = RegisterAccumulatedStat_Int( modes_SES, "kills", MODE_SPECIFIC, CHALLENGES_NEED ) 
 	CAREER_STATS.modes_assists = RegisterAccumulatedStat_Int( modes_SES, "assists", MODE_SPECIFIC ) 
@@ -1864,22 +1872,20 @@ void function RegisterAllStats()
 	CAREER_STATS.maggie_wrecking_ball_boost_distance = RegisterAccumulatedStat_Int( null, "maggie_wrecking_ball_boost_distance", eChallengeGameMode.ANY, TRACKERS_NEED | CHALLENGES_NEED )
 	CAREER_STATS.maggie_warlords_ire_highlight_time = RegisterAccumulatedStat_Int( null, "maggie_warlords_ire_highlight_time", eChallengeGameMode.ANY, TRACKERS_NEED | CHALLENGES_NEED )
 
+	CAREER_STATS.newcastle_revive_distance = RegisterAccumulatedStat_Int( null, "newcastle_revive_distance", eChallengeGameMode.ANY, TRACKERS_NEED | CHALLENGES_NEED )
+	CAREER_STATS.newcastle_mobile_shield_damage = RegisterAccumulatedStat_Int( null, "newcastle_mobile_shield_damage", eChallengeGameMode.ANY, TRACKERS_NEED | CHALLENGES_NEED )
+	CAREER_STATS.newcastle_allies_rescued = RegisterAccumulatedStat_Int( null, "newcastle_allies_rescued", eChallengeGameMode.ANY, TRACKERS_NEED | CHALLENGES_NEED )
 
-		CAREER_STATS.newcastle_revive_distance = RegisterAccumulatedStat_Int( null, "newcastle_revive_distance", eChallengeGameMode.ANY, TRACKERS_NEED | CHALLENGES_NEED )
-		CAREER_STATS.newcastle_mobile_shield_damage = RegisterAccumulatedStat_Int( null, "newcastle_mobile_shield_damage", eChallengeGameMode.ANY, TRACKERS_NEED | CHALLENGES_NEED )
-		CAREER_STATS.newcastle_allies_rescued = RegisterAccumulatedStat_Int( null, "newcastle_allies_rescued", eChallengeGameMode.ANY, TRACKERS_NEED | CHALLENGES_NEED )
-
-
-
-
-
-
+	CAREER_STATS.vantage_tactical_distance = RegisterAccumulatedStat_Int( null, "vantage_tactical_distance", eChallengeGameMode.ANY, TRACKERS_NEED | CHALLENGES_NEED )
+	CAREER_STATS.vantage_ultimate_damage = RegisterAccumulatedStat_Int( null, "vantage_ultimate_damage", eChallengeGameMode.ANY, TRACKERS_NEED | CHALLENGES_NEED )
+	CAREER_STATS.vantage_passive_enemies_pinged = RegisterAccumulatedStat_Int( null, "vantage_passive_enemies_pinged", eChallengeGameMode.ANY, TRACKERS_NEED | CHALLENGES_NEED )
+	CAREER_STATS.vantage_ultimate_marked_hits = RegisterAccumulatedStat_Int( null, "vantage_ultimate_marked_hits", eChallengeGameMode.ANY, CHALLENGES_NEED ) 
 
 
-		CAREER_STATS.vantage_tactical_distance = RegisterAccumulatedStat_Int( null, "vantage_tactical_distance", eChallengeGameMode.ANY, TRACKERS_NEED | CHALLENGES_NEED )
-		CAREER_STATS.vantage_ultimate_damage = RegisterAccumulatedStat_Int( null, "vantage_ultimate_damage", eChallengeGameMode.ANY, TRACKERS_NEED | CHALLENGES_NEED )
-		CAREER_STATS.vantage_passive_enemies_pinged = RegisterAccumulatedStat_Int( null, "vantage_passive_enemies_pinged", eChallengeGameMode.ANY, TRACKERS_NEED | CHALLENGES_NEED )
-		CAREER_STATS.vantage_ultimate_marked_hits = RegisterAccumulatedStat_Int( null, "vantage_ultimate_marked_hits", eChallengeGameMode.ANY, CHALLENGES_NEED ) 
+		CAREER_STATS.conduit_boosted_distance = RegisterAccumulatedStat_Int( null, "conduit_boosted_distance", eChallengeGameMode.ANY, TRACKERS_NEED | CHALLENGES_NEED )
+		CAREER_STATS.conduit_temp_shields_applied = RegisterAccumulatedStat_Int( null, "conduit_temp_shields_applied", eChallengeGameMode.ANY, TRACKERS_NEED | CHALLENGES_NEED )
+		CAREER_STATS.conduit_ult_damage = RegisterAccumulatedStat_Int( null, "conduit_ult_damage", eChallengeGameMode.ANY, TRACKERS_NEED | CHALLENGES_NEED )
+
 
 
 		CAREER_STATS.ballistic_passive_sling_kills = RegisterAccumulatedStat_Int( null, "ballistic_passive_sling_kills", eChallengeGameMode.ANY, TRACKERS_NEED | CHALLENGES_NEED )
@@ -1888,11 +1894,9 @@ void function RegisterAllStats()
 		CAREER_STATS.ballistic_tactical_enemies_hit = RegisterAccumulatedStat_Int( null, "ballistic_tactical_enemies_hit", eChallengeGameMode.ANY, CHALLENGES_NEED )
 
 
-
-		CAREER_STATS.catalyst_doors_barricaded = RegisterAccumulatedStat_Int( null, "catalyst_doors_barricaded", eChallengeGameMode.ANY, TRACKERS_NEED | CHALLENGES_NEED )
-		CAREER_STATS.catalyst_spikes_damage = RegisterAccumulatedStat_Int( null, "catalyst_spikes_damage", eChallengeGameMode.ANY, TRACKERS_NEED | CHALLENGES_NEED )
-		CAREER_STATS.catalyst_dark_veil_enemies_crossed = RegisterAccumulatedStat_Int( null, "catalyst_dark_veil_enemies_crossed", eChallengeGameMode.ANY, TRACKERS_NEED | CHALLENGES_NEED )
-
+	CAREER_STATS.catalyst_doors_barricaded = RegisterAccumulatedStat_Int( null, "catalyst_doors_barricaded", eChallengeGameMode.ANY, TRACKERS_NEED | CHALLENGES_NEED )
+	CAREER_STATS.catalyst_spikes_damage = RegisterAccumulatedStat_Int( null, "catalyst_spikes_damage", eChallengeGameMode.ANY, TRACKERS_NEED | CHALLENGES_NEED )
+	CAREER_STATS.catalyst_dark_veil_enemies_crossed = RegisterAccumulatedStat_Int( null, "catalyst_dark_veil_enemies_crossed", eChallengeGameMode.ANY, TRACKERS_NEED | CHALLENGES_NEED )
 
 
 		
@@ -2196,62 +2200,7 @@ void function RegisterAllStats()
 	
 	CAREER_STATS.s13_flash_01_buffet_points    = RegisterAccumulatedStat_Int( null, "s13_flash_01_buffet_points", eChallengeGameMode.NON_MODE, CHALLENGES_NEED )
 
-	
-	
 
-
-	CAREER_STATS.s16ce01_buffet_points				= RegisterAccumulatedStat_Int( null, "s16ce01_buffet_points", eChallengeGameMode.NON_MODE, CHALLENGES_NEED )
-	CAREER_STATS.s16ce01_damage_done_any_mode		= RegisterAccumulatedStat_Int( null, "s16ce01_damage_done_any_mode", eChallengeGameMode.ANY, CHALLENGES_NEED | BADGES_UNLOCK_NEED )
-	CAREER_STATS.s16ce01_kills_or_assists_any_mode	= RegisterAccumulatedStat_Int( null, "s16ce01_kills_or_assists_any_mode", eChallengeGameMode.ANY, CHALLENGES_NEED | BADGES_UNLOCK_NEED )
-	CAREER_STATS.s16ce01_wins_any_mode				= RegisterAccumulatedStat_Int( null, "s16ce01_wins_any_mode", eChallengeGameMode.ANY, CHALLENGES_NEED | BADGES_UNLOCK_NEED )
-	CAREER_STATS.s16ce01_combined_badge_earned      = RegisterExpensiveCalculatedStat_Int( null, "s16ce01_combined_badge_earned", CHALLENGES_NEED | BADGES_UNLOCK_NEED, SetupGetImperialGuardCombinedBadgeEarned, [], eChallengeGameMode.NON_MODE )
-
-
-		
-		
-
-
-	CAREER_STATS.s16ace_buffet_points				= RegisterAccumulatedStat_Int( null, "s16ace_buffet_points", eChallengeGameMode.NON_MODE, CHALLENGES_NEED )
-	CAREER_STATS.s16ace_damage_done_any_mode		= RegisterAccumulatedStat_Int( null, "s16ace_damage_done_any_mode", eChallengeGameMode.ANY, CHALLENGES_NEED | BADGES_UNLOCK_NEED )
-	CAREER_STATS.s16ace_kills_or_assists_any_mode	= RegisterAccumulatedStat_Int( null, "s16ace_kills_or_assists_any_mode", eChallengeGameMode.ANY, CHALLENGES_NEED | BADGES_UNLOCK_NEED )
-
-		CAREER_STATS.s16ace_wins_tdm			= RegisterAccumulatedStat_Int( null, "s16ace_wins_tdm", eChallengeGameMode.FTDM, CHALLENGES_NEED | BADGES_UNLOCK_NEED )
-
-	CAREER_STATS.s16ace_combined_badge_earned     = RegisterExpensiveCalculatedStat_Int( null, "s16ace_combined_badge_earned", CHALLENGES_NEED | BADGES_UNLOCK_NEED, Setup4thAnniversaryBadgeEarned, [], eChallengeGameMode.NON_MODE )
-
-	
-	CAREER_STATS.s16ce02_buffet_points				= RegisterAccumulatedStat_Int( null, "s16ce02_buffet_points", eChallengeGameMode.NON_MODE, CHALLENGES_NEED )
-	CAREER_STATS.s16ce02_damage_done_any_mode		= RegisterAccumulatedStat_Int( null, "s16ce02_damage_done_any_mode", eChallengeGameMode.ANY, CHALLENGES_NEED | BADGES_UNLOCK_NEED )
-	CAREER_STATS.s16ce02_kills_or_assists_any_mode	= RegisterAccumulatedStat_Int( null, "s16ce02_kills_or_assists_any_mode", eChallengeGameMode.ANY, CHALLENGES_NEED | BADGES_UNLOCK_NEED )
-
-
-	CAREER_STATS.s16ce02_top5_heatwave				= RegisterAccumulatedStat_Int( null, "s16ce02_top5_heatwave", eChallengeGameMode.HEATWAVE, CHALLENGES_NEED | BADGES_UNLOCK_NEED )
-
-	CAREER_STATS.s16ce02_combined_badge_earned      = RegisterExpensiveCalculatedStat_Int( null, "s16ce02_combined_badge_earned", CHALLENGES_NEED | BADGES_UNLOCK_NEED, SetupSunSquadBadgeEarned, [], eChallengeGameMode.NON_MODE )
-
-	
-	CAREER_STATS.s16ce03_buffet_points			= RegisterAccumulatedStat_Int( null, "s16ce03_buffet_points", eChallengeGameMode.NON_MODE, CHALLENGES_NEED )
-	CAREER_STATS.s16ce03_damage_done_any_mode		= RegisterAccumulatedStat_Int( null, "s16ce03_damage_done_any_mode", eChallengeGameMode.ANY, CHALLENGES_NEED | BADGES_UNLOCK_NEED )
-	CAREER_STATS.s16ce03_kills_or_assists_any_mode	= RegisterAccumulatedStat_Int( null, "s16ce03_kills_or_assists_any_mode", eChallengeGameMode.ANY, CHALLENGES_NEED | BADGES_UNLOCK_NEED )
-
-		CAREER_STATS.s16ce03_wins_tdm			= RegisterAccumulatedStat_Int( null, "s16ce03_wins_tdm", eChallengeGameMode.FTDM, CHALLENGES_NEED | BADGES_UNLOCK_NEED )
-
-	CAREER_STATS.s16ce03_combined_badge_earned      = RegisterExpensiveCalculatedStat_Int( null, "s16ce03_combined_badge_earned", CHALLENGES_NEED | BADGES_UNLOCK_NEED, SetupVeiledBadgeEarned, [], eChallengeGameMode.NON_MODE )
-
-
-		CAREER_STATS.s17fe01_buffet_points 					= RegisterAccumulatedStat_Int( null, "s17fe01_buffet_points", eChallengeGameMode.NON_MODE, CHALLENGES_NEED )
-		CAREER_STATS.s17fe01_damage_done_any_mode				= RegisterAccumulatedStat_Int( null, "s17fe01_damage_done_any_mode", eChallengeGameMode.ANY, CHALLENGES_NEED | BADGES_UNLOCK_NEED )
-		CAREER_STATS.s17fe01_kills_or_assists_any_mode		= RegisterAccumulatedStat_Int( null, "s17fe01_kills_or_assists_any_mode", eChallengeGameMode.ANY, CHALLENGES_NEED | BADGES_UNLOCK_NEED )
-		CAREER_STATS.s17fe01_health_restored_any_mode			= RegisterAccumulatedStat_Int( null, "s17fe01_health_restored_any_mode", eChallengeGameMode.ANY, CHALLENGES_NEED | BADGES_UNLOCK_NEED )
-		CAREER_STATS.s17fe01_combined_badge_earned      		= RegisterExpensiveCalculatedStat_Int( null, "s17fe01_combined_badge_earned", CHALLENGES_NEED | BADGES_UNLOCK_NEED, SetupThreatLevelBadgeEarned, [], eChallengeGameMode.NON_MODE )
-
-
-
-		CAREER_STATS.s17ce01_buffet_points 					= RegisterAccumulatedStat_Int( null, "s17ce01_buffet_points", eChallengeGameMode.NON_MODE, CHALLENGES_NEED )
-		CAREER_STATS.s17ce01_damage_done_any_mode				= RegisterAccumulatedStat_Int( null, "s17ce01_damage_done_any_mode", eChallengeGameMode.ANY, CHALLENGES_NEED | BADGES_UNLOCK_NEED )
-		CAREER_STATS.s17ce01_kills_or_assists_any_mode		= RegisterAccumulatedStat_Int( null, "s17ce01_kills_or_assists_any_mode", eChallengeGameMode.ANY, CHALLENGES_NEED | BADGES_UNLOCK_NEED )
-		CAREER_STATS.s17ce01_shotgun_damage_done_any_mode						= RegisterAccumulatedStat_Int( null, "s17ce01_shotgun_damage_done_any_mode", eChallengeGameMode.ANY, CHALLENGES_NEED | BADGES_UNLOCK_NEED )
-		CAREER_STATS.s17ce01_combined_badge_earned      		= RegisterExpensiveCalculatedStat_Int( null, "s17ce01_combined_badge_earned", CHALLENGES_NEED | BADGES_UNLOCK_NEED, SetupDressedToKillBadgeEarned, [], eChallengeGameMode.NON_MODE )
 		CAREER_STATS.s17_eventrefactor_currency 			= RegisterAccumulatedStat_Int( null, "s17_eventrefactor_currency", eChallengeGameMode.NON_MODE, CHALLENGES_NEED | BADGES_UNLOCK_NEED ) 
 
 
@@ -2293,6 +2242,28 @@ void function RegisterAllStats()
 		CAREER_STATS.s18ce03_kills_or_assists = RegisterAccumulatedStat_Int( null, "s18ce03_kills_or_assists", eChallengeGameMode.ANY, CHALLENGES_NEED | BADGES_UNLOCK_NEED )
 		CAREER_STATS.s18ce03_wins = RegisterAccumulatedStat_Int( null, "s18ce03_wins", eChallengeGameMode.ANY, CHALLENGES_NEED | BADGES_UNLOCK_NEED )
 		CAREER_STATS.s18ce03_combined_badge_earned = RegisterExpensiveCalculatedStat_Int( null, "s18ce03_combined_badge_earned", CHALLENGES_NEED | BADGES_UNLOCK_NEED, SetupS18CE03BadgeEarned, [], eChallengeGameMode.NON_MODE )
+
+
+	
+	
+
+		CAREER_STATS.s19aw_event_currency_total = RegisterAccumulatedStat_Int( null, "s19aw_event_currency_total", eChallengeGameMode.NON_MODE, CHALLENGES_NEED | BADGES_UNLOCK_NEED )
+		CAREER_STATS.s19aw_revives_any_mode = RegisterAccumulatedStat_Int( null, "s19aw_revives_any_mode", eChallengeGameMode.ANY, CHALLENGES_NEED )
+
+
+	
+	
+
+		CAREER_STATS.s19ce01_01_buffet_points = RegisterAccumulatedStat_Int( null, "s19ce01_01_buffet_points", eChallengeGameMode.NON_MODE, CHALLENGES_NEED )
+		CAREER_STATS.s19ce01_02_buffet_points = RegisterAccumulatedStat_Int( null, "s19ce01_02_buffet_points", eChallengeGameMode.NON_MODE, CHALLENGES_NEED )
+		CAREER_STATS.s19ce01_03_buffet_points = RegisterAccumulatedStat_Int( null, "s19ce01_03_buffet_points", eChallengeGameMode.NON_MODE, CHALLENGES_NEED )
+		CAREER_STATS.s19ce01_04_buffet_points = RegisterAccumulatedStat_Int( null, "s19ce01_04_buffet_points", eChallengeGameMode.NON_MODE, CHALLENGES_NEED )
+
+		CAREER_STATS.s19ce01_wins_any_mode	  = RegisterAccumulatedStat_Int( null, "s19ce01_wins_any_mode", eChallengeGameMode.ANY, CHALLENGES_NEED | BADGES_UNLOCK_NEED )
+
+
+
+
 
 
 	
@@ -2356,13 +2327,25 @@ void function RegisterAllStats()
 		CAREER_STATS.slide_count = RegisterAccumulatedStat_Int( null, "slide_count", eChallengeGameMode.ANY, CHALLENGES_NEED )
 		CAREER_STATS.armor_upgaraded_count = RegisterAccumulatedStat_Int( null, "armor_upgaraded_count", eChallengeGameMode.ANY, CHALLENGES_NEED )
 		CAREER_STATS.doors_broken_by_melee = RegisterAccumulatedStat_Int( null, "doors_broken_by_melee", eChallengeGameMode.ANY, CHALLENGES_NEED )
-		CAREER_STATS.health_items_used = RegisterAccumulatedStat_Int( null, "health_items_used", eChallengeGameMode.BATTLE_ROYALE, CHALLENGES_NEED )
-		CAREER_STATS.shield_items_used = RegisterAccumulatedStat_Int( null, "shield_items_used", eChallengeGameMode.BATTLE_ROYALE, CHALLENGES_NEED )
 		CAREER_STATS.phoenix_kits_used = RegisterAccumulatedStat_Int( null, "phoenix_kits_used", eChallengeGameMode.BATTLE_ROYALE, CHALLENGES_NEED )
 		CAREER_STATS.beginner_distance_kill = RegisterAccumulatedStat_Int( null, "beginner_distance_kill", eChallengeGameMode.BATTLE_ROYALE, CHALLENGES_NEED )
-		CAREER_STATS.looted_weapon = RegisterAccumulatedStat_Int( null, "looted_weapon", eChallengeGameMode.BATTLE_ROYALE, CHALLENGES_NEED )
-		CAREER_STATS.looted_ammo = RegisterAccumulatedStat_Int( null, "looted_ammo", eChallengeGameMode.BATTLE_ROYALE, CHALLENGES_NEED )
-		CAREER_STATS.looted_backpack = RegisterAccumulatedStat_Int( null, "looted_backpack", eChallengeGameMode.BATTLE_ROYALE, CHALLENGES_NEED )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2516,6 +2499,8 @@ bool function IsValidMapForStats()
 
 
 
+
+
  bool function CurrentModeSupportsCustomStats()
  {
 	 string mode = ""
@@ -2552,19 +2537,6 @@ bool function IsValidMapForStats()
  }
 
  
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -7077,7 +7049,7 @@ StatCalcFuncInfo function SetupGetCountOfCharactersWithLegendarySkinAndExecution
 				array<ItemFlavor> characterSkins = GetValidItemFlavorsForLoadoutSlot( ToEHI( player ), Loadout_CharacterSkin( character ) )
 				foreach ( skin in characterSkins )
 				{
-					if ( GRX_IsItemOwnedByPlayer_AllowOutOfDateData( skin, player ) && ItemFlavor_HasQuality( skin ) && ItemFlavor_GetQuality( skin ) >= eRarityTier.LEGENDARY )
+					if ( GRX_IsItemOwnedByPlayer_AllowOutOfDateData( skin, player ) && ItemFlavor_HasQuality( skin ) && ItemFlavor_GetQuality( skin ) == eRarityTier.LEGENDARY )
 					{
 						hasLegendarySkin = true
 						break
@@ -7087,7 +7059,7 @@ StatCalcFuncInfo function SetupGetCountOfCharactersWithLegendarySkinAndExecution
 				array<ItemFlavor> executions = GetValidItemFlavorsForLoadoutSlot( ToEHI( player ), Loadout_CharacterExecution( character ) )
 				foreach ( execution in executions )
 				{
-					if ( GRX_IsItemOwnedByPlayer_AllowOutOfDateData( execution, player ) && ItemFlavor_HasQuality( execution ) && ItemFlavor_GetQuality( execution ) >= eRarityTier.LEGENDARY )
+					if ( GRX_IsItemOwnedByPlayer_AllowOutOfDateData( execution, player ) && ItemFlavor_HasQuality( execution ) && ItemFlavor_GetQuality( execution ) == eRarityTier.LEGENDARY )
 					{
 						hasLegendaryFinisher = true
 						break
@@ -7604,133 +7576,6 @@ StatCalcFuncInfo function SetupGetS12ACECombinedBadgeEarned( StatEntry calcEntry
 
 
 
-	StatCalcFuncInfo function SetupGetImperialGuardCombinedBadgeEarned( StatEntry calcEntry, array<StatTemplate> sourceTemplates )
-	{
-		 StatCalcFuncInfo info
-
-		  
-
-
-
-		 info.calcFunc_Int = (int function ( entity player, array<StatEntry> sourceEntries, int when ) {
-			 int count = 0
-
-			 int damage_done    = GetStat_Int( player, ResolveStatEntry( CAREER_STATS.s16ce01_damage_done_any_mode ), when )
-			 int kills_assists  = GetStat_Int( player, ResolveStatEntry( CAREER_STATS.s16ce01_kills_or_assists_any_mode ), when )
-			 int wins	= GetStat_Int( player, ResolveStatEntry( CAREER_STATS.s16ce01_wins_any_mode ), when )
-
-			 if ( damage_done >= 50000 && kills_assists >= 200 && wins >= 20 )
-				 count = 1
-
-			 return count
-		 })
-
-		 return info
-	}
-
-	StatCalcFuncInfo function Setup4thAnniversaryBadgeEarned( StatEntry calcEntry, array<StatTemplate> sourceTemplates )
-	{
-		StatCalcFuncInfo info
-
-		
-
-
-
-		info.calcFunc_Int = (int function ( entity player, array<StatEntry> sourceEntries, int when ) {
-			int count = 0
-
-
-				
-				int damage_done   = GetStat_Int( player, ResolveStatEntry( CAREER_STATS.s16ace_damage_done_any_mode ), when )
-				int kills_assists = GetStat_Int( player, ResolveStatEntry( CAREER_STATS.s16ace_kills_or_assists_any_mode ), when )
-				int wins_tdm      = GetStat_Int( player, ResolveStatEntry( CAREER_STATS.s16ace_wins_tdm ), when )
-
-				if ( damage_done >= 50000 && kills_assists >= 200 && wins_tdm >= 10 )
-					count = 1
-
-			return count
-		})
-
-		return info
-	}
-
-
-
-
-
-	StatCalcFuncInfo function SetupSunSquadBadgeEarned( StatEntry calcEntry, array< StatTemplate > sourceTemplates )
-	{
-		StatCalcFuncInfo info
-
-		info.calcFunc_Int = ( int function ( entity player, array< StatEntry > sourceEntries, int when ) {
-
-			return (
-				GetStat_Int( player, ResolveStatEntry( CAREER_STATS.s16ce02_damage_done_any_mode ), when ) >= 50000
-				&& GetStat_Int( player, ResolveStatEntry( CAREER_STATS.s16ce02_kills_or_assists_any_mode ), when ) >= 100
-				&& GetStat_Int( player, ResolveStatEntry( CAREER_STATS.s16ce02_top5_heatwave ), when ) >= 10)
-			? 1 : 0
-
-
-
-		} )
-
-		return info
-	}
-
-	StatCalcFuncInfo function SetupVeiledBadgeEarned( StatEntry calcEntry, array<StatTemplate> sourceTemplates )
-	{
-		StatCalcFuncInfo info
-
-		
-
-
-
-		info.calcFunc_Int = (int function ( entity player, array<StatEntry> sourceEntries, int when ) {
-			int count = 0
-
-
-				int damage_done   = GetStat_Int( player, ResolveStatEntry( CAREER_STATS.s16ce03_damage_done_any_mode ), when )
-				int kills_assists = GetStat_Int( player, ResolveStatEntry( CAREER_STATS.s16ce03_kills_or_assists_any_mode ), when )
-				int wins_tdm      = GetStat_Int( player, ResolveStatEntry( CAREER_STATS.s16ce03_wins_tdm ), when )
-
-				if ( damage_done >= 50000 && kills_assists >= 200 && wins_tdm >= 10 )
-					count = 1
-
-			return count
-		})
-
-		return info
-	}
-
-
-
- 	StatCalcFuncInfo function SetupThreatLevelBadgeEarned( StatEntry calcEntry, array<StatTemplate> sourceTemplates )
-	{
-		StatCalcFuncInfo info
-
-		
-
-
-
-		info.calcFunc_Int = (int function ( entity player, array<StatEntry> sourceEntries, int when ) {
-			int count = 0
-
-			int damage_done     = GetStat_Int( player, ResolveStatEntry( CAREER_STATS.s17fe01_damage_done_any_mode ), when )
-			int kills_assists   = GetStat_Int( player, ResolveStatEntry( CAREER_STATS.s17fe01_kills_or_assists_any_mode ), when )
-			int health_restored = GetStat_Int( player, ResolveStatEntry( CAREER_STATS.s17fe01_health_restored_any_mode ), when )
-
-			if ( damage_done >= 50000 && kills_assists >= 100 && health_restored >= 5000 )
-				count = 1
-
-			return count
-		})
-
-		return info
-	}
-
-
-
-
 StatCalcFuncInfo function SetupS18RRChallengesCompleted( StatEntry calcEntry, array<StatTemplate> sourceTemplates )
 {
 	StatCalcFuncInfo info
@@ -7757,32 +7602,6 @@ StatCalcFuncInfo function SetupS18RRChallengesCompleted( StatEntry calcEntry, ar
 
 	return info
 }
-
-
-
- StatCalcFuncInfo function SetupDressedToKillBadgeEarned( StatEntry calcEntry, array<StatTemplate> sourceTemplates )
- {
-	 StatCalcFuncInfo info
-
-	 
-
-
-
-	 info.calcFunc_Int = (int function ( entity player, array<StatEntry> sourceEntries, int when ) {
-		 int count = 0
-
-		 int damage_done     = GetStat_Int( player, ResolveStatEntry( CAREER_STATS.s17ce01_damage_done_any_mode ), when )
-		 int kills_assists   = GetStat_Int( player, ResolveStatEntry( CAREER_STATS.s17ce01_kills_or_assists_any_mode ), when )
-		 int shotgun_damage		 = GetStat_Int( player, ResolveStatEntry( CAREER_STATS.s17ce01_shotgun_damage_done_any_mode ), when )
-
-		 if ( damage_done >= 50000 && kills_assists >= 200 && shotgun_damage >= 5000 )
-			 count = 1
-
-		 return count
-	 })
-
-	 return info
- }
 
 
 

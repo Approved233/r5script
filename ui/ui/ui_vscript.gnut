@@ -11,7 +11,10 @@ global function AddUICallback_OnLevelInit
 global function AddUICallback_InputModeChanged
 global function AddUICallback_KeyBindSet
 global function AddUICallback_UIShutdown
-
+#if PC_PROG_NX_UI
+global function AddUICallback_NXOperationModeChanged
+global function RemoveUICallback_NXOperationModeChanged
+#endif
 
 global struct CTAData
 {
@@ -277,6 +280,9 @@ global struct UIGlobals
 	array<void functionref(bool)>            inputModeChangeCallbacks
 	array<void functionref(string, string)>  keyBindSetCallbacks
 	array<void functionref()>                uiShutdownCallbacks
+#if PC_PROG_NX_UI
+	array<void functionref()>            	 nxOperationModeChangedCallbacks
+#endif
 
 	table<var, MenuDef> menuData
 
@@ -435,3 +441,15 @@ void function AddUICallback_KeyBindSet( void functionref( string, string ) callb
 {
 	uiGlobal.keyBindSetCallbacks.append( callbackFunc )
 }
+
+#if PC_PROG_NX_UI
+void function AddUICallback_NXOperationModeChanged( void functionref() callbackFunc )
+{
+	uiGlobal.nxOperationModeChangedCallbacks.append( callbackFunc )
+}
+
+void function RemoveUICallback_NXOperationModeChanged( void functionref() callbackFunc )
+{
+	uiGlobal.nxOperationModeChangedCallbacks.removebyvalue( callbackFunc )
+}
+#endif

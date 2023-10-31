@@ -1,4 +1,3 @@
-
 global function MpAbilityArmoredLeap_Init
 global function OnWeaponActivate_ability_armored_leap
 global function OnWeaponDeactivate_ability_armored_leap
@@ -3188,7 +3187,7 @@ void function ArmoredLeap_AR_Placement_Thread( entity weapon )
 		float testHeight = ( info.finalPos.z - player.GetOrigin().z )
 		float testDistanceM = Distance(player.GetOrigin(), info.finalPos) * INCHES_TO_METERS
 		float testHeightM = ( info.finalPos.z - player.GetOrigin().z ) * INCHES_TO_METERS
-		printt( "DIST: " + testDistance + " | " + testDistanceM + " || HEIGHT:  " + testHeight + " | " + testHeightM  )
+		
 
 		endPointMover.Hide()
 		allyMover.Hide()
@@ -6804,7 +6803,6 @@ vector function SnakeWall_GetBestDownTracePosition( vector nextValidPos, vector 
 
 
 
-
 vector function CastleWall_OffsetDamageNumbers( entity shieldEnt, vector damageFlyoutPosition )
 {
 	vector flyoutPosition = ZERO_VECTOR
@@ -8012,5 +8010,3 @@ bool function DoAdditionalAirPosChecks()
 	return GetCurrentPlaylistVarBool( "newcastle_ult_additional_air_pos_checks", true )
 }
 
-
-              

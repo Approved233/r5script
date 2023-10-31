@@ -76,6 +76,7 @@ const asset SHADOW_FORM_SHADOW_SCREEN_FX = $"p_rev_reborn_FP_ult_screen_base"
 
 global const float SHADOW_FORM_DURATION = 25.0
 const float SHADOW_FORM_TIME_ADD = 5.0
+const float SHADOW_FORM_ASSIST_TIME = 3.0
 const float SHADOW_FORM_SHIELD_HEALTH = 75
 const float SHADOW_FORM_SHIELD_REGEN_RATE = 1.0
 const float SHADOW_FORM_SHIELD_REGEN_DELAY = 1.0
@@ -114,6 +115,7 @@ struct
 	
 	float duration
 	float extensionTime
+	float assistTime
 	float shieldHealth
 	float shieldRegenRate
 	float shieldRegenDelay
@@ -145,6 +147,7 @@ void function MpAbilityShadowForm_Init()
 	
 	file.duration = GetCurrentPlaylistVarFloat( "revenant_shadow_form_duration", SHADOW_FORM_DURATION )
 	file.extensionTime = GetCurrentPlaylistVarFloat( "revenant_shadow_form_extension_time", SHADOW_FORM_TIME_ADD )
+	file.assistTime = GetCurrentPlaylistVarFloat( "revenant_shadow_form_extension_time", SHADOW_FORM_ASSIST_TIME )
 	file.shieldHealth = GetCurrentPlaylistVarFloat( "revenant_shadow_form_shield_health", SHADOW_FORM_SHIELD_HEALTH )
 	file.shieldRegenRate = GetCurrentPlaylistVarFloat( "revenant_shadow_form_shield_regen_rate", SHADOW_FORM_SHIELD_REGEN_RATE )
 	file.shieldRegenDelay = GetCurrentPlaylistVarFloat( "revenant_shadow_form_shield_regen_delay", SHADOW_FORM_SHIELD_REGEN_DELAY )
@@ -179,6 +182,12 @@ void function MpAbilityShadowForm_Init()
 	RegisterSignal( "EndShieldRegenDelay" )
 	RegisterSignal( "EndExpirationThread" )
 }
+
+
+
+
+
+
 
 
 
@@ -402,6 +411,18 @@ void function ShadowForm_Start( entity player, entity weapon )
 		return
 
 	EndSignal( player, "OnDeath", "OnDestroy", "BleedOut_OnStartDying" ,"ExitShadowForm" )
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1115,6 +1136,27 @@ void function ShadowForm_Start( entity player, entity weapon )
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function ShadowForm_StartClient( entity ent, int statusEffect, bool actuallyChanged )
 {
 	if ( !actuallyChanged && GetLocalViewPlayer() == GetLocalClientPlayer() )
@@ -1133,6 +1175,8 @@ void function ShadowForm_StopClient( entity ent, int statusEffect, bool actually
 
 	if ( ent != GetLocalViewPlayer() )
 		return
+
+	Rumble_Play( "rumble_burn_card_activate", {} )
 
 	ent.Signal( "ShadowForm_EndShadowScreenFx" )
 }
@@ -1195,6 +1239,7 @@ void function ShadowShield_ToggleFX_Think( entity player )
 
 	file.shadowShieldFx = StartParticleEffectOnEntity( viewPlayer, GetParticleSystemIndex( SHADOW_FORM_SHIELD_ACTIVE_FX_1P ), FX_PATTACH_ABSORIGIN_FOLLOW, ATTACHMENTID_INVALID )
 	EffectSetIsWithCockpit( file.shadowShieldFx, true )
+	Rumble_Play( "rumble_stim_activate", {} )
 
 	OnThreadEnd(
 		function() : ()
@@ -1219,6 +1264,7 @@ void function ShadowShield_ToggleFX_Think( entity player )
 			file.shadowShieldFx = StartParticleEffectOnEntity( viewPlayer, GetParticleSystemIndex( SHADOW_FORM_SHIELD_ACTIVE_FX_1P ), FX_PATTACH_ABSORIGIN_FOLLOW, ATTACHMENTID_INVALID )
 			EffectSetIsWithCockpit( file.shadowShieldFx, true )
 			effectiveActive = true
+			Rumble_Play( "rumble_stim_activate", {} )
 		}
 
 		WaitFrame()
@@ -1302,6 +1348,8 @@ void function DamageTakenFlash( entity player )
 	EffectSetIsWithCockpit( shieldDamageFx, true )
 	int shieldDamageHexFx = StartParticleEffectOnEntity( viewPlayer, GetParticleSystemIndex( SHADOW_FORM_SHIELD_HIT_FX2_1P ), FX_PATTACH_ABSORIGIN_FOLLOW, ATTACHMENTID_INVALID )
 	EffectSetIsWithCockpit( shieldDamageHexFx, true )
+
+	Rumble_Play( "rumble_pilot_hurt", {} )
 
 	OnThreadEnd(
 		function() : ( player, shieldDamageFx, shieldDamageHexFx )

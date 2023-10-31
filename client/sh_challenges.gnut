@@ -2,13 +2,13 @@
 global function ShChallenges_LevelInit_PreStats
 global function ShChallenges_LevelInit_PostStats
 global function GetAllChallenges
+global function GetAllChallengesOfTimespan
 global function Challenge_GetTierCount
 global function Challenge_LastTierIsInfinite
 global function Challenge_GetCurrentTier
 global function Challenge_IsComplete
 global function Challenge_GetTimeSpanKind
 global function Challenge_IsBoostEnabled
-global function Challenge_GetMaxNumChallenges
 global function Challenge_GetGoalVal
 global function Challenge_EitherOr_GetGoalVals
 global function Challenge_GetBPStarsReward
@@ -93,11 +93,17 @@ global function DEV_DumpFavoritePersistenceData
 
 
 
+
+
+
 global function ServerToClient_AssignedChallengesDidChange
 global function ServerToClient_AssignedChallengesDidChange_FromEventsRefresh
 global function ServerToClient_ChallengeDataDidChange
 global function UpdateMinimapChallengeRui
 global function UpdateClientCategorySelectionIndexFromUI
+
+
+
 
 
 #if DEV
@@ -147,7 +153,8 @@ enum eChallengeCategory
 	STORY_03,
 	BEGINNER,
 	DAILY,
-	TOP_WEEKLY
+	TOP_WEEKLY,
+	EVENTSHOP_DAILY_CHALLENGE,
 	FAVORITES,
 }
 
@@ -201,6 +208,7 @@ global enum eChallegeDifficulty
 global enum eChallengeTimeSpanKind
 {
 	BEGINNER,
+	EVENTSHOP_DAILY_CHALLENGE, 
 	DAILY,
 	SEASON_WEEKLY,
 	SEASON_WEEKLY_RECURRING,
@@ -227,6 +235,7 @@ global enum eTinyLabelPlacementStyle
 	CENTER = 2
 	BOTTOM = 3
 }
+
 
 
 
@@ -312,7 +321,7 @@ global const bool BOTS_HAVE_CHALLENGES = false
 const int MAX_UNOWNED_CHAR_CHALLENGE = 1
 const array<int> DAILY_CHALLENGE_SET = [ eChallegeDifficulty.VERY_EASY, eChallegeDifficulty.EASY, eChallegeDifficulty.MEDIUM, eChallegeDifficulty.HARD, eChallegeDifficulty.VERY_HARD ]
 const int NUM_DAILY_CHALLENGES = 5 
-const int NUM_FAVORITE_CHALLENGES = 5
+const int NUM_FAVORITE_CHALLENGES = NUM_DAILY_CHALLENGES 
 const int NUM_WEEKLY_CHALLENGES_MAX = 11
 const int NUM_CHALLENGE_WEEKS_MAX = 13
 const int NUM_CHALLENGE_BUFFER_FOR_EVENTS = 32 
@@ -323,6 +332,7 @@ const int NUM_POST_GAME_CHALLENGES_MAX = 32
 global const int MAX_REWARDS_PER_CHALLENGE_TIER = 4 
 
 
+const int BASE_CHALLENGE_TIER = 0 
 const asset BATTLE_COMPLETED_HEADER_IMAGE = $"rui/menu/battlepass/battle_pass_completed_header"
 
 
@@ -481,6 +491,7 @@ void function ShChallenges_LevelInit_PreStats()
 
 
 
+
 	BeginnerChallenges_Init()
 
 
@@ -533,7 +544,7 @@ void function ShChallenges_LevelInit_PostStats()
 	fileLevel.currentEvents  = GetActiveBuffetEventArray( timestamp )
 
 
-		ItemFlavor ornull activeEventShop = GetActiveEventShop( timestamp )
+		ItemFlavor ornull activeEventShop = EventShop_GetCurrentActiveEventShop()
 		if( activeEventShop != null )
 		{
 			expect ItemFlavor( activeEventShop )
@@ -655,6 +666,19 @@ void function ShChallenges_LevelInit_PostStats()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function RegisterChallengeSource( ItemFlavor challengeFlav, ItemFlavor sourceFlav, int sortOrdinal )
 {
 	if ( challengeFlav in fileLevel.challengeSourceMap )
@@ -721,6 +745,7 @@ void function OnChallengeRegistered( ItemFlavor challenge )
 {
 	
 }
+
 
 
 
@@ -1037,6 +1062,36 @@ void function ServerToClient_ChallengeDataDidChange( bool didEventChallengesRefr
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function UpdateMinimapChallengeRui( array<var> ruiArray )
 {
 	if ( !IsConnected() )
@@ -1066,15 +1121,34 @@ void function UpdateMinimapChallengeRui( array<var> ruiArray )
 			currentEvent = GetActiveBuffetEventForIndex( timestamp, 0 )
 	}
 
-
-
 	array<ItemFlavor> challenges = GetChallengesByCategory( player, challengeCategory, currentEvent )
 
-	if ( IsEventCategory( challengeCategory ) && currentEvent != null )
+	if ( IsEventCategory( challengeCategory ) )
 	{
-		expect ItemFlavor( currentEvent )
-		FilterOutMainChallengeIfValid( currentEvent, challenges )
+		if ( currentEvent != null )
+		{
+			expect ItemFlavor( currentEvent )
+			FilterOutMainChallengeIfValid( currentEvent, challenges )
+		}
+		else 
+		{
+			array< ItemFlavor > chalCopy = clone challenges
+			foreach ( ItemFlavor chal in chalCopy )
+			{
+				if ( Challenge_GetGameMode( chal ) == eChallengeGameMode.NON_MODE )
+				{
+					challenges.fastremovebyvalue( chal )
+					break
+				}
+			}
+		}
 	}
+	else if ( challenges.len() > NUM_DAILY_CHALLENGES )
+	{
+		Assert( false, format( "too many challenges - %d - being sent to the Challenge box-row RUI", challenges.len() ) )
+		challenges.resize( NUM_DAILY_CHALLENGES )
+	}
+	Assert( challenges.len() <= NUM_DAILY_CHALLENGES )
 
 	UpdateChallengeCategorySelection( titleRui, true, true )
 	UpdateChallengeRowsRuiRefreshWrapper( player, challenges, rowRuiArray )
@@ -1115,7 +1189,8 @@ array<ItemFlavor> function GetChallengesByCategory( entity player, int challenge
 	array<ItemFlavor> challenges
 	if ( IsEventCategory( challengeCategory ) )
 	{
-		challenges = GetAssignedChallengesByTimeSpan( player, eChallengeTimeSpanKind.EVENT, -1, currentEvent )
+		int timespan = IsEventShopChallengeCategory( challengeCategory ) ? eChallengeTimeSpanKind.EVENTSHOP_DAILY_CHALLENGE : eChallengeTimeSpanKind.EVENT
+		challenges = GetAssignedChallengesByTimeSpan( player, timespan, -1, currentEvent )
 	}
 	else if ( IsStoryCategory( challengeCategory ) )
 	{
@@ -1135,10 +1210,14 @@ array<ItemFlavor> function GetChallengesByCategory( entity player, int challenge
 					if ( challenges.len() > 4 )
 						break 
 
-					if ( !Challenge_IsComplete( player, beginnerChallenge ) )
-					{
-						challenges.append( beginnerChallenge )
-					}
+
+
+
+						if ( !Challenge_IsComplete( player, beginnerChallenge ) )
+						{
+							challenges.append( beginnerChallenge )
+						}
+
 				}
 				break
 			}
@@ -1155,6 +1234,10 @@ array<ItemFlavor> function GetChallengesByCategory( entity player, int challenge
 				challenges = GetFavoriteChallenges( player )
 				break
 
+			case eChallengeCategory.EVENTSHOP_DAILY_CHALLENGE:
+				challenges = GetAssignedChallengesByTimeSpan( player, eChallengeTimeSpanKind.EVENTSHOP_DAILY_CHALLENGE )
+				break
+
 				unreachable
 		}
 	}
@@ -1166,7 +1249,7 @@ array<ItemFlavor> function GetChallengesByCategory( entity player, int challenge
 
 array<ItemFlavor> function GetWeeklyChallengesSortedByProgress( entity player )
 {
-	const NUM_CHALLENGES_TO_RETURN = 5
+	const NUM_CHALLENGES_TO_RETURN = NUM_DAILY_CHALLENGES
 
 	array<ChallengeSortStruct> challengeSortArray
 
@@ -1408,7 +1491,7 @@ bool function IsFavoriteChallenge( ItemFlavor challengeFlav )
 
 array<ItemFlavor> function GetFavoriteChallenges( entity player )
 {
-	const NUM_CHALLENGES_TO_RETURN = 5
+	const NUM_CHALLENGES_TO_RETURN = NUM_DAILY_CHALLENGES
 
 	array<ChallengeSortStruct> challengeSortArray
 	PlayerChallengesState pcs                = GetPlayerChallengesState( player )
@@ -1512,22 +1595,47 @@ void function DEV_DumpFavoritePersistenceData()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 array<int> function GetChallengeCategoryIDArray( bool hideStories = false )
 {
 	array<int> categoryIDtoStringArray = []
 
+
+
+
+
+
 	
-	int eventIdx                       = eChallengeCategory.EVENT_00
+	int eventIdx = eChallengeCategory.EVENT_00
 	foreach ( event in fileLevel.currentEvents )
 	{
 		Assert( IsEventCategory( eventIdx ) )
 		categoryIDtoStringArray.append( eventIdx++ )
 	}
 
+	if ( EventShop_CurrentActiveEventShopHasDailyChallenges() )
+	{
+		categoryIDtoStringArray.append( eChallengeCategory.EVENTSHOP_DAILY_CHALLENGE )
+	}
+
+
 	
 	if( !hideStories )
 	{
-		int storyIdx                       = eChallengeCategory.STORY_00
+		int storyIdx = eChallengeCategory.STORY_00
 		foreach ( story in fileLevel.currentStories )
 		{
 			if( StoryEvent_GetShowInChallengeBoxBool( story ) )
@@ -1639,11 +1747,17 @@ void function UpdateChallengeCategorySelection( var rui, bool longName = false, 
 
 
 
+
+
+
+
+
+
+
+
+
+
 }
-
-
-
-
 
 
 
@@ -1790,6 +1904,10 @@ string function GetCategoryStringFromType( int categoryID, bool longName = false
 			case eChallengeCategory.FAVORITES:
 				return "#CATEGORY_FAVORITES" + appendStr
 				break
+
+			case eChallengeCategory.EVENTSHOP_DAILY_CHALLENGE:
+				return "#CATEGORY_REWARD_SHOP_DAILY_CHALLENGE" + appendStr
+				break
 		}
 	}
 
@@ -1812,52 +1930,6 @@ void function SetSeasonColors( var rui )
 		RuiSetFloat3( rui, "seasonColor", Season_GetTabBGSelectedCol( season ) )
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -3743,6 +3815,153 @@ bool function Challenge_IsChallengesStateInititated( entity player )
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #if DEV
 void function PrintChallengePersistence( entity player )
 {
@@ -4121,7 +4340,11 @@ array<ItemFlavor> function GetAssignedChallengesByTimeSpan( entity player, int t
 	{
 		
 		array<ItemFlavor> results
-		foreach( ItemFlavor challengeFlav in BeginnerChallenges_GetChallengeList() )
+
+
+
+		foreach ( ItemFlavor challengeFlav in BeginnerChallenges_GetChallengeList() )
+
 		{
 			if( Challenge_IsAssigned( player, challengeFlav ) )
 				results.append( challengeFlav )
@@ -4160,7 +4383,6 @@ array<ItemFlavor> function GetAssignedChallengesByTimeSpan( entity player, int t
 						continue
 				}
 			}
-
 
 			results.append( challengeFlav )
 		}
@@ -4265,7 +4487,7 @@ bool function IsChallengePlaylistEnabled( ItemFlavor challengeFlav )
 void function UpdateChallengeRowsRui( entity player, array<ItemFlavor> challenges, array<var> rowRuis = [] )
 {
 	
-	Assert( challenges.len() <= 5, "total:" + challenges.len() )
+	Assert( challenges.len() <= NUM_DAILY_CHALLENGES, "total:" + challenges.len() )
 
 	foreach ( int rowIdx, var rui in rowRuis )
 	{
@@ -4381,6 +4603,57 @@ void function UpdateChallengeRowsRui( entity player, array<ItemFlavor> challenge
 		}
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4975,6 +5248,27 @@ void function UpdateChallengeBoxHeaderBPProgress( entity player, var rui )
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 bool function Challenge_CanRerollChallenge( ItemFlavor challenge )
 {
 	if ( Challenge_GetTimeSpanKind( challenge ) != eChallengeTimeSpanKind.DAILY )
@@ -4999,22 +5293,6 @@ bool function Challenge_CanRerollChallenge( ItemFlavor challenge )
 
 	return true
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 void function SetRuiArgsForChallengeTier( var rui, string ruiArgPrefix, ItemFlavor challenge, int ornull displayTierIdx, int maxRewardIcons, int maxExtraRewardIcons, bool isEitherOrChallenge = false )
@@ -5042,7 +5320,7 @@ void function SetRuiArgsForChallengeTier( var rui, string ruiArgPrefix, ItemFlav
 	array<int> progression
 	array<int> goals
 
-	if( isEitherOrChallenge )
+	if ( isEitherOrChallenge )
 	{
 		descriptions = Challenge_EitherOr_GetDescriptions( challenge )
 		progression = Challenge_EitherOr_GetProgressValues( player, challenge )
@@ -5159,6 +5437,27 @@ array<ChallengeRewardDisplayData> function GetChallengeRewardDisplayData( ItemFl
 	array<ChallengeRewardDisplayData> displayData = []
 
 	ItemFlavorBag rewards = Challenge_GetRewards( challenge, tierIdx )
+
+	if ( Challenge_GetTimeSpanKind( challenge ) == eChallengeTimeSpanKind.EVENTSHOP_DAILY_CHALLENGE )
+	{
+		foreach ( int itemIndex, ItemFlavor flav in rewards.flavors )
+		{
+			ChallengeRewardDisplayData data
+			data.flav = flav
+			data.originalQuantity = rewards.quantities[itemIndex]
+			data.displayQuantity = data.originalQuantity
+			data.style = eChallengeRewardStyle.ITEM_GENERAL
+			data.rarityTier = ItemFlavor_GetQuality( flav, eRarityTier.COMMON )
+			data.icon = CustomizeMenu_GetRewardButtonImage( flav )
+			data.tinyLabelPlacementStyle = tinyLabelToTheLeft ? eTinyLabelPlacementStyle.LEFT : eTinyLabelPlacementStyle.CENTER
+			data.tinyLabelText = Localize( "#PLUS_N", FormatAndLocalizeNumber( "1", float( data.displayQuantity ), false ) )
+
+			displayData.append( data )
+		}
+
+		return displayData
+	}
+
 	foreach ( int itemIdx, ItemFlavor flav in rewards.flavors )
 	{
 		ChallengeRewardDisplayData crdd
@@ -5210,6 +5509,31 @@ array<ChallengeRewardDisplayData> function GetChallengeRewardDisplayData( ItemFl
 					Warning( "Challenge reward voucher gives multiple kinds of points -- this isn't yet supported properly!" )
 				}
 			}
+
+			if ( Voucher_GetEffectAccountXP( flav ) > 0 )
+			{
+				if ( !foundQuantity )
+				{
+					foundQuantity = true
+					crdd.displayQuantity *= Voucher_GetEffectAccountXP( flav )
+
+					if ( tinyLabelToTheLeft )
+					{
+						crdd.tinyLabelText           = Localize( "#PLUS_N", FormatAndLocalizeNumber( "1", float( crdd.displayQuantity ), false ) )
+						crdd.tinyLabelPlacementStyle = eTinyLabelPlacementStyle.LEFT
+					}
+					else
+					{
+						crdd.tinyLabelText           = FormatAndLocalizeNumber( "1", float( crdd.displayQuantity ), false )
+						crdd.tinyLabelPlacementStyle = eTinyLabelPlacementStyle.CENTER
+					}
+				}
+				else
+				{
+					Warning( "Challenge reward voucher gives multiple kinds of points -- this isn't yet supported properly!" )
+				}
+			}
+
 			if ( Voucher_GetEffectStatRef( flav ) != null && Voucher_GetEffectStatAmount( flav ) != 0 )
 			{
 				if ( !foundQuantity )
@@ -5491,6 +5815,37 @@ array<ChallengeRewardDisplayData> function GetChallengeRewardDisplayData( ItemFl
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 string function Challenge_GetDescription( ItemFlavor challenge, int tier, bool getAlt = false )
 {
 	int tierCount = Challenge_GetTierCount( challenge )
@@ -5551,6 +5906,42 @@ bool function DoesPlayerHaveChallenge( entity player, ItemFlavor flavor )
 	PlayerChallengesState pcs = GetPlayerChallengesState( player )
 	return (flavor in pcs.challengeStateMap)
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6346,6 +6737,7 @@ array<ItemFlavor> function GetAllChallengesOfTimespan( int timeSpan, int weekInd
 
 
 
+
 #if DEV
 string function AddPadding( string str, int minWidth = 8 )
 {
@@ -6431,14 +6823,6 @@ bool function Challenge_IsBoostEnabled( ItemFlavor flavor )
 
 	return GetGlobalSettingsBool( ItemFlavor_GetAsset( flavor ), "isBoostEnabled" )
 }
-
-
-
-int function Challenge_GetMaxNumChallenges()
-{
-	return NUM_CHALLENGES_MAX
-}
-
 
 
 
@@ -7010,6 +7394,26 @@ void function ChallengeDbg( entity player, string label, ... )
 	SpamLog( str )
 }
 
+bool function IsCalendarCategory( int challengeCategory )
+{
+	return ( challengeCategory == eChallengeCategory.DAILY ) || ( challengeCategory == eChallengeCategory.TOP_WEEKLY )
+}
+
+bool function IsPreferredCalendarCategory( int challengeCategory )
+{
+	if ( !IsCalendarCategory( challengeCategory ) )
+		return false
+
+	int preferredCalendar = file.hasCompletedRegularDailies ? eChallengeCategory.TOP_WEEKLY : eChallengeCategory.DAILY
+
+	return ( challengeCategory == preferredCalendar )
+}
+
+bool function IsBeginnerCategory( int challengeCategory )
+{
+	return ( challengeCategory == eChallengeCategory.BEGINNER )
+}
+
 bool function IsEventCategory( int challengeCategory )
 {
 	switch ( challengeCategory )
@@ -7036,6 +7440,11 @@ bool function IsStoryCategory( int challengeCategory )
 	}
 
 	return false
+}
+
+bool function IsEventShopChallengeCategory( int challengeCategory )
+{
+	return challengeCategory == eChallengeCategory.EVENTSHOP_DAILY_CHALLENGE
 }
 
 ItemFlavor ornull function GetActiveBuffetEventForCategory( int t, int currCat )

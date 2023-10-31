@@ -39,6 +39,13 @@ global function SharedRanked_GetEmblemDisplayModeFromEmblemText
 global function SharedRanked_GetNumPlayerOnLaddersOverridePlaylistVar
 global function Ranked_PlayerDeservesRewardsInPeriod
 
+
+global function Ranked_GetXProgMergedPersistenceData
+
+
+
+
+
 global function Ranked_GetCurrentActiveRankedPeriod
 global function Ranked_GetAllRanked2Pt0Periods
 global function Ranked_GetSeasonForRanked2Pt0Period
@@ -57,6 +64,10 @@ global function Ranked_GetHistoricalRankedPersistenceData
 global function Ranked_HasActiveLadderOnlyDivision
 global function Ranked_GetActiveLadderOnlyDivisionData
 global function Ranked_GetTierOfThresholdForRankedPartyDifferences
+
+
+
+
 
 
 
@@ -118,15 +129,29 @@ global const string RANKED_SEASON_16_GUIDSTRING = "SAID02005235415"
 
 global const string RANKED_2PT0_PERIOD_17_GUIDSTRING = "SAID01711148254" 
 
+global const string RANKED_2PT0_PERIOD_19_GUIDSTRING = "SAID01234567890" 
+
+
 global const asset RANKED_PLACEMENT_BADGE = $"ui/ranked_badge_placement.rpak"
 global const asset RANKED_PLACEMENT_ICON = $"ui_image/rui/menu/ranked/rank_emblem_placement.rpak"
 global const asset RANKED_PLACEMENT_LEVEL_UP_BADGE = $"ui/rank_emblem_rank_up_anim_placement.rpak"
 
+global const string RANKED_LAST_INITIALIZED_PERIOD_GUID_VAR_NAME = "lastInitializedRankedPeriodGUID"
 global const string RANKED_CURRENT_SCORE_PERSISTENCE_VAR_NAME = "currentRankedScore"
+global const string RANKED_PROVISIONAL_MATCH_COUNT_PERSISTENCE_VAR_NAME = "rankedProvisionalMatchesCompleted"
+global const string RANKED_PROVISIONAL_MATCH_HAS_PROGRESSED_OUT_PERSISTENCE_VAR_NAME = "rankedHasProgressedOutOfProvisional"
+global const string RANKED_SHOW_RANKED_SUMMARY_PERSISTENCE_VAR_NAME = "showRankedSummary"
 
+const array< string > XPROG_MERGED_PLATFORM_PERSISTENCE_FIELDS = [
+	RANKED_CURRENT_SCORE_PERSISTENCE_VAR_NAME,
+	RANKED_PROVISIONAL_MATCH_COUNT_PERSISTENCE_VAR_NAME,
+	RANKED_PROVISIONAL_MATCH_HAS_PROGRESSED_OUT_PERSISTENCE_VAR_NAME,
+	RANKED_SHOW_RANKED_SUMMARY_PERSISTENCE_VAR_NAME,
+]
 
-
-
+global const string XPROG_PERSISTENCE_RANKED_STRUCT_NAME = "xProgRanked"
+global const string XPROG_PERSISTENCE_PREFIX_FORMAT_STRING = XPROG_PERSISTENCE_MERGED_PLAT_STRUCT_NAME + "[ %s ]." + XPROG_PERSISTENCE_RANKED_STRUCT_NAME + "." 
+global const string XPROG_PERSISTENCE_FORMAT_STRING = XPROG_PERSISTENCE_PREFIX_FORMAT_STRING + "%s" 
 
 const array<string> RANKED_2PT0_PERSISTENCE_FIELDS = [
 	RANKED_CURRENT_SCORE_PERSISTENCE_VAR_NAME,
@@ -142,6 +167,7 @@ global enum emblemDisplayMode
 	DISPLAY_LADDER_POSITION,
 	NONE,
 }
+
 
 
 
@@ -245,6 +271,7 @@ global struct SharedRankedTierData
 	asset                     bgImage
 	asset					  glowImage
 	asset                     levelUpRuiAsset
+	asset					  promotionalMetallicImage
 	int                       entryCost = 9999999
 	int 					  maxProtection
 	int 					  minProtection
@@ -348,7 +375,7 @@ void function Sh_Ranked_Init()
 
 
 
-
+			Sh_RankedTrials_Init() 
 
 
 
@@ -394,7 +421,7 @@ void function Sh_Ranked_ItemRegistrationInit()
 
 	AddCallback_RegisterRootItemFlavors( RegisterRanked2Pt0Periods )
 
-
+		AddCallback_OnPreAllItemFlavorsRegistered( RankedTrials_RegisterAllRankedTrials )
 
 
 	
@@ -451,6 +478,10 @@ void function OnRankedPeriodRegistered( ItemFlavor rp )
 			tier.isTopEnd			   = GetSettingsBlockBool( tierBlock, "isTopEnd" )
 
 
+
+
+
+			tier.promotionalMetallicImage = GetSettingsBlockAsset( tierBlock, "promotionalMetallicImage" )
 
 		}
 		tier.levelUpRuiAsset       = GetSettingsBlockStringAsAsset( tierBlock, "levelUpRuiAsset" )
@@ -534,6 +565,10 @@ void function OnRankedPeriodRegistered( ItemFlavor rp )
 
 
 			ladderOnlyTier.glowImage			 = GetSettingsBlockAsset( tierBlock, "glowImage" )
+
+
+			ladderOnlyTier.promotionalMetallicImage = GetSettingsBlockAsset( tierBlock, "promotionalMetallicImage" )
+
 		}
 		ladderOnlyTier.levelUpRuiAsset       = GetSettingsBlockStringAsAsset( tierBlock, "levelUpRuiAsset" )
 		ladderOnlyTier.iconRuiAsset          = GetSettingsBlockStringAsAsset( tierBlock, "iconRuiAsset" )
@@ -648,16 +683,11 @@ array<ItemFlavor> function Ranked_GetAllRanked2Pt0Periods()
 	return file.allRanked2Pt0Periods
 }
 
-ItemFlavor ornull function Ranked_GetSeasonForRanked2Pt0Period( ItemFlavor period )
+ItemFlavor function Ranked_GetSeasonForRanked2Pt0Period( ItemFlavor period )
 {
 	asset parentAsset = GetGlobalSettingsAsset( ItemFlavor_GetAsset( period ), "parentItemFlavor" )
-	
-	if ( IsValidItemFlavorSettingsAsset( parentAsset ) )
-	{
-		return GetItemFlavorByAsset( parentAsset )
-	}
-
-	return null
+	Assert( IsValidItemFlavorSettingsAsset( parentAsset ) )
+	return GetItemFlavorByAsset( parentAsset )
 }
 
 int function SharedRanked_GetEmblemDisplayModeFromEmblemText( string emblemText )
@@ -1509,7 +1539,7 @@ int function SharedRanked_GetAbandonPenaltyLength( entity player )
 	if( !IsValid( player ) )
 		return 0
 
-	int numGamesAbandoned = expect int ( player.GetPersistentVar( "numPenalizedAbandons" ) )
+	int numGamesAbandoned = expect int ( player.GetPersistentVar( "numPenalizedAbandons" ) ) + 1
 	if ( numGamesAbandoned == 0 )
 		return 0
 
@@ -1576,6 +1606,14 @@ int function SharedRanked_GetAbandonPenaltyLength( entity player )
 
 	return banLengthInSeconds
 }
+
+
+
+
+
+
+
+
 
 
 
@@ -1671,6 +1709,32 @@ bool function Ranked_HasPlayerWaitedTooLongAfterBannerWasPickedUp( entity player
 
 
 
+int function Ranked_GetXProgMergedPersistenceData( entity player, string persistenceField )
+{
+	Assert( XPROG_MERGED_PLATFORM_PERSISTENCE_FIELDS.contains( persistenceField ) )
+	string platformId = GetMergedPlatformIdForPlayer( player )
+	string persistenceKey = format( XPROG_PERSISTENCE_FORMAT_STRING, platformId, persistenceField )
+
+
+
+
+
+
+	return player.GetPersistentVarAsInt( persistenceKey )
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 int function GetRankedPersistenceData( entity player, string persistenceField )
 {
 #if DEV
@@ -1690,16 +1754,11 @@ int function GetRankedPersistenceData( entity player, string persistenceField )
 				return 0
 
 
-
-
-
-
-
-
-
-
-
-
+			if ( XPROG_MERGED_PLATFORM_PERSISTENCE_FIELDS.contains( persistenceField ) )
+			{
+				return Ranked_GetXProgMergedPersistenceData( player, persistenceField )
+			}
+			else
 
 			{
 
@@ -1795,6 +1854,11 @@ array< SharedRankedDivisionData > function Ranked_GetRankedDivisionDataForTier( 
 
 	return data
 }
+
+
+
+
+
 
 
 
@@ -2442,6 +2506,44 @@ SharedRankedDivisionData function Ranked_GetNewDivisionForNewSeasonOrSplitReset(
 
 	return newDivData
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

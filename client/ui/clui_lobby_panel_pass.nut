@@ -3043,6 +3043,10 @@ void function UIToClient_ItemPresentation( SettingsAssetGUID itemFlavorGUID, int
 			
 			fileLevel.sceneRefOrigin += <0, 60, 20>
 		}
+		else
+		{
+			fileLevel.sceneRefOrigin += <-20, 0, 10>
+		}
 	}
 
 	if ( sceneRefName == "collection_event_ref" )
@@ -3254,6 +3258,11 @@ void function ShowBattlepassItem( ItemFlavor item, int level, float scale, var l
 		case eItemType.sticker:
 			ShowBattlePassItem_Sticker( item )
 			break
+
+		case eItemType.event_ability:
+			ShowBattlePassItem_EventAbility( item, scale )
+			break
+
 
 		default:
 			Warning( "Battle Pass reward item type not supported: " + DEV_GetEnumStringSafe( "eItemType", itemType ) )
@@ -4167,6 +4176,33 @@ void function ShowBattlePassItem_RadioPlay( ItemFlavor item, float scale )
 	fileLevel.topo = topo
 	fileLevel.rui = rui
 }
+
+
+void function ShowBattlePassItem_EventAbility( ItemFlavor item, float scale )
+{
+	const float BATTLEPASS_EVENT_ABILITY_WIDTH = 440
+	const float BATTLEPASS_EVENT_ABILITY_HEIGHT = 248
+	const float BATTLEPASS_EVENT_ABILITY_Z_OFFSET = 40
+	const float BATTLEPASS_EVENT_ABILITY_SCALE = 0.5
+
+	
+	vector origin = fileLevel.sceneRefOrigin + <0, 0, BATTLEPASS_EVENT_ABILITY_Z_OFFSET>
+	vector angles = VectorToAngles( AnglesToForward( fileLevel.sceneRefAngles ) * -1 )
+
+	float width  = BATTLEPASS_EVENT_ABILITY_SCALE * scale * BATTLEPASS_EVENT_ABILITY_WIDTH
+	float height = BATTLEPASS_EVENT_ABILITY_SCALE * scale * BATTLEPASS_EVENT_ABILITY_HEIGHT
+
+	var topo = CreateRUITopology_Worldspace( origin, angles, width, height )
+	var rui  = RuiCreate( $"ui/world_space_event_ability.rpak", topo, RUI_DRAW_VIEW_MODEL, 0 )
+
+	RuiSetImage( rui, "rewardImage", EventAbilities_GetRewardImage( item ) )
+	RuiSetString( rui, "abilityName", ItemFlavor_GetLongName( item ) )
+	RuiSetString( rui, "abilityDesc", ItemFlavor_GetShortDescription( item ) )
+
+	fileLevel.topo = topo
+	fileLevel.rui = rui
+}
+
 
 void function ShowBattlePassItem_SkydiveEmote( ItemFlavor item, float scale )
 {

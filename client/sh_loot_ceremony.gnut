@@ -91,17 +91,21 @@ const asset TICK_FX_HOLO_BEAM_TIER2 = $"P_loot_triad_beam_reveal_T2"
 const asset TICK_FX_HOLO_BEAM_TIER3 = $"P_loot_triad_beam_reveal_T3"
 const asset TICK_FX_HOLO_BEAM_TIER4 = $"P_loot_triad_beam_reveal_T4"
 const asset TICK_FX_HOLO_BEAM_TIER5 = $"P_loot_triad_beam_reveal_T4"
+const asset TICK_FX_HOLO_BEAM_TIER6 = $"P_loot_triad_beam_reveal_T6"
 const asset TICK_FX_RARITY_IDLE = $"P_loot_tick_beam_idle_flash"
 const asset TICK_FX_RARITY_BEAM_TIER1 = $"P_loot_tick_rarity_beam_T1"
 const asset TICK_FX_RARITY_BEAM_TIER2 = $"P_loot_tick_rarity_beam_T2"
 const asset TICK_FX_RARITY_BEAM_TIER3 = $"P_loot_tick_rarity_beam_T3"
 const asset TICK_FX_RARITY_BEAM_TIER4 = $"P_loot_tick_rarity_beam_T4"
 const asset TICK_FX_RARITY_BEAM_TIER5 = $"P_loot_tick_rarity_beam_T4"
+const asset TICK_FX_RARITY_BEAM_TIER6 = $"P_loot_tick_rarity_beam_T6"
 const asset TICK_FX_RARITY_FLASH_TIER1 = $"P_loot_tick_rarity_body_T1"
 const asset TICK_FX_RARITY_FLASH_TIER2 = $"P_loot_tick_rarity_body_T2"
 const asset TICK_FX_RARITY_FLASH_TIER3 = $"P_loot_tick_rarity_body_T3"
 const asset TICK_FX_RARITY_FLASH_TIER4 = $"P_loot_tick_rarity_body_T4"
 const asset TICK_FX_RARITY_FLASH_TIER5 = $"P_loot_tick_rarity_body_T4"
+const asset TICK_FX_RARITY_FLASH_TIER6 = $"P_loot_tick_rarity_body_T6"
+
 const asset TICK_FX_HEAD_CHARGE = $"P_loot_tick_head_charge"
 const asset TICK_FX_JUMP_JET = $"P_loot_tick_jump_jet"
 const string ATTACHNAME_LEFT = "FX_L_EYE"
@@ -302,6 +306,9 @@ void function LootBoxCeremony_SharedInit()
 	Remote_RegisterServerFunction( "Server_GrantLegendaryStickersIfCollectionCompleted" )
 	Remote_RegisterUIFunction( "ForceOpenRewardPacks" )
 }
+
+
+
 
 
 
@@ -1054,8 +1061,12 @@ void function UIToClient_SpecialItemPresentation_Threaded( SettingsAssetGUID ite
 	
 	LootCeremonySceneLightsUpdateShadows( true )
 
-	if ( !IsValid( fileLevel.cameraMover.GetParent() ) )
-		fileLevel.cameraMover.SetParent( fileLevel.lootTickModel, "CAMERA" )
+	if( fileLevel.cameraMover != null )
+	{
+		if ( !IsValid( fileLevel.cameraMover.GetParent() ) )
+			fileLevel.cameraMover.SetParent( fileLevel.lootTickModel, "CAMERA" )
+	}
+
 
 	GetLocalClientPlayer().SetMenuCameraEntityWithAudio( fileLevel.cameraEnt )
 
@@ -1521,6 +1532,11 @@ void function LootCeremony_RarityBeamFX( entity tickModel, string fxAttachment )
 			RunUIScript( "ClientToUI_PlayLootCeremonySound", SOUND_BEAM_SWEETEN_TIER4 )
 			break
 
+		case 5:
+			fxIndex = StartParticleEffectOnEntity( tickModel, GetParticleSystemIndex( TICK_FX_RARITY_BEAM_TIER6 ), FX_PATTACH_POINT_FOLLOW, attachID )
+			RunUIScript( "ClientToUI_PlayLootCeremonySound", SOUND_BEAM_SWEETEN_TIER4 )
+			break
+
 		default:
 			fxIndex = StartParticleEffectOnEntity( tickModel, GetParticleSystemIndex( TICK_FX_RARITY_BEAM_TIER1 ), FX_PATTACH_POINT_FOLLOW, attachID )
 			break
@@ -1581,6 +1597,14 @@ void function LootCeremony_RarityFlashFX( entity tickModel, string attachmentHea
 
 		case 3:
 			fxIndex = StartParticleEffectInWorldWithHandle( GetParticleSystemIndex( TICK_FX_RARITY_FLASH_TIER4 ), origin, angles )
+			break
+
+		case 4:
+			fxIndex = StartParticleEffectInWorldWithHandle( GetParticleSystemIndex( TICK_FX_RARITY_FLASH_TIER5 ), origin, angles )
+			break
+
+		case 5:
+			fxIndex = StartParticleEffectInWorldWithHandle( GetParticleSystemIndex( TICK_FX_RARITY_FLASH_TIER6 ), origin, angles )
 			break
 
 		default:
@@ -3237,6 +3261,10 @@ void function ShowInspect_FX( int animAttachID, int rarity, vector rarityColor )
 			particleAssetRarity = TICK_FX_HOLO_BEAM_TIER5
 			break
 
+		case 5:
+			particleAssetRarity = TICK_FX_HOLO_BEAM_TIER6
+			break
+
 		default:
 			Assert( false, "Couldn't find particle beam asset based on rarity: " + rarity )
 	}
@@ -3292,6 +3320,10 @@ void function ShowRewards_FX( int animAttachID, int rarity, vector rarityColor, 
 
 		case 4:
 			particleAssetRarity = TICK_FX_HOLO_BEAM_TIER5
+			break
+
+		case 5:
+			particleAssetRarity = TICK_FX_HOLO_BEAM_TIER6
 			break
 
 		default:

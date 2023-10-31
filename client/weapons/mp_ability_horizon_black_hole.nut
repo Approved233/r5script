@@ -75,6 +75,9 @@ const bool BLACKHOLE_DEBUG_SIZE = false
 const bool BLACKHOLE_DEBUG_VORTEX = false
 
 const float BLACKHOLE_TROPHY_HEALTH_AMOUNT = 175
+
+
+
 const float BLACKHOLE_TUNING_RADIUS = 400
 const int BLACKHOLE_TUNING_ABOVE_HEIGHT = 200
 const int BLACKHOLE_TUNING_BELOW_HEIGHT = 200
@@ -91,6 +94,9 @@ const float BLACKHOLE_TUNING_DEATHFIELD_DAMAGE_SCALAR = 1.0
 const float BLACKHOLE_TUNING_TAKE_EXPLOSIVE_DAMAGE_MULTIPLIER = 1.5
 
 const float BLACKHOLE_TUNING_ACTIVATION_TIME = 1.75
+
+
+
 const float BLACKHOLE_TUNING_PULL_ACTIVATION_FX_LEAD_TIME = 1.0
 const float BLACKHOLE_TUNING_START_FX_STOP_OFFSET = 0.0
 const float BLACKHOLE_TUNING_PULL_TIME = 0.8
@@ -353,6 +359,17 @@ void function BLACKHOLE_ProjectileLanded( entity projectile, DeployableCollision
 
 
 }
+
+
+
+
+
+
+
+
+
+
+
 
 
 

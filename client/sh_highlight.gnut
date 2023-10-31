@@ -61,9 +61,6 @@ global function ClearSurvivalPropHighlight
 
 
 
-
-
-
 global function ClInitHighlight
 global function ClientCodeCallback_HighlightServerActiveContextsChanged
 global function ManageHighlightEntity
@@ -230,7 +227,6 @@ global const HIGHLIGHT_COLOR_MOVEMENT_REVEALED = <1, 0.10, 0>
 
 global const HIGHLIGHT_COLOR_CASTLE_WALL_FOCUS = <0.1,0.4,0.6>
 
-
 const HIGHLIGHT_FILL_MOVEMENT_REVEALED = 12 
 global const PARIAH_PURPLE = <0.5, 0.26, 0.77>
 
@@ -248,9 +244,7 @@ global enum eHighlightDrawFunc
 	LOS 
 	LOS_LINE 
 	LOS_LINE_FADE
-
 	LOS_LINE_LONGFADE
-
 
 	REVENANT_EXECUTIONER
 
@@ -374,6 +368,23 @@ void function Highlight_Init()
 	
 	
 	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 	highlight = RegisterHighlight( "friendly_ai" )
 	HighlightContext_SetDrawFunc( highlight, eHighlightDrawFunc.LOS )
@@ -583,37 +594,37 @@ void function Highlight_Init()
 
 
 
-		highlight = RegisterHighlight( "castle_wall_focus" )
-		HighlightContext_SetDrawFunc( highlight, eHighlightDrawFunc.ALWAYS )
-		HighlightContext_SetADSFade( highlight, false )
+	highlight = RegisterHighlight( "castle_wall_focus" )
+	HighlightContext_SetDrawFunc( highlight, eHighlightDrawFunc.ALWAYS )
+	HighlightContext_SetADSFade( highlight, false )
 
-			RegisterHighlightContext(
-				HIGHLIGHT_FILL_NONE,
-				HIGHLIGHT_OUTLINE_CUSTOM_COLOR_NOZ_NOSCANLINES,
-				3.0,
-				HIGHLIGHT_COLOR_CASTLE_WALL_FOCUS,
-				<0, 0, 0>,
-				true,
-				false
-			)
+		RegisterHighlightContext(
+			HIGHLIGHT_FILL_NONE,
+			HIGHLIGHT_OUTLINE_CUSTOM_COLOR_NOZ_NOSCANLINES,
+			3.0,
+			HIGHLIGHT_COLOR_CASTLE_WALL_FOCUS,
+			<0, 0, 0>,
+			true,
+			false
+		)
 
 
-		
-		
-		highlight = RegisterHighlight( "armored_leap_threat" )
-		HighlightContext_SetDrawFunc( highlight, eHighlightDrawFunc.LOS_LINE_LONGFADE )
-		HighlightContext_SetADSFade( highlight, false )
-		HighlightContext_SetFarFadeDistance( highlight, 5000.0 )
+	
+	
+	highlight = RegisterHighlight( "armored_leap_threat" )
+	HighlightContext_SetDrawFunc( highlight, eHighlightDrawFunc.LOS_LINE_LONGFADE )
+	HighlightContext_SetADSFade( highlight, false )
+	HighlightContext_SetFarFadeDistance( highlight, 5000.0 )
 
-			RegisterHighlightContext(
-				HIGHLIGHT_FILL_EMPTY_OCCLUDED,
-				HIGHLIGHT_OUTLINE_CUSTOM_COLOR_OCCLUDED_NOSCANLINES,
-				1.0,
-				HIGHLIGHT_COLOR_BLOODHOUND,
-				<0, 0, 0>,
-				true,
-				true
-			)
+		RegisterHighlightContext(
+			HIGHLIGHT_FILL_EMPTY_OCCLUDED,
+			HIGHLIGHT_OUTLINE_CUSTOM_COLOR_OCCLUDED_NOSCANLINES,
+			1.0,
+			HIGHLIGHT_COLOR_BLOODHOUND,
+			<0, 0, 0>,
+			true,
+			true
+		)
 
 
 
@@ -625,7 +636,7 @@ void function Highlight_Init()
 		HighlightContext_SetFarFadeDistance( highlight, 5000.0 )
 
 			RegisterHighlightContext(
-				HIGHLIGHT_FILL_NONE,
+				HIGHLIGHT_FILL_EMPTY_OCCLUDED,
 				HIGHLIGHT_OUTLINE_CUSTOM_COLOR_NOZ_NOSCANLINES,
 				2.0,
 				HIGHLIGHT_COLOR_MOVEMENT_REVEALED,
@@ -952,40 +963,40 @@ void function Highlight_Init()
 
 
 
+		highlight = RegisterHighlight( "survival_item_ordinance" )
+		HighlightContext_SetDrawFunc( highlight, eHighlightDrawFunc.ALWAYS )
+		HighlightContext_SetADSFade( highlight, false )
+		HighlightContext_SetFarFadeDistance( highlight, GetEyeForQualityRadius() )
+		highlight.colorID = COLORID_LOOT_TIER1
+
+			RegisterHighlightContext(
+				HIGHLIGHT_FILL_LOOT_SCANNED,
+				HIGHLIGHT_OUTLINE_LOOT_SCANNED,
+				2.0,
+				<0.34, 0, 0.7>,
+				<.55, .55, .5>,
+				true,
+				false
+			)
+			HighlightContext_SetFocusedColor( highlight.highlightId, HIGHLIGHT_FILL_LOOT_SCANNED, HIGHLIGHT_OUTLINE_LOOT_SCANNED )
 
 
+		highlight = RegisterHighlight( "survival_item_rare_vision" )
+		HighlightContext_SetDrawFunc( highlight, eHighlightDrawFunc.ALWAYS )
+		HighlightContext_SetADSFade( highlight, false )
+		HighlightContext_SetFarFadeDistance( highlight, GetEyeForQualityRadius() )
+		highlight.colorID = COLORID_LOOT_TIER2
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+			RegisterHighlightContext(
+				HIGHLIGHT_FILL_LOOT_SCANNED,
+				HIGHLIGHT_OUTLINE_LOOT_SCANNED,
+				2.0,
+				<0.34, 0, 0.7>,
+				<.55, .55, .5>,
+				true,
+				false
+			)
+			HighlightContext_SetFocusedColor( highlight.highlightId, HIGHLIGHT_FILL_LOOT_SCANNED, HIGHLIGHT_OUTLINE_LOOT_SCANNED )
 
 
 
@@ -1558,39 +1569,58 @@ void function Highlight_Init()
 
 
 
-		highlight = RegisterHighlight( "enemy_leader" )
-		HighlightContext_SetDrawFunc( highlight, eHighlightDrawFunc.LOS )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		highlight = RegisterHighlight( "rev_army_enemy" )
+		HighlightContext_SetDrawFunc( highlight, eHighlightDrawFunc.ALWAYS )
 		HighlightContext_SetADSFade( highlight, false )
-		HighlightContext_SetFarFadeDistance( highlight, HIGHLIGHT_LOS_FAR_FADE_DIST )
+		HighlightContext_SetFarFadeDistance( highlight, 1968 ) 
 
 			RegisterHighlightContext(
-				HIGHLIGHT_FILL_CUSTOM_COLOR,
-				HIGHLIGHT_OUTLINE_CUSTOM_COLOR,
-				8.0,
+				HIGHLIGHT_FILL_SONAR,
+				HIGHLIGHT_OUTLINE_SONAR,
+				5.0,
 				HIGHLIGHT_COLOR_ENEMY,
-				<0.0, 0, 0>,
+				<0, 0, 0>,
 				true,
 				false
 			)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -2098,7 +2128,6 @@ void function Highlight_SetMaggieThreatHighlight( entity ent, string assetName )
 	__SetEntityContextHighlight( ent, HIGHLIGHT_CONTEXT_MOVEMENT_REVEALED, highlight )
 }
 
-
 void function Highlight_SetCastleWallFocusHighlight( entity ent, string assetName )
 {
 	HighlightContext highlight = GetHighlight( assetName )
@@ -2112,11 +2141,10 @@ void function Highlight_SetArmoredLeapThreatHighlight( entity ent, string assetN
 }
 
 
-
 void function Highlight_SetRevenantExecutionerPassiveHighlight( entity ent, string assetName )
 {
 	HighlightContext highlight = GetHighlight( assetName )
-	__SetEntityContextHighlight( ent, HIGHLIGHT_CONTEXT_MOVEMENT_REVEALED, highlight )
+	__SetEntityContextHighlight( ent, HIGHLIGHT_CONTEXT_FRIENDLY_REVEALED, highlight )
 }
 
 
@@ -2169,17 +2197,16 @@ void function Highlight_ClearEnemyHighlight( entity ent )
 
 void function Highlight_SetEnemyHighlightNightmap( entity player )
 {
-
-		if ( IsShadowRoyaleMode() )
-		{
-			if ( IsPlayerShadowZombie( player ) && GetCurrentPlaylistVarBool( "enemy_nightmap_outline_enable_for_shadows", false ) == false )
-				return
-
-			Highlight_SetEnemyHighlight( player, "enemy_nightmap" )
+	if ( IsShadowRoyaleMode() )
+	{
+		if ( IsPlayerShadowZombie( player ) && GetCurrentPlaylistVarBool( "enemy_nightmap_outline_enable_for_shadows", false ) == false )
 			return
-		}
 
+		Highlight_SetEnemyHighlight( player, "enemy_nightmap" )
+		return
+	}
 }
+
 
 void function SetDefaultMPEnemyHighlight( entity ent )
 {
@@ -2505,7 +2532,6 @@ void function ClHighlight_UpdateHighlightFlags( entity ent, int contextId )
 		}
 			break
 
-
 		case eHighlightDrawFunc.LOS_LINE_LONGFADE:
 		{
 			ent.Highlight_SetVisibilityType( HIGHLIGHT_VIS_LOS )
@@ -2515,14 +2541,13 @@ void function ClHighlight_UpdateHighlightFlags( entity ent, int contextId )
 			break
 
 
-
 		case eHighlightDrawFunc.REVENANT_EXECUTIONER:
 		{
 			ent.Highlight_SetVisibilityType( HIGHLIGHT_VIS_LOS )
 			ent.Highlight_SetFlag( HIGHLIGHT_FLAG_CHECK_OFTEN, true )
 			ent.Highlight_SetFadeInTime( 0.0 )
 			ent.Highlight_SetFadeOutTime( 0.0 )
-			ent.Highlight_SetFlag( HIGHLIGHT_FLAG_ADDITIONAL_LOS_CHECKS_FOR_PLAYER_ENT, true )
+			ent.Highlight_SetFlag( HIGHLIGHT_FLAG_ADDITIONAL_LOS_CHECKS, true )
 		}
 			break
 
@@ -3090,12 +3115,10 @@ int function GetHighlightContextForEnt( entity viewPlayer, entity ent )
 			if ( Highlight_ShouldObserverHighlight( viewPlayer, ent ) )
 				return HIGHLIGHT_CONTEXT_PURE_OBSERVER
 		}
-
 		else if ( ShouldCastleWallHighlight( viewPlayer, ent ) )
 		{
 			return HIGHLIGHT_CONTEXT_FRIENDLY_REVEALED
 		}
-
 		else
 		{
 			return HIGHLIGHT_CONTEXT_FRIENDLY
@@ -3158,15 +3181,13 @@ int function GetHighlightContextForEnt( entity viewPlayer, entity ent )
 			}
 			else if ( ShouldExecutionerHighlight( viewTarget, ent ) )
 			{
-				return HIGHLIGHT_CONTEXT_MOVEMENT_REVEALED
+				return HIGHLIGHT_CONTEXT_FRIENDLY_REVEALED
 			}
-
 
 			else if ( ShouldArmoredLeapThreatHighlight( viewTarget, ent ) )
 			{
 				return HIGHLIGHT_CHARACTER_SPECIAL_HIGHLIGHT_2
 			}
-
 			else if ( ShouldSonicBlastThreatHighlight ( viewTarget, ent ) )
 			 {
 				 return HIGHLIGHT_CHARACTER_SPECIAL_HIGHLIGHT_2
@@ -3471,7 +3492,6 @@ bool function ShouldShadowDuelHighlight( entity viewPlayer, entity ent )
 }
 
 
-
 bool function ShouldCastleWallHighlight( entity viewPlayer, entity ent )
 {
 	int viewTeam = viewPlayer.GetTeam()
@@ -3490,7 +3510,6 @@ bool function ShouldArmoredLeapThreatHighlight( entity viewPlayer, entity ent )
 
 	return ArmoredLeap_TargetEntityShouldBeHighlighted( ent )
 }
-
 
 bool function ShouldSonicBlastThreatHighlight( entity viewPlayer, entity ent )
 {
@@ -3532,6 +3551,19 @@ void function Highlight_SetGameModeEnemyHighlight( entity player )
 		}
 
 
+	
+	if ( AllianceProximity_IsUsingAlliances() )
+	{
+		int onlyAllianceToApplyEnemyHighlightTo = Highlight_GetExclusiveAllianceToApplyGameModeEnemyHighlightsTo()
+		if ( onlyAllianceToApplyEnemyHighlightTo != ALLIANCE_NONE )
+		{
+			if ( AllianceProximity_GetAllianceFromTeam( player.GetTeam() ) == onlyAllianceToApplyEnemyHighlightTo )
+				Highlight_SetEnemyHighlight( player, Highlight_GetGameModeEnemyHighlightString() )
+
+			return
+		}
+	}
+
 	Highlight_SetEnemyHighlight( player, Highlight_GetGameModeEnemyHighlightString() )
 }
 
@@ -3539,6 +3571,12 @@ void function Highlight_SetGameModeEnemyHighlight( entity player )
 bool function Highlight_IsUsingGameModeEnemyHighlights()
 {
 	return GetCurrentPlaylistVarBool( "is_using_gamemode_enemy_highlights", false )
+}
+
+
+int function Highlight_GetExclusiveAllianceToApplyGameModeEnemyHighlightsTo()
+{
+	return GetCurrentPlaylistVarInt( "only_apply_gamemode_enemy_highlight_to_alliance", ALLIANCE_NONE )
 }
 
 

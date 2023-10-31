@@ -1016,6 +1016,11 @@ void function OnProjectileCollision_arc_bolt( entity projectile, vector pos, vec
 
 
 
+
+
+
+
+
 void function ArcBolt_ServerToClient_NewTetherAdded( int tetherID, entity tetherEnt )
 {
 	entity player = GetLocalViewPlayer()

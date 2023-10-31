@@ -106,6 +106,13 @@ var function OnWeaponPrimaryAttack_care_package_medic( entity weapon, WeaponPrim
 
 
 
+
+
+
+
+
+
+
 		PlayerUsedOffhand( ownerPlayer, weapon )
 		SetCarePackageDeployed( true )
 		ownerPlayer.Signal( "DeployableCarePackagePlacement" )

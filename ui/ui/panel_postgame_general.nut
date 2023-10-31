@@ -2,6 +2,7 @@ global function InitPostGameGeneralPanel
 
 global function InitXPEarnedDisplay
 global function PostGameGeneral_CanNavigateBack
+global function PostGameGeneral_SetDisableNavigateBack
 global function PostGameGeneral_SetSkippableWait
 
 const PROGRESS_BAR_FILL_TIME = 2.0
@@ -268,7 +269,11 @@ var function DisplayPostGameSummary( bool isFirstTime )
 	Hud_SetVisible( Hud_GetChild( file.panel, "XPProgressBarAccount" ), false )
 	PostGame_ToggleVisibilityContinueButton( false )
 
-	bool showRankedSummary = GetPersistentVarAsInt( "showRankedSummary" ) != 0
+
+	bool showRankedSummary = Ranked_GetXProgMergedPersistenceData( GetLocalClientPlayer(), RANKED_SHOW_RANKED_SUMMARY_PERSISTENCE_VAR_NAME ) != 0
+
+
+
 	string postMatchSurveyMatchId = string( GetPersistentVar( "postMatchSurveyMatchId" ) )
 	float postMatchSurveySampleRateLowerBound = expect float( GetPersistentVar( "postMatchSurveySampleRateLowerBound" ) )
 	if ( GetActiveBattlePass() == null && !showRankedSummary && isFirstTime && TryOpenSurvey( eSurveyType.POSTGAME, postMatchSurveyMatchId, postMatchSurveySampleRateLowerBound ) )
@@ -670,6 +675,11 @@ float function CalculateAccountLevelingUpDuration( int start_accountLevel, int e
 	}
 
 	return totalDelay
+}
+
+void function PostGameGeneral_SetDisableNavigateBack( bool disableNavigateBack )
+{
+	file.disableNavigateBack = disableNavigateBack
 }
 
 bool function PostGameGeneral_CanNavigateBack()

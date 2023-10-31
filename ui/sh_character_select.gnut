@@ -38,8 +38,8 @@ const string REMOTE_SERVERCALL_ON_RESELECT_MENU_CLOSE = "ClientToServer_OnCharac
 global function UI_InitCharacterSelectMenu
 global function UI_RunCharacterSelect
 
-
-
+global function UI_SetSpecialCharacterMenu
+global function UI_RunSpecialCharacterSelect
 
 global function UI_CloseCharacterSelect
 global function ClientToUI_UpdateSquadMute
@@ -54,6 +54,7 @@ global function CharacterSelectSkinSelectionIsEnabled
 
 
 global const int NUM_CHARACTER_SELECT_BUTTONS = 50
+
 
 
 
@@ -176,7 +177,7 @@ struct FileForeverStruct
 {
 	var menu
 
-
+	var specialCharacterSelect
 
 }
 FileForeverStruct& fileForever
@@ -188,6 +189,8 @@ struct FileLevelStruct
 		bool isBrowseMode = false
 		bool browseModeShowLockedCharacters = false
 		float isBrowseModeStartTime
+
+
 
 
 
@@ -382,10 +385,10 @@ void function UI_InitCharacterSelectMenu( var newMenuArg )
 }
 
 
-
-
-
-
+void function UI_SetSpecialCharacterMenu( var specialCharMenu )
+{
+	fileForever.specialCharacterSelect = specialCharMenu
+}
 
 
 bool function UI_ShouldShowToggleMuteFooter()
@@ -420,6 +423,7 @@ void function ClientToUI_UpdateSquadMute( bool muteState )
 {
 
 }
+
 
 
 
@@ -1370,6 +1374,25 @@ bool function CharacterSelectSkinSelectionIsEnabled()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function UI_RunCharacterSelect( bool isBrowseMode, bool menuEntsExist )
 {
 	if ( !isBrowseMode )
@@ -1392,24 +1415,24 @@ void function UI_RunCharacterSelect( bool isBrowseMode, bool menuEntsExist )
 
 
 
+void function UI_RunSpecialCharacterSelect( bool isBrowseMode, bool menuEntsExist )
+{
+	if ( !isBrowseMode )
+		CloseAllMenus()
 
+	fileLevel.isBrowseMode = isBrowseMode
+	fileLevel.isBrowseModeStartTime = UITime()
 
+	if ( !CanRunClientScript() )
+		return
 
+	if ( !menuEntsExist )
+		SetBlurEnabled( true )
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	FlashGameWindow()
+	RunClientScript( "OpenCharacterSelectClientSetup", fileForever.menu )
+	AdvanceMenu( GetMenu( "SpecialCharacterSelectMenu" ) )
+}
 
 
 
@@ -2065,17 +2088,178 @@ void function UI_CloseCharacterSelect()
 	SetBlurEnabled( false )
 	if ( GetActiveMenu() == fileForever.menu
 
-
+			|| GetActiveMenu() == fileForever.specialCharacterSelect
 
 			)
 		CloseActiveMenu()
 	else if ( MenuStack_Contains( fileForever.menu ) )
 		MenuStack_Remove( fileForever.menu )
 
-
-
+	else if ( MenuStack_Contains( fileForever.specialCharacterSelect ) )
+		MenuStack_Remove( fileForever.specialCharacterSelect )
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

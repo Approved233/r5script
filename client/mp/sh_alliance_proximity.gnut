@@ -26,11 +26,15 @@ global function AllianceProximity_RegisterNonPlayerTeamToAlliances
 global function AddCallback_AllianceProximity_OnTeamPutIntoAlliance 
 
 
+global function AllianceProximity_ShouldTryToTransmitPingOrIconToAlliance 
+global function AllianceProximity_ShouldOnlyDisplayPriorityPingsForAlliance 
+global function AllianceProximity_SetPriorityPingsForAlliance 
 global function AllianceProximity_GetOriginalPlayerTeam_FromPlayerEHI 
 global function AllianceProximity_GetLivingAllianceMembersInProximity 
 global function AllianceProximity_GetLivingPlayerTeamsInAlliance 
 global function AllianceProximity_GetNumPlayersInAlliance 
 global function AllianceProximity_GetAllPlayersInAlliance 
+global function AllianceProximity_GetGroupsOfAllAlliancePlayers 
 global function AllianceProximity_GetAllPlayersInOtherAlliances 
 global function AllianceProximity_GetPlayersInSameAllianceAsTeam 
 global function AllianceProximity_GetLivingPlayerTeamsInSameAllianceAsTeam 
@@ -60,6 +64,7 @@ global function AllianceProximity_ServerCallback_SetTeamToAllianceOnClient
 
 
 
+
 global function AllianceProximity_GetAllianceColor
 global function AllianceProximity_GetAllianceColorFromTeam
 
@@ -79,6 +84,11 @@ struct {
 
 		table< EHI, int > playerEHIToOriginalTeamTable 
 		bool isMinimapDisabled
+		array < int > priorityPingTypes
+
+
+
+
 
 
 
@@ -106,6 +116,15 @@ void function AllianceProximity_Init()
 	if ( !AllianceProximity_IsUsingAlliances() )
 		return
 
+	
+	
+	
+	
+	
+	
+	
+	
+
 	file.isMidMatchAllianceSwitchEnabled = GetCurrentPlaylistVarBool( "allow_mid_match_alliance_switching", false )
 	Remote_RegisterClientFunction( "AllianceProximity_ServerCallback_SetTeamToAllianceOnClient", "int", TEAM_MULTITEAM_FIRST, TEAM_MULTITEAM_LAST, "int", ALLIANCE_NONE, file.maxAlliances + 1 )
 
@@ -131,7 +150,7 @@ void function AllianceProximity_Init()
 
 
 
-		file.isMinimapDisabled = GetCurrentPlaylistVarBool( "disable_minimap", false )
+		file.isMinimapDisabled = MiniMapIsDisabled()
 
 }
 
@@ -164,6 +183,52 @@ bool function AllianceProximity_IsUsingAllianceProximityDistanceChecks()
 {
 	return file.maxDistAllianceProximity > 0.0 && AllianceProximity_IsUsingAllianceProximity()
 }
+
+
+
+bool function AllianceProximity_ShouldOnlyDisplayPriorityPingsForAlliance()
+{
+	return GetCurrentPlaylistVarBool( "use_proximity_alliance_priority_pings", false )
+}
+
+
+
+
+void function AllianceProximity_SetPriorityPingsForAlliance( array < int > priorityPingTypes )
+{
+	Assert( AllianceProximity_ShouldOnlyDisplayPriorityPingsForAlliance(), "ALLIANCE PROXIMITY: Setting priority pings using AllianceProximity_SetPriorityPingsForAlliance for a mode that doesn't have priority pings enabled." )
+
+
+#if DEV
+		if ( file.priorityPingTypes.len() > 0 )
+			Warning( "ALLIANCE PROXIMITY: Setting priority pings for alliance when we already have defined priority pings, the old pings will be overridden" )
+#endif
+
+
+	file.priorityPingTypes = priorityPingTypes
+}
+
+
+
+
+bool function AllianceProximity_ShouldTryToTransmitPingOrIconToAlliance( bool isPing, int pingType = -1 )
+{
+	
+	if ( !AllianceProximity_IsUsingAllianceProximity() )
+		return false
+
+#if DEV
+		if ( AllianceProximity_ShouldOnlyDisplayPriorityPingsForAlliance() && file.priorityPingTypes.len() < 1 )
+			Warning( "ALLIANCE PROXIMITY: AllianceProximity_ShouldOnlyDisplayPriorityPingsForAlliance is set to true but there are no priority pings defined, use AllianceProximity_SetPriorityPingsForAlliance to set them" )
+#endif
+
+	
+	if ( AllianceProximity_ShouldOnlyDisplayPriorityPingsForAlliance() && ( !isPing || pingType == -1 || !file.priorityPingTypes.contains( pingType ) ) )
+		return false
+
+	return true
+}
+
 
 
 bool function AllianceProximity_IsTeamInAnAlliance( int team )
@@ -400,6 +465,58 @@ array<entity> function AllianceProximity_GetAllPlayersInAlliance( int alliance, 
 	}
 
 	return allianceMembers
+}
+
+
+
+
+
+array< array< entity > > function AllianceProximity_GetGroupsOfAllAlliancePlayers( int alliance, int numGroups, bool shouldReturnOnlyLivingPlayers )
+{
+	array<entity> players = []
+
+	if ( shouldReturnOnlyLivingPlayers )
+	{
+		players = GetPlayerArray_AliveConnected()
+	}
+	else
+	{
+		players = GetPlayerArray()
+	}
+
+	table< int, array< entity > > teamInAllianceToPlayersMap
+
+	foreach ( playerEnt in players )
+	{
+		if ( IsValid( playerEnt ) )
+		{
+			int team = playerEnt.GetTeam()
+			int playerEntAlliance = AllianceProximity_GetAllianceFromTeam( team )
+			if ( playerEntAlliance == alliance && team in teamInAllianceToPlayersMap )
+			{
+				teamInAllianceToPlayersMap[ team ].append( playerEnt )
+			}
+			else if ( playerEntAlliance == alliance )
+			{
+				teamInAllianceToPlayersMap[ team ] <- [ playerEnt ]
+			}
+		}
+	}
+
+	array< array< entity > > groupsOfAllianceTeams
+	for ( int i = 0; i < numGroups; i++ )
+	{
+		groupsOfAllianceTeams.append( [] )
+	}
+
+	int groupIdx = 0
+	foreach( team, teamPlayers in teamInAllianceToPlayersMap )
+	{
+		groupsOfAllianceTeams[ groupIdx % numGroups ].extend( teamPlayers )
+		groupIdx++
+	}
+
+	return groupsOfAllianceTeams
 }
 
 
@@ -968,6 +1085,17 @@ int function AllianceProximity_GetAllianceScoreDifference()
 
 	return scoreDifference
 }
+
+
+
+
+
+
+
+
+
+
+
 
 
 

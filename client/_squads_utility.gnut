@@ -202,7 +202,7 @@ vector function Squads_GetNonLinearSquadColor( int squadIndex, bool forceWinterE
 		GetKeyColor( COLORID_LTM_SQUAD_3 )
 	]
 
-	return squad_colors[ squadIndex ]
+	return squad_colors[ int( clamp( squadIndex, 0, squad_colors.len() - 1 ) ) ]
 }
 
 
@@ -217,7 +217,7 @@ asset function Squads_GetSquadIcon( int squadIndex, bool forceWinterExpress = fa
 	if( squadIndex + TEAM_IMC == file.squadIdIsNessie )
 		return $"rui/gamemodes/tdm/tdm_squad_icon0_easteregg"
 
-	return SQUAD_ICONS[ squadIndex ]
+	return SQUAD_ICONS[ int( clamp( squadIndex, 0, SQUAD_ICONS.len() - 1 ) ) ]
 }
 
 
@@ -232,7 +232,7 @@ string function Squads_GetSquadName( int squadIndex, bool forceWinterExpress = f
 	if( squadIndex + TEAM_IMC == file.squadIdIsNessie )
 		return "#TEAM_NAME_0_EASTEREGG"
 
-	return SQUAD_NAMES[ squadIndex ]
+	return SQUAD_NAMES[ int( clamp( squadIndex, 0, SQUAD_NAMES.len() - 1 ) ) ]
 }
 
 int function Squads_GetMax()
@@ -251,7 +251,7 @@ string function Squads_GetSquadNameLong( int squadIndex, bool forceWinterExpress
 		return "#TEAM_NAME_LONG_0_EASTEREGG"
 
 
-	return SQUAD_NAMES_LONG[ squadIndex ]
+	return SQUAD_NAMES_LONG[ int( clamp( squadIndex, 0, SQUAD_NAMES_LONG.len() - 1 ) ) ]
 }
 
 
@@ -261,57 +261,30 @@ void function Squads_SetCustomPlayerInfo( entity player )
 	if ( !IsValid(player) || player == null || !IsValid(localPlayer) || localPlayer == null)
 		return
 
-	int team   = player.GetTeam()
+	int team = player.GetTeam()
 	if( team == TEAM_SPECTATOR || team == TEAM_UNASSIGNED )
 		return
 
 	int myTeam = localPlayer.GetTeam()
-	int squadIndex = Squads_GetSquadUIIndex( team )
-	if( squadIndex >= 0 && squadIndex < MAX_NUMBER_SQUADS )
-	{
-		SetCustomPlayerInfoColor( player, Squads_GetNonLinearSquadColor( squadIndex ) )
-		player.SetTargetInfoIcon( Squads_GetSquadIcon( squadIndex ) )
+	bool isUsingAlliances   = AllianceProximity_IsUsingAlliances()
+	int allianceOrTeam      = ( isUsingAlliances )? AllianceProximity_GetAllianceFromTeam( team ): team
+	int myAllianceOrTeam    = ( isUsingAlliances )? AllianceProximity_GetAllianceFromTeam( myTeam ): myTeam
+	bool sameAllianceOrTeam = allianceOrTeam == myAllianceOrTeam
 
-		vector color = Squads_GetSquadColor( squadIndex )
+	if( !IsSurvivalMode() || ( IsSurvivalMode() && Survival_ShouldChangeTeamUI() ) )
+	{
+		vector color = Teams_GetTeamColor( team )
+
+		SetCustomPlayerInfoColor( player, LinearToSrgb( color ) * 255 )
+
+		player.SetTargetInfoIcon( Teams_GetTeamIcon( team ) )
 		player.SetTargetInfoIconColor( color, 1.0 )
-		if( team == myTeam )
+
+		if( sameAllianceOrTeam )
 		{
 			SetUnitFrameCustomColor( player, color )
 			Minimap_SetPlayerColorOverride( player, color )
-		}
-	}
-	if ( LoadoutSlot_IsReady( ToEHI( player ), Loadout_Character() ) )
-	{
-		ItemFlavor character = LoadoutSlot_GetItemFlavor( ToEHI( player ), Loadout_Character() )
-		player.SetTargetInfoCharacterPortrait( CharacterClass_GetGalleryPortrait( character ) )
-	}
-}
-
-
-
-void function Alliances_SetCustomPlayerInfo( entity player )
-{
-	entity localPlayer = GetLocalViewPlayer()
-	if ( !IsValid(player) || player == null || !IsValid(localPlayer) || localPlayer == null)
-		return
-
-	int team   = player.GetTeam()
-	if( team == TEAM_SPECTATOR || team == TEAM_UNASSIGNED )
-		return
-
-	int myTeam = localPlayer.GetTeam()
-	int squadIndex = Squads_GetSquadUIIndex( team )
-	if( squadIndex >= 0 && squadIndex < MAX_NUMBER_SQUADS )
-	{
-		SetCustomPlayerInfoColor( player, Squads_GetNonLinearSquadColor( squadIndex ) )
-		player.SetTargetInfoIcon( Squads_GetSquadIcon( squadIndex ) )
-
-		vector color = Squads_GetSquadColor( squadIndex )
-		player.SetTargetInfoIconColor( color, 1.0 )
-		if( team == myTeam )
-		{
-			SetUnitFrameCustomColor( player, color )
-			Minimap_SetPlayerColorOverride( player, color )
+			FullMap_SetPlayerColorOverride( player, color )
 		}
 	}
 	if ( LoadoutSlot_IsReady( ToEHI( player ), Loadout_Character() ) )

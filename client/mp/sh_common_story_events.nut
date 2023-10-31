@@ -6,10 +6,78 @@
 global function ClCommonStoryEvents_Init
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 struct
 {
 
 } file
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

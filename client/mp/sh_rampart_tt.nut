@@ -18,6 +18,7 @@ global function CheckRampartTTMuralLegends
 
 
 
+
 global const string VEND_PANEL = "rampart_tt_vend_panel"
 const string VEND_WEAPON_TARGET = "rampart_tt_vend_weapon_target"
 const string VEND_SHIELD = "rampart_tt_vend_shield"
@@ -715,6 +716,19 @@ entity function GetRampartTTPanelForLoot( entity lootEnt )
 
 	return null
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

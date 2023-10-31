@@ -1800,7 +1800,7 @@ bool function IsNearAirdropBadPlace( vector origin, entity realmEnt = null )
 			return true
 	}
 
-	if ( IsOriginInvalidForPlacingPermanentOnto( origin ) )
+	if ( IsOriginInvalidForPlacingPermanentOnto( origin, realmEnt ) )
 		return true
 
 	return false

@@ -176,6 +176,10 @@ global function EquipButton_GetItemLoadoutEntries
 
 
 
+
+
+
+
 struct FileForeverStruct
 {
 	table signalDummy
@@ -302,6 +306,26 @@ void function LootBoxCeremony_SharedInit()
 	Remote_RegisterServerFunction( "Server_GrantLegendaryStickersIfCollectionCompleted" )
 	Remote_RegisterUIFunction( "ForceOpenRewardPacks" )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3018,6 +3042,14 @@ const float RUI_PLACARD_Z_OFFSET		= 7.0
 const float RUI_PLACARD_FORWARD_OFFSET 	= 32.0
 const bool  RUI_PLACARD_DEBUG 			= false
 const int   MYTHIC_RARITY_INDEX 		= eRarityTier.MYTHIC + 1 
+
+
+
+
+
+
+
+
 
 
 
@@ -6160,12 +6192,12 @@ void function UpdateSpecialItemPresentationPurchaseButton()
 			HudElem_SetRuiArg( fileForever.purchaseButton, "descText", Localize( "#STORE_REQUIRES_LOCKED", Localize( ItemFlavor_GetLongName( prereqFlav ) ) ) )
 	}
 
-
-
-
-
-
-
+	else if ( GetConVarBool( "mtx_useIneligibilityCode" ) && fileLevel.storeItemPresentationModeOffer != null && !GRXOffer_IsEligibleForPurchase( expect GRXScriptOffer( fileLevel.storeItemPresentationModeOffer ) ))
+	{
+		isOfferUnavailable = true
+		HudElem_SetRuiArg( fileForever.purchaseButton, "buttonText", "#UNAVAILABLE" )
+		HudElem_SetRuiArg( fileForever.purchaseButton, "descText", "" )
+	}
 
 
 	ItemFlavor itemFlav = fileLevel.specialItemPresentationModeItemFlav

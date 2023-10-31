@@ -34,7 +34,6 @@ global function DEV_ScoreTrackAnimateIn
 
 
 
-
 global function FreeDM_GamemodeInitClient
 global function FreeDM_ScoreboardSetup
 global function FreeDM_SetScoreboardSetupFunc
@@ -90,6 +89,11 @@ const string FDM_PODIUM_FX_CONFETTI = "confetti_burst"
 
 const string FDM_PODIUM_SCRIPT_FIREBALL = "script_fireballs"
 const string FDM_PODIUM_SCRIPT_SPARKS = "script_sparks"
+
+
+
+
+
 
 
 
@@ -192,6 +196,8 @@ struct {
 
 
 
+
+
 	bool                          isScoreText = false
 	var        					  introCountdownRUI = null
 	asset functionref( int team ) getCustomIndicatorCallback = null
@@ -208,6 +214,29 @@ void function FreeDM_GamemodeInitShared()
 {
 	SetScoreEventOverrideFunc( FreeDM_SetScoreEventOverride )
 	GamemodeSurvivalShared_Init()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -324,6 +353,9 @@ void function FreeDM_GamemodeInitShared()
 
 
 }
+
+
+
 
 
 
@@ -616,12 +648,6 @@ bool function FreeDM_ShouldSpawnOnConnect(entity player)
 
 
 
-
-
-
-
-
-
 void function FreeDM_SetAudioEvent( int event, string eventString )
 {
 	if( event < 0 || event >= eFreeDMAudioEvents.Count )
@@ -632,77 +658,6 @@ void function FreeDM_SetAudioEvent( int event, string eventString )
 
 	file.audioEvents[ event ] <- eventString
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -1516,7 +1471,6 @@ const int FramesToWait = 60
 
 
 
-
 const string FREEDM_AIRDROP_ANIMATION = "droppod_loot_drop_lifeline"
 
 
@@ -1641,6 +1595,11 @@ void function ServerCallback_FreeDM_AirdropNotification()
 
 
 const string FREEDM_DEFAULT_AIRDROP_CONTENTS = "arenas_red_airdrop_weapons arenas_gold_airdrop_weapons arenas_gold_airdrop_weapons"
+
+
+
+
+
 
 
 
@@ -2273,7 +2232,7 @@ void function FreeDM_SetCharacterInfo( var rui, int infoIndex, entity player )
 
 	RuiSetImage( rui, "portraitImage_" + infoIndex, CharacterClass_GetGalleryPortrait( character ) )
 	RuiSetBool( rui, "portraitImageVisible_" + infoIndex, true )
-	RuiSetColorAlpha( rui, "portraitBorderColor_" + infoIndex, SrgbToLinear( GetPlayerInfoColor( player ) / 255.0 ), 1.0 )
+	RuiSetColorAlpha( rui, "portraitBorderColor_" + infoIndex, GetPlayerInfoColor( player ), 1.0 )
 }
 
 

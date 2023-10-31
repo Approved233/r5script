@@ -1,4 +1,3 @@
-
 global function MpAbilityShieldThrow_Init
 global function OnWeaponActivate_ability_shield_throw
 global function OnWeaponAttemptOffhandSwitch_ability_shield_throw
@@ -1878,6 +1877,12 @@ void function OnWaypointCreated( entity wp )
 	{
 		thread MobileShield_WaypointUI_Thread( wp )
 		AddRefEntAreaToInvalidOriginsForPlacingPermanentsOnto( wp, MOBILE_SHIELD_INVALID_PLACEMENT_MIN_AREA, MOBILE_SHIELD_INVALID_PLACEMENT_MAX_AREA )
+		AddEntityDestroyedCallback( wp,
+			void function( entity ent ) : ( wp )
+			{
+				RemoveRefEntAreaFromInvalidOriginsForPlacingPermanentsOnto( ent )
+			}
+		)
 	}
 
 }
@@ -2026,6 +2031,3 @@ void function MobileShield_TrackStickyEnt_Thread( entity mobileShield, entity st
 	}
 
 }
-
-
-      

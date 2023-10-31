@@ -18,6 +18,7 @@ global function GetSeaHeightForDisplay
 
 
 
+
 const asset PLAYER_WIND_FX 	= $"P_wind_cruising"
 
 global const string JUMPTOWER_PING_NAME = "jump_tower"
@@ -260,6 +261,7 @@ void function SurvivalFreefall_Init()
 	Remote_RegisterServerFunction( "ClientCallback_StopFreefallFollowMode" )
 	Remote_RegisterServerFunction( "ClientCallback_SkydiveEmote", "int", INT_MIN, INT_MAX )
 	Remote_RegisterServerFunction( "ClientCallback_SkydiveEmoteNext" )
+
 
 
 
@@ -1704,6 +1706,79 @@ SkyDiveTrailPackage function GetSkyDiveTrailPackageForPlayerWithOverrides( entit
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function CL_AttemptDropEmote( entity player )
 {
 	printt( "CLIENT EMOTE" )
@@ -1800,21 +1875,23 @@ void function SetSkydiveStartingConvars()
 	}
 }
 
+
+
+
+
 void function UpdateSkydiveRui_Emotes( var rui, entity player )
 {
-	RuiSetBool( rui, "emoteAvailable", false )
-
 	if ( player != GetLocalClientPlayer() )
 		return
+	bool canEmote = !player.Player_IsSkydiveAnticipating() && player.GetPlayerNetBool( "freefallEmoteAvailable" ) 
 
-	table<int, ItemFlavor> emotes = GetValidPlayerSkydiveEmotes( player )
-	bool emoteAreAvailable = ((emotes.len() > 0) && !player.Player_IsSkydiveAnticipating() && player.GetPlayerNetBool( "freefallEmoteAvailable" )) 
-	if ( !emoteAreAvailable )
-		return
+	array<ItemFlavor> emotes = ItemFlavor_GetQuipArrayForCharacter( player, LoadoutSlot_GetItemFlavor( LocalClientEHI(), Loadout_Character() ) )
+	bool emoteAvailable = canEmote && emotes.len() > 0
+	RuiSetBool( rui, "emoteAvailable", emoteAvailable )
 
-	RuiSetBool( rui, "emoteAvailable", true )
-	string emoteHint = (EmoteMenuOnHold() && (emotes.len() > 1)) ? "#FREEFALL_EMOTE_HINT_MENU" : "#FREEFALL_EMOTE_HINT"
-	RuiSetString( rui, "emoteHintString", emoteHint )
+	table<int, ItemFlavor> skydiveEmotes = GetValidPlayerSkydiveEmotes( player )
+	bool skydiveAvailable = canEmote && skydiveEmotes.len() > 0
+	RuiSetBool( rui, "skydiveAvailable", skydiveAvailable )
 }
 
 void function UpdateSkydiveRui_MusicTrackInfo( var rui )
@@ -1930,8 +2007,8 @@ void function PlayerFreefallEmoteAvailableChanged( entity player, bool isFreefal
 	printt( "PlayerFreefallEmoteAvailableChanged", isFreefallEmoteAvailable )
 	if ( file.skydiveRui != null )
 	{
-		
-		RuiSetBool( file.skydiveRui, "emoteAvailable", isFreefallEmoteAvailable )
+		bool hasSkydiveEmotes = GetValidPlayerSkydiveEmotes( player ).len() > 0
+		RuiSetBool( file.skydiveRui, "skydiveAvailable", isFreefallEmoteAvailable && hasSkydiveEmotes )
 	}
 }
 
@@ -2289,6 +2366,7 @@ void function Freefall_DestroyEnemyFullmapDisplayAfterDelay( var ruiToDestroy, f
 
 void function CodeCallback_PlayerSkydiveBegin( entity player )
 {
+
 
 
 

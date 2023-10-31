@@ -155,6 +155,7 @@ void function SurvivalGroundList_LevelInit()
 		RegisterSignal( "DeathBoxEntryData_Update" )
 		RegisterSignal( "DeathBoxEntryData_Unbind" )
 		AddCallback_OnPingCreatedByAnyPlayer( OnPingCreatedByAnyPlayer )
+		AddLocalPlayerTookDamageCallback( OnLocalPlayerDamaged )
 
 		if ( !IsLobby() )
 		{
@@ -889,6 +890,13 @@ void function UpdateSurvivalGroundList( SurvivalGroundListUpdateParams params )
 		{
 			shouldBeVisible = false
 		}
+
+
+
+
+
+
+
 
 
 		DeathBoxListPanelItem ornull item = DeathBoxListPanel_GetItemByKey( fileLevel.listPanel, entryData.key )
@@ -1884,6 +1892,14 @@ void function OnPingCreatedByAnyPlayer( entity pingingPlayer, int pingType, enti
 		return
 	expect DeathBoxListPanelItem(item)
 	UpdateItem( item )
+}
+
+
+
+void function OnLocalPlayerDamaged( float damage, vector damageOrigin, int damageType, int damageSourceId, entity attacker )
+{
+	
+	fileLevel.specialStateSamenessKey = "player_damaged"
 }
 
 

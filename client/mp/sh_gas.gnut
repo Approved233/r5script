@@ -1162,6 +1162,17 @@ void function ShGas_Init()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
 void function UpdatePlayerScreenColorCorrection( entity player, int statusEffect, int ccID )
 {
 	Assert ( IsNewThread(), "Must be threaded off." )
@@ -1273,6 +1284,20 @@ void function GasCloud_StartVisualEffect( entity ent, int statusEffect, bool act
 
 void function GasCloud_StopVisualEffect( entity ent, int statusEffect, bool actuallyChanged )
 {
+	thread GasCloud_StopVisualEffect_Thread( ent, statusEffect, actuallyChanged )
+}
+
+void function GasCloud_StopVisualEffect_Thread( entity ent, int statusEffect, bool actuallyChanged )
+{
+
+
+
+
+
+
+
+
+
 	ManageHighlightEntity( ent )
 
 	if ( !actuallyChanged && GetLocalViewPlayer() == GetLocalClientPlayer() )

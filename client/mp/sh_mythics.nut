@@ -30,6 +30,15 @@ global function Mythics_IsExecutionUsableOnTier1AndTier2
 
 
 
+
+
+
+
+
+
+
+
+
 struct FileStruct_LifetimeLevel
 {
 	table< int, int > mythicSkinsGUIDToCustomExecutionGUID
@@ -42,8 +51,21 @@ struct FileStruct_LifetimeLevel
 	table< int, array< asset > > charactersGUIDToStoreImages
 	table< int, string > charactersGUIDToSkinBaseName
 	ItemFlavor ornull currentChallenge
+
+
+	table< entity, array< ItemFlavor > > mythicBoostedChallenges
+
 }
 FileStruct_LifetimeLevel& fileLevel
+
+
+global struct Mythic_ChallengeProgress
+{
+	ItemFlavor& challenge
+	int challengeProgress
+	int statMarker
+}
+
 
 const int CHALLENGE_SORT_ORDINAL = 0 
 const int FINAL_TIER = 3
@@ -89,7 +111,8 @@ void function RegisterMythicBundlesForCharacter( ItemFlavor characterClass )
 			if ( skydivetrailAsset != $"" )
 			{
 				SettingsAssetGUID skydiveGUID = GetUniqueIdForSettingsAsset( skydivetrailAsset )
-				if ( IsValidItemFlavorGUID( skydiveGUID ) )
+				ItemFlavor ornull skydiveFlavOrNull = RegisterItemFlavorFromSettingsAsset( skydivetrailAsset )
+				if ( skydiveFlavOrNull != null && IsValidItemFlavorGUID( skydiveGUID ) )
 					fileLevel.mythicSkinsGUIDToCustomSkydivetrailGUID[ preRegGUID ] <- skydiveGUID
 			}
 		}
@@ -462,3 +485,113 @@ string function Mythics_GetSkinBaseNameForCharacter( ItemFlavor character )
 	Assert( IsItemFlavorStructValid( character.guid, eValidation.DONT_ASSERT ), eValidation.ASSERT )
 	return fileLevel.charactersGUIDToSkinBaseName[ ItemFlavor_GetGUID( character ) ]
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  

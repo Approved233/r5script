@@ -143,7 +143,7 @@ void function OnGRXSeasonUpdate()
 		bool hasThemedShopCalevent              = ( activeThemedShopEvent != null )
 
 
-			ItemFlavor ornull activeEventShop 		= GetActiveEventShop( GetUnixTimestamp() )
+			ItemFlavor ornull activeEventShop 		= EventShop_GetCurrentActiveEventShop()
 			bool haveActiveEventShop          		= activeEventShop != null
 
 

@@ -28,6 +28,10 @@ global function ShDrones_DroneSpawned
 
 
 
+
+
+
+
 global function ServerCallback_AddDroneClientData
 global function ShDrones_GetDroneClientData
 global function ServerCallback_SetDroneTrailFXType
@@ -62,6 +66,9 @@ global enum eDroneType
 	INVALID,
 	LOOT_DRONE,
 	AD_DRONE,
+
+
+
 
 
 
@@ -177,7 +184,21 @@ void function ShDrones_EntitiesDidLoad()
 
 
 
+
+
+
+
+
+
+
 }
+
+
+
+
+
+
+
 
 
 
@@ -218,6 +239,13 @@ int function Drones_GetLootDronesCountToSpawn()
 
 
 
+
+
+
+
+
+
+
 bool function Drones_ShouldSpawnAdDrones()
 {
 	return Drones_GetAdDronesCountToSpawn() > 0 && HasEntWithScriptName( AD_DRONE_NODE_SCRIPT_NAME )
@@ -227,6 +255,13 @@ bool function Drones_ShouldSpawnLootDrones()
 {
 	return Drones_GetLootDronesCountToSpawn() > 0 && HasEntWithScriptName( LOOT_DRONE_NODE_SCRIPT_NAME )
 }
+
+
+
+
+
+
+
 
 
 
@@ -299,6 +334,12 @@ int function GetDroneTypeFromDroneEntity( entity droneEnt )
 
 
 
+
+
+
+
+
+
 	return droneType
 }
 
@@ -315,6 +356,12 @@ int function GetDroneTypeFromDroneMover( entity droneEnt )
 	{
 		droneType = eDroneType.AD_DRONE
 	}
+
+
+
+
+
+
 
 
 
@@ -391,6 +438,11 @@ void function SetDroneTrailFX( DroneClientData droneData )
 
 
 
+
+
+
+
+
 		default:
 			break
 	}
@@ -415,6 +467,12 @@ void function ServerCallback_SetDroneTrailFXType( entity droneEnt, int trailType
 
 		case eDroneType.AD_DRONE:
 			AdDrones_SetAdDroneTrailFXType( droneEnt, trailType )
+
+
+
+
+
+
 
 
 

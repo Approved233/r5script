@@ -22,12 +22,6 @@ const string WEAPON_OVERVIEW_BACKGROUND_ENT_NAME = "weapons_mastery_inspect_bg_t
 
 
 
-struct RevTalkingInfo
-{
-	string rev1conv
-	string rev2conv
-	float rev2ConvoStartOffset = 0.0
-}
 
 
 const float CARD_TAG_SCALE = 0.0 
@@ -58,6 +52,7 @@ const array<asset> STORE_BACKGROUND_FX_TIERS =
 	$"P_store_BG_bundle_T3",
 	$"P_store_BG_bundle_T4",
 	$"P_store_BG_bundle_T5",
+	$"P_store_BG_bundle_T5", 
 ]
 
 
@@ -323,10 +318,6 @@ struct
 
 	array<void functionref()> mouseWheelDownCallbacks
 	array<void functionref()> mouseWheelUpCallbacks
-
-	array< RevTalkingInfo > revTalkingInfoArray
-	array< RevTalkingInfo > playedRevTalkingInfoArray
-	bool revTalkingInProgress
 } file
 
 
@@ -376,8 +367,6 @@ global function UIToClient_LoadItemInspectPakFile
 global function UIToClient_UnloadItemInspectPakFile
 global function UIToClient_ForceStoreBackgroundSkins
 global function UIToClient_SetWeaponsOverviewBackgroundSkin
-
-global function UIToClient_SignalRevConvoStop
 
 global function DisableModelTurn
 global function EnableModelTurn
@@ -508,8 +497,6 @@ void function ClMenuModels_Init()
 
 	AddCallback_OnClientScriptInit( OnClientScriptInit )
 	AddCallback_FullUpdate( OnFullUpdate )
-
-	InitRevConvoData()
 }
 
 void function OnClientScriptInit( entity player )
@@ -1166,9 +1153,6 @@ void function StartPresentation_PLAY()
 {
 	if ( file.presentationData[file.previousPresentationType].startFunc != StartPresentation_PLAY )
 	{
-		if ( !HasAnimEvent( ModelData_GetModel( file.playCharacter ), "center_hands_idle_event") )
-			AddAnimEvent( ModelData_GetModel( file.playCharacter ), "center_hands_idle_event", AnimEvent_RevHandsIdle )
-
 		ModelData_SetAnim( file.playCharacter, "ACT_MP_MENU_LOBBY_CENTER_IDLE" )
 		UpdateMenuCharacterModel( GetLocalClientPlayer(), -1 )
 
@@ -1180,12 +1164,6 @@ void function StartPresentation_PLAY()
 
 void function EndPresentation_PLAY()
 {
-	if ( HasAnimEvent( ModelData_GetModel( file.playCharacter ), "center_hands_idle_event") )
-	{
-		Signal( level, "EndRevConvo")
-		DeleteAnimEvent( ModelData_GetModel( file.playCharacter ), "center_hands_idle_event" )
-	}
-
 	RemoveCallback_OnPartyUpdated( UpdateMenuWithPartyMembers )
 }
 
@@ -1729,6 +1707,9 @@ bool function IsEventLobbyActive()
 	if ( eventLobbyOverride )
 		return true
 
+	if ( IsLobbyEvent2Active() )
+		return true
+
 	return false
 }
 
@@ -2016,7 +1997,6 @@ void function UpdateMenuCharacterModelInternal( int overrideCharacterFlavorGUID 
 	bool doTransitionFX = (file.currentPresentationType == ePresentationType.CHARACTER_SKIN)
 	UpdateCharacterModelDisplay( file.playCharacter, doTransitionFX )
 	UpdateCharacterModelDisplay( file.customizeCharacter, doTransitionFX )
-	UpdateDoppelGangerModelDisplay( character )
 }
 
 void function UIToClient_PreviewCharacterEmote( int guid, int overrideCharacterFlavorGUID )
@@ -2411,66 +2391,6 @@ void function TransitionWeaponOverviewBackgroundFX( ItemFlavor itemFlav )
 }
 
 
-void function UpdateDoppelGangerModelDisplay( ItemFlavor character )
-{
-	if ( !IsLobbyEvent2Active() )
-		return
-
-	entity shadowLegend
-
-	array< entity > shadows = GetEntArrayByScriptName( "rev2" )
-	if ( shadows.len() == 1 )
-	{
-		shadowLegend = shadows[0]
-	}
-
-	ItemFlavor skin = GetDefaultItemFlavorForLoadoutSlot( EHI_null, Loadout_CharacterSkin( character ) )
-	asset modelAsset = CharacterSkin_GetBodyModel( skin )
-
-	bool modelChanged = ( !IsValid( shadowLegend ) ) || modelAsset != shadowLegend.GetModelName()
-	if ( modelChanged )
-	{
-		if ( IsValid( shadowLegend ) )
-			shadowLegend.Destroy()
-
-		shadowLegend = CreateClientSidePropDynamic(<40, 740, 0> , <0, -90, 0>, modelAsset )
-		shadowLegend.SetScriptName( "rev2" )
-		shadowLegend.MakeSafeForUIScriptHack()
-
-		int skinIdx = shadowLegend.GetSkinIndexByName( "ShadowSqaud" )
-		if ( skinIdx > 0 )
-		{
-			shadowLegend.SetSkin( skinIdx )
-			shadowLegend.SetCamo( 0 )
-		}
-		else 
-		{
-			shadowLegend.kv.rendercolor = <0, 0, 0>
-		}
-
-		string characterRef = ItemFlavor_GetCharacterRef( character )
-
-		if ( characterRef == "character_newcastle" )
-		{
-			StartParticleEffectOnEntity( shadowLegend, GetParticleSystemIndex( $"P_s18_HW_eye_NC" ), FX_PATTACH_POINT_FOLLOW, shadowLegend.LookupAttachment( "EYE_L" ) )
-		}
-		else
-		{
-			StartParticleEffectOnEntity( shadowLegend, GetParticleSystemIndex( $"P_s14_HW_eye" ), FX_PATTACH_POINT_FOLLOW, shadowLegend.LookupAttachment( "EYE_L" ) )
-			StartParticleEffectOnEntity( shadowLegend, GetParticleSystemIndex( $"P_s14_HW_eye" ), FX_PATTACH_POINT_FOLLOW, shadowLegend.LookupAttachment( "EYE_R" ) )
-		}
-
-		if ( characterRef == "character_crypto" )
-		{
-			shadowLegend.Anim_Play("S18_lobby_crypto_shadow_pit")
-		}
-		else
-		{
-			shadowLegend.Anim_Play("S18_lobby_generic_shadow_pit")
-		}
-	}
-}
-
 void function UpdateCharacterModelDisplay( MenuModelData modelData, bool doTransitionFX )
 {
 	if ( !file.initializedMenuModels ) 
@@ -2522,152 +2442,6 @@ void function UpdateCharacterModelDisplay( MenuModelData modelData, bool doTrans
 		thread FlashMenuModel( model, eMenuModelFlashType.DEFAULT, flashColor )
 	}
 }
-
-void function AnimEvent_RevHandsIdle( entity target )
-{
-	float chance = GetCurrentPlaylistVarFloat( "RevLobbyConvoChance", 1.0 )
-	if ( chance != 1.0 && RandomFloat(1.0) > chance)
-	{
-		return
-	}
-
-	thread AnimEvent_TriggerHangingRevAnim()
-}
-
-
-void function InitRevConvoData()
-{
-	{
-		RevTalkingInfo info
-		info.rev1conv = "diag_mp_revenant_menu_conversation_A_01"
-		info.rev2conv = "diag_mp_revenant_menu_conversation_A_02"
-		info.rev2ConvoStartOffset = -1.5
-		file.revTalkingInfoArray.append( info )
-	}
-
-	{
-		RevTalkingInfo info
-		info.rev1conv = "diag_mp_revenant_menu_conversation_B_01"
-		info.rev2conv = "diag_mp_revenant_menu_conversation_B_02"
-		info.rev2ConvoStartOffset = -1.5
-		file.revTalkingInfoArray.append( info )
-	}
-
-	{
-		RevTalkingInfo info
-		info.rev1conv = "diag_mp_revenant_menu_conversation_C_01"
-		info.rev2conv = "diag_mp_revenant_menu_conversation_C_02"
-		info.rev2ConvoStartOffset = -1.5
-		file.revTalkingInfoArray.append( info )
-	}
-
-	{
-		RevTalkingInfo info
-		info.rev1conv = "diag_mp_revenant_menu_conversation_D_01"
-		info.rev2conv = "diag_mp_revenant_menu_conversation_D_02"
-		info.rev2ConvoStartOffset = -1.5
-		file.revTalkingInfoArray.append( info )
-	}
-
-	{
-		RevTalkingInfo info
-		info.rev1conv = "diag_mp_revenant_menu_conversation_E_01"
-		info.rev2conv = "diag_mp_revenant_menu_conversation_E_02"
-		info.rev2ConvoStartOffset = -1.5
-		file.revTalkingInfoArray.append( info )
-	}
-
-	file.revTalkingInfoArray.randomize()
-}
-
-void function UIToClient_SignalRevConvoStop()
-{
-	Signal( level, "EndRevConvo" )
-}
-
-void function AnimEvent_TriggerHangingRevAnim()
-{
-	EndSignal( level, "EndRevConvo")
-	if ( !IsValid(file.playCharacter) )
-		return
-
-
-	array<entity> revs = GetEntArrayByScriptName( "s18_lobby_talking_rev" )
-	if ( revs.len() != 1 )
-		return
-
-	if ( !IsValid( revs[0] ) )
-		return
-
-	entity hangingRev = revs[0]
-
-	EndSignal( hangingRev, "OnDestroy" )
-	if ( file.revTalkingInProgress )
-		return
-
-	file.revTalkingInProgress = true
-
-	OnThreadEnd(
-		function() : ( hangingRev )
-		{
-			if ( IsValid(hangingRev) )
-				hangingRev.Anim_Play("revenant_teaser_lobby_powerdown_loop")
-
-			file.revTalkingInProgress = false
-		}
-	)
-
-	hangingRev.Anim_Play("revenant_teaser_lobby_powerdup")
-
-
-	wait 4.17
-
-	RevTalkingInfo info
-	if ( file.revTalkingInfoArray.len() == 0 )
-	{
-		info = file.playedRevTalkingInfoArray.getrandom()
-	}
-	else
-	{
-		info = file.revTalkingInfoArray.pop()
-		file.playedRevTalkingInfoArray.append( info )
-	}
-
-	hangingRev.Anim_Play("revenant_teaser_lobby_powerdup_loop")
-
-
-	EmitUISound( info.rev1conv )
-
-
-	OnThreadEnd(
-		function() : ( info )
-		{
-			StopUISoundByName( info.rev1conv )
-		}
-	)
-
-
-	wait (GetSoundDuration ( info.rev1conv ) + info.rev2ConvoStartOffset)
-
-	hangingRev.Anim_Play("revenant_teaser_lobby_powerdown")
-
-
-	EmitUISound( info.rev2conv )
-
-	OnThreadEnd(
-		function() : ( info )
-		{
-			StopUISoundByName( info.rev2conv )
-		}
-	)
-
-
-	wait GetSoundDuration ( info.rev2conv )
-
-
-	wait 2.83
-}
-
 
 void function UIToClient_PartyMemberGetFocus( string partyMemberUID )
 {

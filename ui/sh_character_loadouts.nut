@@ -99,9 +99,6 @@ void function SetDefaultLoadouts()
 
 
 
-
-
-
 		file.weaponLoadoutDefault = GetTrimmedSplitString( defaultweaponLoadoutsPlaylist, " " )
 		file.consumableLoadoutDefault = GetTrimmedSplitString( defaultconsumableLoadoutPlaylist, " " )
 		file.equipmentLoadoutDefault = GetTrimmedSplitString( defaultequipmentLoadoutPlaylist, " " )
@@ -410,6 +407,9 @@ void function PopulateCharacterLoadouts()
 
 	printf( "CHARACTER LOADOUTS: Character Loadouts populated" )
 }
+
+
+
 
 
 

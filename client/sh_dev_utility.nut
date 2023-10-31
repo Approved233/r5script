@@ -1120,6 +1120,23 @@ void function DEV_DrawBoundingBox()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 array<entity> function DEV_PrintChildren( entity ent )
 {
 	array<entity> children = []
@@ -1148,17 +1165,28 @@ int function DEV_PrintChildrenRecursive( entity parentEnt, string prefix = "" )
 	return rv
 }
 
-void function DEV_DumpPlayers( bool includeSpectators = true, float drawDuration = 60 )
+void function DEV_DumpPlayers( string filter = "", float drawDuration = 60 )
 {
+	filter = filter.toupper()
+
 	array<entity> players
-	if ( includeSpectators )
+	if ( filter == "SPEC" )
+	{
 		players = GetPlayerArrayIncludingSpectators()
+	}
+	else if ( filter == "ALIVE" )
+	{
+		players = GetPlayerArray_Alive()
+	}
 	else
+	{
 		players = GetPlayerArray()
+		filter = ""
+	}
 
 	string plural = players.len() > 1 ? "players" : "player"
 
-	printt( "---", FUNC_NAME(), players.len(), plural, "total ---" )
+	printt( "---", FUNC_NAME(), filter, players.len(), plural, "total ---" )
 	if ( players.len() == 0 )
 		return
 
@@ -1224,7 +1252,7 @@ void function DEV_DumpPlayers( bool includeSpectators = true, float drawDuration
 			DebugDrawText( player.GetOrigin() + randomOffset, string( player.GetEntIndex() ), false, drawDuration )
 
 
-		printf( "  %s[%2d] %-20s", playerPrefix, player.GetEntIndex(), player.GetPlayerName() )
+		printf( "  %s [%3d] %-20s", playerPrefix, player.GetEntIndex(), player.GetPlayerName() )
 	}
 }
 

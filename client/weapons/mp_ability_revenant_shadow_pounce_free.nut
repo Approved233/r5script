@@ -233,7 +233,6 @@ void function OnWeaponTossPrep_shadow_pounce_free( entity weapon, WeaponTossPrep
 
 		if( file.shadowPounce_ChargeUI )
 			thread ShadowPounce_ChargeUI_Thread( player, weapon )
-
 		if( file.shadowPounce_TargetIndicator )
 			thread ShadowPounce_UpdateIndicator( player, weapon )
 		if( file.maxFovOffset != 0.0 )
@@ -747,12 +746,30 @@ void function ShadowPounce_ChargeFov_Thread( entity player, entity weapon )
 		}
 	} )
 
+	bool lowCharge = false
+	bool midCharge = false
+	bool fullCharge = false
 	while( true )
 	{
 		float maxChargeTime = ShadowPounce_GetMaxChargeTime( player )
 		float chargeTime = clamp( Time() - weapon.w.startChargeTime, 0.0, maxChargeTime )
 		float chargeFrac = chargeTime/maxChargeTime
 		player.SetFOVOffset( chargeFrac * maxFovOffset )
+		if( ( chargeFrac >= 0.33 ) && ( !lowCharge ) )
+		{
+			lowCharge = true
+			Rumble_Play( "rumble_burn_card_activate", {} )
+		}
+		if( ( chargeFrac >= 0.66 ) && ( !midCharge ) )
+		{
+			midCharge = true
+			Rumble_Play( "rumble_burn_card_activate", {} )
+		}
+		if( ( chargeFrac >= 1.0 ) && ( !fullCharge ) )
+		{
+			fullCharge = true
+			Rumble_Play( "rumble_titanfall_request", {} )
+		}
 		WaitFrame()
 	}
 }

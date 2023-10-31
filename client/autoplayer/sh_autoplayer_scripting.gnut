@@ -6,6 +6,8 @@ global function AutoPlayer_TranslateItemType
 global function AutoPlayer_GetLootTier
 global function AutoPlayer_GetAmmoPoolTypeByLootTableIndex
 global function AutoPlayer_GetLootRef
+global function AutoPlayer_IsDoorClosed
+global function AutoPlayer_GetLootbinDetails
 
 string function AutoPlayer_GetPlayerInventory( entity player )
 {
@@ -120,4 +122,55 @@ int function AutoPlayer_GetAmmoPoolTypeByLootTableIndex( int ammoLootTableIndex 
 string function AutoPlayer_GetLootRef( int lootTableIndex )
 {
 	return SURVIVAL_Loot_GetLootDataByIndex( lootTableIndex ).ref
+}
+
+bool function AutoPlayer_IsDoorClosed( entity ent )
+{
+	if ( !IsValid( ent ) )
+		return false
+
+	if ( IsDoor( ent ) )
+		return !IsDoorOpen( ent )
+
+	if ( IsVaultPanel( ent ) )
+		return IsVaultPanelLocked( ent )
+
+
+	if ( ent.GetModelName() == EXPLOSIVE_HOLD_PROXY || ent.GetScriptName() == EXPLOSIVE_HOLD_PANEL_SCRIPTNAME )
+	{
+		return !ExplosiveHold_IsOpen( ent )
+	}
+
+
+	Warning( "AutoPlayer_IsDoorOpen: Not any kind of door. Return false" )
+	return false
+}
+
+string function AutoPlayer_GetLootbinDetails( entity ent )
+{
+	if ( ent.GetScriptName() != LOOT_BIN_SCRIPTNAME )
+	{
+		Warning( "AutoPlayer_GetLootbinDetails: Not a lootbin. Return 000" )
+		return "000"
+	}
+
+	string items = ""
+
+	if ( !LootBin_IsOpenAtAll( ent ) )
+		items += "1"
+	else
+		items += "0"
+
+	if ( LootBin_HasSecretCompartment( ent ) )
+		items += "1"
+	else
+		items += "0"
+
+	
+	if (LootBin_HasSecretCompartment( ent ) == true && GradeFlagsHas( ent, eGradeFlags.IS_OPEN_SECRET ) == false )
+		items += "1"
+	else
+		items += "0"
+
+	return items
 }

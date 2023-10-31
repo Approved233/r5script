@@ -68,6 +68,7 @@ global function HeirloomEvent_GetMythicButtonImage
 global function HeirloomEvent_GetHeirloomHeaderText
 global function HeirloomEvent_GetHeirloomUnlockDesc
 global function HeirloomEvent_IsCompletionRewardOwned
+global function HeirloomEvent_IsRewardHeirloom
 
 
 
@@ -101,6 +102,7 @@ global function CollectionEvent_IsItemFlavorFromEvent
 
 
 
+
 global struct CollectionEventRewardGroup
 {
 	string ref
@@ -112,7 +114,9 @@ global struct CollectionEventRewardGroup
 }
 
 
-global const array< int > HEIRLOOM_EVENTS = [ eItemType.calevent_collection, eItemType.calevent_themedshop ]
+
+
+	global const array< int > HEIRLOOM_EVENTS = [ eItemType.calevent_collection, eItemType.calevent_themedshop ]
 
 
 
@@ -376,7 +380,11 @@ string function CollectionEvent_GetFrontPageGRXOfferLocation( ItemFlavor event )
 
 array<CollectionEventRewardGroup> function CollectionEvent_GetRewardGroups( ItemFlavor event )
 {
-	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_collection )
+
+
+
+
+		Assert( ItemFlavor_GetType( event ) == eItemType.calevent_collection )
 
 	array<CollectionEventRewardGroup> groups = []
 	foreach ( var groupBlock in IterateSettingsAssetArray( ItemFlavor_GetAsset( event ), "rewardGroups" ) )
@@ -692,7 +700,7 @@ string function HeirloomEvent_GetHeirloomHeaderText( ItemFlavor event )
 		headerText = "#CURRENCY_HEIRLOOM_NAME_SHORT"
 	else if ( HeirloomEvent_IsRewardMythicSkin( event ) )
 		headerText = "#COLLECTION_EVENT_MYTHIC_BOX_TITLE"
-	else if ( !CollectionEvent_IsRewardHeirloom( event ) )
+	else if ( !HeirloomEvent_IsRewardHeirloom( event ) )
 		headerText = "#COLLECTION_EVENT_REACTIVE_BOX_TITLE"
 
 	return Localize( headerText ).toupper()
@@ -700,7 +708,7 @@ string function HeirloomEvent_GetHeirloomHeaderText( ItemFlavor event )
 
 
 
-bool function CollectionEvent_IsRewardHeirloom( ItemFlavor event )
+bool function HeirloomEvent_IsRewardHeirloom( ItemFlavor event )
 {
 	Assert( HEIRLOOM_EVENTS.contains( ItemFlavor_GetType( event ) ) )
 	ItemFlavor reward = HeirloomEvent_GetPrimaryCompletionRewardItem( event )
@@ -778,7 +786,11 @@ int function HeirloomEvent_GetItemCount( ItemFlavor event, bool onlyOwned, entit
 
 	int count = 0
 	array < ItemFlavor > eventItems
+
+
+
 	if ( ItemFlavor_GetType( event ) == eItemType.calevent_collection )
+
 	{
 		eventItems = []
 		array<CollectionEventRewardGroup> rewardGroups = CollectionEvent_GetRewardGroups( event )
@@ -820,7 +832,11 @@ int function HeirloomEvent_GetItemCount( ItemFlavor event, bool onlyOwned, entit
 array<ItemFlavor> function CollectionEvent_GetEventItems( ItemFlavor event )
 {
 	array<ItemFlavor> eventItems
+
+
+
 	if ( ItemFlavor_GetType( event ) == eItemType.calevent_collection )
+
 	{
 		array<CollectionEventRewardGroup> rewardGroups = CollectionEvent_GetRewardGroups( event )
 		foreach ( CollectionEventRewardGroup rewardGroup in rewardGroups )
@@ -894,6 +910,10 @@ int function CollectionEvent_GetCurrentMaxEventPackPurchaseCount( ItemFlavor eve
 
 	return HeirloomEvent_GetCurrentRemainingItemCount( event, player ) - ownedPackCount
 }
+
+
+
+
 
 
 

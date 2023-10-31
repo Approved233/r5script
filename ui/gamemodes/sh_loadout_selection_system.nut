@@ -66,7 +66,6 @@ global function LoadoutSelection_Init
 
 
 
-
 global function LoadoutSelection_UpdateLoadoutInfo_UI
 global function LoadoutSelection_SetSelectedLoadoutSlotIndex_UI
 global function LoadoutSelection_GetSelectedLoadoutSlotIndex_UI
@@ -224,7 +223,9 @@ global enum eLoadoutSelectionSlotType
 
 
 
+
 struct {
+
 
 
 
@@ -310,7 +311,6 @@ bool function LoadoutSelection_ShouldAvoidDuplicateWeaponsInLoadoutRotation()
 {
 	return GetCurrentPlaylistVarBool( "loadoutselection_avoid_duplicate_weapons_in_loadouts", false )
 }
-
 
 
 
@@ -1218,35 +1218,10 @@ void function LoadoutSelection_OverrideSupportedWeaponAttachmentsForWeaponRef( s
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 int function LoadoutSelection_GetSelectedLoadoutSlotIndex_CL_UI()
 {
 	return file.playerSelectedLoadout
 }
-
-
-
-
-
-
-
-
-
 
 
 
@@ -1320,42 +1295,6 @@ int function LoadoutSelection_GetWeaponCountByLoadoutIndex( int loadoutIndex )
 
 	return weaponCount
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -1842,10 +1781,6 @@ int function LoadoutSelection_GetLoadoutSlotTypeForLoadoutIndex( int loadoutSlot
 
 	return slotType
 }
-
-
-
-
 
 
 

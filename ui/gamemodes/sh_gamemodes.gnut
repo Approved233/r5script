@@ -225,8 +225,8 @@ void function GameModes_Init()
 
 
 
-
-
+	AddCallback_UI_FeatureTutorialDialog_PopulateTabsForMode( Ranked_PopulateAboutText, GAMEMODE_SURVIVAL_RANKED )
+	AddCallback_UI_FeatureTutorialDialog_SetTitle( FeatureTutorial_GetGameModeName, GAMEMODE_SURVIVAL_RANKED )
 
 
 
@@ -280,6 +280,13 @@ void function GameModes_Init()
 
 
 
+		AddCallback_UI_FeatureTutorialDialog_PopulateTabsForMode( Survival_Strikeout_PopulateAboutText, GAMEMODE_STRIKEOUT )
+		AddCallback_UI_FeatureTutorialDialog_SetTitle( FeatureTutorial_GetGameModeName, GAMEMODE_STRIKEOUT )
+
+
+
+
+
 		AddCallback_UI_FeatureTutorialDialog_PopulateTabsForMode( Armed_And_Dangerous_PopulateAboutText, GAMEMODE_ARMED_AND_DANGEROUS )
 		AddCallback_UI_FeatureTutorialDialog_SetTitle( FeatureTutorial_GetGameModeName, GAMEMODE_ARMED_AND_DANGEROUS )
 
@@ -293,6 +300,8 @@ void function GameModes_Init()
 
 
 
+		AddCallback_UI_FeatureTutorialDialog_PopulateTabsForMode( ShadowArmy_PopulateAboutText, GAMEMODE_SHADOW_ARMY )
+		AddCallback_UI_FeatureTutorialDialog_SetTitle( FeatureTutorial_GetGameModeName, GAMEMODE_SHADOW_ARMY )
 
 
 
@@ -302,6 +311,11 @@ void function GameModes_Init()
 
 
 
+
+
+
+		AddCallback_UI_FeatureTutorialDialog_PopulateTabsForMode( EventAbilities_PopulateAboutText, EVENT_ABILITIES )
+		AddCallback_UI_FeatureTutorialDialog_SetTitle( EventAbilities_GetAboutHeader, EVENT_ABILITIES )
 
 
 

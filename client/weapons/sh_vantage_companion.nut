@@ -9,10 +9,6 @@ global function VantageCompanion_GetPlayerLaunchState
 
 
 
-
-
-
-
 global function Launch_CalcLaunchToPos
 
 
@@ -320,6 +316,9 @@ float function VantageCompanion_GetRangeMax( entity owner )
 	return result
 }
 
+float function VantageCompanion_GetSpeed( entity owner )
+{
+	float result = VANTAGE_COMPANION_BASE_SPEED
 
 
 
@@ -328,18 +327,8 @@ float function VantageCompanion_GetRangeMax( entity owner )
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
+	return result
+}
 
 const float UPDATE_RATE = 0.1
 
@@ -916,20 +905,6 @@ void function TestCompanionSendPoint_Thread( entity player, entity echoEnt )
 
 }
 
-float function VantageCompanion_GetSpeed( entity owner )
-{
-	float result = VANTAGE_COMPANION_BASE_SPEED
-
-
-
-
-
-
-
-
-	return result
-}
-
 CompanionFlightParams function GetVantageCompanionFlightData( entity owner )
 {
 	CompanionFlightParams flightData
@@ -1017,26 +992,6 @@ vector function Launch_CalcLaunchToPos( entity player, entity echoEnt )
 
 	return finalLaunchToPos
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

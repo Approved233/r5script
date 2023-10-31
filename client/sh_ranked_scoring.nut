@@ -11,12 +11,16 @@ global function Ranked_HasCompletedProvisionalMatches
 
 
 
-global function LoadLPBreakdownFromPersistance
+
+
+
+global function GetHighEndLostMultiplier
 
 global const RANKED_LP_PROMOTION_BONUS = 250
 global const RANKED_LP_DEMOTION_PENALITY = 150
 global const float PARTICIPATION_MODIFIER = 0.5
 global const int RANKED_NUM_PROVISIONAL_MATCHES = 10
+global const float HIGH_END_LOST_MULTIPLIER = 1.5
 
 global struct RankLadderPointsBreakdown
 {
@@ -41,6 +45,7 @@ global struct RankLadderPointsBreakdown
 	int participationUnique = 0			
 
 	int placement						
+	int totalSquads						
 	int placementScore					
 
 
@@ -75,7 +80,7 @@ global struct RankLadderPointsBreakdown
 	int finalLP
 
 
-
+		int trialState = 0 
 
 }
 
@@ -155,9 +160,13 @@ int function Ranked_GetNumProvisionalMatchesCompleted( entity player )
 
 
 
+	return Ranked_GetXProgMergedPersistenceData( player, RANKED_PROVISIONAL_MATCH_COUNT_PERSISTENCE_VAR_NAME )
 
 
-		return player.GetPersistentVarAsInt( "rankedProvisionalMatchesCompleted" )
+
+
+
+
 
 
 	unreachable
@@ -232,40 +241,71 @@ int function Ranked_GetPenaltyPointsForAbandon( )
 
 
 
-void function LoadLPBreakdownFromPersistance ( RankLadderPointsBreakdown breakdown , entity player)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+float function GetHighEndLostMultiplier ()
 {
-	
-	
-	
-	
-	breakdown.wasAbandoned 				   =  bool ( GetRankedGameData( player,  "lastGameRankedAbandon" ) )
-	breakdown.placement 				   = player.GetPersistentVarAsInt( "lastGameRank" )
-	breakdown.placementScore 			   = GetRankedGameData( player, "lastGamePlacementScore" )
-
-	breakdown.wasInProvisonalGame          = Ranked_GetNumProvisionalMatchesCompleted( player ) <= Ranked_GetNumProvisionalMatchesRequired()
-	breakdown.penaltyPointsForAbandoning   = GetRankedGameData( player,  "lastGamePenaltyPointsForAbandoning" )
-	breakdown.lossProtectionAdjustment     = GetRankedGameData ( player, "lastGameLossProtectionAdjustment"  )
-	breakdown.demotionProtectionAdjustment = GetRankedGameData ( player, "lastGameTierDerankingProtectionAdjustment" )
-	breakdown.startingLP                   = GetRankedGameData ( player, "lastGameStartingScore" )
-	breakdown.netLP 					   = GetRankedGameData ( player, "lastGameScoreDiff" )
-
-	breakdown.killBonus                    = GetRankedGameData ( player, "lastGameBonus[0]" )
-	breakdown.convergenceBonus             = GetRankedGameData ( player, "lastGameBonus[1]" )
-	breakdown.skillDiffBonus               = GetRankedGameData ( player, "lastGameBonus[2]" )
-	breakdown.provisionalMatchBonus        = GetRankedGameData ( player, "lastGameBonus[3]" )
-	breakdown.highEndAdjustment            = GetRankedGameData ( player, "lastGameBonus[4]" )
-
-	breakdown.finalLP 					   = breakdown.startingLP + breakdown.netLP
-
-	breakdown.demotionPenality 			   = ( GetCurrentRankedDivisionFromScore( breakdown.finalLP ).tier.index  < GetCurrentRankedDivisionFromScore( breakdown.startingLP ).tier.index )
-													? GetCurrentPlaylistVarInt ( "ranked_tier_demotion_penality", RANKED_LP_DEMOTION_PENALITY )
-													: 0
-
-
-
-
-
-#if DEV
-		PrintRankLadderPointsBreakdown (breakdown, 1, "LoadLPBreakdownFromPersistance" )
-#endif
+	return GetCurrentPlaylistVarFloat( "ranked_tuning_var_high_end_multiplier", HIGH_END_LOST_MULTIPLIER ) 
 }

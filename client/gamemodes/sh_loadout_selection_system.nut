@@ -50,7 +50,6 @@ global function UICallback_LoadoutSelection_BindOpticSlotButton
 global function UICallback_LoadoutSelection_BindWeaponElement
 global function UICallback_LoadoutSelection_OnRequestOpenScopeSelection
 global function ServerCallback_LoadoutSelection_FinishedProcessingClickEvent
-global function ServerCallback_LoadoutSelection_SetActiveLoadoutNameForSlot
 global function ServerCallback_LoadoutSelection_UpdateLoadoutInfo
 global function ServerCallback_LoadoutSelection_UpdateSelectedLoadoutInfo
 global function ServerCallback_LoadoutSelection_RefreshUILoadoutInfo
@@ -206,8 +205,9 @@ struct LoadoutSelectionLoadoutContents
 
 
 
-		table < int, int > weaponIndexToScopePreferenceTable
 
+
+		table < int, int > weaponIndexToScopePreferenceTable
 
 }
 
@@ -236,6 +236,7 @@ struct {
 
 
 
+		int matchStartTime
 		asset rotationsDatatable = LOADOUTSELECTION_ROTATIONS_DATATABLE
 		asset loadoutsDatatable = LOADOUTSELECTION_LOADOUTS_DATATABLE
 		table<int, LoadoutSelectionCategory > loadoutSlotIndexToCategoryDataTable
@@ -283,17 +284,17 @@ void function LoadoutSelection_Init()
 
 		LoadoutSelection_RegisterLoadoutData()
 		LoadoutSelection_RegisterLoadoutDistribution()
+		file.matchStartTime = GetUnixTimestamp()
 
 
 
 
 
-		LoadoutSelection_PopulateLoadouts()
 
 
 
 
-
+			AddCallback_EntitiesDidLoad( LoadoutSelection_PopulateLoadouts ) 
 
 
 		Remote_RegisterUIFunction( "LoadoutSelectionMenu_OpenLoadoutMenu", "bool" )
@@ -365,8 +366,7 @@ void function LoadoutSelection_RegisterNetworking()
 		return
 
 	Remote_RegisterClientFunction( "ServerCallback_LoadoutSelection_FinishedProcessingClickEvent" )
-	Remote_RegisterClientFunction( "ServerCallback_LoadoutSelection_SetActiveLoadoutNameForSlot", "string", "int", 0, LOADOUTSELECTION_MAX_TOTAL_LOADOUT_SLOTS + 1 )
-	Remote_RegisterClientFunction( "ServerCallback_LoadoutSelection_UpdateLoadoutInfo", "int", 0, LOADOUTSELECTION_MAX_TOTAL_LOADOUT_SLOTS + 1, "string", "int", 0, LOADOUTSELECTION_MAX_WEAPONS_PER_LOADOUT + 1, "int", 0, eLoadoutSelectionSlotType._count, "int", -1, LOADOUTSELECTION_MAX_SCOPE_INDEX + 1, "int", -1, LOADOUTSELECTION_MAX_SCOPE_INDEX + 1 )
+	Remote_RegisterClientFunction( "ServerCallback_LoadoutSelection_UpdateLoadoutInfo", "int", 0, LOADOUTSELECTION_MAX_TOTAL_LOADOUT_SLOTS + 1, "int", -1, LOADOUTSELECTION_MAX_SCOPE_INDEX + 1, "int", -1, LOADOUTSELECTION_MAX_SCOPE_INDEX + 1 )
 	Remote_RegisterClientFunction( "ServerCallback_LoadoutSelection_RefreshUILoadoutInfo" )
 	Remote_RegisterClientFunction( "ServerCallback_LoadoutSelection_UpdateSelectedLoadoutInfo", "int", 0, LOADOUTSELECTION_MAX_TOTAL_LOADOUT_SLOTS + 1 )
 	Remote_RegisterClientFunction( "ServerCallback_LoadoutSelection_RepopulateLoadouts")
@@ -1029,26 +1029,10 @@ LoadoutSelectionLoadoutContents function LoadoutSelection_GenerateLoadoutByLoado
 {
 	Assert( loadoutIndex in file.loadoutSlotIndexToCategoryDataTable, "Running LoadoutSelection_GenerateLoadoutByLoadoutSlot and " + loadoutIndex + " is not a key for the file.loadoutSlotIndexToCategoryDataTable table" )
 	LoadoutSelectionCategory loadoutCategory = file.loadoutSlotIndexToCategoryDataTable[ loadoutIndex ]
+	loadoutCategory.activeLoadoutName        = LoadoutSelection_GetActiveLoadoutForCategory( loadoutCategory )
+
 	LoadoutSelectionLoadoutContents loadout
-	string activeLoadoutName
-
-
-
-
-
-
-
-
-
-
-		if ( loadoutCategory.activeLoadoutName == "" )
-		{
-			return loadout
-		}
-		activeLoadoutName = loadoutCategory.activeLoadoutName
-
-
-	loadout = loadoutCategory.loadoutContentsByNameTable[ activeLoadoutName ]
+	loadout = loadoutCategory.loadoutContentsByNameTable[ loadoutCategory.activeLoadoutName ]
 	loadout.weaponLoadoutSelectionItemsInLoadout.clear()
 	loadout.consumableLoadoutSelectionItemsInLoadout.clear()
 
@@ -1303,15 +1287,6 @@ void function ServerCallback_LoadoutSelection_RepopulateLoadouts()
 
 
 
-
-void function ServerCallback_LoadoutSelection_SetActiveLoadoutNameForSlot( string activeLoadoutName, int loadoutCategoryIndex )
-{
-	if ( loadoutCategoryIndex < file.loadoutCategories.len() )
-		file.loadoutCategories[ loadoutCategoryIndex ].activeLoadoutName = activeLoadoutName
-}
-
-
-
 int function LoadoutSelection_GetWeaponCountByLoadoutIndex( int loadoutIndex )
 {
 	int weaponCount = 0
@@ -1323,212 +1298,176 @@ int function LoadoutSelection_GetWeaponCountByLoadoutIndex( int loadoutIndex )
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+string function LoadoutSelection_GetActiveLoadoutForCategory( LoadoutSelectionCategory loadoutCategory )
+{
+	int loadoutRotation = loadoutCategory.rotationStyle
+	int rotationIndex
+
+	if ( loadoutRotation == eLoadoutSelectionRotationStyle.MANUAL )
+	{
+		int indexToUse = GetGlobalNetInt( NETVAR_LOADOUT_CURRENT_ROTATION_INDEX_NAME )
+		while (indexToUse >= loadoutCategory.loadoutContentNames.len())
+			indexToUse -= loadoutCategory.loadoutContentNames.len()
+
+		if ( indexToUse < 0 )
+			indexToUse = 0
+
+#if DEV
+			printt( "LOADOUT SELECTION: loadout rotation is set to manual, using loadout index: " + indexToUse + " for category: " + loadoutCategory.loadoutSlot )
+#endif
+
+		return loadoutCategory.loadoutContentNames[ indexToUse ]
+	}
+
+	
+	if ( loadoutRotation == eLoadoutSelectionRotationStyle.PERMANENT )
+	{
+		Assert( loadoutCategory.loadoutContentsByNameTable.len() != 0, "LOADOUT SELECTION: Loadout Contents list in loadout slot " + loadoutCategory.loadoutSlot + " is empty" )
+		
+		rotationIndex = loadoutCategory.loadoutContentNames.len() - 1
+
+		
+		if ( loadoutCategory.loadoutContentNames.len() > 1 )
+			rotationIndex = LoadoutSelection_GetLoadoutForCategoryWithoutDupeWeapons( rotationIndex, loadoutCategory )
+
+#if DEV
+			printt( "LOADOUT SELECTION: loadout rotation is set to permanent, using loadout index: " + rotationIndex + " for category: " + loadoutCategory.loadoutSlot )
+#endif
+
+		return loadoutCategory.loadoutContentNames[ rotationIndex ]
+	}
+
+	
+	string unixTimeEventStartString = GetCurrentPlaylistVarString( "loadoutselection_rotation_start", "2021-07-21 10:00:00 -08:00" )
+	int unixTimeNow = file.matchStartTime
+
+	int ornull unixTimeEventStart = DateTimeStringToUnixTimestamp( unixTimeEventStartString )
+	Assert( unixTimeEventStart != null, format( "Bad format in playlist for setting 'loadoutselection_rotation_start': '%s'", unixTimeEventStartString ) )
+	expect int( unixTimeEventStart )
+
+	int unixTimeSinceEventStarted = ( unixTimeNow - unixTimeEventStart )
+	int hourQuartersSinceEventStarted = int( floor( unixTimeSinceEventStarted / ( SECONDS_PER_HOUR * 0.25 ) ) )
+	int hoursSinceEventStarted = int( floor( unixTimeSinceEventStarted / SECONDS_PER_HOUR ) )
+	int daysSinceEventStarted =  int( floor( unixTimeSinceEventStarted / SECONDS_PER_DAY ) )
+	int weeksSinceEventStarted = int( floor( unixTimeSinceEventStarted / SECONDS_PER_WEEK ) )
+
+	int rotationRaw = 1
+	if ( loadoutRotation == eLoadoutSelectionRotationStyle.WEEKLY )
+	{
+		rotationRaw = weeksSinceEventStarted
+	}
+	else if ( loadoutRotation == eLoadoutSelectionRotationStyle.DAILY )
+	{
+		rotationRaw = daysSinceEventStarted
+	}
+	else if ( loadoutRotation == eLoadoutSelectionRotationStyle.HOURLY )
+	{
+		rotationRaw = hoursSinceEventStarted
+	}
+	else if ( loadoutRotation == eLoadoutSelectionRotationStyle.GAME )
+	{
+		rotationRaw = hourQuartersSinceEventStarted
+	}
+
+	rotationIndex = abs( rotationRaw % ( loadoutCategory.loadoutContentNames.len() ) )
+
+	
+	if ( LoadoutSelection_ShouldAvoidDuplicateWeaponsInLoadoutRotation() )
+		rotationIndex = LoadoutSelection_GetLoadoutForCategoryWithoutDupeWeapons( rotationIndex, loadoutCategory )
+
+#if DEV
+		printt( "LOADOUT SELECTION: loadouts using a rotation, loadout index: " + rotationIndex + " for category: " + loadoutCategory.loadoutSlot )
+#endif
+
+	return loadoutCategory.loadoutContentNames[ rotationIndex ]
+}
+
+
+int function LoadoutSelection_GetLoadoutForCategoryWithoutDupeWeapons( int startingRotationIndex, LoadoutSelectionCategory loadoutCategory )
+{
+	int rotationIndex = startingRotationIndex
+	
+	array < string > dupeWeapons
+	string activeLoadoutNameToTest
+	LoadoutSelectionLoadoutContents contentsToTest
+	foreach ( category in file.loadoutCategories )
+	{
+		if ( category.activeLoadoutName != "" )
+		{
+			activeLoadoutNameToTest = category.activeLoadoutName
+			if ( activeLoadoutNameToTest in category.loadoutContentsByNameTable )
+			{
+				contentsToTest = category.loadoutContentsByNameTable[ activeLoadoutNameToTest ]
+				foreach ( weaponRef in contentsToTest.weaponsInLoadout )
+				{
+					string baseRef = GetBaseWeaponRef( weaponRef )
+					if ( !dupeWeapons.contains( baseRef ) )
+						dupeWeapons.append( baseRef )
+				}
+			}
+		}
+	}
+
+	
+	bool doesLoadoutContainDupes
+	bool didFindValidLoadout = false
+	for ( int index = startingRotationIndex; index < loadoutCategory.loadoutContentNames.len(); index++ )
+	{
+		doesLoadoutContainDupes = false
+		activeLoadoutNameToTest = loadoutCategory.loadoutContentNames[ index ]
+		if ( activeLoadoutNameToTest in loadoutCategory.loadoutContentsByNameTable )
+		{
+			contentsToTest  = loadoutCategory.loadoutContentsByNameTable[ activeLoadoutNameToTest ]
+			foreach ( weaponRef in contentsToTest.weaponsInLoadout )
+			{
+				string baseRef = GetBaseWeaponRef( weaponRef )
+				if ( dupeWeapons.contains( baseRef ) )
+					doesLoadoutContainDupes = true
+			}
+
+			if ( !doesLoadoutContainDupes )
+			{
+				rotationIndex = index
+				didFindValidLoadout = true
+				break
+			}
+		}
+	}
+
+	
+	if ( didFindValidLoadout )
+		return rotationIndex
+
+	
+	if ( !didFindValidLoadout && startingRotationIndex != 0 )
+	{
+		for ( int index = 0; index < startingRotationIndex; index++ )
+		{
+			doesLoadoutContainDupes = false
+			activeLoadoutNameToTest = loadoutCategory.loadoutContentNames[ index ]
+			if ( activeLoadoutNameToTest in loadoutCategory.loadoutContentsByNameTable )
+			{
+				contentsToTest  = loadoutCategory.loadoutContentsByNameTable[ activeLoadoutNameToTest ]
+				foreach ( weaponRef in contentsToTest.weaponsInLoadout )
+				{
+					string baseRef = GetBaseWeaponRef( weaponRef )
+					if ( dupeWeapons.contains( baseRef ) )
+						doesLoadoutContainDupes = true
+				}
+
+				if ( !doesLoadoutContainDupes )
+				{
+					rotationIndex = index
+					didFindValidLoadout = true
+					break
+				}
+			}
+		}
+	}
+
+	
+	return rotationIndex
+}
 
 
 
@@ -1846,12 +1785,8 @@ int function LoadoutSelection_GetLoadoutSlotTypeForLoadoutIndex( int loadoutSlot
 
 
 
-void function ServerCallback_LoadoutSelection_UpdateLoadoutInfo( int loadoutIndex, string loadoutHeaderText, int weaponCount, int loadoutType, int weapon0ScopePref, int weapon1ScopePref )
+void function ServerCallback_LoadoutSelection_UpdateLoadoutInfo( int loadoutIndex, int weapon0ScopePref, int weapon1ScopePref )
 {
-	file.loadoutSlotIndexToHeaderTable[ loadoutIndex ] <- loadoutHeaderText
-	file.loadoutSlotIndexToWeaponCountTable[ loadoutIndex ] <- weaponCount
-	file.loadoutSlotIndexToLoadoutTypeTable[ loadoutIndex ] <- loadoutType
-
 	LoadoutSelectionLoadoutContents	data = LoadoutSelection_GetLoadoutContentsByLoadoutSlotIndex( loadoutIndex )
 	if ( weapon0ScopePref > -1 && weapon0ScopePref <= LOADOUTSELECTION_MAX_SCOPE_INDEX )
 		data.weaponIndexToScopePreferenceTable[ 0 ] <- weapon0ScopePref
@@ -1859,7 +1794,7 @@ void function ServerCallback_LoadoutSelection_UpdateLoadoutInfo( int loadoutInde
 	if ( weapon1ScopePref > -1 && weapon1ScopePref <= LOADOUTSELECTION_MAX_SCOPE_INDEX )
 		data.weaponIndexToScopePreferenceTable[ 1 ] <- weapon1ScopePref
 
-	RunUIScript( "LoadoutSelection_UpdateLoadoutInfo_UI", loadoutIndex, loadoutHeaderText, weaponCount, loadoutType )
+	LoadoutSelection_RefreshAllUILoadoutInfo()
 }
 
 

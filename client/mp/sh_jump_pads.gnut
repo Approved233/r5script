@@ -59,6 +59,15 @@ global array<string> INVALID_GRAVITY_CANNON_PLACEABLES
 
 
 
+
+
+
+
+
+
+
+
+
 const asset GRAVITY_CANNON_CHARGE_FX = $"P_toy_gravity_cannon_charge"
 const TEAM_JUMPJET_DBL = $"P_team_jump_jet_ON_trails"
 const ENEMY_JUMPJET_DBL = $"P_enemy_jump_jet_ON_trails"
@@ -101,6 +110,10 @@ void function Sh_JumpPad_Init()
 	PrecacheParticleSystem( JUMP_PAD_LAUNCH_FX )
 
 
+
+
+
+
 		AddCreateCallback( "trigger_cylinder_heavy", OnJumpPadCreated )
 		AddCallback_OnBleedoutStarted( HideDoubleJumpHint )
 
@@ -110,6 +123,15 @@ void function Sh_JumpPad_Init()
 
 	AddCallback_GivePlayerDoubleJump( StartGivePlayerDoubleJump )
 }
+
+
+
+
+
+
+
+
+
 
 
 
@@ -781,6 +803,29 @@ void function JumpPad_GiveDoubleJump( entity player )
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 				GivePlayerSettingsMods( player, [ "enable_doublejump" ] )
 
 
@@ -789,10 +834,22 @@ void function JumpPad_GiveDoubleJump( entity player )
 
 
 		OnThreadEnd(
+
+
+
 			function() : ( player )
+
 			{
 				if ( IsValid( player ) )
 				{
+
+
+
+
+
+
+
+
 
 
 
@@ -836,6 +893,11 @@ void function OnJumpPadCreated( entity trigger )
 		return
 
 	trigger.SetClientEnterCallback( JumpPad_OnTouchTrigger_Client )
+
+
+
+
+
 }
 
 void function JumpPad_OnTouchTrigger_Client( entity trigger, entity player )

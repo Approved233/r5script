@@ -698,7 +698,7 @@ void function CodeCallback_OnMeleePressed( entity attacker, entity meleeInputWea
 	entity offhandToRestore           = restoreMainOffhandAfterMelee ? currentWeapon : null
 
 	attacker.ClearOffhand( eActiveInventorySlot.mainHand )
-	attacker.PlayerMelee_StartAttack( PLAYER_MELEE_STATE_HUMAN_KICK_ATTACK, offhandToRestore )
+	attacker.PlayerMelee_StartAttack( PLAYER_MELEE_STATE_KICK_ATTACK, offhandToRestore )
 
 	TryDoorLunge( attacker, meleeAttackWeapon )
 
@@ -731,7 +731,6 @@ void function TryDoorLunge( entity attacker, entity lungeWeapon )
 			lungeTarget = eyeTrace.hitEnt
 			eyeTraceHitPos = eyeTrace.endPos
 
-
 			TraceResults rebuiltDoorTrace = TraceLine(
 				attacker.EyePosition(), attacker.EyePosition() + 150.0 * attacker.GetViewVector(),
 				[ attacker ], TRACE_MASK_SHOT, TRACE_COLLISION_GROUP_NONE
@@ -742,14 +741,9 @@ void function TryDoorLunge( entity attacker, entity lungeWeapon )
 				lungeTarget = rebuiltDoorTrace.hitEnt
 				eyeTraceHitPos = rebuiltDoorTrace.endPos
 			}
-
 		}
 
-
 		if ( doorLungeEnabled && IsValid( lungeTarget ) && ( IsDoor( lungeTarget ) || IsRebuiltDoor( lungeTarget ) ) )
-
-
-
 		{
 			lungeWeapon.AddMod( "proto_door_kick" )
 
@@ -823,7 +817,7 @@ void function CodeCallback_OnMeleeAttackAnimEvent( entity attacker, entity melee
 	if ( !attacker.PlayerMelee_IsAttackActive() )
 		return 
 
-	Assert( attacker.PlayerMelee_GetState() == PLAYER_MELEE_STATE_HUMAN_KICK_ATTACK )
+	Assert( attacker.PlayerMelee_GetState() != PLAYER_MELEE_STATE_NONE )
 	Assert( !attacker.PlayerMelee_GetAttackHitEntity() )
 
 
@@ -981,12 +975,13 @@ void function Melee_Attack( entity attacker, entity meleeAttackWeapon, int impac
 	
 	if ( IsValid( target ) )
 	{
+
 		float  knockbackMagnitude	= meleeAttackWeapon.GetWeaponSettingFloat( eWeaponVar.melee_knockback_velocity_magnitude )
 		vector lookDirection		= attacker.GetViewForward()
-		if(shouldHitForward )
+		if ( shouldHitForward )
 		{
 			lookDirection.z = 0
-			lookDirection = Normalize(lookDirection)
+			lookDirection   = Normalize( lookDirection )
 		}
 		vector pushBackVelocity		= knockbackMagnitude * lookDirection
 
@@ -1000,6 +995,10 @@ void function Melee_Attack( entity attacker, entity meleeAttackWeapon, int impac
 					pushBackVelocity = -pushBackVelocity
 				}
 
+
+
+
+
 				if ( target.IsPlayer() )
 				{
 					if ( LengthSqr( pushBackVelocity ) > 0.0 )
@@ -1007,6 +1006,9 @@ void function Melee_Attack( entity attacker, entity meleeAttackWeapon, int impac
 						target.KnockBack( pushBackVelocity, MELEE_KNOCKBACK_DURATION )
 					}
 				}
+
+
+
 
 
 

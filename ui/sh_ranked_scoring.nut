@@ -11,12 +11,16 @@ global function Ranked_HasCompletedProvisionalMatches
 
 
 
+
 global function LoadLPBreakdownFromPersistance
+
+global function GetHighEndLostMultiplier
 
 global const RANKED_LP_PROMOTION_BONUS = 250
 global const RANKED_LP_DEMOTION_PENALITY = 150
 global const float PARTICIPATION_MODIFIER = 0.5
 global const int RANKED_NUM_PROVISIONAL_MATCHES = 10
+global const float HIGH_END_LOST_MULTIPLIER = 1.5
 
 global struct RankLadderPointsBreakdown
 {
@@ -41,6 +45,7 @@ global struct RankLadderPointsBreakdown
 	int participationUnique = 0			
 
 	int placement						
+	int totalSquads						
 	int placementScore					
 
 
@@ -75,7 +80,7 @@ global struct RankLadderPointsBreakdown
 	int finalLP
 
 
-
+		int trialState = 0 
 
 }
 
@@ -155,7 +160,11 @@ int function Ranked_GetNumProvisionalMatchesCompleted( entity player )
 
 
 
-		return GetPersistentVarAsInt( "rankedProvisionalMatchesCompleted" )
+	return Ranked_GetXProgMergedPersistenceData( player, RANKED_PROVISIONAL_MATCH_COUNT_PERSISTENCE_VAR_NAME )
+
+
+
+
 
 
 
@@ -232,14 +241,39 @@ int function Ranked_GetPenaltyPointsForAbandon( )
 
 
 
+
+
 void function LoadLPBreakdownFromPersistance ( RankLadderPointsBreakdown breakdown , entity player)
 {
 	
 	
 	
 	
+
+	string myName 					   	   = GetPlayerName()
+	int mySquadIndex					   = -1
+	int maxTrackedSquadMembers 			   = PersistenceGetArrayCount( "lastGameSquadStats" )
+	for ( int i = 0 ; i < maxTrackedSquadMembers ; i++ )
+	{
+
+		string squadMemberName = expect string( player.GetPersistentVar( "lastGameSquadStats[" + i + "].playerName" ) )
+		if ( squadMemberName == myName )
+		{
+			mySquadIndex = i
+			break
+		}
+	}
+
+	if ( mySquadIndex >= 0 )
+	{
+		breakdown.kills 				   = GetPersistentVarAsInt( "lastGameSquadStats[" + mySquadIndex + "].kills" )
+		breakdown.assists 				   = GetPersistentVarAsInt( "lastGameSquadStats[" + mySquadIndex + "].assists" )
+		breakdown.participationUnique  	   = GetRankedGameData( player, "lastGameParticipationCount" )
+	}
+
 	breakdown.wasAbandoned 				   =  bool ( GetRankedGameData( player,  "lastGameRankedAbandon" ) )
 	breakdown.placement 				   = player.GetPersistentVarAsInt( "lastGameRank" )
+	breakdown.totalSquads				   = player.GetPersistentVarAsInt( "lastGameSquads" )
 	breakdown.placementScore 			   = GetRankedGameData( player, "lastGamePlacementScore" )
 
 	breakdown.wasInProvisonalGame          = Ranked_GetNumProvisionalMatchesCompleted( player ) <= Ranked_GetNumProvisionalMatchesRequired()
@@ -262,10 +296,16 @@ void function LoadLPBreakdownFromPersistance ( RankLadderPointsBreakdown breakdo
 													: 0
 
 
-
+		breakdown.trialState = GetRankedGameData( player, RANKED_TRIALS_PERSISTENCE_STATE_KEY )
 
 
 #if DEV
 		PrintRankLadderPointsBreakdown (breakdown, 1, "LoadLPBreakdownFromPersistance" )
 #endif
+}
+
+
+float function GetHighEndLostMultiplier ()
+{
+	return GetCurrentPlaylistVarFloat( "ranked_tuning_var_high_end_multiplier", HIGH_END_LOST_MULTIPLIER ) 
 }

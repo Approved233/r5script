@@ -254,7 +254,11 @@ void function UpdateSystemMenu()
 				SetButtonData( buttonIndex++, file.abandonMissionButtonData )
 			else if ( IsSurvivalTraining() || IsFiringRangeGameMode() )
 				SetButtonData( buttonIndex++, file.lobbyReturnButtonData )
-			else if( !MenuStack_Contains( GetMenu( "CharacterSelectMenu" ) ) )
+			else if( !MenuStack_Contains( GetMenu( "CharacterSelectMenu" ) )
+
+				&& !MenuStack_Contains( GetMenu( "SpecialCharacterSelectMenu" ) )
+
+			)
 				SetButtonData( buttonIndex++, file.leaveMatchButtonData )
 		}
 
@@ -281,7 +285,11 @@ void function UpdateSystemMenu()
 			SetButtonData( buttonIndex++, file.exitButtonData )
 
 
-		if ( IsPrivateMatchLobby() && !MenuStack_Contains( GetMenu( "CharacterSelectMenu" ) ))
+		if ( IsPrivateMatchLobby() && !MenuStack_Contains( GetMenu( "CharacterSelectMenu" ) )
+
+			&& !MenuStack_Contains( GetMenu( "SpecialCharacterSelectMenu" ) )
+
+		)
 			SetButtonData( buttonIndex++, file.leaveMatchButtonData )
 	}
 

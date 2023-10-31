@@ -9,6 +9,8 @@ const int CLOAK_TRIGGER_RADIUS = 240
 
 const int MIRAGE_ULT_MAX_DECOYS = 5
 
+global function GetMirageCloakDuration
+
 struct
 {
 

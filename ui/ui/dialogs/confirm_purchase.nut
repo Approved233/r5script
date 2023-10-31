@@ -1,19 +1,19 @@
 global function InitConfirmPurchaseDialog
 global function InitConfirmPackBundlePurchaseDialog
 
-
+global function InitConfirmMultiPackBundlePurchaseDialog
 
 global function InitBattlepassPurchaseDialog
 global function InitConfirmPackPurchaseDialog
 
-
-
-
-
-
-
-
-
+global function InitMultiPackDisclosureHeaderPanel
+global function InitApexPackDisclosureDialogContentPanel
+global function InitEventPackDisclosureDialogContentPanel
+global function InitThematicPackDisclosureDialogContentPanel0
+global function InitThematicPackDisclosureDialogContentPanel1
+global function InitThematicPackDisclosureDialogContentPanel2
+global function InitThematicPackDisclosureDialogContentPanel3
+global function InitEventThematicPackDisclosureDialogContentPanel
 
 global function UpdateGiftButtonToolTip
 
@@ -58,7 +58,7 @@ struct
 	var genericPurchaseDialog
 	var packBundlePurchaseDialog
 
-
+	var multiPackBundlePurchaseDialog
 
 	var battlepassPurchaseDialog
 	var packPurchaseDialog
@@ -68,10 +68,10 @@ struct
 
 	var dialogContent
 
+	var dialogHeader
 
-
-
-
+	bool isAllApexPacks
+	bool isMultipackDisclosure = false
 
 
 	var        cancelButton
@@ -358,14 +358,14 @@ void function InitConfirmPackBundlePurchaseDialog( var menu )
 }
 
 
+void function InitConfirmMultiPackBundlePurchaseDialog( var menu )
+{
+	file.multiPackBundlePurchaseDialog = menu
+	InitPurchaseMenu( menu, GetPurchaseButtonArray( menu, MAX_PURCHASE_BUTTONS ) )
+	SetIsSelfClosingMenu( menu, true )
 
-
-
-
-
-
-
-
+	RegisterSignal( "ConfirmPurchaseClosed" )
+}
 
 
 void function InitBattlepassPurchaseDialog( var menu )
@@ -399,12 +399,34 @@ void function InitConfirmPackPurchaseDialog( var newMenuArg )
 	RegisterSignal( "ConfirmPurchaseClosed" )
 }
 
+struct DialogElementReferencesConfig
+{
+	bool hasEventPack = false
+	bool hasThematicPack = false
+	bool hasEventThematicPack = false
+	bool hasStickers = false
+	bool hasSkydives = false
+	bool hasHolosprays = false
+	bool usesMOTDButtonForCount = false
+
+	string disclaimerSpecifics = ""
+}
 
 
+void function UpdateDialogElementReferences( DialogElementReferencesConfig cfg, array<ItemFlavor> packFlavors )
 
-void function UpdateDialogElementReferences( bool hasEventPack, bool hasThematicPack, bool hasEventThematicPack, string disclaimerSpecifics, bool hasStickers, bool hasSkydives, bool usesMOTDButtonForCount )
+
 
 {
+	bool hasEventPack = cfg.hasEventPack
+	bool hasThematicPack = cfg.hasThematicPack
+	bool hasEventThematicPack = cfg.hasEventThematicPack
+	bool hasStickers = cfg.hasStickers
+	bool hasSkydives = cfg.hasSkydives
+	bool hasHolosprays = cfg.hasHolosprays
+	bool usesMOTDButtonForCount = cfg.usesMOTDButtonForCount
+	string disclaimerSpecifics = cfg.disclaimerSpecifics
+
 	file.cancelButton = Hud_GetChild( file.activeDialog, "CancelButton" )
 
 	Assert( ( !hasStickers && hasSkydives ) || ( hasStickers && !hasSkydives ) || ( !hasStickers && !hasSkydives ), "Cannot currently have both Stickers *and* Skydives in Slot 12 of 'Available Item Categories.'" )
@@ -413,59 +435,59 @@ void function UpdateDialogElementReferences( bool hasEventPack, bool hasThematic
 	file.purchaseButtonBottomToTopList = GetPurchaseButtonArray( file.activeDialog, MAX_PURCHASE_BUTTONS )
 
 
+	if ( IsPanelTabbed( file.activeDialog ) )
+		ClearTabs( file.activeDialog )
 
+	
+	if ( file.isMultipackDisclosure )
+	{
+		bool apexDisclosurePresent = false 
+		int thematicPackCount = 0 
 
+		Hud_SetVisible( Hud_GetChild( file.activeDialog, "DialogContentPackHeader" ), true )
 
+		foreach ( ItemFlavor pack in packFlavors )
+		{
+			
+			if ( ItemFlavor_GetGRXMode( pack ) == eItemFlavorGRXMode.PACK && ItemFlavor_GetAccountPackType( pack ) == eAccountPackType.APEX && apexDisclosurePresent == false )
+			{
+				TabDef tabDef = AddTab( file.activeDialog, Hud_GetChild( file.activeDialog, "DialogContentApexPackContent" ), ItemFlavor_GetLongName( pack ) )
+				apexDisclosurePresent = true 
+			}
 
+			
+			if ( ItemFlavor_GetGRXMode( pack ) == eItemFlavorGRXMode.PACK && ItemFlavor_GetAccountPackType( pack ) == eAccountPackType.EVENT )
+			{
+				AddMultiPackDisclosureCollectionEventPackTab( pack )
+			}
 
+			
+			if ( ItemFlavor_GetGRXMode( pack ) == eItemFlavorGRXMode.PACK && ItemFlavor_GetAccountPackType( pack ) == eAccountPackType.THEMATIC )
+			{
+				Assert( thematicPackCount < 4, "We are not set up to accomdate more than 4 different Thematic Packs at once." )
 
+				AddMultiPackDisclosureThematicPackTab( pack, thematicPackCount )
+				thematicPackCount++ 
+			}
 
+			
+			if ( ItemFlavor_GetGRXMode( pack ) == eItemFlavorGRXMode.PACK && ItemFlavor_GetAccountPackType( pack ) == eAccountPackType.EVENT_THEMATIC )
+			{
+				AddMultiPackDisclosureEventThematicPackTab( pack, usesMOTDButtonForCount )
+			}
+		}
 
+		TabData tabData = GetTabDataForPanel( file.activeDialog )
 
+		tabData.centerTabs = true
+		ActivateTab( tabData, 0 )
+		file.dialogContent = _GetActiveTabPanel( file.activeDialog )
+		SetTabBackground( tabData, Hud_GetChild( file.activeDialog, "TabsBackground" ), eTabBackground.STANDARD )
+		SetTabDefsToSeasonal(tabData)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	}
+	else
+	{
 
 	if ( hasEventPack )
 	{
@@ -482,7 +504,7 @@ void function UpdateDialogElementReferences( bool hasEventPack, bool hasThematic
 		Hud_SetVisible( Hud_GetChild( file.activeDialog, "EventThematicDialogContent" ), false )
 
 
-
+			SetThematicPackDisclosureText( packFlavors[ 0 ], file.dialogContent )
 
 	}
 	else if ( hasEventThematicPack )
@@ -491,6 +513,7 @@ void function UpdateDialogElementReferences( bool hasEventPack, bool hasThematic
 		HudElem_SetRuiArg( file.dialogContent, "eventName", disclaimerSpecifics )
 		HudElem_SetRuiArg( file.dialogContent, "hasStickers", hasStickers )
 		HudElem_SetRuiArg( file.dialogContent, "hasSkydives", hasSkydives )
+		HudElem_SetRuiArg( file.dialogContent, "hasHolosprays", hasHolosprays )
 		HudElem_SetRuiArg( file.dialogContent, "usesMOTDButtonForCount", usesMOTDButtonForCount )
 		Hud_SetVisible( Hud_GetChild( file.activeDialog, "DialogContent" ), false )
 		Hud_SetVisible( Hud_GetChild( file.activeDialog, "EventDialogContent" ), false )
@@ -509,7 +532,7 @@ void function UpdateDialogElementReferences( bool hasEventPack, bool hasThematic
 	}
 	Hud_SetVisible( file.dialogContent, true )
 
-
+	}
 
 
 	InitButtonRCP( file.dialogContent )
@@ -520,116 +543,116 @@ void function UpdateDialogElementReferences( bool hasEventPack, bool hasThematic
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+void function InitMultiPackDisclosureHeaderPanel( var panel )
+{
+	file.dialogHeader = panel
+}
+void function InitApexPackDisclosureDialogContentPanel( var panel )
+{
+}
+
+void function InitEventPackDisclosureDialogContentPanel( var panel )
+{
+}
+
+void function InitThematicPackDisclosureDialogContentPanel0( var panel )
+{
+}
+
+void function InitThematicPackDisclosureDialogContentPanel1( var panel )
+{
+}
+
+void function InitThematicPackDisclosureDialogContentPanel2( var panel )
+{
+}
+
+void function InitThematicPackDisclosureDialogContentPanel3( var panel )
+{
+}
+
+void function InitEventThematicPackDisclosureDialogContentPanel( var panel )
+{
+}
+
+void function AddMultiPackDisclosureCollectionEventPackTab( ItemFlavor pack )
+{
+	TabDef tabDef = AddTab( file.activeDialog, Hud_GetChild( file.activeDialog, "DialogContentEventPackContent" ), ItemFlavor_GetLongName( pack ) )
+
+	SetTabBaseWidth( tabDef,340 )
+	var tabPanel = Hud_GetChild( file.activeDialog, "DialogContentEventPackContent" )
+
+	var rui = Hud_GetRui( tabPanel )
+
+	string currentEventName = Localize( ItemFlavor_GetLongName( expect ItemFlavor( file.activeCollectionEvent ) ) )
+	string nameText = Localize( ItemFlavor_GetLongName( HeirloomEvent_GetPrimaryCompletionRewardItem( expect ItemFlavor( file.activeCollectionEvent ) ) ) )
+
+	RuiSetString( rui, "probabilityDescText", Localize( "#COLLECTION_EVENT_PACK_SUBHEADER", currentEventName ) )
+	RuiSetString( rui, "itemDetailsText3", Localize( "#COLLECTION_EVENT_DISCLAIMER_1", currentEventName ) )
+	RuiSetString( rui, "itemDetailsText4", Localize( "#COLLECTION_EVENT_DISCLAIMER_2", currentEventName ) )
+	RuiSetString( rui, "itemDetailsText5", Localize( "#COLLECTION_EVENT_DISCLAIMER_3", currentEventName, nameText ) )
+	RuiSetString( rui, "eventItemDetails", Localize( "#COLLECTION_EVENT_PACK_EVENT_ITEM", currentEventName ) )
+}
+
+void function AddMultiPackDisclosureThematicPackTab( ItemFlavor pack, int panelCount )
+{
+	string panelName = "DialogContentThematicPackContent" + panelCount.tostring()
+
+	TabDef tabDef = AddTab( file.activeDialog, Hud_GetChild( file.activeDialog, panelName ), ItemFlavor_GetLongName( pack ) )
+
+	SetTabBaseWidth( tabDef,340 )
+	var tabPanel = tabDef.panel
+
+	SetThematicPackDisclosureText( pack, tabPanel )
+}
+
+void function AddMultiPackDisclosureEventThematicPackTab( ItemFlavor pack, bool usesMOTDButtonForCount )
+{
+	TabDef tabDef = AddTab( file.activeDialog, Hud_GetChild( file.activeDialog, "DialogContentEventThematicPackContent" ), ItemFlavor_GetLongName( pack ) )
+
+	SetTabBaseWidth( tabDef,340 )
+	var tabPanel = Hud_GetChild( file.activeDialog, "DialogContentEventThematicPackContent" )
+
+	bool multipackHasStickers = GetGlobalSettingsBool( ItemFlavor_GetAsset( pack ), "hasStickers" )
+	bool multipackHasSkydives = GetGlobalSettingsBool( ItemFlavor_GetAsset( pack ), "hasSkydives" )
+
+	Assert( ( !multipackHasStickers && multipackHasSkydives ) || ( multipackHasStickers && !multipackHasSkydives ) || ( !multipackHasStickers && !multipackHasSkydives ), "Cannot currently have both Stickers *and* Skydives in Slot 12 of 'Available Item Categories.'" )
+
+	HudElem_SetRuiArg( tabPanel, "eventName", Localize( ItemFlavor_GetShortName( pack ) ) )
+	HudElem_SetRuiArg( tabPanel, "hasStickers", multipackHasStickers )
+	HudElem_SetRuiArg( tabPanel, "hasSkydives", multipackHasSkydives )
+	HudElem_SetRuiArg( tabPanel, "usesMOTDButtonForCount", usesMOTDButtonForCount )
+}
+
+void function SetThematicPackDisclosureText( ItemFlavor pack, var tabPanel )
+{
+	ItemFlavor ornull packTheme = null
+	asset themeAsset = GetGlobalSettingsAsset( ItemFlavor_GetAsset( pack ), "themeFlavor" )
+
+	if ( IsValidItemFlavorSettingsAsset( themeAsset ) )
+	{
+		packTheme = GetItemFlavorByAsset( themeAsset )
+		var rui = Hud_GetRui( tabPanel )
+
+		
+		if ( ItemFlavor_GetType( expect ItemFlavor( packTheme ) ) == eItemType.character )
+		{
+			RuiSetString( rui, "probabilityDescText", Localize( "#PACK_BUNDLE_LEGEND_THEMATIC_PROBABILITIES_DESC" ) )
+			RuiSetString( rui, "itemProbabilitiesBlob", Localize( "#PACK_BUNDLE_LEGEND_THEMATIC_ITEM_PROBABILITIES_BLOB" ) )
+			RuiSetString( rui, "generalItemContentDetails3", Localize( "#PACK_BUNDLE_LEGEND_THEMATIC_ITEM_DETAILS_3" ) )
+			RuiSetString( rui, "generalItemContentDetails4", Localize( "#PACK_BUNDLE_LEGEND_THEMATIC_ITEM_DETAILS_4" ) )
+			RuiSetString( rui, "generalItemContentDetails5", Localize( "#PACK_BUNDLE_LEGEND_THEMATIC_ITEM_DETAILS_5" ) )
+		}
+		else if ( ItemFlavor_GetType( expect ItemFlavor( packTheme ) ) == eItemType.weapon_category )
+		{
+			RuiSetString( rui, "probabilityDescText", Localize( "#PACK_BUNDLE_WEAPON_THEMATIC_PROBABILITIES_DESC" ) )
+			RuiSetString( rui, "itemProbabilitiesBlob", Localize( "#PACK_BUNDLE_WEAPON_THEMATIC_ITEM_PROBABILITIES_BLOB" ) )
+			RuiSetString( rui, "generalItemContentDetails3", Localize( "#PACK_BUNDLE_WEAPON_THEMATIC_ITEM_DETAILS_3" ) )
+			RuiSetString( rui, "generalItemContentDetails4", Localize( "#PACK_BUNDLE_WEAPON_THEMATIC_ITEM_DETAILS_4" ) )
+			RuiSetString( rui, "generalItemContentDetails5", Localize( "#PACK_BUNDLE_WEAPON_THEMATIC_ITEM_DETAILS_5" ) )
+		}
+	}
+}
 
 
 void function PurchaseDialog( PurchaseDialogConfig cfg )
@@ -646,8 +669,8 @@ void function PurchaseDialog( PurchaseDialogConfig cfg )
 	file.activeCollectionEvent = GetActiveCollectionEvent( GetUnixTimestamp() )
 	Hud_SetVisible( file.giftButton, false )
 
-
-
+	file.isMultipackDisclosure = false
+	file.isAllApexPacks = false
 
 
 	bool hasApexPack = false
@@ -659,13 +682,14 @@ void function PurchaseDialog( PurchaseDialogConfig cfg )
 
 	bool hasStickers = false
 	bool hasSkydives = false
+	bool hasHolosprays = false
 	bool isBattlepass = false
 	bool usesMOTDButtonForCount = false
 	file.isGiftableLegend = false
 	file.isGiftableOnly = false
 
 
-
+	array<ItemFlavor> packFlavors
 
 
 	if ( cfg.flav != null )
@@ -725,15 +749,15 @@ void function PurchaseDialog( PurchaseDialogConfig cfg )
 		SetCachedOfferAlias( offer.offerAlias )
 
 
+		foreach ( GRXStoreOfferItem item in offer.items )
+		{
+			ItemFlavor itemFlav = GetItemFlavorByGRXIndex( item.itemIdx )
 
-
-
-
-
-
-
-
-
+			if ( ItemFlavor_GetType( itemFlav ) == eItemType.account_pack )
+			{
+				packFlavors.append( itemFlav )
+			}
+		}
 
 
 		if ( GRXOffer_ContainsPack( offer ) )
@@ -747,7 +771,7 @@ void function PurchaseDialog( PurchaseDialogConfig cfg )
 			hasEventThematicPack = GRXOffer_ContainsEventThematicPack( offer )
 			specialPackName = Localize( GRXOffer_GetSpecialPackName( offer ) )
 
-
+			file.isAllApexPacks = !hasEventPack && !hasThematicPack && !hasEventThematicPack && hasApexPack
 
 
 			bool isEventPackPurchaseOffer = isOnlyPackOffer && ( hasEventPack || hasEventThematicPack )
@@ -759,12 +783,12 @@ void function PurchaseDialog( PurchaseDialogConfig cfg )
 				RuiSetBool( Hud_GetRui( Hud_GetChild( file.activeDialog, "DialogBackground" ) ) , "isPackSelection", true )
 			}
 
-
-
-
-
-
-
+			else if ( packFlavors.len() > 1 && !file.isAllApexPacks )
+			{
+				file.activeDialog = file.multiPackBundlePurchaseDialog
+				file.isMultipackDisclosure = true
+				RuiSetBool( Hud_GetRui( Hud_GetChild( file.activeDialog, "DialogBackground" ) ) , "isPackSelection", false )
+			}
 
 			else
 			{
@@ -774,6 +798,7 @@ void function PurchaseDialog( PurchaseDialogConfig cfg )
 
 			hasStickers = GRXOffer_GetSpecialPackContainsStickers( offer )
 			hasSkydives = GRXOffer_GetSpecialPackContainsSkydives( offer )
+			hasHolosprays = GRXOffer_GetSpecialPackContainsHolosprays( offer )
 			usesMOTDButtonForCount = GRXOffer_GetSpecialPackCountShownOnMOTD( offer )
 		}
 
@@ -792,15 +817,25 @@ void function PurchaseDialog( PurchaseDialogConfig cfg )
 		return
 	}
 
+	DialogElementReferencesConfig dialogRefConfig
+	dialogRefConfig.hasEventPack           = hasEventPack
+	dialogRefConfig.hasThematicPack        = hasThematicPack
+	dialogRefConfig.hasEventThematicPack   = hasEventThematicPack
+	dialogRefConfig.hasStickers            = hasStickers
+	dialogRefConfig.hasSkydives            = hasSkydives
+	dialogRefConfig.hasHolosprays          = hasHolosprays
+	dialogRefConfig.usesMOTDButtonForCount = usesMOTDButtonForCount
+	dialogRefConfig.disclaimerSpecifics    = specialPackName
+
+
+	UpdateDialogElementReferences( dialogRefConfig, packFlavors )
 
 
 
-	UpdateDialogElementReferences( hasEventPack, hasThematicPack, hasEventThematicPack, specialPackName, hasStickers, hasSkydives, usesMOTDButtonForCount )
 
 
-
-
-
+	if ( !file.isMultipackDisclosure )
+	{
 
 		if ( hasEventPack && file.dialogContent == Hud_GetChild( file.activeDialog, "EventDialogContent" ) )
 		{
@@ -815,7 +850,7 @@ void function PurchaseDialog( PurchaseDialogConfig cfg )
 			RuiSetString( rui, "eventItemDetails", Localize( "#COLLECTION_EVENT_PACK_EVENT_ITEM", currentEventName ) )
 		}
 
-
+	}
 
 	EmitUISound( "UI_Menu_Cosmetic_Unlock" )
 	AdvanceMenu( file.activeDialog )
@@ -1044,11 +1079,11 @@ void function OnPurchaseOperationFinished( int status, GRXScriptOffer offer, Ite
 	if ( wasSuccessful )
 	{
 
-
-
-
-
-
+		offer.purchaseCount += quantity
+		if ( GRXOffer_IsPurchaseLimitReached( offer ) )
+		{
+			offer.ineligibilityCode = eIneligibilityCode.PURCHASE_LIMIT
+		}
 
 
 		
@@ -1217,23 +1252,23 @@ void function UpdatePurchaseDialog()
 	printt( "UpdatePurchaseDialog", devDesc )
 
 
+	if ( file.isMultipackDisclosure )
+	{
+		HudElem_SetRuiArg( file.dialogHeader, "quality", quality )
+		HudElem_SetRuiArg( file.dialogHeader, "qualityText", Localize( qualityText ) )
+		HudElem_SetRuiArg( file.dialogHeader, "quantity", file.state.cfg.quantity )
+		HudElem_SetRuiArg( file.dialogHeader, "messageText", messageText )
+	}
+	else
+	{
+		HudElem_SetRuiArg( file.dialogContent, "quality", quality )
+		HudElem_SetRuiArg( file.dialogContent, "qualityText", Localize( qualityText ) )
+		HudElem_SetRuiArg( file.dialogContent, "quantity", file.state.cfg.quantity )
+	}
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-	HudElem_SetRuiArg( file.dialogContent, "quality", quality )
-	HudElem_SetRuiArg( file.dialogContent, "qualityText", Localize( qualityText ) )
-	HudElem_SetRuiArg( file.dialogContent, "quantity", file.state.cfg.quantity )
 
 
 	HudElem_SetRuiArg( file.dialogContent, "giftRecipient", "" )
@@ -1247,16 +1282,16 @@ void function UpdatePurchaseDialog()
 		string gifterName = GetFriendNameFromNucleusPId( recipient.activeNucleusPersonaId, eadFriendlist.people )
 
 
+		if ( file.isMultipackDisclosure  )
+		{
+			HudElem_SetRuiArg( file.dialogHeader, "headerText", "#CONFIRM_PURCHASE_HEADER" )
+		}
+		else
+		{
+			HudElem_SetRuiArg( file.dialogContent, "headerText", "#BUY_GIFT" )
+		}
 
 
-
-
-
-
-
-
-
-		HudElem_SetRuiArg( file.dialogContent, "headerText", "#BUY_GIFT" )
 
 
 		HudElem_SetRuiArg( file.dialogContent, "giftRecipient", gifterName )
@@ -1264,31 +1299,31 @@ void function UpdatePurchaseDialog()
 	else
 	{
 
+		if ( file.isMultipackDisclosure  )
+		{
+			HudElem_SetRuiArg( file.dialogHeader, "headerText", "#CONFIRM_PURCHASE_HEADER" )
+		}
+		else
+		{
+			HudElem_SetRuiArg( file.dialogContent, "headerText", "#CONFIRM_PURCHASE_HEADER" )
+		}
 
 
-
-
-
-
-
-
-
-	HudElem_SetRuiArg( file.dialogContent, "headerText", "#CONFIRM_PURCHASE_HEADER" )
 
 
 	}
 
 
+	if ( file.isMultipackDisclosure )
+	{
+		HudElem_SetRuiArg( file.dialogHeader, "messageText", messageText )
+	}
+	else
+	{
+		HudElem_SetRuiArg( file.dialogContent, "messageText", messageText )
+	}
 
 
-
-
-
-
-
-
-
-	HudElem_SetRuiArg( file.dialogContent, "messageText", messageText )
 
 
 	HudElem_SetRuiArg( file.dialogContent, "reqsText", prereqText )
@@ -1333,7 +1368,7 @@ void function UpdatePurchaseDialog()
 				{
 					if ( ItemFlavor_GetTypeName( GetItemFlavorByGRXIndex( offer.items[0].itemIdx ) ) == "#itemtype_battlepass_purchased_xp_NAME" )
 					{
-						ItemFlavor ornull activeEventShop = GetActiveEventShop( GetUnixTimestamp() )
+						ItemFlavor ornull activeEventShop = EventShop_GetCurrentActiveEventShop()
 						if ( activeEventShop != null )
 						{
 							if ( price.flavors[0] == EventShop_GetEventShopCurrency( expect ItemFlavor( activeEventShop ) ) )
@@ -1349,7 +1384,16 @@ void function UpdatePurchaseDialog()
 			Hud_Show( button )
 			HudElem_SetRuiArg( button, "buttonText", offer.isCraftingOffer ? "#CONFIRM_CRAFT_WITH" : "#CONFIRM_PURCHASE_WITH" )
 			HudElem_SetRuiArg( button, "priceText", GRX_GetFormattedPrice( price, file.state.cfg.quantity ) )
-			HudElem_SetRuiArg( file.giftButton, "priceText", GRX_GetFormattedPrice( price, file.state.cfg.quantity ) )
+
+			if ( IsTwoFactorAuthenticationEnabled() )
+			{
+				HudElem_SetRuiArg( file.giftButton, "priceText", GRX_GetFormattedPrice( price, file.state.cfg.quantity ) )
+			}
+			else
+			{
+				HudElem_SetRuiArg( file.giftButton, "priceText", "" )
+			}
+
 			HudElem_SetRuiArg( button, "isProcessing", false )
 
 			bool isLoadingPrice = false
@@ -1413,9 +1457,9 @@ void function UpdatePurchaseDialog()
 	int buttonPadding = Hud_GetY( file.purchaseButtonBottomToTopList[0] )
 
 
+	if ( file.activeDialog == file.packBundlePurchaseDialog || file.activeDialog == file.packPurchaseDialog || file.activeDialog == file.multiPackBundlePurchaseDialog )
 
 
-	if ( file.activeDialog == file.packBundlePurchaseDialog || file.activeDialog == file.packPurchaseDialog )
 
 		return
 	UpdateAffordabilityAndButtonPositions( canAffordPremiumAndCraft, isWithPack, usedPurchaseButtonCount )
@@ -1538,6 +1582,21 @@ string function GetExtraPurchaseTooltipInfo( ItemFlavor currency )
 	return ""
 }
 
+string function GetCantAffordTooltipDesc( ItemFlavorBag price, string priceDeltaText, ItemFlavor currency, string currencyName )
+{
+	bool isPremiumNegativeBalance = GRXCurrency_GetPlayerBalance( GetLocalClientPlayer(), GRX_CURRENCIES[GRX_CURRENCY_PREMIUM] ) < 0
+	bool isPremiumCurrency = false
+	foreach ( int costIndex, ItemFlavor costFlav in price.flavors )
+	{
+		if ( costFlav == GRX_CURRENCIES[GRX_CURRENCY_PREMIUM] )
+		{
+			isPremiumCurrency = true
+		}
+	}
+
+	return isPremiumNegativeBalance && isPremiumCurrency ? Localize( "#CANNOT_AFFORD_NEGATIVE", priceDeltaText, currencyName ) : Localize( "#CANNOT_AFFORD_DESC", priceDeltaText, currencyName ) + GetExtraPurchaseTooltipInfo( currency )
+}
+
 vector function GetTooltipAltDescColorFromCurrency( ItemFlavor currency )
 {
 	vector color = <1,1,1>
@@ -1627,18 +1686,18 @@ void function SetPurchaseButtonAndTooltip( ItemFlavorBag price, var button, GRXS
 	}
 
 	Hud_ClearToolTipData( file.giftButton )
+	bool canGift = CanLocalPlayerGift()
 	int giftsLeft = Gifting_GetRemainingDailyGifts()
-	bool isWithinGiftingLimit = IsPlayerWithinGiftingLimit()
 	HudElem_SetRuiArg( file.giftButton, "descText", Localize( "#GIFTS_LEFT_FRACTION", giftsLeft ) )
 	HudElem_SetRuiArg( file.giftButton, "buttonText", Localize( "#BUY_GIFT_STAR" ) )
-	HudElem_SetRuiArg( file.giftButton, "canGift", isWithinGiftingLimit )
+	HudElem_SetRuiArg( file.giftButton, "canGift", canGift )
 
 	Hud_SetEnabled( file.giftButton, false )
 	Hud_SetLocked( file.giftButton, false )
 
+	UpdateGiftButtonToolTip( file.giftButton, price, canAffordPremiumAndCraft, file.activeDialog, file.state.cfg.quantity, file.isMultipackDisclosure, false )
 
 
-	UpdateGiftButtonToolTip( file.giftButton, price, canAffordPremiumAndCraft, file.activeDialog, file.state.cfg.quantity, false )
 
 }
 
@@ -1695,13 +1754,30 @@ void function UpdatePackQuantitySelectionButtons()
 			Hud_SetLocked( button, false )
 			if ( !file.state.cfg.isGiftPack )
 			{
-				if ( file.activeCollectionEvent == null )
-					return
+				int currentMaxEventPackPurchaseCount
+				bool cannotBuy
+				ItemFlavor activeEvent
 
-				ItemFlavor activeEvent = expect ItemFlavor( file.activeCollectionEvent )
+				if ( file.activeCollectionEvent == null  )
+				{
+					if ( GRXOffer_ContainsEventThematicPack( offer ) != false )
+					{
+						GRX_PackCollectionInfo colInfo = GRXOffer_GetEventThematicPackCollectionInfoFromScriptOffer( offer )
 
-				int currentMaxEventPackPurchaseCount = CollectionEvent_GetCurrentMaxEventPackPurchaseCount( activeEvent , GetLocalClientPlayer() )
-				bool cannotBuy = quantity > currentMaxEventPackPurchaseCount
+						currentMaxEventPackPurchaseCount = colInfo.numTotalInCollection
+						cannotBuy = quantity > currentMaxEventPackPurchaseCount - colInfo.numCollected
+
+					}
+					else
+						return
+				}
+				else
+				{
+					activeEvent = expect ItemFlavor( file.activeCollectionEvent )
+
+					currentMaxEventPackPurchaseCount = CollectionEvent_GetCurrentMaxEventPackPurchaseCount( activeEvent , GetLocalClientPlayer() )
+					cannotBuy = quantity > currentMaxEventPackPurchaseCount
+				}
 
 				if ( cannotBuy )
 				{
@@ -1710,7 +1786,12 @@ void function UpdatePackQuantitySelectionButtons()
 					toolTipData.tooltipFlags = toolTipData.tooltipFlags | eToolTipFlag.SOLID
 					toolTipData.tooltipStyle = eTooltipStyle.STORE_CONFIRM
 					toolTipData.storeTooltipData.tooltipAltDescColor = SrgbToLinear( TOOLTIP_COLOR_ORANGE / 255 )
-					toolTipData.descText = Localize( "#COLLECTION_CANNOT_PURCHASE_DESC", currentMaxEventPackPurchaseCount, HeirloomEvent_GetItemCount( activeEvent, false ) )
+
+					if ( file.activeCollectionEvent != null )
+						toolTipData.descText = Localize( "#COLLECTION_CANNOT_PURCHASE_DESC", currentMaxEventPackPurchaseCount, HeirloomEvent_GetItemCount( activeEvent, false ) )
+					else
+						toolTipData.descText = ""
+
 					Hud_SetToolTipData( button, toolTipData )
 				}
 
@@ -1740,10 +1821,10 @@ void function UpdateCollectionPackPurchaseButton( int quantity )
 			bool isPurchasable = quantity <= CollectionEvent_GetCurrentMaxEventPackPurchaseCount( event , GetLocalClientPlayer() )
 
 
-
-
-
-
+			if ( GetConVarBool( "mtx_useIneligibilityCode" ) && isPurchasable && file.state.cfg.offer != null )
+			{
+				isPurchasable = GRXOffer_IsEligibleForPurchase( expect GRXScriptOffer( file.state.cfg.offer ) )
+			}
 
 
 			Hud_SetLocked( file.purchaseButtonBottomToTopList[0], !isPurchasable )
@@ -1776,9 +1857,9 @@ void function GiftButton_Activate( var button )
 }
 
 
+void function UpdateGiftButtonToolTip( var giftButton, ItemFlavorBag price, array<bool> canAffordPremiumAndCraft, var activeDialog, int quantity, bool multipackDisclosure, bool inspectButton )
 
 
-void function UpdateGiftButtonToolTip( var giftButton, ItemFlavorBag price, array<bool> canAffordPremiumAndCraft, var activeDialog, int quantity, bool inspectButton )
 
 {
 	bool canAfford     = GRX_CanAfford( price, file.state.cfg.quantity )
@@ -1792,13 +1873,17 @@ void function UpdateGiftButtonToolTip( var giftButton, ItemFlavorBag price, arra
 
 	ToolTipData giftToolTipData
 
-	if ( IsTwoFactorAuthenticationEnabled() )
+	if ( !IsTwoFactorAuthenticationEnabled() )
 	{
 		GiftButtonToolTipTwoFactor( giftToolTipData, giftButton, inspectButton )
 	}
 	else if ( !IsPlayerWithinGiftingLimit() )
 	{
 		GiftButtonToolTipGiftingLimit( giftToolTipData, giftButton )
+	}
+	else if( !IsPlayerLeveledForGifting() )
+	{
+		GiftButtonToolTipNotHighEnoughLevel( giftButton )
 	}
 	else if ( !canAfford )
 	{
@@ -1823,51 +1908,51 @@ void function ButtonCurrencyCheck( ItemFlavor currency, string currencyName, arr
 		if ( !canAfford )
 		{
 
+			if ( currency == GRX_CURRENCIES[GRX_CURRENCY_PREMIUM] )
+			{
+				canAffordPremiumAndCraft[0] = false
+			}
+			else if ( currency == GRX_CURRENCIES[GRX_CURRENCY_CRAFTING] )
+			{
+				canAffordPremiumAndCraft[1] = false
+			}
+			else if ( currency == GRX_CURRENCIES[GRX_CURRENCY_HEIRLOOM] )
+			{
+				canAffordPremiumAndCraft[1] = false
+			}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+			if ( file.isMultipackDisclosure )
+			{
+				break 
+			}
 
 			if ( activeDialog != null )
 			{
 				var rui = Hud_GetRui( Hud_GetChild( activeDialog, "DialogContent" ) )
 
-
-
-
-
-
-
-
-
-
-				if ( currency == GRX_CURRENCIES[GRX_CURRENCY_PREMIUM] )
+				if ( currency == GRX_CURRENCIES[GRX_CURRENCY_CRAFTING] )
 				{
-					canAffordPremiumAndCraft[0] = false
-				}
-				else if ( currency == GRX_CURRENCIES[GRX_CURRENCY_CRAFTING] )
-				{
-					canAffordPremiumAndCraft[1] = false
 					RuiSetString( rui, "getPacksDescText", "CONFIRM_COSMETIC_DESCRIPTION" )
 				}
 				else if ( currency == GRX_CURRENCIES[GRX_CURRENCY_HEIRLOOM] )
 				{
-					canAffordPremiumAndCraft[1] = false
 					RuiSetString( rui, "getPacksDescText", "CONFIRM_COSMETIC_HEIRLOOM_DESCRIPTION" )
 				}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 			}
 		}
@@ -1923,7 +2008,13 @@ void function ButtonToolTipCantAfford( ToolTipData toolTipData, var button, Item
 	toolTipData.tooltipFlags = toolTipData.tooltipFlags | eToolTipFlag.SOLID
 	toolTipData.tooltipStyle = eTooltipStyle.STORE_CONFIRM
 	toolTipData.storeTooltipData.tooltipAltDescColor = GetTooltipAltDescColorFromCurrency( currency )
-	toolTipData.descText = Localize( "#CANNOT_AFFORD_DESC", priceDeltaText, currencyName ) + GetExtraPurchaseTooltipInfo( currency )
+	toolTipData.descText = GetCantAffordTooltipDesc( price, priceDeltaText, currency, currencyName )
 
 	Hud_SetToolTipData( button, toolTipData )
+}
+
+void function GiftButtonToolTipNotHighEnoughLevel( var giftButton  )
+{
+	HudElem_SetRuiArg( giftButton, "buttonText", Localize( "#LOCKED_GIFT" ) )
+	Hud_SetLocked( giftButton, true )
 }

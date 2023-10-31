@@ -178,6 +178,10 @@ void function JumpToChallengesLink ( string link )
 			button = challengePanelData.claimedLargeButtons[eChallengeTimeSpanKind.EVENT]
 			break
 
+		case "challengeseventshop":
+			button = challengePanelData.claimedLargeButtons[eChallengeTimeSpanKind.EVENTSHOP_DAILY_CHALLENGE]
+			break
+
 		case "challengesspecial1":
 			button = challengePanelData.claimedLargeButtons[eChallengeTimeSpanKind.EVENT_SPECIAL]
 			break
@@ -383,6 +387,20 @@ void function AllChallengesMenu_UpdateCategories( bool ornull isShown )
 						group.groupName = Localize( "#CATEGORY_FAVORITES" )
 						RuiSetGameTime( Hud_GetRui( button ), "expireTime", RUI_BADGAMETIME )
 						HudElem_SetRuiArg( button, "isTrackedCategory", true )
+					}
+				}
+				else if ( group.timeSpanKind == eChallengeTimeSpanKind.EVENTSHOP_DAILY_CHALLENGE )
+				{
+					if ( group.challenges.len() > 0 )
+					{
+						button = ClaimLargeGroupButton( panelData, group.timeSpanKind )
+						ItemFlavor eventShopFlav = Challenge_GetSource( group.challenges[0] )
+						Assert( ItemFlavor_GetType( eventShopFlav ) == eItemType.calevent_event_shop )
+
+						int remainingDuration = GetPersistentVarAsInt( "dailyExpirationTime" ) - Daily_GetCurrentTime()
+						EventShopData data = EventShop_GetEventShopData( eventShopFlav )
+						group.groupName = Localize ( data.eventShopButtonText )
+						RuiSetGameTime( Hud_GetRui( button ), "expireTime", remainingDuration > 0 ? ClientTime() + remainingDuration : RUI_BADGAMETIME )
 					}
 				}
 				else
@@ -653,7 +671,7 @@ void function AllChallengesMenu_UpdateActiveGroup()
 			}
 		}
 
-		if ( group.timeSpanKind == eChallengeTimeSpanKind.BEGINNER )
+		if ( group.timeSpanKind == eChallengeTimeSpanKind.BEGINNER || group.timeSpanKind == eChallengeTimeSpanKind.EVENTSHOP_DAILY_CHALLENGE )
 		{
 			pinnedChallenges = []
 		}
@@ -743,8 +761,6 @@ void function PutChallengeOnFullChallengeWidget( var button, ItemFlavor challeng
 	else if ( timeSpan == eChallengeTimeSpanKind.MYTHIC )
 	{
 		mythicSkinEnabled = true
-
-
 	}
 
 	int displayTier = Challenge_GetCurrentTier( GetLocalClientPlayer(), challenge )

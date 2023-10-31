@@ -146,6 +146,10 @@ void function MpWeaponBow_Init()
 	PrecacheModel( SINGLE_ARROW_MODEL )
 	PrecacheModel( SINGLE_ARROW_MODEL_PICKUP )
 
+
+
+
+
 	file.fxLightAssets1p = {}
 	string settingStr
 	foreach ( string optic, array<string> attachments in fxLightPointsForOptic )
@@ -925,3 +929,29 @@ void function StopChargeFX( entity weapon )
 		weapon.StopWeaponEffect( fx1p, $"" )
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

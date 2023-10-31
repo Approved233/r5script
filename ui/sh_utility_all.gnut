@@ -835,6 +835,13 @@ bool function Halloween18_IsModeEnabled()
 
 
 
+
+
+
+
+
+
+
 bool function GunGame_IsModeEnabled()
 {
 	return GetCurrentPlaylistVarBool( "freedm_gun_game_active", false)
@@ -2218,8 +2225,10 @@ bool function IsLobbyEvent1Active()
 		}
 #endif
 
-	if ( IsHarbingersEventActive() )
+
+	if ( IsAcidWraithEventActive() )
 		return true
+
 
 	return false
 }
@@ -2238,28 +2247,38 @@ bool function IsLobbyEvent2Active()
 		}
 #endif
 
-	if ( IsDoppleGangersEventActive() )
+
+	if ( IsUprisingEventActive() )
 		return true
+
 
 	return false
 
 }
 
-bool function IsHarbingersEventActive()
+
+bool function IsUprisingEventActive()
 {
-	if ( CalEvent_IsActive( GetItemFlavorByAsset( $"settings/itemflav/calevent/s18ce02/collection.rpak" ), GetUnixTimestamp() ) )
+	if ( CalEvent_IsActive( GetItemFlavorByAsset( $"settings/itemflav/calevent/s19ce01/collection.rpak" ), GetUnixTimestamp() ) )
 		return true
 
 	return false
 }
 
 
-bool function IsDoppleGangersEventActive()
+
+bool function IsAcidWraithEventActive()
 {
-	if ( CalEvent_IsActive( GetItemFlavorByAsset( $"settings/itemflav/calevent/s18ce03/collection.rpak" ), GetUnixTimestamp() ) )
+	if ( CalEvent_IsActive( GetItemFlavorByAsset( $"settings/itemflav/calevent/s19fe01/event_shop.rpak" ), GetUnixTimestamp() ) )
 		return true
 
 	return false
+}
+
+
+bool function IsVDUDialogueEnabled()
+{
+	return GetCurrentPlaylistVarBool( "enable_vdu_dialogue", false )
 }
 
 bool function IsSurvivalTraining()
@@ -2314,7 +2333,7 @@ bool function FreelanceSystemsAreEnabled()
 
 bool function SpectreShacksAreEnabled()
 {
-	return GetCurrentPlaylistVarBool( "spectre_shacks_enabled", true )
+	return GetCurrentPlaylistVarBool( "spectre_shacks_enabled", false ) 
 }
 
 
@@ -3477,21 +3496,21 @@ void function SetConVarFloatFromPlaylist( string varName, float floatVal )
 }
 
 
+string function GetMergedPlatformIdForPlayer( entity player )
+{
+
+	Assert( player == GetLocalClientPlayer() )
+
+
+	string platformId = ""
 
 
 
+	platformId = HARDWARE_TO_MERGED_PLATFORM[GetHardwareFromName( GetPlayerHardware() )]
 
-
-
-
-
-
-
-
-
-
-
-
+	Assert( platformId != "" )
+	return platformId
+}
 
 
 
@@ -4048,6 +4067,19 @@ bool function DEV_ForceLoadAllEntityTypes()
 	return GetCurrentPlaylistVarBool( "dev_force_load_all_entity_types", DEV_FORCE_LOAD_ALL_ENTITIES )
 }
 #endif
+
+
+bool function IsRevTakeover()
+{
+	return GetCurrentPlaylistVarBool("rev_takeover", false)
+}
+
+
+
+
+
+
+
 
 
 

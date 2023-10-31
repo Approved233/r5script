@@ -202,6 +202,7 @@ void function OnShowScoreboardPanel( var panel )
 	}
 
 	RegisterButtonPressedCallback( KEY_F, HandleViewProfileScoreboardPlayer )
+	RegisterButtonPressedCallback( BUTTON_Y, HandleViewProfileScoreboardPlayer )
 
 	UpdateFooterOptions()
 }
@@ -227,6 +228,7 @@ void function OnHideScoreboardPanel( var panel )
 	}
 
 	DeregisterButtonPressedCallback( KEY_F, HandleViewProfileScoreboardPlayer )
+	DeregisterButtonPressedCallback( BUTTON_Y, HandleViewProfileScoreboardPlayer )
 }
 
 void function RegisterEvents( var panel )
@@ -497,6 +499,11 @@ float function GetHPadding( var panel )
 	float screenSizeFrac = GetScreenSize().height / 1080.0
 	if( ShouldUseTinyMode(panel ) )
 		return 22.0 * screenSizeFrac
+
+
+	if( DeathScreenIsOpen() && Control_IsModeEnabled() )
+		return 100.0 * screenSizeFrac
+
 
 	return 35.0 * screenSizeFrac
 }

@@ -193,9 +193,7 @@ void function MpWeaponRiotDrill_Init()
 	file.fxOption_impactTableFXEnterRefire	= GetCurrentPlaylistVarFloat( "breaching_spike_impact_fx_enter_refire", 0.2 )
 	file.fxOption_impactTableFXExitRefire	= GetCurrentPlaylistVarFloat( "breaching_spike_impact_fx_exit_refire", 0.2 )
 
-
 	file.shieldScriptNames.append( MOBILE_SHIELD_SCRIPTNAME )
-
 	file.shieldScriptNames.append( BUBBLE_SHIELD_SCRIPTNAME )
 	file.shieldScriptNames.append( AMPED_WALL_SCRIPT_NAME )
 	file.shieldScriptNames.append( ECHO_LOCATOR_SCRIPT_NAME )

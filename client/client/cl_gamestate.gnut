@@ -9,6 +9,7 @@ global function ClGameState_SetHasScreenBorder
 
 global function AddCallback_OnScoreboardCreated
 global function AddCallback_OnGameStateChanged
+global function ClWaittillGameStateOrHigher
 
 global function ShowRoundScoresInAnnouncement
 
@@ -39,6 +40,8 @@ global function ClGameState_SetSwitchingSidesSubText
 global function UpdateIsSonyMP
 
 global function HasWaitingGameStateArtHud
+
+global function ClientCodeCallback_ToggleGamePaused
 
 global enum ePlayerStatusType
 {
@@ -104,10 +107,20 @@ struct
 
 const DEV_COUNTDOWNTIMER = 0
 
+void function ClientCodeCallback_ToggleGamePaused( bool isPaused )
+{
+	if ( !file.gameStateRuiCreated )
+		return
 
+	if ( !GetConVarBool( "pause_ui" ) && isPaused )
+		return
 
-
-
+	RuiSetBool( file.gamestateRui, "showPauseMessage", isPaused )
+	if ( isPaused )
+		GfxDesaturateOn()
+	else
+		GfxDesaturateOff()
+}
 
 void function ClGameState_Init()
 {
@@ -148,6 +161,7 @@ void function CreateScoreRUI()
 	RuiTrackBool( rui, "audioIssueData", null, RUI_TRACK_AUDIO_ISSUE_DATA )
 	RuiTrackBool( rui, "audioIssueLimits", null, RUI_TRACK_AUDIO_ISSUE_LIMITS )
 	RuiTrackBool( rui, "audioIssueMarker", null, RUI_TRACK_AUDIO_ISSUE_MARKER_INSERTED )
+
 
 	
 	if ( file.isNetGraphEnabled == true )
@@ -295,7 +309,12 @@ void function UpdateCommonScoreRuiTracking( var rui, entity player )
 
 		if ( Crafting_IsEnabled() )
 		{
-			RuiTrackInt( ClGameState_GetRui(), "craftingMaterials", player, RUI_TRACK_SCRIPT_NETWORK_VAR_INT, GetNetworkedVariableIndex( "craftingMaterials" ) )
+
+
+
+			{
+				RuiTrackInt( ClGameState_GetRui(), "craftingMaterials", player, RUI_TRACK_SCRIPT_NETWORK_VAR_INT, GetNetworkedVariableIndex( "craftingMaterials" ) )
+			}
 		}
 
 }
@@ -663,6 +682,10 @@ void function ClGameState_Changed( entity playerEnt, int newVal )
 
 	entity player = GetLocalClientPlayer()
 	Signal( player, "GameStateChanged", { newState = gameState } )
+	
+	
+	if ( IsValid( clGlobal.levelEnt ) )
+		Signal( clGlobal.levelEnt, "GameStateChanged", { newState = gameState } )
 
 	foreach( func in file.onGameStateChangedFuncs )
 		func( gameState )
@@ -817,6 +840,14 @@ void function AddCallback_OnGameStateChanged( void functionref( int ) func )
 {
 	Assert( !file.onGameStateChangedFuncs.contains( func ) )
 	file.onGameStateChangedFuncs.append( func )
+}
+
+void function ClWaittillGameStateOrHigher( int state )
+{
+	while( GetGameState() < state && IsValid( clGlobal.levelEnt ) )
+	{
+		clGlobal.levelEnt.WaitSignal( "GameStateChanged" )
+	}
 }
 
 void function GameState_SpectatorTargetChanged( entity player, entity previousTarget, entity currentTarget )

@@ -514,8 +514,6 @@ bool function SniperRecon_IsTracking( entity owner )
 
 
 
-
-
 float function GetReconInfoFOV( entity weapon )
 {
 	if ( !IsValid( weapon ) )

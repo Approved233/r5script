@@ -392,11 +392,7 @@ string function Ranked_MostRecentRankedPeriodWithRewardsNotAcknowledged()
 
 		if ( ItemFlavor_GetType( rankedPeriod ) == eItemType.ranked_2pt0_period )
 		{
-			ItemFlavor ornull season = Ranked_GetSeasonForRanked2Pt0Period( rankedPeriod )
-			if ( season == null )
-				continue
-
-			expect ItemFlavor( season )
+			ItemFlavor season = Ranked_GetSeasonForRanked2Pt0Period( rankedPeriod )
 			if ( CalEvent_GetFinishUnixTime( season ) > GetUnixTimestamp() )
 				continue
 		}
@@ -527,6 +523,10 @@ bool function Ranked_PartyMeetsRankedDifferenceRequirements()
 	if ( party.members.len() == 0 )
 		return true
 
+	string selectedRankedPlaylist = Lobby_GetSelectedPlaylist()
+	if ( GetPartySize() >= GetPlaylistVarInt( selectedRankedPlaylist, "max_team_size", 3 ) && GetPlaylistVarBool( selectedRankedPlaylist, "ranked_ignore_full_party_rank_difference", true ) )
+		return true
+
 	bool allPartyMembersMeetRankedDifferenceRequirements = true
 
 	foreach ( member in party.members )
@@ -587,13 +587,6 @@ bool function Ranked_PartyMeetsRankedDifferenceRequirements()
 
 bool function Ranked_HasBeenInitialized()
 {
-#if DEV
-	if( GetConVarBool( "script_ranked_debug" ) )
-	{
-		return true
-	}
-#endif
-
 	if ( !IsFullyConnected() )
 		return false
 
@@ -621,7 +614,7 @@ bool function Ranked_HasBeenInitialized()
 
 	expect ItemFlavor ( activeRankedPeriod )
 
-	return ( GetPersistentVar( "lastInitializedRankedPeriodGUID" ) == ItemFlavor_GetGUID( activeRankedPeriod ) )
+	return ( GetPersistentVar( RANKED_LAST_INITIALIZED_PERIOD_GUID_VAR_NAME ) == ItemFlavor_GetGUID( activeRankedPeriod ) )
 
 }
 
@@ -671,6 +664,17 @@ void function Ranked_ConstructSingleRankBadgeForStatsCard( var badgeRui, entity 
 			int numMatchesCompleted = Ranked_GetNumProvisionalMatchesCompleted( uiPlayer )
 			PopulateRuiWithRankedProvisionalBadgeDetails( badgeRui, numMatchesCompleted, score, Ranked_GetLadderPosition( uiPlayer ), true )
 		}
+
+		else if ( RankedTrials_PlayerHasIncompleteTrial( uiPlayer ) )
+		{
+			ItemFlavor currentTrial = RankedTrials_GetAssignedTrial( uiPlayer )
+
+			int numMatchesCompleted = RankedTrials_GetGamesPlayedInTrialsState( uiPlayer )
+			int maxMatches = RankedTrials_GetGamesAllowedInTrialsState( uiPlayer, currentTrial )
+
+			PopulateRuiWithRankedProvisionalBadgeDetails( badgeRui, numMatchesCompleted, score, Ranked_GetLadderPosition( uiPlayer ), true, maxMatches, true, true )
+		}
+
 		else
 		{
 			PopulateRuiWithRankedBadgeDetails( badgeRui, score, Ranked_GetLadderPosition( uiPlayer ) )
@@ -727,10 +731,14 @@ void function Ranked_ConstructDoubleRankBadgeForStatsCard( var firstSplitBadgeRu
 
 
 
-void function PopulateRuiWithRankedProvisionalBadgeDetails( var rui, int numMatchesCompleted, int rankScore, int ladderPosition,  bool isNested = false)
+void function PopulateRuiWithRankedProvisionalBadgeDetails( var rui, int numMatchesCompleted, int rankScore, int ladderPosition, bool isNested = false, int maxPips = 10, bool useDynamicPips = false, bool isPromotional = false )
 {
 	
 	RuiSetInt( rui, "startPip", 0 )
+	RuiSetInt( rui, "maxPips", maxPips )
+	RuiSetBool( rui, "useDynamicPips", useDynamicPips )
+	RuiSetBool( rui, "isPromotional", isPromotional )
+
 	RuiSetInt( rui, "placementProgress", numMatchesCompleted )
 	for ( int i = 0; i < numMatchesCompleted; i++ )
 		RuiSetBool( rui, format("wonGame%d", i ) , true )
@@ -871,6 +879,19 @@ var function CreateNestedRankedRui( var pRui, SharedRankedTierData tier, string 
 		PopulateRuiWithRankedProvisionalBadgeDetails( rui, numMatchesCompleted, score, ladderPosition, true )
 		return rui
 	}
+
+	else if ( RankedTrials_PlayerHasIncompleteTrial( uiPlayer ) )
+	{
+		var rui = RuiCreateNested( pRui, varName, RANKED_PLACEMENT_BADGE )
+
+		ItemFlavor currentTrial = RankedTrials_GetAssignedTrial( uiPlayer )
+		int numMatchesCompleted = RankedTrials_GetGamesPlayedInTrialsState( uiPlayer )
+		int maxMatches = RankedTrials_GetGamesAllowedInTrialsState( uiPlayer, currentTrial )
+
+		PopulateRuiWithRankedProvisionalBadgeDetails( rui, numMatchesCompleted, score, ladderPosition, true, maxMatches, true, true )
+		return rui
+	}
+
 	else
 	{
 		var rui = RuiCreateNested( pRui, varName, tier.iconRuiAsset )
@@ -896,7 +917,12 @@ void function SharedRanked_FillInRuiEmblemText( var rui, SharedRankedDivisionDat
 {
 	
 	entity uiPlayer = GetLocalClientPlayer()
-	if ( !Ranked_HasCompletedProvisionalMatches( uiPlayer ) )
+	bool useProvisionalFix = !Ranked_HasCompletedProvisionalMatches( uiPlayer )
+
+		useProvisionalFix = !Ranked_HasCompletedProvisionalMatches( uiPlayer ) || RankedTrials_PlayerHasIncompleteTrial( uiPlayer )
+
+
+	if ( useProvisionalFix )
 	{
 		RuiSetInt( rui, "emblemDisplayMode" + ruiArgumentPostFix, emblemDisplayMode.NONE )
 		RuiSetString( rui, "emblemText" + ruiArgumentPostFix, "" )

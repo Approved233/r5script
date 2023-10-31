@@ -202,7 +202,7 @@ vector function Squads_GetNonLinearSquadColor( int squadIndex, bool forceWinterE
 		GetKeyColor( COLORID_LTM_SQUAD_3 )
 	]
 
-	return squad_colors[ squadIndex ]
+	return squad_colors[ int( clamp( squadIndex, 0, squad_colors.len() - 1 ) ) ]
 }
 
 
@@ -217,7 +217,7 @@ asset function Squads_GetSquadIcon( int squadIndex, bool forceWinterExpress = fa
 	if( squadIndex + TEAM_IMC == file.squadIdIsNessie )
 		return $"rui/gamemodes/tdm/tdm_squad_icon0_easteregg"
 
-	return SQUAD_ICONS[ squadIndex ]
+	return SQUAD_ICONS[ int( clamp( squadIndex, 0, SQUAD_ICONS.len() - 1 ) ) ]
 }
 
 
@@ -232,7 +232,7 @@ string function Squads_GetSquadName( int squadIndex, bool forceWinterExpress = f
 	if( squadIndex + TEAM_IMC == file.squadIdIsNessie )
 		return "#TEAM_NAME_0_EASTEREGG"
 
-	return SQUAD_NAMES[ squadIndex ]
+	return SQUAD_NAMES[ int( clamp( squadIndex, 0, SQUAD_NAMES.len() - 1 ) ) ]
 }
 
 int function Squads_GetMax()
@@ -251,35 +251,8 @@ string function Squads_GetSquadNameLong( int squadIndex, bool forceWinterExpress
 		return "#TEAM_NAME_LONG_0_EASTEREGG"
 
 
-	return SQUAD_NAMES_LONG[ squadIndex ]
+	return SQUAD_NAMES_LONG[ int( clamp( squadIndex, 0, SQUAD_NAMES_LONG.len() - 1 ) ) ]
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

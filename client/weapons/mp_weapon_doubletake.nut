@@ -48,11 +48,19 @@ void function OnWeaponActivate_weapon_doubletake( entity weapon )
 
 
 
+
+
+
+
 }
 
 void function OnWeaponDeactivate_weapon_doubletake( entity weapon )
 {
 	OnWeaponDeactivate_Kinetic_Loader( weapon )
+
+
+
+
 }
 
 var function OnWeaponPrimaryAttack_weapon_doubletake( entity weapon, WeaponPrimaryAttackParams attackParams )

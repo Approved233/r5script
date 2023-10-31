@@ -52,12 +52,6 @@ global function SURVIVAL_Loot_IsUniqueAmmoWeapon
 
 
 
-
-
-
-
-
-
 #if DEV
 global function DEV_PrintDisabledLoot
 #endif
@@ -82,6 +76,7 @@ global enum eLootTier
 	EPIC
 	LEGENDARY
 	MYTHIC
+	ICONIC
 
 	_count
 }
@@ -217,6 +212,10 @@ global enum eLootType
 
 
 
+
+
+
+
 	_count
 }
 
@@ -253,15 +252,6 @@ struct RestrictedLootInfo
 		string dialogPopupDeny
 
 }
-
-
-
-
-
-
-global const int HAS_DEATHBOX_OVERRIDE_FRIEND_PROFILES_TO_SEND = 3
-
-
 
 
 
@@ -318,18 +308,8 @@ struct
 	table<int, RestrictedLootInfo> restrictedLootInfo
 
 
-		table<EHI, array< OverrideDeathBoxRUI_NetworkOptimizedStruct > > EHIToOverrideDeathBoxRUIProfilesTable
-		table<string, EHI>                                               corpseToEHITable
 		array< OverrideDeathBoxRUI_NetworkOptimizedStruct >              handcraftedProfiles
 		array< OverrideDeathBoxRUI_NetworkOptimizedStruct >              handcraftedProfilesMasterList 
-
-
-
-
-			bool                                                      overrideDeathBoxRUI_Initialized = false
-			table<string, OverrideDeathBoxRUI_NetworkOptimizedStruct> overrideDeathBoxRUIProfilesTable
-			int                                                       profilesSent = 0
-
 
 
 
@@ -430,6 +410,14 @@ void function SURVIVAL_Loot_All_InitShared()
 	file.disabledRefs.clear()
 
 	string disabledRefs = GetCurrentPlaylistVarString( "survival_disabled_loot", " " )
+
+
+
+
+
+
+
+
 	file.disabledRefs.extend( split( disabledRefs, WHITESPACE_CHARACTERS ) )
 
 	disabledRefs = GetCurrentPlaylistVarString( "survival_disabled_weapons", " " )
@@ -696,12 +684,6 @@ void function SURVIVAL_Loot_All_InitShared()
 
 
 
-			RegisterSignal( "GatherFriendInfo" )
-			RegisterSignal( "GatheredEnoughFriendInfo" )
-			SURVIVAL_UIInit_Override_DeathBox_RUI()
-
-
-
 
 
 
@@ -875,6 +857,10 @@ int function SURVIVAL_Loot_GetLootTypeFromString( string lootTypeString )
 
 		case "candy_pickup":
 			return eLootType.CANDY_PICKUP
+
+
+
+
 
 
 
@@ -1066,8 +1052,12 @@ void function DEV_PrintDisabledLoot()
 
 
 
+
 vector function GetFXRarityColorForTier( int tier )
 {
+
+
+
 
 
 
@@ -1105,6 +1095,9 @@ vector function GetFXRarityColorForTier( int tier )
 
 vector function GetFXRarityColorForUnlockable( int tier )
 {
+
+
+
 
 
 
@@ -1288,272 +1281,6 @@ void function RemoveCallback_EditLootDesc( string functionref( string, entity, s
 	Assert( file.editLootDescCallbacks.contains( callback ), "Tried to remove a callback that was not added" )
 	file.editLootDescCallbacks.fastremovebyvalue( callback )
 }
-
-
-
-
-
-
-
-void function SURVIVAL_UIInit_Override_DeathBox_RUI()
-{
-	if ( !IsConnected() )
-		return
-
-	if ( GetCurrentPlaylistVarInt( "flyer_deathbox_friendlist_rui", 0 ) != 1 )
-		return
-
-	if ( !file.overrideDeathBoxRUI_Initialized ) 
-	{
-		AddUICallback_OnLevelInit( SURVIVAL_UI_OnLevelInit )
-		AddCallbackAndCallNow_UserInfoUpdated( HAS_DEATHBOX_OVERRIDE_OnUserInfoUpdated )
-	}
-
-	file.overrideDeathBoxRUI_Initialized = true
-}
-
-
-void function SURVIVAL_UI_OnLevelInit()
-{
-	if ( IsLobby() )
-	{
-		return
-	}
-
-	if ( GetCurrentPlaylistVarInt( "enableFlyers", 1 ) != 1 )
-		return
-
-	thread SURVIVAL_UI_GatherFriendInfo()
-}
-
-void function SURVIVAL_UI_GatherFriendInfo()
-{
-	if ( GetCurrentPlaylistVarInt( "flyer_deathbox_friendlist_rui", 0 ) <= 0 )
-		return
-
-	Signal( uiGlobal.signalDummy, "GatherFriendInfo" )
-	EndSignal( uiGlobal.signalDummy, "GatherFriendInfo" )
-	EndSignal( uiGlobal.signalDummy, "GatheredEnoughFriendInfo" )
-
-
-	if ( GetCurrentPlaylistVarInt( "flyer_deathbox_friendlist_rui", HAS_DEATHBOX_OVERRIDE_FRIEND_PROFILES_TO_SEND ) == 0 )
-		return
-
-	file.overrideDeathBoxRUIProfilesTable.clear()
-	file.profilesSent = 0
-
-	FriendsData fData = GetFriendsData()
-
-	while( fData.friends.len() > 0 )
-	{
-		int randomIndex = RandomInt( fData.friends.len() )
-		Friend friend   = fData.friends[ randomIndex  ]
-		fData.friends.fastremove( randomIndex )
-
-		if ( friend.ingame == true ) 
-			continue
-
-		OverrideDeathBoxRUI_NetworkOptimizedStruct profileData
-
-		file.overrideDeathBoxRUIProfilesTable[ friend.hardware + friend.id  ] <- profileData
-
-		CommunityUserInfo ornull cui = GetUserInfo( friend.hardware, friend.id ) 
-
-		if ( !file.overrideDeathBoxRUIProfilesTable[ friend.hardware + friend.id  ].isValid ) 
-		{
-			wait 2.0 
-		}
-	}
-}
-
-
-void function HAS_DEATHBOX_OVERRIDE_OnUserInfoUpdated( string hardware, string id )
-{
-	if ( !IsConnected() ) 
-		return
-
-	if( !IsValid( GetLocalClientPlayer() ) )
-		return
-
-	if ( GetCurrentPlaylistVarInt( "flyer_deathbox_friendlist_rui", 0 ) != 1 )
-		return
-
-	if ( IsLobby() )
-		return
-
-	if ( hardware == "" && id == "" )
-		return
-
-	CommunityUserInfo ornull cui = GetUserInfo( hardware, id )
-
-	if ( cui == null )
-		return
-
-	if ( !((hardware + id) in file.overrideDeathBoxRUIProfilesTable) ) 
-		return
-
-	expect CommunityUserInfo( cui )
-
-	if ( !HasCommunityUserPlayedApex( cui ) )
-		return
-
-	if ( file.profilesSent >= GetCurrentPlaylistVarInt( "flyer_deathbox_friendlist_rui", HAS_DEATHBOX_OVERRIDE_FRIEND_PROFILES_TO_SEND ) )
-		return
-
-	OverrideDeathBoxRUI_NetworkOptimizedStruct profileData
-	profileData.name = cui.name
-	profileData.hardware = cui.hardware
-	profileData.playerID = cui.uid
-
-	ItemFlavor character               = GetItemFlavorForCommunityUserInfo( cui, ePlayerStryderCharDataArraySlots.CHARACTER, eItemType.character )
-	LoadoutEntry characterLoadoutEntry = Loadout_Character()
-	profileData.characterIndex = ConvertItemFlavorToLoadoutSlotContentsIndex( characterLoadoutEntry, character )
-
-	ItemFlavor skin               = GetItemFlavorForCommunityUserInfo( cui, ePlayerStryderCharDataArraySlots.CHARACTER_SKIN, eItemType.character_skin )
-	LoadoutEntry skinLoadoutEntry = Loadout_CharacterSkin( character )
-	profileData.skinIndex = ConvertItemFlavorToLoadoutSlotContentsIndex( skinLoadoutEntry, skin )
-
-	ItemFlavor frame               = GetItemFlavorForCommunityUserInfo( cui, ePlayerStryderCharDataArraySlots.BANNER_FRAME, eItemType.gladiator_card_frame )
-	LoadoutEntry frameLoadoutEntry = Loadout_GladiatorCardFrame( character )
-	profileData.frameIndex = ConvertItemFlavorToLoadoutSlotContentsIndex( frameLoadoutEntry, frame )
-
-	ItemFlavor stance               = GetItemFlavorForCommunityUserInfo( cui, ePlayerStryderCharDataArraySlots.BANNER_STANCE, eItemType.gladiator_card_stance )
-	LoadoutEntry stanceLoadoutEntry = Loadout_GladiatorCardStance( character )
-	profileData.stanceIndex = ConvertItemFlavorToLoadoutSlotContentsIndex( stanceLoadoutEntry, stance )
-
-	ItemFlavor firstBadge               = GetBadgeItemFlavorForCommunityUserInfo( cui, character, 0 )
-	LoadoutEntry firstBadgeLoadoutEntry = Loadout_GladiatorCardBadge( character, 0 )
-	profileData.firstBadgeIndex = ConvertItemFlavorToLoadoutSlotContentsIndex( firstBadgeLoadoutEntry, firstBadge )
-
-	int firstBadgeDataInt = GetBadgeDataIntegerFromCommunityUserInfo( cui, 0 )
-	profileData.firstBadgeDataInt = firstBadgeDataInt
-
-	ItemFlavor secondBadge               = GetBadgeItemFlavorForCommunityUserInfo( cui, character, 1 )
-	LoadoutEntry secondBadgeLoadoutEntry = Loadout_GladiatorCardBadge( character, 1 )
-	profileData.secondBadgeIndex = ConvertItemFlavorToLoadoutSlotContentsIndex( secondBadgeLoadoutEntry, secondBadge )
-
-	int secondBadgeDataInt = GetBadgeDataIntegerFromCommunityUserInfo( cui, 1 )
-	profileData.secondBadgeDataInt = secondBadgeDataInt
-
-	ItemFlavor thirdBadge               = GetBadgeItemFlavorForCommunityUserInfo( cui, character, 2 )
-	LoadoutEntry thirdBadgeLoadoutEntry = Loadout_GladiatorCardBadge( character, 2 )
-	profileData.thirdBadgeIndex = ConvertItemFlavorToLoadoutSlotContentsIndex( thirdBadgeLoadoutEntry, thirdBadge )
-
-	int thirdBadgeDataInt = GetBadgeDataIntegerFromCommunityUserInfo( cui, 2 )
-	profileData.thirdBadgeDataInt = thirdBadgeDataInt
-
-	profileData.isValid = true
-
-	file.overrideDeathBoxRUIProfilesTable[ hardware + id  ] = profileData
-
-	
-	Remote_ServerCallFunction("ClientCallback_RUIProfileList",
-		profileData.name, profileData.hardware, profileData.playerID, profileData.characterIndex, profileData.skinIndex,
-		profileData.frameIndex, profileData.stanceIndex, profileData.firstBadgeIndex, profileData.firstBadgeDataInt,
-		profileData.secondBadgeIndex, profileData.secondBadgeDataInt, profileData.thirdBadgeIndex, profileData.thirdBadgeDataInt )
-
-	if ( ++file.profilesSent >= GetCurrentPlaylistVarInt( "flyer_deathbox_friendlist_rui", HAS_DEATHBOX_OVERRIDE_FRIEND_PROFILES_TO_SEND ) )
-	{
-		Signal( uiGlobal.signalDummy, "GatheredEnoughFriendInfo" ) 
-	}
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

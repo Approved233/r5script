@@ -92,6 +92,7 @@ global function CharSelect_GetOutroTransitionDuration
 
 
 
+
 global function GamemodeSurvivalShared_UI_Init
 
 
@@ -209,6 +210,9 @@ global enum ePodiumBanner
 	LTM,
 	MIXTAPE,
 
+	SR_LEGENDS,
+	SR_REV,
+
 	_COUNT
 }
 
@@ -229,6 +233,10 @@ global enum ePodiumBackground
 	MP_RR_DESERTLANDS_NIGHT,
 	MP_RR_CANYONLANDS_MU1_NIGHT,
 
+	SR_LEGENDS,
+	SR_REV,
+
+	MP_RR_TROPICS_ISLAND_MU2,
 	_COUNT
 }
 
@@ -292,6 +300,10 @@ float function CharSelect_GetOutroSquadPresentDuration()		{ return GetCurrentPla
 float function CharSelect_GetOutroMVPPresentDuration()			{ return GetCurrentPlaylistVarFloat( "charselect_outro_mvp_present_duration", 0.0 ) }
 float function CharSelect_GetOutroChampionPresentDuration()		{ return GetCurrentPlaylistVarFloat( "charselect_outro_champion_present_duration", 8.0 ) }
 float function CharSelect_GetOutroTransitionDuration()			{ return GetCurrentPlaylistVarFloat( "charselect_outro_transition_duration", 3.0 ) }
+
+
+
+
 
 
 
@@ -867,6 +879,62 @@ void function UIInputChanged( bool controllerModeActive )
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+bool function Survival_ClampToRing()
+{
+	return GetCurrentPlaylistVarBool( "dropship_bounds_clamp_to_ring", false )
+}
 
 
 

@@ -15,6 +15,19 @@ const int LOBBY_BANNER_LTM_SKIN_INDEX = 2
 const int LOBBY_EVENT1_SKIN_OFFSET = 3
 const int LOBBY_EVENT2_SKIN_OFFSET = 6
 
+const asset WARP_EFFECT = $"P_env_lobby_s19_warp"
+const asset JET_EFFECT = $"P_env_lobby_s19_ship_jet"
+const asset BUTTERFLY_EFFECT = $"P_env_lobby_s19_butterfly_128"
+const float BUTTERFLY_EFFECT_COOLDOWN = 8.0
+
+
+struct LobbyShipData
+{
+	array< entity > jetEffects
+	array< entity > warpEffects
+	entity ship
+}
+
 struct
 {
 	array<void functionref( entity )> onPlayerAddedToLobbyCallbacks
@@ -24,7 +37,12 @@ struct
 #if DEV
 		bool overrideLobbyBanner = false
 #endif
-	bool revCreated = false
+
+	array< LobbyShipData > lobbyShipData
+
+	array< entity > effectInfoTargets
+	float butterFlyCooldown = 0
+	bool shipsArrived = false
 
 } file
 
@@ -53,10 +71,6 @@ void function Lobby_AddLocalPlayer()
 	SetupEventProps()
 	SetupEventBase()
 
-
-	SetupRevAnimation()
-
-
 	RunUIScript( "MaybeSendPINSettingsEvent" )
 }
 
@@ -71,36 +85,101 @@ void function CacheLobbyBannerEnt()
 {
 	file.lobbyBanners = GetEntArrayByScriptName( "lobby_banner" )
 	file.lobbyBases = GetEntArrayByScriptName( "lobby_base" )
-	PrecacheParticleSystem( $"P_s14_HW_eye" )
-	PrecacheParticleSystem( $"P_s18_HW_bat_Swarm" )
-	PrecacheParticleSystem( $"P_s18_HW_eye_NC" )
+
+	if ( IsLobbyEvent1Active() )
+	{
+		PrecacheParticleSystem( BUTTERFLY_EFFECT )
+		file.effectInfoTargets = GetEntArrayByScriptName( "event_1_effect" )
+	}
+
+	if ( IsLobbyEvent2Active() )
+	{
+		PrecacheParticleSystem( WARP_EFFECT )
+		PrecacheParticleSystem( JET_EFFECT )
+
+		InitShipData()
+	}
+}
+
+void function InitShipData()
+{
+	array< entity > warpEffects = GetEntArrayByScriptName( "holiday_ship_effect" )
+	array< entity > jetEffects = GetEntArrayByScriptName( "holiday_jet_effect" )
+	array< entity > ships = GetEntArrayByScriptName( "holiday_event_ready_up_ships" )
+
+	foreach ( ship in ships )
+	{
+		LobbyShipData data
+		data.ship = ship
+
+		foreach ( jetEffect in jetEffects )
+		{
+			printt (" Distance 1: " + Distance( ship.GetOrigin(), jetEffect.GetOrigin() ))
+			if ( Distance( ship.GetOrigin(), jetEffect.GetOrigin() ) < 100 )
+				data.jetEffects.append( jetEffect )
+		}
+
+		foreach ( warpEffect in warpEffects )
+		{
+			printt (" Distance 2: " + Distance( ship.GetOrigin(), warpEffect.GetOrigin() ))
+			if ( Distance( ship.GetOrigin(), warpEffect.GetOrigin() ) < 100 )
+				data.warpEffects.append( warpEffect )
+		}
+
+		file.lobbyShipData.append( data )
+	}
+
 }
 
 void function Lobby_OnReadyFX( bool isReady )
 {
 	if ( IsLobbyEvent1Active() )
 	{
-		if ( isReady )
+		float now = ClientTime()
+
+		if ( now < (file.butterFlyCooldown + 10.0))
+			return
+
+		file.butterFlyCooldown = now
+
+		thread ButterflyReadyFX()
+	}
+	else if ( IsLobbyEvent2Active()  )
+	{
+		if ( file.shipsArrived )
+			return
+
+		file.shipsArrived = true
+		foreach( data in file.lobbyShipData )
 		{
-			foreach ( lobbyBase in file.lobbyBases )
-			{
-				if ( IsValid( lobbyBase ) )
-				{
-					lobbyBase.SetSkin( 3 )
-				}
-			}
-		}
-		else
-		{
-			foreach ( lobbyBase in file.lobbyBases )
-			{
-				if ( IsValid( lobbyBase ) )
-				{
-					lobbyBase.SetSkin( 1 )
-				}
-			}
+			thread ShipWarpReadyFXThread( data )
 		}
 	}
+}
+
+void function ShipWarpReadyFXThread( LobbyShipData data )
+{
+	wait RandomFloat( 0.5 )
+
+	data.ship.SetModelScale( 50.0 )
+	foreach ( effectInfoTarget in data.warpEffects )
+	{
+		StartParticleEffectInWorld( GetParticleSystemIndex ( WARP_EFFECT ) , effectInfoTarget.GetOrigin(),  effectInfoTarget.GetAngles() )
+		printt( "effect" + effectInfoTarget.GetOrigin() )
+	}
+
+	foreach ( jetEffectsInfoTarget in data.jetEffects )
+	{
+		StartParticleEffectInWorld( GetParticleSystemIndex ( JET_EFFECT ) , jetEffectsInfoTarget.GetOrigin(),  jetEffectsInfoTarget.GetAngles() )
+		printt( "jet" + jetEffectsInfoTarget.GetOrigin() )
+	}
+
+}
+
+void function ButterflyReadyFX()
+{
+	foreach ( effectInfoTarget in file.effectInfoTargets )
+		StartParticleEffectInWorld( GetParticleSystemIndex ( BUTTERFLY_EFFECT ) , effectInfoTarget.GetOrigin(),  effectInfoTarget.GetAngles() )
 }
 
 void function Lobby_SetBannerSkin( string playlist )
@@ -207,6 +286,14 @@ void function SetupEvent1Props()
 
 		return
 	}
+
+	
+	
+
+
+
+
+
 }
 
 void function SetupEvent2Props()
@@ -224,46 +311,11 @@ void function SetupEvent2Props()
 	}
 
 	
-	array<entity> effects = GetEntArrayByScriptName( "event_2_effect" )
-	foreach ( effect in effects )
-	{
-		if ( IsValid( effect ) )
-			StartParticleEffectOnEntity( effect, GetParticleSystemIndex( $"P_s18_HW_bat_Swarm" ), FX_PATTACH_ABSORIGIN, ATTACHMENTID_INVALID )
-	}
+	
 
-	if ( file.revCreated )
-		return
 
-	entity rev1 = CreateClientSidePropDynamic(<-40, 740, 0> , <0, -90, 0>, $"mdl/humans/class/heavy/pilot_heavy_revenant_reborn.rmdl")
-	rev1.SetScriptName( "rev1" )
 
-	int skinIdx = rev1.GetSkinIndexByName( "ShadowSqaud" )
-	if ( skinIdx > 0 )
-	{
-		rev1.SetSkin( skinIdx )
-		rev1.SetCamo( 0 )
-	}
-	else 
-	{
-		rev1.kv.rendercolor = <0, 0, 0>
-	}
 
-	StartParticleEffectOnEntity( rev1, GetParticleSystemIndex( $"P_s14_HW_eye" ), FX_PATTACH_POINT_FOLLOW, rev1.LookupAttachment( "EYE_L" ) )
-	StartParticleEffectOnEntity( rev1, GetParticleSystemIndex( $"P_s14_HW_eye" ), FX_PATTACH_POINT_FOLLOW, rev1.LookupAttachment( "EYE_R" ) )
 
-	rev1.Anim_Play("S18_Lobby_revenant_shadow_pit")
 
-	file.revCreated = true
 }
-
-
-void function SetupRevAnimation()
-{
-	array<entity> revs = GetEntArrayByScriptName( "s18_lobby_talking_rev" )
-	if ( revs.len() != 1 )
-		return
-
-	revs[0].SetModelScale(1.1)
-	revs[0].Anim_Play("revenant_teaser_lobby_powerdown_loop")
-}
-      

@@ -16,7 +16,7 @@ global function OnWeaponDeactivate_weapon_zipline
 
 
 global function OnCreateClientOnlyModel_weapon_zipline
-global function ClientCodeCallback_ZiplinesPerPlayer
+global function ClientCodeCallback_MaxPlayerZiplines
 
 
 const ZIPLINE_STATION_MODEL_VERTICAL = $"mdl/IMC_base/scaffold_tech_horz_rail_c.rmdl"
@@ -69,18 +69,12 @@ void function MpWeaponZipline_Init()
 }
 
 
-int function ClientCodeCallback_ZiplinesPerPlayer()
+int function ClientCodeCallback_MaxPlayerZiplines()
 {
-	return ZIPLINE_MAX_IN_WORLD
+	
+	
+	return 180
 }
-
-
-
-
-
-
-
-
 
 
 
@@ -313,6 +307,8 @@ var function OnWeaponPrimaryAttack_weapon_zipline( entity weapon, WeaponPrimaryA
 		fireGrenadeParams.ziplineGrenadeRopeMaterial = "cable/zipline_active"
 
 		entity projectile = weapon.FireWeaponGrenade( fireGrenadeParams )
+		if ( !IsValid( projectile ) )
+			return 0
 
 
 
@@ -335,6 +331,12 @@ var function OnWeaponPrimaryAttack_weapon_zipline( entity weapon, WeaponPrimaryA
 
 	return weapon.GetWeaponSettingInt( eWeaponVar.ammo_min_to_fire )
 }
+
+
+
+
+
+
 
 
 

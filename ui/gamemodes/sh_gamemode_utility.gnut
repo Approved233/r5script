@@ -9,6 +9,7 @@ global function GamemodeUtility_IsJIPEnabledInPlaylist
 global function GamemodeUtility_GetMixtapeAbandonPenaltyActive
 global function GamemodeUtility_ParseCircleString 
 global function GamemodeUtility_ParseVectorString 
+global function GamemodeUtility_ParseStringOfVectors 
 
 
 
@@ -124,10 +125,16 @@ struct {
 
 
 
+
+
+
+
 } file
 
 void function GamemodeUtility_Init()
 {
+
+
 
 
 
@@ -228,6 +235,38 @@ bool function GamemodeUtility_IsJIPEnabledInPlaylist()
 {
 	return GetCurrentPlaylistVarBool( "match_jip", false )
 }
+
+
+bool function GamemodeUtility_GetShouldTweakDVSForGamemode()
+{
+	return GetCurrentPlaylistVarBool( "should_tweak_dvs_for_gamemode", false )
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1703,6 +1742,7 @@ int function GamemodeUtility_GetMaxDroppedGrenadesOnDeath()
 
 
 
+
 float function GetPlaylistVar_DeathboxDuration()
 {
 	return GetCurrentPlaylistVarFloat( "deathbox_duration", 60.0 )
@@ -1779,6 +1819,95 @@ float function GetPlaylistVar_DeathboxDuration()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+array< vector > function GamemodeUtility_ParseStringOfVectors( string positionsRawString )
+{
+	array<string> positionStrings = GetTrimmedSplitString( positionsRawString, "," )
+	array<vector> positions
+	foreach( positionString in positionStrings )
+	{
+		vector pos = GamemodeUtility_ParseVectorString( positionString )
+		positions.append( pos )
+	}
+
+	return positions
+}
 
 vector function GamemodeUtility_ParseVectorString( string vectorString )
 {

@@ -1064,6 +1064,9 @@ void function UpdateLootRuiWithData( entity player, var rui, LootData data, int 
 			case 4:
 				color = <44, 117, 255>
 				break
+			case 5:
+				color = <240, 30, 2>
+				break
 
 
 
@@ -2465,10 +2468,8 @@ void function TryHolsterWeapon( entity player )
 			}
 		}
 
-
-			if( PassiveReinforce_BlockControllerHolster( player, useEnt ) )
-				return
-
+		if( PassiveReinforce_BlockControllerHolster( player, useEnt ) )
+			return
 	}
 
 	entity activeWeapon = player.GetActiveWeapon( eActiveInventorySlot.mainHand )

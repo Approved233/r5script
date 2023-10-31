@@ -98,7 +98,6 @@ void function RemoteFunctions_Init_Begin()
 	RegisterNetworkedVariable( "roundWinningKillReplayPlaying", SNDC_GLOBAL_NON_REWIND, SNVT_BOOL, false )
 	RegisterNetworkedVariable( "roundScoreLimitComplete", SNDC_GLOBAL_NON_REWIND, SNVT_BOOL, false )
 
-	RegisterNetworkedVariable( "roundWinningKillReplayEntHealthFrac", SNDC_GLOBAL_NON_REWIND, SNVT_FLOAT_RANGE, 0.0, 0.0, 1.0 )
 	RegisterNetworkedVariable( "badRepPresent", SNDC_GLOBAL_NON_REWIND, SNVT_BOOL, false )
 
 	RegisterNetworkedVariable( "roundBased", SNDC_GLOBAL_NON_REWIND, SNVT_BOOL, false )
@@ -223,8 +222,12 @@ void function RemoteFunctions_Init_Begin()
 
 
 			RegisterNetworkedVariable( "focalTrap", SNDC_PLAYER_EXCLUSIVE, SNVT_ENTITY )
-			RegisterNetworkedVariable( "coverFireMeter", SNDC_PLAYER_EXCLUSIVE, SNVT_FLOAT_RANGE, 0.0, 0.0, 100.0 )
-			RegisterNetworkedVariable( "coverFireLocked", SNDC_PLAYER_EXCLUSIVE, SNVT_BOOL, false )
+
+
+
+
+
+
 			Remote_RegisterClientFunction( "ServerCallback_PlayTurretDestroyFX", "vector", -32000.0, 32000.0, 32, "vector", -180.0, 180.0, 32, "vector", -32000.0, 32000.0, 32, "vector", -180.0, 180.0, 32 )
 
 			RegisterNetworkedVariable( "gladCardPlayer", SNDC_PLAYER_EXCLUSIVE, SNVT_ENTITY )
@@ -310,7 +313,7 @@ void function RemoteFunctions_Init_Begin()
 
 
 
-
+			Ability_Shadow_Zombie_RegisterNetworking()
 
 
 
@@ -544,10 +547,6 @@ void function RemoteFunctions_Init_Begin()
 
 
 
-
-
-
-
 			FreeDM_RegisterNetworking()
 
 
@@ -584,12 +583,12 @@ void function RemoteFunctions_Init_Begin()
 
 
 
+			ShGameMode_ShadowArmy_RegisterNetworking()
+			ShadowArmy_RespawnBeacon_RegisterNetworking()
 
 
 
-
-
-
+			EvacShip_RegisterNetworking()
 
 
 
@@ -622,6 +621,10 @@ void function RemoteFunctions_Init_Begin()
 
 
 			PathTT_OnNetworkRegistration()
+
+
+
+			Wattson_TT_Register_Networking()
 
 
 			Rampart_TT_RegisterNetworking()
@@ -757,9 +760,6 @@ void function RemoteFunctions_Init_Begin()
 	Remote_RegisterUIFunction( "ServerCallback_OpenDevMenu" )
 
 	
-	Remote_RegisterClientFunction( "Dev_PrintClientMessage", "float", -1.0, 10000.0, 32 )
-	Remote_RegisterClientFunction( "Dev_BuildClientMessage", "bool", "string" )
-
 	Remote_RegisterServerFunction( "ClientCallback_Dev_SetPlayerMMR", "float", 0.0, 10000.0, 32, "float", 0.0, 10000.0, 32, "float", 0.0, 10000.0, 32, "float", 0.0, 10000.0, 32)
 	Remote_RegisterServerFunction( "ClientCallback_Dev_PrintTeamsMMR" )
 
@@ -890,24 +890,16 @@ void function RemoteFunctions_Init_Begin()
 	
 
 
-	
-	Remote_RegisterServerFunction( "ClientCallback_RUIProfileList", "string", "string", "string", "int", 0, INT_MAX,
-		"int", 0, INT_MAX, "int", 0, INT_MAX, "int", 0, INT_MAX, "int", 0, INT_MAX, "int", INT_MIN, INT_MAX, "int", 0, INT_MAX, "int", INT_MIN, INT_MAX,
-		"int", 0, INT_MAX, "int", INT_MIN, INT_MAX )
-
-
-
 		
 		Remote_RegisterServerFunction( "ClientToServer_MarkAllBoostsAsSeen" )
 
 
 	
-	Remote_RegisterClientFunction( "Dev_BuildTextInfoPanel", "bool", "string" )
 	Remote_RegisterClientFunction( "Dev_CreateTextInfoPanel", "vector", -MAX_MAP_BOUNDS, MAX_MAP_BOUNDS, 32, "vector", -MAX_MAP_BOUNDS, MAX_MAP_BOUNDS, 32, "bool", "float", -10000.0, 10000.0, 32 )
 	Remote_RegisterClientFunction( "Dev_CreateTextInfoPanelWithID", "vector", -MAX_MAP_BOUNDS, MAX_MAP_BOUNDS, 32, "vector", -MAX_MAP_BOUNDS, MAX_MAP_BOUNDS, 32, "bool", "float", -10000.0, 10000.0, 32, "int", 0, INT_MAX )
 	Remote_RegisterClientFunction( "Dev_DestroyTextInfoPanelWithID", "int", 0, INT_MAX )
 
-	Remote_RegisterClientFunction( "ServerToClient_ScreenCoverTransition", "float", 0.0, 5000.0, 32 )
+	Remote_RegisterClientFunction( "ServerToClient_ScreenCoverTransition", "float", 0.0, 5000.0, 32, "bool" )
 
 	
 	Remote_RegisterClientFunction( "ServerCallback_WatchForSyncedMeleeCancelPeriod", "float", 0.0, 10.0 )

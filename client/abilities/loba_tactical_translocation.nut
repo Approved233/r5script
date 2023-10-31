@@ -824,6 +824,19 @@ void function TranslocationTossedThread( entity owner, entity weapon )
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function OnProjectilePlanted( entity projectile, DeployableCollisionParams collisionParams )
 {
 	entity owner = projectile.GetOwner()

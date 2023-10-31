@@ -12,3 +12,13 @@ vector function RTKMutator_QualityColor( int input, bool exception )
 
 	return GetKeyColor( COLORID_HUD_LOOT_TIER0, input ) / 255.0
 }
+
+string function RTKMutator_QualityName( int input )
+{
+	return Localize( ItemQuality_GetQualityName( input ) )
+}
+
+vector function RTKMutator_QualityTextColor( int input )
+{
+	return GetKeyColor( COLORID_MENU_TEXT_LOOT_TIER0, input + 1 ) / 255.0
+}

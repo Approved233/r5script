@@ -60,6 +60,7 @@ void function ClUnitFrames_Init()
 {
 	AddCreateCallback( "player", OnPlayerCreated )
 	AddCallback_OnPlayerChangedTeam( OnPlayerTeamChanged )
+	AddCallback_AllianceProximity_OnTeamPutIntoAlliance( OnPlayerAllianceChanged )
 	AddDestroyCallback( "player", OnPlayerDestroyed )
 	AddCallback_PlayerClassChanged( OnPlayerClassChanged )
 	AddOnSpectatorTargetChangedCallback( OnSpectatorTargetChanged )
@@ -96,6 +97,13 @@ void function OnPlayerTeamChanged( entity player, int oldTeam, int newTeam )
 
 	if ( GetCurrentPlaylistVarBool( "minimal_mic_hud_enabled", false ) )
 		RefreshMinimalMicRui()
+
+	UnitFrames_ToggleTeamName()
+}
+
+void function OnPlayerAllianceChanged( int team, int newAlliance )
+{
+	UnitFrames_ToggleTeamName()
 }
 
 
@@ -153,6 +161,7 @@ void function OnGameStateEnterPlaying()
 	if ( GetCurrentPlaylistVarBool( "minimal_mic_hud_enabled", false ) )
 		CreateMinimalMicRui()
 
+	UnitFrames_ToggleTeamName()
 }
 
 void function OnGameStateEnterResolution()
@@ -168,6 +177,11 @@ void function OnSpectatorTargetChanged( entity spectator, entity prevTarget, ent
 {
 	
 	RefreshUnitframesForPlayer( newTarget )
+
+	if ( IsValid( newTarget ) && newTarget.IsPlayer() && (newTarget != prevTarget) )
+	{
+		UnitFrames_ToggleTeamName()
+	}
 }
 
 
@@ -176,6 +190,8 @@ void function OnViewPlayerChanged( entity newViewPlayer )
 	
 	RefreshUnitframesForPlayer( newViewPlayer )
 	UpdateFullmapRuiTracks()
+
+	UnitFrames_ToggleTeamName()
 }
 
 
@@ -399,15 +415,8 @@ void function CreateJIPUnitFrame( int teammateNumber = 0)
 	RuiSetBool( rui, "isVisible", true )
 	RuiSetString( rui, "name", Localize( "#JIP_SEARCHING_FOR_SHORT" ) )
 
-	vector playerColor
-	if( GetCurrentPlaylistVarBool("has_squad_based_ui", false) )
-	{
-		entity player = GetLocalViewPlayer()
-		playerColor = SrgbToLinear( GetPlayerInfoColor(player ) / 255.0 )
-	}
-	else
-		playerColor = SrgbToLinear( GetKeyColor( COLORID_MEMBER_COLOR0, 1 + teammateNumber ) / 255.0 )
-
+	entity player = GetLocalViewPlayer()
+	vector playerColor = Teams_GetTeamColor( player.GetTeam() )
 
 	RuiSetColorAlpha( rui, "customCharacterColor", playerColor, 1.0 )
 }
@@ -596,13 +605,13 @@ void function SetUnitFrameDataFromOwner( var rui, entity ent, entity localPlayer
 
 	bool showBleedoutTimer = true
 
-
+		showBleedoutTimer = !IsStrikeoutGamemode()
 
 
 	RuiSetBool( rui, "showBleedoutTimer", showBleedoutTimer )
 
 
-
+		RuiTrackInt( rui, "overshield", ent, RUI_TRACK_SCRIPT_NETWORK_VAR_INT, GetNetworkedVariableIndex( TEMPSHIELD_NETVAR ) )
 
 
 	int observerMode = 0
@@ -645,6 +654,19 @@ void function SetUnitFrameDataFromOwner( var rui, entity ent, entity localPlayer
 	{
 		RuiSetColorAlpha( rui, "customCharacterColor", file.customCharacterColor[ent], 1.0 )
 		RuiSetBool( rui, "useCustomCharacterColor", true )
+	}
+
+	
+	if ( ent == localPlayer )
+	{
+		
+
+			if ( IsRevTakeover() )
+			{
+				RuiSetColorAlpha( rui, "customCharacterColor", Teams_GetTeamColor( ent.GetTeam() ), 1.0 )
+				RuiSetBool( rui, "useCustomCharacterColor", true )
+			}
+
 	}
 }
 
@@ -996,7 +1018,6 @@ void function SetUnitFrameCustomColor( entity player, vector color )
 
 }
 
-
 void function ClearUnitFrameCustomColor( entity player )
 {
 	foreach ( unitframePlayer, unitFrame in file.teamUnitFrames )
@@ -1010,7 +1031,6 @@ void function ClearUnitFrameCustomColor( entity player )
 	}
 }
 
-
 void function OverwriteWithCustomUnitFrameInfo( entity player, var rui )
 {
 	if ( player in file.customCharacterIcon )
@@ -1023,8 +1043,9 @@ void function OverwriteWithCustomUnitFrameInfo( entity player, var rui )
 
 	if ( player in file.customCharacterColor )
 	{
-		RuiSetColorAlpha( rui, "customCharacterColor", SrgbToLinear( GetUnitFrameColor( player ) / 255.0 ), 1.0 )
+		RuiSetColorAlpha( rui, "customCharacterColor", GetUnitFrameColor( player ), 1.0 )
 		RuiSetBool( rui, "useCustomCharacterColor", true )
+
 	}
 	else
 	{
@@ -1105,4 +1126,75 @@ table<entity, UnitFrameDef> function GetTeamUnitFrames()
 table<int, UnitFrameDef> function GetTeamJIPUnitFrames()
 {
 	return file.JIPUnitFrames
+}
+
+void function UnitFrames_ToggleTeamName()
+{
+	entity player
+	string teamName
+	asset teamIcon
+	bool isUsingAlliances = AllianceProximity_IsUsingAlliances()
+	bool show = false
+
+	if( IsPrivateMatch() )
+	{
+		entity clientPlayer = GetLocalClientPlayer()
+		entity currentObserverTarget = clientPlayer.GetObserverTarget()
+
+		if ( clientPlayer.GetTeam() != TEAM_SPECTATOR )
+			return
+
+		if ( !IsValid( currentObserverTarget ) || currentObserverTarget.GetTeam() == TEAM_SPECTATOR )
+			return
+
+		teamName = PrivateMatch_GetTeamName( currentObserverTarget.GetTeam() )
+		player = currentObserverTarget
+		show = true
+	}
+	else
+	{
+		player = GetLocalViewPlayer()
+		int team
+
+		if ( isUsingAlliances )
+			team = AllianceProximity_GetAllianceFromTeam( player.GetTeam() )
+		else
+			team = player.GetTeam() - TEAM_IMC
+
+		teamIcon = Teams_GetTeamIcon( team )
+		teamName = Teams_GetTeamName( team )
+		show = UnitFrames_ShouldShowTeamName()
+	}
+
+	var rui = GetPilotRui()
+	if( rui == null )
+		return
+
+	if( show )
+	{
+		RuiSetString( rui, "teamNameString", teamName )
+		RuiSetImage( rui, "teamNameIcon", teamIcon )
+		RuiSetBool( rui, "shouldShowTeamName", true )
+
+		RuiSetColorAlpha( rui, "teamColor", Teams_GetTeamColor( player.GetTeam() ), 1.0 )
+	}
+	else
+	{
+		RuiSetBool( rui, "shouldShowTeamName", false )
+	}
+}
+
+bool function UnitFrames_ShouldShowTeamName()
+{
+
+	if ( GunGame_IsModeEnabled() )
+		return true
+
+
+
+	if ( IsRevTakeover() )
+		return true
+
+
+	return false
 }

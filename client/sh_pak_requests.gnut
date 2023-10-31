@@ -316,6 +316,8 @@ void function WORKAROUND_ProcessPakQueues()
 			int unloadResult = ClientPakFile_Unload( prs.pakId )
 			Assert( unloadResult == PAK_STATUS_FREED )
 
+			ClientPakFile_Unlock()
+
 			prs.status = ePakRequestStatus.UNLOADED
 			delete file.rpakPathRequestStateMap[prs.rpakPath]
 		}
@@ -347,6 +349,8 @@ void function WORKAROUND_ProcessPakQueues()
 			printf( "ClientPakFile_RequestAsyncLoad: %s\n", prs.rpakPath + ".rpak" )
 			prs.pakId = ClientPakFile_RequestAsyncLoad( prs.rpakPath + ".rpak", prs.trackResourceFeature )
 			file.activeRequestOrNull = prs
+
+			ClientPakFile_Unlock()
 
 			if ( prs.pakId == -1 )
 			{

@@ -336,8 +336,8 @@ void function InitWeaponScripts()
 	MeleeRevenantScythe_Init()
 	MpWeaponRevenantScythePrimary_Init()
 
-
-
+		MeleeShadowsquadHands_Init()
+		MpWeaponShadowsquadHandsPrimary_Init()
 
 
 		MeleeBoxingRing_Init()
@@ -350,6 +350,12 @@ void function InitWeaponScripts()
 
 		MpAbilityPortableAutoLoader_Init()
 		MpWeaponDebuffZone_Init()
+
+
+
+
+
+
 
 
 
@@ -451,9 +457,9 @@ void function InitWeaponScripts()
 
 
 
-
-
-
+		MpAbilityConduitArcFlash_Init()
+		Mp_ability_shield_mines_init()
+		Mp_ability_shield_mines_line_init()
 
 
 
@@ -556,6 +562,9 @@ void function InitWeaponScripts()
 
 
 
+	MpAbilityRiseFromTheAshes_Init()
+
+
 
 
 
@@ -565,7 +574,6 @@ void function InitWeaponScripts()
 		MpAbilityShieldThrow_Init()
 		MpAbilityArmoredLeap_Init()
 		MpWeaponReviveShield_Init()
-
 
 
 
@@ -597,12 +605,9 @@ void function InitWeaponScripts()
 
 
 
-
-		MpWeaponFerroWall_Init()
-		MpAbilitySpikeStrip_Init()
-		MpAbilityReinforce_Init()
-
-
+	MpWeaponFerroWall_Init()
+	MpAbilitySpikeStrip_Init()
+	MpAbilityReinforce_Init()
 
 
 
@@ -2247,6 +2252,17 @@ bool function PointWithinDistOfAnyPoint( Point point, array<Point> pointArray, f
 	foreach ( Point pt in pointArray )
 	{
 		if ( DistanceSqr( pt.origin, point.origin ) < distSq )
+			return true
+	}
+
+	return false
+}
+
+bool function PointIsEqualToAPointInList( Point testPt, array< Point > pointArray )
+{
+	foreach( Point pt in pointArray )
+	{
+		if(( testPt.origin == pt.origin ) && ( testPt.angles == pt.angles ))
 			return true
 	}
 
@@ -4530,6 +4546,16 @@ float function HealthRatio( entity ent )
 	return float( health ) / maxHealth
 }
 
+Point function GetPointFromEnt( entity ent )
+{
+	Point result
+
+	result.origin = ent.GetOrigin()
+	result.angles = ent.GetAngles()
+
+	return result
+}
+
 
 vector function GetPointOnPathForFraction( array<entity> nodes, float frac )
 {
@@ -6698,11 +6724,14 @@ void function RemoveRefEntAreaFromInvalidOriginsForPlacingPermanentsOnto( entity
 }
 
 
-bool function IsOriginInvalidForPlacingPermanentOnto( vector origin )
+bool function IsOriginInvalidForPlacingPermanentOnto( vector origin, entity realmEnt )
 {
 	foreach ( entity refEnt, RefEntAreaData data in file.invalidAreasRelativeToEntForPlacingPermanentsOnto )
 	{
 		if ( !IsValid( refEnt ) )
+			continue
+
+		if( IsValid( realmEnt ) && !refEnt.DoesShareRealms( realmEnt ) )
 			continue
 
 		vector localPos = WorldPosToLocalPos_NoEnt( origin, refEnt.GetOrigin(), refEnt.GetAngles() )

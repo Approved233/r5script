@@ -63,6 +63,11 @@ global function AddCallback_CanOpenLootBin
 
 
 
+
+
+
+
+
 global function CL_LootBinOpening
 
 
@@ -237,6 +242,8 @@ struct
 
 
 
+
+
 } file
 
 
@@ -296,6 +303,30 @@ void function AddCallback_OnLootBinOpening( OnLootBinOpeningCallbackType callbac
 	Assert( !file.onLootBinOpeningCallbacks.contains( callbackFunc ), "Already added " + string( callbackFunc ) + " with Survival_AddCallback_OnLootbinOpened" )
 	file.onLootBinOpeningCallbacks.append( callbackFunc )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1738,6 +1769,26 @@ string function GetLootBinUseTextOverride( entity lootBin )
 	}
 	return ""
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

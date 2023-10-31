@@ -538,6 +538,49 @@ int function SpawnSquadSkyDive_GetRemainingRespawnsForPlayer( entity player )
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 float function SpawnGroupSkydive_GetSquadSpawnDelay( int team )
 {
 	float spawnDelay = GetCurrentPlaylistVarFloat( "respawn_cooldown", 5.0 )

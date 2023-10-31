@@ -34,7 +34,7 @@ global function CanSendClubInvite
 
 
 global function JoinMatchAsPartySpectatorDialog
-
+global function PIN_GetSocialSettings
 
 #if DEV
 global function DebugDiscoverability
@@ -3280,4 +3280,31 @@ string function GetProfileString()
 	string profileString = Localize( "#INSPECT_MENU_HEADER_NAME_PLAT", s_socialFile.actionFriend.name, platformString ).toupper()
 
 	return profileString
+}
+
+table function PIN_GetSocialSettings()
+{
+	table social = {
+		party_privacy  = GetConVarString( "party_privacy" ),
+		last_squad     = PIN_GetLastSquadSetting(),
+		friend_request = PIN_GetCrossplayInviteSetting(),
+	}
+
+	return social
+}
+
+string function PIN_GetLastSquadSetting()
+{
+	if ( IsBitFlagSet( s_socialFile.cachedMatchPreferenceFlags, eMatchPreferenceFlags.LAST_SQUAD_INVITE_OPT_OUT ) )
+		return "opt_out"
+
+	return "allow_invites"
+}
+
+string function PIN_GetCrossplayInviteSetting()
+{
+	if ( IsBitFlagSet( s_socialFile.cachedMatchPreferenceFlags, eMatchPreferenceFlags.CROSSPLAY_INVITE_AUTO_DENY ) )
+		return "deny_all"
+
+	return "display"
 }

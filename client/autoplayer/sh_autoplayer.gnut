@@ -14,6 +14,9 @@ global function AutoPlayer_GetAllLootData
 global function AutoPlayer_GetForbiddenCharacters
 global function AutoPlayer_GetEquipmentSlotEquippedTier
 global function AutoPlayer_GetCurrentAttachmentTier
+global function AutoPlayer_GetPrematchGameState
+global function AutoPlayer_GetPlayingGameState
+global function AutoPlayer_GetSuddenDeathGameState
 
 
 
@@ -430,4 +433,19 @@ int function AutoPlayer_GetCurrentAttachmentTier( int lootIndex, entity weapon )
 	}
 
 	return attachedData.tier
+}
+
+int function AutoPlayer_GetPrematchGameState()
+{
+	return eGameState.Prematch
+}
+
+int function AutoPlayer_GetPlayingGameState()
+{
+	return eGameState.Playing
+}
+
+int function AutoPlayer_GetSuddenDeathGameState()
+{
+	return eGameState.SuddenDeath
 }

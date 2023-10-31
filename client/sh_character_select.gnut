@@ -94,6 +94,7 @@ global function OverrideCharacterSelectCamera
 global function RestoreCharacterSelectCamera
 global function PanAwayCharacterSelect
 global function FadeInOut
+global function SetCustomReadyUpVoiceLine
 
 const string CAMERA_ENT_NAME = "target_char_sel_camera_new"
 const string CHARACTER_ENT_NAME = "target_char_sel_pilot_new"
@@ -313,6 +314,8 @@ struct FileLevelStruct
 		bool isJiP = false
 		string jipDescription = "#CONTROL_RESPAWN_LATE_JOIN_PLAYER_DESC"
 
+		string customVoiceLine = ""
+
 }
 
 struct CharacterLists {
@@ -440,6 +443,7 @@ void function CharacterSelectMenu_Init()
 
 
 
+
 		RegisterSignal( "UpdateScene" )
 		RegisterSignal( "UpdatingModel" )
 		RegisterSignal( "PlayerModelUpdated" )
@@ -505,18 +509,24 @@ void function OpenCharacterSelectMenu( bool isBrowseMode = false, bool browseMod
 	bool isSpecialCharacterSelect = false
 
 
-
-
+	if (IsRevTakeover())
+		isSpecialCharacterSelect = ShadowArmy_IsPlayerOnShadowArmy(GetLocalClientPlayer())
 
 
 	if (isSpecialCharacterSelect)
 	{
 
-
+		RunUIScript( "UI_RunSpecialCharacterSelect", fileLevel.isBrowseMode, fileLevel.menuEntsExist )
+		ScreenCoverEndTransition ( 11.0 )
 
 	}
 	else
 	{
+
+		if (IsRevTakeover())
+			ScreenCoverEndTransition()
+
+
 		RunUIScript( "UI_RunCharacterSelect", fileLevel.isBrowseMode, fileLevel.menuEntsExist )
 	}
 
@@ -595,8 +605,8 @@ void function PanAwayCharacterSelect()
 	bool isSpecialCharacterSelect = false
 
 
-
-
+	if (IsRevTakeover())
+		isSpecialCharacterSelect = ShadowArmy_IsPlayerOnShadowArmy(GetLocalClientPlayer())
 
 
 
@@ -833,6 +843,11 @@ void function DoSquadCardsPresentation( string endTime, bool showTitleFrame )
 
 	bool shouldHideCharacterSelectRoom = GetCurrentPlaylistVarBool( "survival_hide_character_select_room", false )
 
+
+	if ( IsRevTakeover() )
+		SetCharacterSelectBackgroundForTeam( ShadowArmy_IsPlayerOnShadowArmy(GetLocalClientPlayer()) )
+
+
 	if ( shouldHideCharacterSelectRoom )
 		CharacterSelect_RestorePlayerView()
 
@@ -863,8 +878,8 @@ void function DoSquadCardsPresentation( string endTime, bool showTitleFrame )
 		fileLevel.nestedGladiatorCardHandles.append( nestedGCHandle )
 
 
-
-
+		if (IsRevTakeover())
+			RuiSetBool( nestedGCHandle.cardRui, "showStack", true )
 
 
 		if (showTitleFrame && teammates.len() > 0)
@@ -914,19 +929,19 @@ void function DoSquadCardsPresentation( string endTime, bool showTitleFrame )
 	}
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+	if (IsRevTakeover())
+	{
+		if (ShadowArmy_IsPlayerOnShadowArmy(GetLocalClientPlayer()))
+		{
+			RuiSetString( borderRui, "headerText", "#SHADOW_ARMY_REV_LEGEND_REV_ARMY_BANNER_01" )
+			RuiSetString( borderRui, "subHeaderText", "#SHADOW_ARMY_REV_LEGEND_REV_ARMY_BANNER_02" )
+		}
+		else
+		{
+			RuiSetString( borderRui, "headerText", "#SHADOW_ARMY_REV_LEGEND_ALLIANCE_BANNER_01" )
+			RuiSetString( borderRui, "subHeaderText", "#SHADOW_ARMY_REV_LEGEND_ALLIANCE_BANNER_02" )
+		}
+	}
 
 
 	RuiSetString( borderRui, "gameModeString", GetCurrentPlaylistVarString( "name", "#PLAYLIST_UNAVAILABLE" ) )
@@ -1151,14 +1166,14 @@ void function DoChampionSquadCardsPresentation( string endTime )
 
 
 
-
-
-
-
-
-
-
-
+	if ( !didPopulateChamptionSquad && IsRevTakeover() )
+	{
+		array <entity> enemyTeamPlayerArray = ShadowArmy_GetEnemySquadPlayersForAllianceIntro( AllianceProximity_GetAllianceFromTeam( GetLocalViewPlayer().GetTeam() ) )
+		if( enemyTeamPlayerArray.len() > 0 ) championEHI 		= ToEHI( enemyTeamPlayerArray[0] )
+		if( enemyTeamPlayerArray.len() > 1 ) championSquad1EHI = ToEHI( enemyTeamPlayerArray[1] )
+		if( enemyTeamPlayerArray.len() > 2 ) championSquad2EHI = ToEHI( enemyTeamPlayerArray[2] )
+		didPopulateChamptionSquad = true
+	}
 
 
 	if ( !didPopulateChamptionSquad )
@@ -1183,6 +1198,9 @@ void function DoChampionSquadCardsPresentation( string endTime )
 
 
 
+
+		if ( IsShadowArmyGamemode() )
+			shouldPlayChampionVO = false
 
 
 	
@@ -1211,7 +1229,12 @@ void function DoChampionSquadCardsPresentation( string endTime )
 	EmitSoundOnEntity( GetLocalClientPlayer(), "UI_Survival_Intro_GladiatorCard_Disappear" )
 	ScreenFade( GetLocalClientPlayer(), 0, 0, 0, 255, fadeToBlackDuration, blackDuration, FFADE_OUT | FFADE_PURGE )
 	wait fadeToBlackDuration
-	SetCharacterSelectSceneForChampionSquad()
+
+	if ( IsRevTakeover() )
+		SetCharacterSelectBackgroundForTeam( !ShadowArmy_IsPlayerOnShadowArmy(GetLocalClientPlayer()) )
+	else
+
+		SetCharacterSelectSceneForChampionSquad()
 	wait blackDuration
 	ScreenFade( GetLocalClientPlayer(), 0, 0, 0, 255, fadeFromBlackDuration, 0.0, FFADE_IN | FFADE_PURGE )
 
@@ -1238,20 +1261,20 @@ void function DoChampionSquadCardsPresentation( string endTime )
 		topHeader = "#GLADIATOR_CARD_INTRO_CHAMPION_SQUAD_DATE_NIGHT"
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	else if ( IsRevTakeover() )
+	{
+		if (ShadowArmy_IsPlayerOnShadowArmy(GetLocalClientPlayer()))
+		{
+			topHeader = "#SHADOW_ARMY_REV_CHAMPIONS_ALLIANCE_BANNER_01"
+			RuiSetString( rui, "subHeaderText" ,"#SHADOW_ARMY_REV_CHAMPIONS_ALLIANCE_BANNER_02" )
+		}
+		else
+		{
+			topHeader = "#SHADOW_ARMY_REV_CHAMPIONS_REV_ARMY_BANNER_01"
+			RuiSetString( rui, "subHeaderText" ,"#SHADOW_ARMY_REV_CHAMPIONS_REV_ARMY_BANNER_02" )
+		}
+		showBottomText = false
+	}
 
 	else
 		topHeader = "#GLADIATOR_CARD_INTRO_CHAMPION_SQUAD"
@@ -1308,9 +1331,9 @@ void function DoChampionSquadCardsPresentation( string endTime )
 	}
 
 
-
-
-
+	if (IsRevTakeover())
+		foreach ( NestedGladiatorCardHandle ngch in nestedGCHandles )
+			RuiSetBool( ngch.cardRui, "showStack", true )
 
 
 	OnThreadEnd(
@@ -2084,15 +2107,30 @@ const float CHARACTER_SELECT_FADE_HOLD_TIME = 1.0
 
 void function CloseCharacterSelectMenuAtTime( float closeTimeStamp )
 {
-	Signal( GetLocalClientPlayer(), "CloseCharacterSelectMenuAtTime" )
-	EndSignal( GetLocalClientPlayer(), "CloseCharacterSelectMenuAtTime" )
+	entity localPlayer = GetLocalClientPlayer()
+	Signal( localPlayer, "CloseCharacterSelectMenuAtTime" )
+	EndSignal( localPlayer, "CloseCharacterSelectMenuAtTime" )
 
 	while ( Time() < closeTimeStamp - SCREEN_COVER_TRANSITION_OUT_DURATION - 0.1 )
 		WaitFrame()
 
-	waitthread ScreenCoverTransition( Time() + CharSelect_GetOutroTransitionDuration() )
+	bool continueHoldOver = false
+
+	if ( IsRevTakeover() && IsValid( localPlayer ) && !ShadowArmy_IsPlayerOnShadowArmy( localPlayer ) )
+		continueHoldOver = true
+
+
+	waitthread ScreenCoverTransition( Time() + CharSelect_GetOutroTransitionDuration(), continueHoldOver )
 
 	CloseCharacterSelectMenu()
+
+
+		if ( IsRevTakeover() && IsValid( localPlayer ) && !ShadowArmy_IsPlayerOnShadowArmy( localPlayer ) )
+		{
+			thread ShadowArmy_PlayIntroBannerSoundForLegends_Thread()
+			wait ScreenCoverEndTransition( SHADOWARMY_LEGEND_SPAWN_FADE_FROM_BLACK_HOLD_DURATION + SHADOWARMY_LEGEND_SPAWN_FADE_FROM_BLACK_FADE_DURATION )
+		}
+
 
 	FlashGameWindow()
 }
@@ -2662,7 +2700,12 @@ void function DoBrowseModeCharacterSelectEffects()
 		wait(0.5)
 		entity player = GetLocalClientPlayer()
 		if ( IsAlive( player ) )
-			PlayClientDialogueOnEntity( GetAnyAliasIdForName( "bc_returnFromRespawn" ), 0, player )
+		{
+			
+			
+			
+			PlayClientDialogueOnEntity( GetAnyAliasIdForName( "bc_returnFromRespawn" ), eDialogueFlags.EMIT_FROM_FIXED_POSITION, player )
+		}
 	}()
 }
 
@@ -2862,14 +2905,14 @@ void function OnLockStepPickIndexChanged( entity player, int new )
 		expect entity( pickingPlayer )
 
 
+		if ( IsRevTakeover() && ShadowArmy_IsPlayerOnShadowArmy(GetLocalClientPlayer()) )
+		{
+			fileLevel.desiredCharacterOrNull = GetItemFlavorByAsset( CHARACTER_ASSET_REV )
+			SetMenuState( eNewCharacterSelectMenuState.LOCKED )
+			UpdateButtonStates()
+			return
 
-
-
-
-
-
-
-
+		}
 
 
 		LoadoutEntry characterSlot = Loadout_Character()
@@ -3678,24 +3721,52 @@ void function UpdatePlayerModel( ItemFlavor character, ItemFlavor ornull charact
 	CharacterSkin_Apply( fileLevel.characterModel, characterSkin )
 	
 	fileLevel.characterModel.Show()
-
 	Signal( fileLevel.signalDummy, "PlayerModelUpdated" )
 
 	
 	vector flashColor = ItemFlavor_GetQualityColor( characterSkin ) / 255
 	thread FlashMenuModel( fileLevel.characterModel, eMenuModelFlashType.CHARACTER_SELECT, flashColor )
 
-	
-	int backgroundSkinIndex = CharacterClass_GetMenuBackgroundSkinIndex( character )
-	if ( IsValid( fileLevel.backgroundModelGeo ) )
-		fileLevel.backgroundModelGeo.SetSkin( backgroundSkinIndex )
 
-	
-	int smokeSkinIndex = CharacterClass_GetMenuSmokeSkinIndex( character )
-	if ( IsValid( fileLevel.backgroundModelSmoke ) )
-		fileLevel.backgroundModelSmoke.SetSkin( smokeSkinIndex )
+		if ( GetCurrentPlaylistVarBool( "use_custom_mode_intro", false ) && IsRevTakeover() && ShadowArmy_IsPlayerOnShadowArmy(GetLocalClientPlayer()) )
+		{
+			
+			int backgroundSkinIndex = fileLevel.backgroundModelGeo.GetSkinIndexByName("revenant_event_skin")
+			if ( IsValid( fileLevel.backgroundModelGeo ) )
+				fileLevel.backgroundModelGeo.SetSkin( backgroundSkinIndex )
 
-	TryUpdateLightingRig( character, characterSkin )
+			
+			int smokeSkinIndex = fileLevel.backgroundModelSmoke.GetSkinIndexByName("revenant_event_skin")
+			if ( IsValid( fileLevel.backgroundModelSmoke ) )
+			fileLevel.backgroundModelSmoke.SetSkin( smokeSkinIndex )
+
+			ItemFlavor ornull armySkin = GetItemFlavorOrNullByGUID( ConvertItemFlavorGUIDStringToGUID( "SAID00097700436" ) )
+			if ( armySkin != null )
+			{
+				expect ItemFlavor( armySkin )
+				TryUpdateLightingRig( character, armySkin )
+			}
+			else
+			{
+				TryUpdateLightingRig( character, characterSkin )
+			}
+
+		}
+		else
+
+		{
+			
+			int backgroundSkinIndex = CharacterClass_GetMenuBackgroundSkinIndex( character )
+			if ( IsValid( fileLevel.backgroundModelGeo ) )
+				fileLevel.backgroundModelGeo.SetSkin( backgroundSkinIndex )
+
+			
+			int smokeSkinIndex = CharacterClass_GetMenuSmokeSkinIndex( character )
+			if ( IsValid( fileLevel.backgroundModelSmoke ) )
+			fileLevel.backgroundModelSmoke.SetSkin( smokeSkinIndex )
+
+			TryUpdateLightingRig( character, characterSkin )
+		}
 
 	SetChromaCharacter( character )
 
@@ -3799,7 +3870,18 @@ void function UpdatePlayerAnim( ItemFlavor character, int currentMenuState )
 		asset customReadyIdleAnim  = CharacterSkin_GetCustomCharSelectReadyIdleAnim( characterSkin )
 		Assert( (customReadyIntroAnim == $"") == (customReadyIdleAnim == $""), format( "Char skin '%s' has only one char select custom anim set!", string(ItemFlavor_GetAsset( characterSkin )) ) )
 
-		if ( (customReadyIntroAnim != $"") && ShipHackCheckForAnim( customReadyIntroAnim, fileLevel.characterModel, characterSkin ) && ShipHackCheckForAnim( customReadyIdleAnim, fileLevel.characterModel, characterSkin ) )
+
+		if ( GetCurrentPlaylistVarBool( "use_custom_mode_intro", false ) && IsRevTakeover() && ShadowArmy_IsPlayerOnShadowArmy(GetLocalClientPlayer()) )
+		{
+			wait 8.5
+			fileLevel.characterModel.Show()
+			entity charNode = fileLevel.characterNode
+			PlayAnim( fileLevel.characterModel, "revenant_army_menu_ready_up_center", charNode )
+		}
+		else if ( (customReadyIntroAnim != $"") && ShipHackCheckForAnim( customReadyIntroAnim, fileLevel.characterModel, characterSkin ) && ShipHackCheckForAnim( customReadyIdleAnim, fileLevel.characterModel, characterSkin ) )
+
+
+
 		{
 			
 			fileLevel.characterModel.Anim_Play( customReadyIntroAnim )
@@ -3808,13 +3890,6 @@ void function UpdatePlayerAnim( ItemFlavor character, int currentMenuState )
 			fileLevel.characterModel.Anim_Play( customReadyIdleAnim )
 			WaittillAnimDone( fileLevel.characterModel )
 		}
-
-
-
-
-
-
-
 		else
 		{
 			entity charNode = fileLevel.characterNode
@@ -3838,6 +3913,12 @@ bool function ShipHackCheckForAnim( asset reqAnim, entity characterModel, ItemFl
 	return true
 }
 
+void function SetCustomReadyUpVoiceLine( string voiceLine )
+{
+	if ( voiceLine != "" )
+		fileLevel.customVoiceLine = voiceLine
+}
+
 void function PlayCharacterReadyUpLine( ItemFlavor character )
 {
 	
@@ -3851,7 +3932,14 @@ void function PlayCharacterReadyUpLine( ItemFlavor character )
 
 	entity player = GetLocalClientPlayer()
 	if ( IsValid( player ) )
-		EmitSoundOnEntity( player, readyUpLines.getrandom() )
+	{
+		if ( fileLevel.customVoiceLine == "" )
+			EmitSoundOnEntity( player, readyUpLines.getrandom() )
+		else
+			EmitSoundOnEntity( player, fileLevel.customVoiceLine )
+	}
+
+	fileLevel.customVoiceLine = "" 
 }
 
 void function DebugMenuThink()
@@ -4617,6 +4705,95 @@ void function FadeInOut (float fadeOutDuration , float blackoutDuration, float f
 	ScreenFade( GetLocalClientPlayer(), 0, 0, 0, 255, fadeInDuration, 0.0, FFADE_IN | FFADE_PURGE )
 }
 
+
+void function SetCharacterSelectBackgroundForTeam( bool shadowArmy )
+{
+	int backgroundModelGeoSkinIndex = CHAMPION_SQAUD_BACKGROUND_SKIN_INDEX
+	int backgroundModelSmokeSkinIndex = CHAMPION_SQAUD_BACKGROUND_SKIN_INDEX
+
+	if ( shadowArmy )
+	{
+		backgroundModelGeoSkinIndex = fileLevel.backgroundModelGeo.GetSkinIndexByName("revenant_event_skin")
+		backgroundModelSmokeSkinIndex = fileLevel.backgroundModelSmoke.GetSkinIndexByName("revenant_event_skin")
+	}
+	else
+	{
+		backgroundModelGeoSkinIndex = fileLevel.backgroundModelGeo.GetSkinIndexByName("ballistic")
+		backgroundModelSmokeSkinIndex = fileLevel.backgroundModelSmoke.GetSkinIndexByName("ballistic")
+	}
+
+	if ( IsValid( fileLevel.backgroundModelGeo ) )
+		fileLevel.backgroundModelGeo.SetSkin( backgroundModelGeoSkinIndex )
+
+	if ( IsValid( fileLevel.backgroundModelSmoke ) )
+		fileLevel.backgroundModelSmoke.SetSkin( backgroundModelSmokeSkinIndex )
+
+	fileLevel.lightEntsExist = DoMenuLightsExist()
+	if ( fileLevel.lightEntsExist && IsValid( fileLevel.lightRigModel ) )
+	{
+		fileLevel.keyLight.SetTweakLightColor( < 0.5, 0.5, 0.5 > )
+		fileLevel.keyLight.SetTweakLightBrightness( 4.0 )
+		fileLevel.keyLight.SetTweakLightCone( 18.0 )
+		fileLevel.keyLight.SetTweakLightInnerCone ( 15.0 )
+		fileLevel.keyLight.SetTweakLightDistance( 1800.0 )
+		fileLevel.keyLight.SetTweakLightHalfBrightFrac( 0.3 )
+		fileLevel.keyLight.SetTweakLightSpecIntensity( 1.0 )
+		fileLevel.keyLight.SetTweakLightPBRFalloff( false )
+		fileLevel.keyLight.SetTweakLightRealtimeShadows( true )
+		fileLevel.fillLight.SetTweakLightColor( < 0.2, 0.2, 0.2 > )
+		fileLevel.fillLight.SetTweakLightBrightness( 0.4 )
+		fileLevel.fillLight.SetTweakLightCone( 15.0 )
+		fileLevel.fillLight.SetTweakLightInnerCone ( 12.0 )
+		fileLevel.fillLight.SetTweakLightDistance( 800.0 )
+		fileLevel.fillLight.SetTweakLightHalfBrightFrac( 0 )
+		fileLevel.fillLight.SetTweakLightSpecIntensity( 1.0 )
+		fileLevel.fillLight.SetTweakLightPBRFalloff( false )
+		fileLevel.fillLight.SetTweakLightRealtimeShadows( true )
+		fileLevel.rimLightL.SetTweakLightColor( < 0.75, 0.75, 0.75 > )
+		fileLevel.rimLightL.SetTweakLightBrightness( 4.0 )
+		fileLevel.rimLightL.SetTweakLightCone( 24.0 )
+		fileLevel.rimLightL.SetTweakLightInnerCone ( 20.0 )
+		fileLevel.rimLightL.SetTweakLightDistance( 800.0 )
+		fileLevel.rimLightL.SetTweakLightHalfBrightFrac( 0 )
+		fileLevel.rimLightL.SetTweakLightSpecIntensity( 1.0 )
+		fileLevel.rimLightL.SetTweakLightPBRFalloff( false )
+		fileLevel.rimLightL.SetTweakLightRealtimeShadows( true )
+		fileLevel.rimLightR.SetTweakLightColor( < 0.6, 0.6, 0.6 > )
+		fileLevel.rimLightR.SetTweakLightBrightness( 4.0 )
+		fileLevel.rimLightR.SetTweakLightCone( 24.0 )
+		fileLevel.rimLightR.SetTweakLightInnerCone ( 20.0 )
+		fileLevel.rimLightR.SetTweakLightDistance( 800.0 )
+		fileLevel.rimLightR.SetTweakLightHalfBrightFrac( 0 )
+		fileLevel.rimLightR.SetTweakLightSpecIntensity( 2.0 )
+		fileLevel.rimLightR.SetTweakLightPBRFalloff( false )
+		fileLevel.rimLightR.SetTweakLightRealtimeShadows( true )
+
+		
+		fileLevel.lightRigModel.Anim_Play( $"animseq/humans/class/char_select_light_default.rseq" )
+		int attachIdx_fill = fileLevel.lightRigModel.LookupAttachment( "LIGHT_1" )
+		int attachIdx_rimL = fileLevel.lightRigModel.LookupAttachment( "LIGHT_2" )
+		int attachIdx_rimR = fileLevel.lightRigModel.LookupAttachment( "LIGHT_3" )
+		int attachIdx_key = fileLevel.lightRigModel.LookupAttachment( "LIGHT_4" )
+
+		fileLevel.fillLight.SetTweakLightOrigin( fileLevel.lightRigModel.GetAttachmentOrigin( attachIdx_fill ) )
+		fileLevel.fillLight.SetTweakLightAngles( fileLevel.lightRigModel.GetAttachmentAngles( attachIdx_fill ) )
+
+		fileLevel.rimLightL.SetTweakLightOrigin( fileLevel.lightRigModel.GetAttachmentOrigin( attachIdx_rimL ) )
+		fileLevel.rimLightL.SetTweakLightAngles( fileLevel.lightRigModel.GetAttachmentAngles( attachIdx_rimL ) )
+
+		fileLevel.rimLightR.SetTweakLightOrigin( fileLevel.lightRigModel.GetAttachmentOrigin( attachIdx_rimR ) )
+		fileLevel.rimLightR.SetTweakLightAngles( fileLevel.lightRigModel.GetAttachmentAngles( attachIdx_rimR ) )
+
+		fileLevel.keyLight.SetTweakLightOrigin( fileLevel.lightRigModel.GetAttachmentOrigin( attachIdx_key ) )
+		fileLevel.keyLight.SetTweakLightAngles( fileLevel.lightRigModel.GetAttachmentAngles( attachIdx_key ) )
+	}
+	else
+	{
+		printt( "Map doesn't have menu lights compiled in. Make sure the latest menu box instance is in the level and recompile the map." )
+	}
+}
+
+
 void function SetCharacterSelectSceneForChampionSquad()
 {
 	
@@ -4699,6 +4876,13 @@ void function SetCharacterSelectSceneForChampionSquad()
 		printt( "Map doesn't have menu lights compiled in. Make sure the latest menu box instance is in the level and recompile the map." )
 	}
 }
+
+
+
+
+
+
+
 
 
 

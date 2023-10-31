@@ -31,6 +31,10 @@ global function SupportBin_UseBasicLootConfiguration
 
 
 
+
+
+
+
 const string LOOT_ITEM_MEDKIT_NAME = "health_pickup_health_large"
 const string LOOT_ITEM_BATTERY_NAME = "health_pickup_combo_large"
 const string LOOT_ITEM_PHEONIX_NAME = "health_pickup_combo_full"
@@ -263,6 +267,23 @@ bool function SupportBin_OnlyScaleSecretLoot()
 	return ( GetCurrentPlaylistVarBool("supportbin_disable_scaling_regular_loot", true ) )
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 bool function SupportBin_AllowArmorLootInBins()
 {
 	return ( GetCurrentPlaylistVarBool("supportbin_enable_armor_loot", false ) )
@@ -277,6 +298,87 @@ bool function SupportBin_ValidateSurvivalNeedAgainstTeamInvetory( )
 {
 	return ( GetCurrentPlaylistVarBool("supportbin_validate_survival_using_team_inventory", false ) )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -118,6 +118,10 @@ void function SquadSummaryOnOpenPanel( var panel )
 
 	if( !IsRegisteredButtonPressedCallback( KEY_F, HandleViewProfileSquadPlayer ) )
 		RegisterButtonPressedCallback( KEY_F, HandleViewProfileSquadPlayer )
+
+	if( !IsRegisteredButtonPressedCallback( BUTTON_Y, HandleViewProfileSquadPlayer ) )
+		RegisterButtonPressedCallback( BUTTON_Y, HandleViewProfileSquadPlayer )
+
 }
 
 void function UI_UpdateSquadSummaryInternal( var panel )
@@ -202,6 +206,10 @@ void function SquadSummaryOnClosePanel( var panel )
 	}
 	if( IsRegisteredButtonPressedCallback( KEY_F, HandleViewProfileSquadPlayer ) )
 		DeregisterButtonPressedCallback( KEY_F, HandleViewProfileSquadPlayer )
+
+	if( IsRegisteredButtonPressedCallback( BUTTON_Y, HandleViewProfileSquadPlayer ) )
+		DeregisterButtonPressedCallback( BUTTON_Y, HandleViewProfileSquadPlayer )
+
 }
 
 

@@ -1568,6 +1568,7 @@ void function OnWreckingBallDeployed( entity projectile, DeployableCollisionPara
 
 
 
+
 void function ServerCallback_RT_SpeedupHudForPlayer( int statusEffect )
 {
 	entity player  = GetLocalViewPlayer()
@@ -1616,9 +1617,6 @@ void function WreckingBall_SpeedupHudThread( entity viewPlayer, int fxHandle, in
 	while ( StatusEffect_HasSeverity( viewPlayer, statusEffect ) )
 		WaitFrame()
 }
-
-
-
 
 
 

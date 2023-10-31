@@ -634,13 +634,13 @@ void function DeathScreenUpdateChangeLegend( entity player )
 	bool legendReselectable = IsCharacterReselectEnabled()
 
 
-
-
-
-
-
-
-
+		if( IsRevTakeover() && IsValid( player ) )
+		{
+			if( AllianceProximity_GetAllianceFromTeam( player.GetTeam() ) == ALLIANCE_B )
+			{
+				legendReselectable = false
+			}
+		}
 
 
 	if( legendReselectable && validGameState )
@@ -790,7 +790,7 @@ void function DeathScreenUpdateHeader( var headerElem )
 	RuiSetBool( headerRui, "isControlMode", Control_IsModeEnabled())
 
 
-
+		RuiSetBool( headerRui, "isStrikeOutMode", IsStrikeoutGamemode())
 
 
 	if ( animateBanner )

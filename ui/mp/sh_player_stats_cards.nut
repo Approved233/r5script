@@ -1312,6 +1312,8 @@ void function StatCard_ClearAvailableSeasonsAndRankedPeriodsCache( int gameMode 
 		delete file.availableSeasonsAndRankedPeriods[gameMode]
 }
 
+const asset SEASON_15 = $"settings/itemflav/calevent/season15.rpak" 
+const string SEASON_ONE_GUID = "SAID01769158912"
 array< ItemFlavor > function StatCard_GetAvailableSeasonsAndRankedPeriods( int gameMode )
 {
 	if ( gameMode in file.availableSeasonsAndRankedPeriods )
@@ -1319,10 +1321,10 @@ array< ItemFlavor > function StatCard_GetAvailableSeasonsAndRankedPeriods( int g
 
 	
 	array< ItemFlavor > seasons = clone GetAllItemFlavorsOfType( eItemType.calevent_season ) 
-	ItemFlavor season15CalEvent = GetItemFlavorByAsset( $"settings/itemflav/calevent/season15.rpak" ) 
+	ItemFlavor season15CalEvent = GetItemFlavorByAsset( SEASON_15 )
 	int season15EndTime = CalEvent_GetFinishUnixTime( season15CalEvent )
 
-	array<ItemFlavor> seasonsCopy = clone seasons
+	array< ItemFlavor > seasonsCopy = clone seasons
 	foreach ( ItemFlavor season in seasonsCopy )
 	{
 		if ( !CalEvent_IsRevealed( season, GetUnixTimestamp() ) )
@@ -1333,7 +1335,7 @@ array< ItemFlavor > function StatCard_GetAvailableSeasonsAndRankedPeriods( int g
 
 		
 		string guid = ItemFlavor_GetGUIDString( season )
-		if ( guid == "SAID01769158912" )
+		if ( guid == SEASON_ONE_GUID )
 		{
 			seasons.removebyvalue( season )
 			continue
@@ -1404,66 +1406,16 @@ array< ItemFlavor > function StatCard_GetAvailableSeasonsAndRankedPeriods( int g
 	return seasonsAndPeriods
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 int function SortSeasonAndRankedStats( ItemFlavor a, ItemFlavor b )
 {
-	ItemFlavor ornull compA = a
-	ItemFlavor ornull compB = b
+	ItemFlavor compA = a
+	ItemFlavor compB = b
 
 	if ( ItemFlavor_GetType( a ) == eItemType.ranked_2pt0_period )
 		compA = Ranked_GetSeasonForRanked2Pt0Period( a )
 
 	if ( ItemFlavor_GetType( b ) == eItemType.ranked_2pt0_period )
 		compB = Ranked_GetSeasonForRanked2Pt0Period( b )
-
-	if ( compA == null && compB != null )
-		return 1
-	else if ( compB != null && compB == null )
-		return -1
-	else if ( compA == null && compB == null )
-		return 0
-
-	expect ItemFlavor( compA )
-	expect ItemFlavor( compB )
 
 	int aTime = CalEvent_GetStartUnixTime( compA )
 	int bTime = CalEvent_GetStartUnixTime( compB )
@@ -1472,14 +1424,13 @@ int function SortSeasonAndRankedStats( ItemFlavor a, ItemFlavor b )
 		return -1
 	else if ( aTime > bTime )
 		return 1
-	else if ( IsSeasonFlavor( a ) && !IsSeasonFlavor( b )  )
+
+	if ( IsSeasonFlavor( a ) && !IsSeasonFlavor( b )  )
 		return -1
 	else if ( !IsSeasonFlavor( a ) && IsSeasonFlavor( b ) )
 		return 1
-	else
-		return 0
 
-	unreachable
+	return 0
 }
 
 string function StatCard_GetToolTipFieldFromIndex( int index, int statCardType, int statCardSection )

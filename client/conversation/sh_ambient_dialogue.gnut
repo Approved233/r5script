@@ -72,7 +72,11 @@ void function ShAmbientDialogue_Init()
 		Warning( "WARNING! Ambient dialogue disabled!" )
 		return
 	}
-
+	if ( GunGame_IsModeEnabled() )
+	{
+		Warning( "WARNING! Ambient dialogue disabled!" )
+		return
+	}
 
 		
 		RegisterCSVDialogue( $"datatable/ambient_dialogue.rpak" )

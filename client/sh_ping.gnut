@@ -19,8 +19,10 @@ global function MapPing_DistanceCheck_GetDistanceRange
 
 
 
+global function DoubleTapEnemyPingEnabled
 global function Ping_SetMapWaypoint
 global function Ping_ClearMapWaypoint
+global function CancelLatestWaypoint
 global function Ping_Interrupt
 global function Ping_GetMenuOptionTextForPing
 global function Ping_GetShortTextForPing
@@ -325,8 +327,8 @@ global enum ePingType
 
 
 
-
-
+		EVAC_SHIP,
+		EVAC_ZONE,
 
 
 
@@ -373,6 +375,10 @@ global enum ePingType
 
 	ABILITY_SPACE_ELEVATOR,
 	ABILITY_BLACK_HOLE,
+
+	ABILITY_SHIELD_MINE,
+
+
 	HOLOSPRAY_LIKE,
 
 
@@ -383,12 +389,10 @@ global enum ePingType
 	VANTAGE_COMPANION,
 	ENEMY_VANTAGE_COMPANION,
 
-
 	ABILITY_BARRICADE,
 	ABILITY_BARRICADE_OPEN,
 	ABILITY_PIERCING_SPIKES,
 	ABILITY_DARK_VEIL,
-
 
 
 
@@ -431,14 +435,12 @@ global enum ePingType
 
 	MAGGIE_WRECKING_BALL,
 
-
-		ABILITY_MOBILE_SHIELD,
-		ENEMY_MOBILE_SHIELD,
-		ABILITY_CASTLE_WALL,
-		ENEMY_CASTLE_WALL,
-		ABILITY_CASTLE_WALL_ENERGIZED,
-		ENEMY_CASTLE_WALL_ENERGIZED,
-
+	ABILITY_MOBILE_SHIELD,
+	ENEMY_MOBILE_SHIELD,
+	ABILITY_CASTLE_WALL,
+	ENEMY_CASTLE_WALL,
+	ABILITY_CASTLE_WALL_ENERGIZED,
+	ENEMY_CASTLE_WALL_ENERGIZED,
 
 
 		BLOODHOUND_WHITE_RAVEN,
@@ -527,6 +529,12 @@ global enum ePingType
 	TOXIC_GAS,
 
 	MULTILOCATION,
+
+
+		REDEYED_REV,
+		EVAC_AREA,
+		LEGEND_START_AREA,
+
 
 
 
@@ -756,8 +764,8 @@ string function Ping_GetSoundForLocationPing( entity wp, int pingType, bool isOu
 		case ePingType.SKYDIVE_LAUNCHER:
 
 
-
-
+		case ePingType.EVAC_SHIP:
+		case ePingType.EVAC_ZONE:
 
 
 
@@ -781,7 +789,6 @@ string function Ping_GetSoundForLocationPing( entity wp, int pingType, bool isOu
 
 
 		case ePingType.MAGGIE_WRECKING_BALL:
-
 		case ePingType.ABILITY_MOBILE_SHIELD:
 		case ePingType.ABILITY_CASTLE_WALL:
 
@@ -854,7 +861,7 @@ void function ShPing_Init()
 	} )
 
 
-		Remote_RegisterServerFunction( CMDNAME_PING_MAP_WAYPOINT, "int", INT_MIN, INT_MAX, "int", INT_MIN, INT_MAX, "int", INT_MIN, INT_MAX )
+		Remote_RegisterServerFunction( CMDNAME_PING_MAP_WAYPOINT, "int", INT_MIN, INT_MAX, "int", INT_MIN, INT_MAX, "int", INT_MIN, INT_MAX, "bool" )
 		Remote_RegisterServerFunction( CMDNAME_PING_NEW_LOOT, "entity", "entity", "int", INT_MIN, INT_MAX, "vector", -MAX_WORLD_COORD, MAX_WORLD_COORD, 32 )
 		Remote_RegisterServerFunction( CMDNAME_PING_NEW_LOOT_OUTSIDE_DEATHBOX, "entity", "int", INT_MIN, INT_MAX, "vector", -MAX_WORLD_COORD, MAX_WORLD_COORD, 32 )
 		Remote_RegisterServerFunction( CMDNAME_PING_REPLY, "entity", "int", INT_MIN, INT_MAX )
@@ -1013,14 +1020,6 @@ bool function IsPingDibsEnabledForPlayer( entity player )
 
 	return true
 }
-
-
-
-
-
-
-
-
 
 
 
@@ -1761,7 +1760,7 @@ bool function DoubleTapEnemyPingEnabled()
 
 bool function IsWaypointCulledEmote(entity player, entity wp)
 {
-	if ( wp.GetWaypointType() == eWaypoint.EMOTE_ICON )
+	if ( wp.GetWaypointType() == eWaypoint.EMOTE_ICON || wp.GetWaypointType() == eWaypoint.SKYDIVE_EMOTE_ICON )
 	{
 		float frac = TraceLineSimple( player.CameraPosition(), wp.GetOrigin(), player )
 		if ( Distance( player.GetOrigin() , wp.GetOrigin() ) > PING_EMOTE_REPLY_CULL_DISTANCE || frac < 1.0 )
@@ -2212,10 +2211,8 @@ array<int> function GetReplyOptionsForWaypoint( entity player, entity wp )
 
 					case ePingType.MAGGIE_WRECKING_BALL:
 					case ePingType.VANTAGE_COMPANION:
-
 					case ePingType.ABILITY_MOBILE_SHIELD:
 					case ePingType.ABILITY_CASTLE_WALL:
-
 
 					case ePingType.BLOODHOUND_WHITE_RAVEN_TARGET_LOC:
 
@@ -2270,6 +2267,10 @@ array<int> function GetReplyOptionsForWaypoint( entity player, entity wp )
 				switch ( pingType )
 				{
 					case ePingType.ENEMY_SPECIFIC:
+						results.append( ePingReply.OK )
+						results.append( ePingReply.NEGATIVE )
+						results.append( ePingReply.HOLD_ON )
+						break
 					case ePingType.ASH_PASSIVE_ID_ATTACKER:
 
 
@@ -2298,12 +2299,8 @@ array<int> function GetReplyOptionsForWaypoint( entity player, entity wp )
 
 					case ePingType.MAGGIE_WRECKING_BALL:
 					case ePingType.VANTAGE_COMPANION:
-
 					case ePingType.ABILITY_MOBILE_SHIELD:
 					case ePingType.ABILITY_CASTLE_WALL:
-
-
-
 					case ePingType.ABILITY_ECHO_LOCATOR:
 					case ePingType.ENEMY_TETHERED:
 						results.append( ePingReply.BLANK )
@@ -2360,6 +2357,10 @@ array<int> function GetReplyOptionsForWaypoint( entity player, entity wp )
 						break
 
 					case ePingType.ENEMY_GENERAL:
+						results.append( ePingReply.OK )
+						results.append( ePingReply.NEGATIVE )
+						results.append( ePingReply.HOLD_ON )
+						break
 					case ePingType.AREA_VISITED:
 						if ( wp.wp.haveConfirmed )
 							results.append( ePingReply.BLANK )
@@ -3443,6 +3444,15 @@ PingCommandParams function GetPingParamsForHitEnt( entity hitEnt, entity player,
 			result.hitEnt = processedHitEnt
 			if ( hitEntIsNPC && (processedHitEnt.GetAISettingsName() == "npc_frag_drone_treasure_tick") )
 			{
+
+
+
+
+
+
+
+
+
 				result.pingType = ePingType.ENEMY_LOOTSOURCE
 				return result
 			}
@@ -3657,7 +3667,6 @@ PingCommandParams function GetPingParamsForHitEnt( entity hitEnt, entity player,
 				}
 
 
-
 			if( IsReinforced( doorEnt ) )
 			{
 				result.hitEnt = doorEnt
@@ -3665,13 +3674,11 @@ PingCommandParams function GetPingParamsForHitEnt( entity hitEnt, entity player,
 				return result
 			}
 
-
 			result.hitEnt = doorEnt
 			result.pingType = ( IsDoorOpen( doorEnt ) ? ePingType.DOOR_OPEN : ePingType.DOOR )
 			return result
 		}
 	}
-
 
 	{
 		entity doorEnt = GetHitEntForTargetName( hitEntData, PASSIVE_REINFORCE_REBUILT_DOOR_SCRIPT_NAME )
@@ -3704,7 +3711,6 @@ PingCommandParams function GetPingParamsForHitEnt( entity hitEnt, entity player,
 			return result
 		}
 	}
-
 
 	
 	{
@@ -3915,15 +3921,15 @@ PingCommandParams function GetPingParamsForHitEnt( entity hitEnt, entity player,
 	}
 	
 
-
-
-
-
-
-
-
-
-
+		{
+			entity dropship = GetHitEntForTargetName( hitEntData, EVAC_DROPSHIP_TARGETNAME )
+			if ( IsValid( dropship ) )
+			{
+				result.hitEnt = dropship
+				result.pingType = ePingType.EVAC_DROPSHIP
+				return result
+			}
+		}
 
 
 
@@ -4050,19 +4056,9 @@ PingCommandParams function GetPingParamsForHitEnt( entity hitEnt, entity player,
 		entity companion = GetHitEntForScriptName( hitEntData, VANTAGE_COMPANION_SCRIPTNAME )
 		if ( IsValid( companion ) )
 		{
-
-
-
-
-
-
-
-
-			{
-				result.hitEnt = companion
-				result.pingType = IsEnemyTeam( playerTeam, companion.GetTeam() ) ? ePingType.ENEMY_VANTAGE_COMPANION : ePingType.VANTAGE_COMPANION
-				return result
-			}
+			result.hitEnt = companion
+			result.pingType = IsEnemyTeam( playerTeam, companion.GetTeam() ) ? ePingType.ENEMY_VANTAGE_COMPANION : ePingType.VANTAGE_COMPANION
+			return result
 		}
 	}
 
@@ -4404,6 +4400,19 @@ PingCommandParams function GetPingParamsForHitEnt( entity hitEnt, entity player,
 		}
 	}
 
+
+		{ 
+			entity shieldMine = GetHitEntForScriptName( hitEntData, SHIELD_MINE_PROP_SCRIPTNAME )
+			if ( IsValid( shieldMine ) )
+			{
+				result.hitEnt = shieldMine
+				result.pingType = ePingType.ABILITY_SHIELD_MINE
+				
+				return result
+			}
+		}
+
+
 	{ 
 		entity chargePylon = GetHitEntForModel( hitEntData, CHARGE_PYLON_PING_MODEL )
 		if ( IsValid( chargePylon ) )
@@ -4414,49 +4423,47 @@ PingCommandParams function GetPingParamsForHitEnt( entity hitEnt, entity player,
 		}
 	}
 
-
+	{ 
+		entity mobileShield = GetHitEntForScriptName( hitEntData, SHIELD_THROW_SCRIPTNAME )
+		if ( IsValid( mobileShield ) )
 		{
-			entity mobileShield = GetHitEntForScriptName( hitEntData, SHIELD_THROW_SCRIPTNAME )
-			if ( IsValid( mobileShield ) )
+			int team = mobileShield.GetTeam()
+			if ( team == TEAM_UNASSIGNED )
 			{
-				int team = mobileShield.GetTeam()
-				if ( team == TEAM_UNASSIGNED )
-				{
-					entity owner = mobileShield.GetOwner()
-					if ( IsValid( owner ) )
-						team = owner.GetTeam()
-				}
-
-				result.hitEnt = mobileShield
-				result.pingType = IsEnemyTeam( playerTeam, team ) ? ePingType.ENEMY_MOBILE_SHIELD : ePingType.ABILITY_MOBILE_SHIELD
-				return result
+				entity owner = mobileShield.GetOwner()
+				if ( IsValid( owner ) )
+					team = owner.GetTeam()
 			}
-		}
 
+			result.hitEnt = mobileShield
+			result.pingType = IsEnemyTeam( playerTeam, team ) ? ePingType.ENEMY_MOBILE_SHIELD : ePingType.ABILITY_MOBILE_SHIELD
+			return result
+		}
+	}
+
+	{
+		entity castleWall = GetHitEntForScriptName( hitEntData, ARMORED_LEAP_SHIELD_ANCHOR_SCRIPTNAME )
+		if ( IsValid( castleWall ) )
 		{
-			entity castleWall = GetHitEntForScriptName( hitEntData, ARMORED_LEAP_SHIELD_ANCHOR_SCRIPTNAME )
-			if ( IsValid( castleWall ) )
+			int team = castleWall.GetTeam()
+			if ( team == TEAM_UNASSIGNED )
 			{
-				int team = castleWall.GetTeam()
-				if ( team == TEAM_UNASSIGNED )
-				{
-					entity owner = castleWall.GetOwner()
-					if ( IsValid( owner ) )
-						team = owner.GetTeam()
-				}
-
-				bool isEnergized = castleWall.e.castleWallIsEnergized
-
-				result.hitEnt = castleWall
-				if( isEnergized )
-					result.pingType = IsEnemyTeam( playerTeam, team ) ? ePingType.ENEMY_CASTLE_WALL_ENERGIZED : ePingType.ABILITY_CASTLE_WALL_ENERGIZED
-				else
-					result.pingType = IsEnemyTeam( playerTeam, team ) ? ePingType.ENEMY_CASTLE_WALL : ePingType.ABILITY_CASTLE_WALL
-
-				return result
+				entity owner = castleWall.GetOwner()
+				if ( IsValid( owner ) )
+					team = owner.GetTeam()
 			}
-		}
 
+			bool isEnergized = castleWall.e.castleWallIsEnergized
+
+			result.hitEnt = castleWall
+			if( isEnergized )
+				result.pingType = IsEnemyTeam( playerTeam, team ) ? ePingType.ENEMY_CASTLE_WALL_ENERGIZED : ePingType.ABILITY_CASTLE_WALL_ENERGIZED
+			else
+				result.pingType = IsEnemyTeam( playerTeam, team ) ? ePingType.ENEMY_CASTLE_WALL : ePingType.ABILITY_CASTLE_WALL
+
+			return result
+		}
+	}
 
 
 	{
@@ -5039,6 +5046,10 @@ int function GetCommsActionForPing( entity pingingPlayer, int pingType, entity p
 				return eCommsAction.PING_WE_GO
 
 		case ePingType.RESPAWN_STATION:
+
+				if ( IsShadowArmyGamemode() && ShadowArmy_RespawnBeacon_CanBeaconBeUsedByPlayer( pingingPlayer, pingedEnt ) )
+					return eCommsAction.SHADOWARMY_PING_RESPAWN_STATION
+
 			return eCommsAction.PING_RESPAWN_STATION
 
 		case ePingType.RESPAWN_MOBILE:
@@ -5164,8 +5175,8 @@ int function GetCommsActionForPing( entity pingingPlayer, int pingType, entity p
 			if ( IsValid( pingedEnt ) && IsPlayerShadowZombie( pingedEnt ) )
 			{
 
-
-
+					
+					if ( !IsShadowArmyGamemode() )
 
 					{
 						return eCommsAction.PING_ENEMY_SPOTTED_SHADOW
@@ -5176,6 +5187,11 @@ int function GetCommsActionForPing( entity pingingPlayer, int pingType, entity p
 
 		case ePingType.ENEMY_LOOTSOURCE:
 			return eCommsAction.PING_NPC_LOOT_TICK
+
+
+
+
+
 
 		case ePingType.ASH_PASSIVE_ID_ATTACKER:
 			return eCommsAction.PING_ENEMY_MARKED_BY_DATAKNIFE
@@ -5231,7 +5247,6 @@ int function GetCommsActionForPing( entity pingingPlayer, int pingType, entity p
 		case ePingType.MAGGIE_WRECKING_BALL:
 			return eCommsAction.PING_MAGGIE_WRECKING_BALL
 
-
 		case ePingType.ABILITY_MOBILE_SHIELD:
 			return eCommsAction.PING_MOBILE_SHIELD
 		case ePingType.ENEMY_MOBILE_SHIELD:
@@ -5244,16 +5259,10 @@ int function GetCommsActionForPing( entity pingingPlayer, int pingType, entity p
 			return eCommsAction.PING_CASTLE_WALL_ENERGIZED
 		case ePingType.ENEMY_CASTLE_WALL_ENERGIZED:
 			return eCommsAction.PING_ENEMY_CASTLE_WALL_ENERGIZED
-
-
-
 		case ePingType.BLOODHOUND_WHITE_RAVEN:
 			return eCommsAction.PING_BLOODHOUND_WHITE_RAVEN
 		case ePingType.BLOODHOUND_WHITE_RAVEN_TARGET_LOC:
 			return eCommsAction.PING_BLOODHOUND_WHITE_RAVEN_TARGET_LOC
-
-
-
 
 
 
@@ -5268,8 +5277,6 @@ int function GetCommsActionForPing( entity pingingPlayer, int pingType, entity p
 			return ( IsValid( pingingPlayer ) && IsValid( pingedEnt ) && IsEnemyTeam( pingingPlayer.GetTeam(), pingedEnt.GetTeam() ) ) ? eCommsAction.PING_PIERCING_SPIKES_ENEMY : eCommsAction.PING_PIERCING_SPIKES
 		case ePingType.ABILITY_DARK_VEIL:
 			return ( IsValid( pingingPlayer ) && IsValid( pingedEnt ) && IsEnemyTeam( pingingPlayer.GetTeam(), pingedEnt.GetTeam() ) ) ? eCommsAction.PING_DARK_VEIL_ENEMY : eCommsAction.PING_DARK_VEIL
-
-
 
 
 		case ePingType.PING_MY_LAST_DEATH_BOX:
@@ -5358,11 +5365,11 @@ int function GetCommsActionForPing( entity pingingPlayer, int pingType, entity p
 
 
 
+		case ePingType.EVAC_SHIP:
+			return eCommsAction.SPAWN_EVAC_SHIP
 
-
-
-
-
+		case ePingType.EVAC_ZONE:
+			return eCommsAction.SPAWN_EVAC_ZONE
 
 
 
@@ -5471,6 +5478,10 @@ int function GetCommsActionForPing( entity pingingPlayer, int pingType, entity p
 
 		case ePingType.ABILITY_BLACK_HOLE:
 			return eCommsAction.PING_BLACKHOLE_HERE
+
+		case ePingType.ABILITY_SHIELD_MINE:
+			return eCommsAction.PING_SHIELD_MINE
+
 
 		case ePingType.OBJECTIVE:
 			return eCommsAction.PING_OBJECTIVE
@@ -5674,8 +5685,14 @@ int function GetCommsActionForPing( entity pingingPlayer, int pingType, entity p
 
 
 
+		case ePingType.REDEYED_REV:
+			return eCommsAction.PING_REDEYED_REV
 
+		case ePingType.EVAC_AREA:
+			return eCommsAction.PING_EVAC_AREA
 
+		case ePingType.LEGEND_START_AREA:
+			return eCommsAction.PING_LEGEND_START_AREA
 
 
 
@@ -5896,6 +5913,11 @@ asset function Ping_IconForPing_Minimap( entity player, int pingType, entity pin
 		case ePingType.PING_REPLICATOR:
 			return $""
 
+
+
+
+
+
 	}
 
 	return Ping_IconForPing_Hud( player, pingType, pingedEnt, owner )
@@ -5931,6 +5953,11 @@ asset function Ping_IconForPing_Bigmap( entity player, int pingType, entity ping
 
 		case ePingType.RESPAWN_STATION:
 			return $"rui/hud/common/objective_marker"
+
+
+
+
+
 	}
 
 	return Ping_IconForPing_Hud( player, pingType, pingedEnt, owner )
@@ -6454,7 +6481,7 @@ void function Ping_ClearMapWaypoint( entity player )
 
 
 
-void function Ping_SetMapWaypoint( entity player, vector origin )
+void function Ping_SetMapWaypoint( entity player, vector origin, bool pingEnemy = false )
 {
 	if ( !IsAlive( player ) )
 		return
@@ -6463,7 +6490,11 @@ void function Ping_SetMapWaypoint( entity player, vector origin )
 		return
 
 	int ticketID = GetNewTicketID()
-	Remote_ServerCallFunction( CMDNAME_PING_MAP_WAYPOINT, int( origin.x ), int( origin.y ), ticketID )
+
+	if( !pingEnemy )
+		Remote_ServerCallFunction( CMDNAME_PING_MAP_WAYPOINT, int( origin.x ), int( origin.y ), ticketID, false )
+	else
+		Remote_ServerCallFunction( CMDNAME_PING_MAP_WAYPOINT, int( origin.x ), int( origin.y ), ticketID, true )
 
 
 
@@ -6485,6 +6516,18 @@ void function Ping_SetControlObjective( entity player, entity objective )
 
 	EmitSoundOnEntity( GetLocalViewPlayer(), PING_SOUND_LOCAL_CONFIRM )
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -7,9 +7,7 @@ global function OnWeaponTossCancel_weapon_sonic_blast
 global function MpAbilitySonicBlast_Init
 global function GetSonicBlastSilenceDuration
 global function GetSonicBlastRange
-
 global function GetSonicBlastDoesSonarScan
-
 global function SonicBlast_TargetEntityShouldBeHighlighted
 
 const asset SONIC_BLAST_FX_IMPACT = $"P_wpn_foa_kickup_dust"
@@ -88,9 +86,7 @@ struct
 	float sonicBlastTubeLength
 	bool sonicBlastDoesDamage
 	bool sonicBlastInterrupts
-
 	bool sonicBlastDoesFullSonarScan
-
 	int sonicBlastDamage
 
 	bool heartbeatSensorActive
@@ -124,9 +120,7 @@ void function MpAbilitySonicBlast_Init()
 	file.sonicBlastInterrupts = GetSonicBlastInterrupts()
 	file.sonicBlastTubeLength = file.sonicBlastRadius * 4.175 
 	file.sonicBlastDamage = GetSonicBlastDamage()
-
 	file.sonicBlastDoesFullSonarScan = GetSonicBlastDoesSonarScan()
-
 
 
 		StatusEffect_RegisterEnabledCallback( eStatusEffect.seer_highlight_target, SonarBlast_StartHighlightStatusEffect )
@@ -315,9 +309,6 @@ void function OnWeaponTossPrep_weapon_sonic_blast( entity weapon, WeaponTossPrep
 
 
 
-
-
-
 void function DoHeartbeatSensorUI_Thread( entity player, entity weapon )
 {
 	Assert ( IsNewThread(), "Must be threaded off." )
@@ -342,13 +333,9 @@ void function DoHeartbeatSensorUI_Thread( entity player, entity weapon )
 		}
 	)
 
-	float pulloutTime = weapon.GetWeaponSettingFloat( eWeaponVar.toss_pullout_time )
-
+	
 
 	wait HEARTBEAT_SENSOR_INITIAL_ACTIVATION_DELAY_DEFAULT
-
-
-
 
 	InitializeHeartbeatSensorUI( player )
 	ActivateHeartbeatSensor( player, true )
@@ -396,24 +383,6 @@ var function OnWeaponTossReleaseAnimEvent_weapon_sonic_blast( entity weapon, Wea
 
 	return weapon.GetWeaponSettingInt( eWeaponVar.ammo_per_shot )
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

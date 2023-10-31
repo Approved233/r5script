@@ -28,7 +28,6 @@ global function CharacterQuip_GetEffectColor2
 
 global function CreateNestedRuiForQuip
 global function EmoteIcon_PopulateNestedRui
-global function ItemFlavor_GetQuipArrayForCharacter
 global function ItemFlavor_GetFavoredQuipArrayForCharacter
 
 
@@ -39,6 +38,7 @@ global function Loadout_FavoredQuip
 global function Loadout_FavoredQuipArrayForCharacter
 global function Loadout_IsCharacterQuipLoadoutEntry
 global function ItemFlavor_CanEquipToWheel
+global function ItemFlavor_GetQuipArrayForCharacter
 
 
 
@@ -232,12 +232,11 @@ bool function CharacterQuip_IsTheEmpty( ItemFlavor flavor )
 	return ( GetGlobalSettingsBool( ItemFlavor_GetAsset( flavor ), "isTheEmpty" ) )
 }
 
-
-array<ItemFlavor> function ItemFlavor_GetQuipArrayForCharacter( ItemFlavor characterClass, bool characterEmotesOnly = false )
+array<ItemFlavor> function ItemFlavor_GetQuipArrayForCharacter( entity player, ItemFlavor characterClass, bool characterEmotesOnly = false )
 {
 	array<ItemFlavor> quips = []
 
-	EHI playerEHI = LocalClientEHI()
+	EHI playerEHI = ToEHI( player )
 
 	foreach ( LoadoutEntry entry in Loadout_QuipArrayForCharacter( characterClass ) )
 	{
@@ -252,7 +251,6 @@ array<ItemFlavor> function ItemFlavor_GetQuipArrayForCharacter( ItemFlavor chara
 
 	return quips
 }
-
 
 
 array<ItemFlavor> function ItemFlavor_GetFavoredQuipArrayForCharacter( ItemFlavor characterClass, bool characterEmotesOnly = false )

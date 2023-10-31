@@ -15,9 +15,14 @@ const string LIFESTEAL_WEAPON_VAR = "lifesteal_heal_percent"
 const float VALENTINES_HEAL_DEBOUNCE_SEC = 10
 
 
-const VFX_COCKPIT_HEALTH = $"P_heal_loop_screen"
-const VFX_COCKPIT_SHIELDS = $"P_armor_FP_charging_CP"
-const VFX_PLAYER_HEALED_3P = $"P_armor_3P_loop_CP"
+
+
+
+
+
+const VFX_COCKPIT_HEALTH = $"P_bMat_heal_loop_FP" 
+const VFX_COCKPIT_SHIELDS = $"P_bmat_armor_charging_FP" 
+const VFX_PLAYER_HEALED_3P = $"P_bmat_armor_charging_3P"
 
 
 const SFX_RECEIVING_HEAL_1P = "DateNight_AOE_Bow_Healing_Success_1P"

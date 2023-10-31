@@ -10,6 +10,8 @@ global function Perk_EnemyBeaconScan_Init
 
 
 
+
+
 global function BeaconScanEnemy_ShowBeaconLocationOnMinimap
 global function BeaconScanEnemy_ShowEnemiesOnMinimap
 global function ServerToClient_BeaconScanEnemy_Notifications
@@ -246,6 +248,7 @@ bool function BeaconScanEnemy_CanUseBeacon( entity player, entity beacon )
 
 	return true
 }
+
 
 
 

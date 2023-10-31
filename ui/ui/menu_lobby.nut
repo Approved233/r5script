@@ -951,7 +951,11 @@ void function PostGameFlow()
 
 
 
-	bool showRankedSummary = GetPersistentVarAsInt( "showRankedSummary" ) != 0
+
+	bool showRankedSummary = Ranked_GetXProgMergedPersistenceData( GetLocalClientPlayer(), RANKED_SHOW_RANKED_SUMMARY_PERSISTENCE_VAR_NAME ) != 0
+
+
+
 	bool isFirstTime       = GetPersistentVarAsInt( "showGameSummary" ) != 0
 
 		bool showOrientationMatchDialog = GetPersistentVarAsInt( "showOrientationMatchGraduationDialog" ) != 0

@@ -153,13 +153,19 @@ const float FERRO_WALL_HEIGHT 		= 120.0
 const float FERRO_WALL_WIDTH 		= 15.0
 const float FERRO_WALL_WIDTH_SQR 		= FERRO_WALL_WIDTH * FERRO_WALL_WIDTH
 
-const float FERRO_WALL_PILLAR_DURATION = 30.0
+const float FERRO_WALL_PILLAR_DURATION = 25.0
+
+
+
 const float FERRO_WALL_PILLAR_DELAY_BEFORE_SCALING = 1.2
 const float FERRO_WALL_PILLAR_DELAY_FORWARD = 0.05
 const float FERRO_WALL_PILLAR_DELAY_HORIZONTAL = FERRO_WALL_PILLAR_DELAY_FORWARD * 2
 const float FERRO_WALL_PILLAR_SCALE_TIME = 0.6
 const float FERRO_WALL_PILLAR_DESCALE_TIME = 0.85
 const int FERRO_WALL_NUM_PILLARS_FORWARD = 24
+
+
+
 const int FERRO_WALL_NUM_PILLARS_HORIZONTAL_PER_SIDE = 8
 const float FERRO_WALL_PILLAR_HEALTH = 125
 const float FERRO_WALL_PILLAR_HEIGHT_CHECK_BUFFER = 25.0 - FERRO_WALL_PILLAR_Z_OFFSET
@@ -420,6 +426,7 @@ void function MpWeaponFerroWall_Init()
 float function GetWallDuration( entity player )
 {
 	float result = file.duration
+
 
 
 
@@ -2303,6 +2310,7 @@ void function OnFerroWallPillarCreatedThread( entity infoTarget )
 	clientAG.AddToOtherEntitysRealms( infoTarget )
 	clientAG.SetParent( infoTarget, "", true )
 	SetTeam( clientAG, infoTarget.GetTeam() )
+	clientAG.SetEnabled( true )
 
 	OnThreadEnd(
 		function() : ( clientAG )
@@ -2314,18 +2322,30 @@ void function OnFerroWallPillarCreatedThread( entity infoTarget )
 		}
 	)
 
+	int prevNumSegments = 0
 	while( true )
 	{
-		clientAG.RemoveSegmentEndpoints()
 		array< entity > segments = infoTarget.GetLinkEntArray()
-		clientAG.SetEnabled( ( segments.len() > 0 ) )
-		foreach( wallSegment in segments )
+		int currentNumSegments   = segments.len()
+		if ( currentNumSegments != prevNumSegments )
 		{
-			if( IsValid( wallSegment ) && wallSegment.GetModelScale() >= 1.0 )
+			prevNumSegments = currentNumSegments
+			if ( currentNumSegments == 0 )
 			{
-				vector startPoint = wallSegment.GetOrigin() + < 0, 0, FERRO_WALL_HEIGHT * 0.75 > + wallSegment.GetRightVector() * FERRO_WALL_RADIUS
-				vector endPoint = wallSegment.GetOrigin() + < 0, 0, FERRO_WALL_HEIGHT * 0.75 > - wallSegment.GetRightVector() * FERRO_WALL_RADIUS
-				clientAG.AddSegmentEndpoints( startPoint, endPoint )
+				clientAG.SetEnabled( false )
+			}
+
+
+			clientAG.RemoveSegmentEndpoints()
+			foreach( wallSegment in segments )
+			{
+				if( IsValid( wallSegment ) )
+				{
+					vector startPoint = wallSegment.GetOrigin() + < 0, 0, FERRO_WALL_HEIGHT * 0.75 > + wallSegment.GetRightVector() * FERRO_WALL_RADIUS
+					vector endPoint = wallSegment.GetOrigin() + < 0, 0, FERRO_WALL_HEIGHT * 0.75 > - wallSegment.GetRightVector() * FERRO_WALL_RADIUS
+
+					clientAG.AddSegmentEndpoints( startPoint, endPoint )
+				}
 			}
 		}
 		WaitFrame()

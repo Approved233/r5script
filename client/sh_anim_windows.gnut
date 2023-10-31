@@ -85,6 +85,8 @@ void function ShAnimWindows_LevelInit()
 		RegisterAnimWindowType( CLIENT, "FadeAlphaOverTime", null, null, AnimWindow_FadeAlphaOverTime_Start, null, AnimWindow_FadeAlphaOverTime_Stop )
 		RegisterAnimWindowType( CLIENT, "SetSkin", null, null, AnimWindow_SetSkin_Start, null, null )
 		RegisterAnimWindowType( BOTH, "SetPropSkin", null, null, AnimWindow_SetPropSkin_Start, null, null )
+		RegisterAnimWindowType( CLIENT, "SetColorModScaleOverDuration", AnimWindow_SetColorModScaleOverDuration_Init, null, AnimWindow_SetColorModScaleOverDuration_Start, AnimWindow_SetColorModScaleOverDuration_Transition, AnimWindow_SetColorModScaleOverDuration_Stop )
+		RegisterAnimWindowType( CLIENT, "SetLodOriginAttachment", null, null, AnimWindow_SetLodOriginAttachment_Start, null, AnimWindow_SetLodOriginAttachment_Stop )
 
 		
 		RegisterAnimWindowType( CLIENT, "MirageHoloFX", AnimWindow_MirageHoloFX_Init, AnimWindow_MirageHoloFX_Precache, AnimWindow_MirageHoloFX_Start, AnimWindow_MirageHoloFX_Transition, AnimWindow_MirageHoloFX_Stop )
@@ -93,6 +95,8 @@ void function ShAnimWindows_LevelInit()
 		RegisterAnimWindowType( CLIENT, "LifelineDroneCommonFX", AnimWindow_LifelineDroneCommonFX_Init, AnimWindow_LifelineDroneCommonFX_Precache, AnimWindow_LifelineDroneCommonFX_Start, AnimWindow_LifelineDroneCommonFX_Transition, AnimWindow_LifelineDroneCommonFX_Stop )
 		RegisterAnimWindowType( CLIENT, "HideWeapon3P", AnimWindow_HideWeapon3P_Init, AnimWindow_HideWeapon3P_Precache, AnimWindow_HideWeapon3P_Start, AnimWindow_HideWeapon3P_Transition, AnimWindow_HideWeapon3P_Stop )
 		RegisterAnimWindowType( CLIENT, "OverrideCharacterSelectCamera", AnimWindow_OverrideCharacterSelectCamera_Init, AnimWindow_OverrideCharacterSelectCamera_Precache, AnimWindow_OverrideCharacterSelectCamera_Start, AnimWindow_OverrideCharacterSelectCamera_Transition, AnimWindow_OverrideCharacterSelectCamera_Stop )
+
+		RegisterSignal("StopLodOriginAttachment")
 
 }
 
@@ -833,6 +837,47 @@ void function AnimWindow_SetPropSkin_Start( ScriptAnimWindow window, var setting
 
 
 
+
+void function AnimWindow_SetLodOriginAttachment_Thread( entity ent, int attachmentId )
+{
+	EndSignal( ent, "OnDestroy" )
+	EndSignal( ent, "StopLodOriginAttachment" )
+
+	OnThreadEnd( void function() : (ent) {
+		ent.DisableLodOriginOverride()
+	} )
+
+	while( true )
+	{
+		vector attachmentOrigin = ent.GetAttachmentOrigin( attachmentId )
+		ent.SetLodOriginOverride( attachmentOrigin )
+		WaitFrame()
+	}
+}
+
+
+void function AnimWindow_SetLodOriginAttachment_Start( ScriptAnimWindow window, var settingsBlock )
+{
+
+	string attachment = GetSettingsBlockString( settingsBlock, "attachment" )
+	int attachmentId = window.ent.LookupAttachment( attachment )
+
+	thread AnimWindow_SetLodOriginAttachment_Thread( window.ent, attachmentId )
+
+}
+
+void function AnimWindow_SetLodOriginAttachment_Stop( ScriptAnimWindow window, var settingsBlock )
+{
+
+	Signal( window.ent, "StopLodOriginAttachment" )
+
+}
+
+
+
+
+
+
 void function AnimWindow_ShadowFormFX_Init()
 {
 	PrecacheParticleSystem( SHADOW_TRAIL_FX )
@@ -847,6 +892,7 @@ void function AnimWindow_ShadowFormFX_Init()
 void function AnimWindow_ShadowFormFX_Precache( var settingsBlock )
 {
 	
+	PrecacheSkinName( "ShadowSqaud" )
 }
 
 
@@ -970,6 +1016,7 @@ void function AnimWindow_ShadowFormRebornFX_Init()
 	PrecacheParticleSystem( SHADOWReborn_body_FX )
 	PrecacheParticleSystem( SHADOWReborn_EYE_FX )
 	PrecacheParticleSystem( SHADOWReborn_activation_FX )
+	PrecacheSkinName( "ShadowSquad_reborn_3p" )
 
 		RegisterSignal( "StopShadowFormRebornFX" )
 
@@ -1092,6 +1139,88 @@ void function AnimWindow_ShadowFormRebornFX_Stop( ScriptAnimWindow window, var s
 
 }
 
+
+
+
+
+
+
+void function AnimWindow_SetColorModScaleOverDuration_Init()
+{
+
+		RegisterSignal( "SetColorModScaleEnd" )
+
+}
+
+void function AnimWindow_SetColorModScaleOverDuration_Start( ScriptAnimWindow window, var settingsBlock )
+{
+
+		AnimWindow_SetColorModScaleOverDuration_Transition( window, settingsBlock )
+
+}
+
+void function AnimWindow_SetColorModScaleOverDuration_Transition( ScriptAnimWindow window, var settingsBlock )
+{
+
+		float rampUpDuration = GetSettingsBlockFloat( settingsBlock, "rampUpDuration" )
+		float plateauDuration = GetSettingsBlockFloat( settingsBlock, "plateauDuration" )
+		float rampDownDuration  = GetSettingsBlockFloat( settingsBlock, "rampDownDuration" )
+
+		thread SetColorModScaleOverDuration( window.ent, window.endCycle, rampUpDuration, plateauDuration, rampDownDuration )
+
+}
+
+
+void function SetColorModScaleOverDuration( entity ent, float endCycle, float rampUpDuration, float plateauDuration, float rampDownDuration )
+{
+	Signal( ent, "SetColorModScaleEnd" )
+	EndSignal( ent, "OnDestroy", "SetColorModScaleEnd" )
+
+	float startTime = Time()
+	float totalDuration =  rampUpDuration + plateauDuration + rampDownDuration
+
+	float rampUpCompletion = rampUpDuration
+	float plateauCompletion = rampUpCompletion + plateauDuration
+	float rampDownCompletion = plateauCompletion + rampDownDuration
+
+	OnThreadEnd( void function() : ( ent ) {
+		if ( IsValid( ent ) )
+			ent.SetColorModScaleIntensity( 1.0 )
+	} )
+
+	float timeSinceStart = Time() - startTime
+	while( IsValid( ent ) && timeSinceStart < totalDuration && ent.GetCycle() <= endCycle )
+	{
+		timeSinceStart = Time() - startTime
+		if ( timeSinceStart < rampUpCompletion )
+		{
+			
+			ent.SetColorModScaleIntensity( Smooth01( 1.0 - ( timeSinceStart / rampUpCompletion  ) ) )
+		}
+		else if ( timeSinceStart < plateauCompletion )
+		{
+			
+			if( ent.GetColorModScaleIntensity() != 0.0 )
+				ent.SetColorModScaleIntensity( 0.0 )
+		}
+		else if ( timeSinceStart < rampDownCompletion )
+		{
+			
+			ent.SetColorModScaleIntensity( Smooth01( ( timeSinceStart - plateauCompletion ) / rampDownDuration ) )
+		}
+
+		WaitFrame()
+	}
+}
+
+
+void function AnimWindow_SetColorModScaleOverDuration_Stop( ScriptAnimWindow window, var settingsBlock )
+{
+
+		if( IsValid( window.ent ) )
+			window.ent.Signal( "SetColorModScaleEnd" )
+
+}
 
 
 

@@ -12,6 +12,7 @@
 
 
 
+
 global function ClBloodhound_TT_Init
 global function SCB_BloodTT_SetCustomSpeakerIdx
 
@@ -76,6 +77,8 @@ global function IsBloodhoundTTEnabled
 
 
 
+const asset BLOOD_TT_CSV_DIALOGUE = $"datatable/dialogue/blood_tt_dialogue.rpak"
+const asset BLOOD_TT_ANNOUNCER_CSV_DIALOGUE = $"datatable/dialogue/blood_tt_announcer_dialogue.rpak"
 const string BLOOD_TT_PANEL_TIER_0_SCRIPTNAME = "prowler_console_tier0"
 const string BLOOD_TT_PANEL_TIER_1_SCRIPTNAME = "prowler_console_tier1"
 const string BLOOD_TT_PANEL_TIER_2_SCRIPTNAME = "prowler_console_tier2"
@@ -323,6 +326,9 @@ void function EntitiesDidLoad()
 {
 	if ( !IsBloodhoundTTEnabled() )
 		return
+
+	RegisterCSVDialogue( BLOOD_TT_CSV_DIALOGUE )
+	RegisterCSVDialogue( BLOOD_TT_ANNOUNCER_CSV_DIALOGUE )
 
 
 
@@ -1965,6 +1971,22 @@ void function OnAbortDialogue( string dialogueRefName )
 		Remote_ServerCallFunction( "ClientCallback_BloodTT_StoryPropDialogueAborted" )
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

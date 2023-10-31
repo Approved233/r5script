@@ -660,7 +660,7 @@ bool function DisplayTreasureBoxRewards()
 	{
 		if ( IsConnected() )
 		{
-			if ( HasQuestStarted( quest ) == false )
+			if ( !IsQuestCurrentOrLastSeason( quest ) )
 				continue
 		}
 
@@ -669,7 +669,23 @@ bool function DisplayTreasureBoxRewards()
 		int count = expect int( GetDialogFlowTablesValueOrPersistence( BuildPersistentVarName( quest, VARNAME_TB_displayCount ) ) )    
 		if ( count <= 0 )
 			continue
+
+		bool shouldPurge = false
+		Assert( count <= SeasonQuest_GetTreasurePacksMaxCount( quest ) )
+		if ( count > SeasonQuest_GetTreasurePacksMaxCount( quest ) )
+			shouldPurge = true 
+
 		int startNum = expect int( GetDialogFlowTablesValueOrPersistence( BuildPersistentVarName( quest, VARNAME_TB_displayStartNum )  )  ) 
+
+		Assert( startNum <= SeasonQuest_GetTreasurePacksMaxCount( quest ) )
+		if ( startNum > SeasonQuest_GetTreasurePacksMaxCount( quest ) )
+			shouldPurge = true 
+
+		if ( shouldPurge ) 
+		{
+			Remote_ServerCallFunction( CC_TreasureBoxDisplayAcknowledged, quest.guid )
+			continue
+		}
 
 		array<BattlePassReward> rewards
 
@@ -692,6 +708,9 @@ bool function DisplayTreasureBoxRewards()
 				rewards.append( info )
 			}
 		}
+
+		if ( rewards.len() == 0 )
+			return false
 
 		bool isForBattlePass = false
 		bool isForQuest = true
@@ -726,6 +745,9 @@ bool function DisplayQuestMissionRewards( ItemFlavor quest, int missionIndex )
 	{
 		rewards.append( ItemFlavorBagToBattlePassRewardByIndex( rewardBag, index ) )
 	}
+
+	if ( rewards.len() == 0 )
+		return false
 
 	bool isForBattlePass = false
 	bool isForQuest = true
@@ -768,7 +790,7 @@ bool function DisplayQuestFinalRewards()
 	{
 		if ( IsConnected() )
 		{
-			if ( HasQuestStarted( quest ) == false )
+			if ( !IsQuestCurrentOrLastSeason( quest ) )
 				continue
 		}
 
@@ -1082,7 +1104,7 @@ int function SeasonQuestComic_GetUnlockTime( ItemFlavor comic )
 ItemFlavorBag function SeasonQuest_GetMissionRewardsForIndex( ItemFlavor flav, int missionIndex )
 {
 	Assert( ItemFlavor_GetType( flav ) == eItemType.quest )
-	ItemFlavorBag rewards = SeasonQuestMission_GetRewards( file.questMissions[ flav ][missionIndex] )
+	ItemFlavorBag rewards = SeasonQuestMission_GetRewards( flav, file.questMissions[ flav ][missionIndex] )
 	return rewards
 }
 
@@ -1196,10 +1218,10 @@ int function SeasonQuest_GetTreasurePackIndexRequiredForMission( ItemFlavor ques
 }
 
 
-ItemFlavorBag function SeasonQuest_GetTreasurePackRewardsForIndex( ItemFlavor flav, int boxIndex )
+ItemFlavorBag function SeasonQuest_GetTreasurePackRewardsForIndex( ItemFlavor quest, int boxIndex )
 {
-	Assert( ItemFlavor_GetType( flav ) == eItemType.quest )
-	var settingsBlock = ItemFlavor_GetSettingsBlock( flav )
+	Assert( ItemFlavor_GetType( quest ) == eItemType.quest )
+	var settingsBlock = ItemFlavor_GetSettingsBlock( quest )
 
 	ItemFlavorBag rewards
 
@@ -1210,16 +1232,20 @@ ItemFlavorBag function SeasonQuest_GetTreasurePackRewardsForIndex( ItemFlavor fl
 	var rewardsBlockArray = GetSettingsBlockArray( boxInfoBlock, "rewards" )
 	foreach ( int rewardIndex, var rewardBlock in IterateSettingsArray( rewardsBlockArray ) )
 	{
-		asset flavorAsset = GetSettingsBlockAsset( rewardBlock, "flavor" )
+		asset rewardAsset = GetSettingsBlockAsset( rewardBlock, "flavor" )
 		int quantity      = GetSettingsBlockInt( rewardBlock, "quantity" )
 
-		if ( !IsValidItemFlavorSettingsAsset( flavorAsset ) )
+		if ( !IsValidItemFlavorSettingsAsset( rewardAsset ) )
 		{
-			Warning( "Skipping item reward #%d of quest '%s' because the asset is not a valid item flavor: '%s'", rewardIndex, string(ItemFlavor_GetAsset( flav )), string(flavorAsset) )
+			Warning( "Skipping item reward #%d of quest '%s' because the asset is not a valid item flavor: '%s'", rewardIndex, string(ItemFlavor_GetAsset( quest )), string(rewardAsset) )
 			continue
 		}
 
-		rewards.flavors.append( GetItemFlavorByAsset( flavorAsset ) )
+		ItemFlavor reward = GetItemFlavorByAsset( rewardAsset )
+		if ( !IsQuestActive( quest ) && ItemFlavor_GetType( reward ) == eItemType.voucher )
+			continue 
+
+		rewards.flavors.append( reward )
 		rewards.quantities.append( quantity )
 	}
 
@@ -1507,7 +1533,11 @@ ItemFlavorBag function SeasonQuest_GetCompletionRewards( ItemFlavor quest )
 			continue
 		}
 
-		rewards.flavors.append( GetItemFlavorByAsset( rewardAsset ) )
+		ItemFlavor reward = GetItemFlavorByAsset( rewardAsset )
+		if ( !IsQuestActive( quest ) && ItemFlavor_GetType( reward ) == eItemType.voucher )
+			continue 
+
+		rewards.flavors.append( reward )
 		rewards.quantities.append( GetSettingsBlockInt( rewardData, "quantity" ) )
 	}
 
@@ -1515,8 +1545,9 @@ ItemFlavorBag function SeasonQuest_GetCompletionRewards( ItemFlavor quest )
 }
 
 
-ItemFlavorBag function SeasonQuestMission_GetRewards( ItemFlavor mission )
+ItemFlavorBag function SeasonQuestMission_GetRewards( ItemFlavor quest, ItemFlavor mission )
 {
+	Assert( ItemFlavor_GetType( quest ) == eItemType.quest )
 	Assert( ItemFlavor_GetType( mission ) == eItemType.quest_mission )
 
 	ItemFlavorBag rewards
@@ -1529,7 +1560,11 @@ ItemFlavorBag function SeasonQuestMission_GetRewards( ItemFlavor mission )
 			continue
 		}
 
-		rewards.flavors.append( GetItemFlavorByAsset( rewardAsset ) )
+		ItemFlavor reward = GetItemFlavorByAsset( rewardAsset )
+		if ( !IsQuestActive( quest ) && ItemFlavor_GetType( reward ) == eItemType.voucher )
+			continue 
+
+		rewards.flavors.append( reward )
 		rewards.quantities.append( GetSettingsBlockInt( rewardData, "quantity" ) )
 	}
 
@@ -1829,18 +1864,36 @@ bool function IsSelectedPlaylistQuestMission()
 }
 
 
-bool function HasQuestStarted( ItemFlavor quest )
+bool function IsQuestActive( ItemFlavor quest )
 {
 	ItemFlavor ornull season = SeasonQuest_GetSeasonForQuest( quest )
-	if ( season == null )
-	{
-		Assert( false, "No season is associated with this quest." )
-		return false
-	}
-	else if ( CalEvent_HasStarted( expect ItemFlavor( season ), GetUnixTimestamp() ) == false )
-	{
-		return false
-	}
+	Assert( season != null, "No season is associated with this quest." )
 
-	return true
+	Assert( IsConnected() )
+
+
+	if ( season == null )
+		return false
+	else if ( CalEvent_IsActive( expect ItemFlavor( season ), GetUnixTimestamp() ) )
+		return true
+
+	return false
+}
+
+bool function IsQuestCurrentOrLastSeason( ItemFlavor quest )
+{
+	ItemFlavor ornull season = SeasonQuest_GetSeasonForQuest( quest )
+	Assert( season != null, "No season is associated with this quest." )
+
+	Assert( IsConnected() )
+
+
+	if ( season == null )
+		return false
+	else if ( CalEvent_IsActive( expect ItemFlavor( season ), GetUnixTimestamp() ) )
+		return true
+	else if ( GetPrecedingSeason( GetLatestSeason( GetUnixTimestamp() ) ) == season )
+		return true
+
+	return false
 }

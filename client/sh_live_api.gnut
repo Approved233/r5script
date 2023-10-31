@@ -163,7 +163,6 @@ void function LiveAPI_RegisterNetworking()
 
     
 	Remote_RegisterClientFunction( "ServerCallback_LiveAPI_LogNetwork_InventoryAction", "int", INT_MIN, eLiveAPI_EventTypes.MAX, "entity" , "int", 0, INT_MAX , "entity" , "int", INT_MIN, INT_MAX  )
-	Remote_RegisterClientFunction( "ServerCallback_LiveAPI_LogNetwork_InventoryActionWithMods", "int", INT_MIN, eLiveAPI_EventTypes.MAX, "entity" , "int", 0, INT_MAX , "entity" , "int", INT_MIN, INT_MAX , "string"  )
 
 	Remote_RegisterClientFunction( "ServerCallback_LiveAPI_LogNetwork_AmmoChanged", "entity", "int", INT_MIN, INT_MAX, "int", INT_MIN, INT_MAX, "int", INT_MIN, INT_MAX )
 

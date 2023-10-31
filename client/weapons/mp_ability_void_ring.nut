@@ -1685,6 +1685,17 @@ void function OnVoidRingPlanted( entity projectile, DeployableCollisionParams co
 
 
 
+
+
+
+
+
+
+
+
+
+
+
 void function ShowVoidRingRadius( entity weapon )
 {
 	EndSignal( weapon, "VoidRing_EndPreview" )
@@ -1867,6 +1878,12 @@ void function OnWaypointCreated( entity wp )
 	{
 		thread VoidRing_WaypointUI_Thread( wp )
 		AddRefEntAreaToInvalidOriginsForPlacingPermanentsOnto( wp, VOID_RING_INVALID_PLACEMENT_MIN_AREA, VOID_RING_INVALID_PLACEMENT_MAX_AREA )
+		AddEntityDestroyedCallback( wp,
+			void function( entity ent ) : ( wp )
+			{
+				RemoveRefEntAreaFromInvalidOriginsForPlacingPermanentsOnto( ent )
+			}
+		)
 	}
 
 }

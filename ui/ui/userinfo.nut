@@ -115,8 +115,9 @@ void function SetupUserInfoPanels()
 void function UpdateActiveUserInfoPanels()
 {
 	bool isReady = GRX_IsInventoryReady() && GRX_AreOffersReady()
-	bool negativeCurrency = false
 	int premiumBalance, creditsBalance, craftingBalance
+
+	printt("UpdateActiveUserInfoPanels Offers:" + GRX_AreOffersReady() + " Inventory:" + GRX_IsInventoryReady()  + " isReady:" +isReady + " " + FUNC_NAME( 1 ) );
 
 	if ( isReady )
 	{

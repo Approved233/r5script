@@ -87,7 +87,7 @@ void function StoreMythicInspectMenu_OnShow()
 	AddCallbackAndCallNow_OnGRXInventoryStateChanged( StoreMythicInspectMenu_OnGRXUpdated )
 	AddCallback_OnGRXOffersRefreshed( StoreMythicInspectMenu_OnGRXUpdated )
 
-
+	if ( !GetConVarBool( "mtx_useOffersV2" ) )
 
 	{
 		AddCallback_OnGRXBundlesRefreshed( StoreMythicInspectMenu_OnGRXBundlesUpdated )
@@ -117,7 +117,7 @@ void function StoreMythicInspectMenu_OnHide()
 	RemoveCallback_OnGRXOffersRefreshed( StoreMythicInspectMenu_OnGRXUpdated )
 
 
-
+	if ( !GetConVarBool( "mtx_useOffersV2" ) )
 
 	{
 		RemoveCallback_OnGRXBundlesRefreshed( StoreMythicInspectMenu_OnGRXBundlesUpdated )
@@ -151,7 +151,7 @@ void function StoreMythicInspectMenu_OnGRXUpdated()
 	foreach( ItemFlavor flav in storeOffer.output.flavors )
 		s_inspectOffers.itemFlavors.append( flav )
 
-	s_inspectOffers.purchaseLimit = ( "purchaselimit" in storeOffer.attributes ? storeOffer.attributes["purchaselimit"].tointeger() : -1 )
+	s_inspectOffers.purchaseLimit = ( "purchaselimit" in storeOffer.attributes && GRXOffer_ContainsStackablesOnly( storeOffer ) ) ? storeOffer.attributes["purchaselimit"].tointeger() : -1
 
 	StoreInspectMenu_UpdatePrices( s_inspectOffers, storeOffer, false, s_inspectUIData )
 	StoreInspectMenu_UpdatePurchaseButton( storeOffer, s_inspectOffers, s_inspectUIData)

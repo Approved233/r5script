@@ -156,13 +156,18 @@ global enum eItemType
 	
 	_CALEVENT_RANGE_START
 	calevent_season
-	calevent_collection
-	calevent_themedshop
-	calevent_buffet
 	calevent_rankedperiod
 
-		calevent_arenas_ranked_period
+	calevent_arenas_ranked_period
 
+	_CALEVENT_LIMITED_TIME 
+	
+	calevent_collection
+	calevent_themedshop
+
+
+
+	calevent_buffet
 	calevent_login
 	calevent_story_challenges
 	calevent_skustore
@@ -211,6 +216,9 @@ global enum eItemType
 	skydive_emote
 	skydive_trail
 	radio_play
+
+	event_ability
+
 	sticker
 
 
@@ -243,6 +251,10 @@ global enum eItemType
 	club_logo_element
 	club_search_tag
 
+
+
+
+
 	
 	mythic_bundle 
 	lore
@@ -253,7 +265,7 @@ global enum eItemType
 
 
 
-
+		ranked_trial
 
 
 	COUNT
@@ -314,12 +326,13 @@ table<int, int> itemTypeUICategoryMap = {
 
 }
 
-table<int, string> itemTypeNameMap = {
+global table<int, string> itemTypeNameMap = {
 	[eItemType.character] = "#itemtype_character_NAME",
 	[eItemType.account_currency] = "#itemtype_account_currency_NAME",
 	[eItemType.account_currency_bundle] = "#itemtype_account_currency_bundle_NAME",
 	[eItemType.account_pack] = "#itemtype_account_pack_NAME",
 	[eItemType.battlepass] = "#itemtype_battlepass_NAME",
+	[eItemType.voucher] = "#itemtype_voucher_NAME",
 	
 	[eItemType.character_skin] = "#itemtype_character_skin_NAME",
 	[eItemType.weapon_skin] = "#itemtype_weapon_skin_NAME",
@@ -342,6 +355,9 @@ table<int, string> itemTypeNameMap = {
 	[eItemType.battlepass_purchased_xp] = "#itemtype_battlepass_purchased_xp_NAME",
 	[eItemType.skydive_emote] = "#itemtype_skydive_emote_NAME",
 	[eItemType.radio_play] = "#itemtype_radio_play_NAME",
+
+	[eItemType.event_ability] = "#itemtype_event_ability_NAME",
+
 	[eItemType.emote_icon] = "#itemtype_character_emote_icon_NAME",
 	[eItemType.character_emote] = "#itemtype_character_emote_NAME",
 	[eItemType.sticker] = "#itemtype_sticker_NAME",
@@ -1335,6 +1351,9 @@ string function ItemQuality_GetQualityName( int quality )
 {
 	switch ( quality )
 	{
+		case 5:
+			return "#LOOT_TIER6"
+
 		case 4:
 			return "#LOOT_TIER5"
 
@@ -1653,7 +1672,24 @@ ItemFlavor ornull function RegisterItemFlavorFromSettingsAsset( asset settingsAs
 		fileLevel.itemFlavorListAll.append( flavor )
 #endif
 
-	fileLevel.itemTypeInfoList[flavor.typeIndex].itemFlavorList.append( flavor )
+	
+	if ( flavor.typeIndex > eItemType._CALEVENT_LIMITED_TIME && flavor.typeIndex < eItemType._CALEVENT_RANGE_END )
+	{
+		bool expired = false
+
+		if ( IsConnected() )
+
+		{
+			expired = CalEvent_GetFinishUnixTime( flavor ) < GetUnixTimestamp()
+		}
+
+		if ( !expired )
+			fileLevel.itemTypeInfoList[flavor.typeIndex].itemFlavorList.append( flavor )
+	}
+	else 
+	{
+		fileLevel.itemTypeInfoList[flavor.typeIndex].itemFlavorList.append( flavor )
+	}
 
 	
 	ShGRX_RegisterItemFlavor( flavor )
@@ -1869,7 +1905,10 @@ bool function ItemFlavor_HasExclusiveFunc( ItemFlavor flavor )
 	{
 		case eItemType.character_skin:
 		case eItemType.weapon_skin:
+		case eItemType.weapon_charm:
+		case eItemType.loadscreen:
 		case eItemType.gladiator_card_frame:
+		case eItemType.gladiator_card_badge:
 			return GetGlobalSettingsBool( ItemFlavor_GetAsset( flavor ), "exclusive" )
 			break
 	}

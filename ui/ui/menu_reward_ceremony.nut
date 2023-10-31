@@ -358,6 +358,7 @@ void function ContinueButton_OnActivate( var button )
 	{
 		storeInspect_JumpingToBPFromBPStorePurchase = false
 		JumpToSeasonTab( "PassPanel" )
+		return
 	}
 
 	if ( file.isCurrentGiftBattlepass )

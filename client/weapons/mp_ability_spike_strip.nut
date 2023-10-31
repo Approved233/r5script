@@ -59,7 +59,10 @@ global const string SPIKE_STRIP_WEAPON_NAME = "mp_ability_spike_strip"
 const string SPIKE_STRIP_EXPLOSION_IMPACT_TABLE = "exp_ferro_tac_SM"
 
 
-const int SPIKE_STRIP_MAX_TRAPS = 3
+const int SPIKE_STRIP_MAX_TRAPS = 2
+
+
+
 const float SPIKE_STRIP_SPIKE_HEALTH = 300
 const float SPIKE_STRIP_SPIKE_DURATION = -1
 const bool SPIKE_STRIP_DEBUG = false
@@ -75,7 +78,10 @@ const int SPIKE_STRIP_NUM_SPIKES_IN_SPIKE_STRIP_EXTRA_WIDTH = 1
 const int SPIKE_STRIP_DISTANCE_BETWEEN_SPIKES = 47
 const int SPIKE_STRIP_DISTANCE_BETWEEN_ROWS = 30
 const float SPIKE_STRIP_MAIN_SPIKE_HEALTH = 300
-const float SPIKE_STRIP_SPIKE_CORE_DORMANT_RADIUS = 350
+const float SPIKE_STRIP_SPIKE_CORE_DORMANT_RADIUS = 440
+
+
+
 const float SPIKE_STRIP_SPIKE_DELAY = 2.0
 const float SPIKE_STRIP_SPIKE_SCALE_DORMANT = 1.0
 const float SPIKE_STRIP_SPIKE_SCALE_ACTIVE = 1.0
@@ -395,6 +401,79 @@ bool function CanDeployOnEnt( entity ent, vector pos )
 
 	return true
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -1,6 +1,7 @@
 global function PIN_Init
 global function PIN_Customization
 global function PIN_UltimateReadyPing
+global function PIN_DynamicDialogue
 global function PIN_NET_TraceRouteResult
 
 
@@ -32,6 +33,8 @@ global function PIN_Club_Search
 global function PIN_Club_Setting
 global function PIN_BattlepassPurchase
 global function PIN_BattlepassMilestonePageView
+global function PIN_UIInteraction_PersonalisedStoreInteraction
+global function PIN_UIInteraction_PersonalisedStoreReveal
 
 global function SetCurrentHubForPIN
 global function SetCurrentTabForPIN
@@ -467,6 +470,7 @@ void function PIN_UIInteraction_Select( string menuName, string objectName, var 
 			mdur = 0
 			object_id = objectName.tolower()
 			pgid = menuName.tolower()
+			online_friend_cnt = GetUniqueOnlineFriendCount()
 			interaction_attr = jsonTable
 		}
 	)
@@ -679,6 +683,9 @@ string function GetPINRarity( int tier )
 
 		case 5:
 			return "heirloom"
+
+		case 6:
+			return "iconic"
 
 		default:
 			Assert( false, "Unhandled loot rarity " + tier )
@@ -992,7 +999,53 @@ void function PIN_UltimateReadyPing( entity player, string pingType, bool isUlti
 	)
 }
 
+void function PIN_DynamicDialogue( string alias )
+{
+	AddPINTelemetryEvent( "tag",
+		PIN_StandardHeader(),
+		{
+			tag_type = alias,
+		}
+	)
+}
+
 void function PIN_NET_TraceRouteResult(entity player, table result)
 {
 	AddPINTelemetryEvent("trace_route_result", PIN_StandardHeader(), result)
 }
+
+
+
+void function PIN_UIInteraction_PersonalisedStoreInteraction( string menuName, string objectName, int slotNumber, string offerSelectorName, string offerName )
+{
+	AddPINTelemetryEvent( "ui_interaction",
+		PIN_StandardHeader(),
+		{
+			object_id = objectName.tolower()
+			pgid = menuName.tolower()
+			sdur = PIN_GetSessionDuration()
+
+			slot = slotNumber
+			slctrname = offerSelectorName
+			offname = offerName
+		}
+	)
+}
+
+void function PIN_UIInteraction_PersonalisedStoreReveal( string menuName, string objectName, int slotNumber, string offerSelectorName, string offerName, array<string> userSegments )
+{
+	AddPINTelemetryEvent( "ui_interaction",
+		PIN_StandardHeader(),
+		{
+			object_id = objectName.tolower()
+			pgid = menuName.tolower()
+			sdur = PIN_GetSessionDuration()
+
+			slot = slotNumber
+			slctrname = offerSelectorName
+			offname = offerName
+			userSegment = userSegments
+		}
+	)
+}
+

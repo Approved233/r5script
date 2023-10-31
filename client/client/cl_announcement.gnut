@@ -22,9 +22,11 @@ global const int ANNOUNCEMENT_STYLE_GENERIC_WARNING = 12
 global const int ANNOUNCEMENT_STYLE_ROUND_WON = 13
 global const int ANNOUNCEMENT_STYLE_RATING_LEADER = 14
 global const int ANNOUNCEMENT_STYLE_TDM_ROUND_WON = 15
-global const int ANNOUNCEMENT_STYLE_STRIKE = 16
-global const int ANNOUNCEMENT_STYLE_FINAL_RING_NO_RESPAWNS= 8
-global const int ANNOUNCEMENT_STYLE_MILESTONE_SMALL = 17
+
+	global const int ANNOUNCEMENT_STYLE_STRIKE = 16
+	global const int ANNOUNCEMENT_STYLE_MILESTONE_SMALL = 17
+	global const int ANNOUNCEMENT_STYLE_FINAL_RING_NO_RESPAWNS= 18
+
 
 global const int ANNOUNCEMENT_POSITION_ZONE_NONE = 0
 global const int ANNOUNCEMENT_POSITION_ZONE_TOP_CENTER = 1
@@ -508,14 +510,13 @@ void function AnnouncementMessage_DisplayOnHud( AnnouncementData announcement )
 	switch ( announcement.announcementStyle )
 	{
 
+		case ANNOUNCEMENT_STYLE_STRIKE:
+			rui = RuiCreate( $"ui/announcement_strike.rpak", clGlobal.topoFullScreen, RUI_DRAW_POSTEFFECTS, RUI_SORT_SCREENFADE + 1 )
 
+			RuiSetInt( rui, "stikeTotal", Strikeout_GetSquadStrikes() )
 
-
-
-
-
-
-
+			EmitSoundOnEntity( player, announcement.soundAlias )
+			break
 
 		case ANNOUNCEMENT_STYLE_SWEEP:
 			if ( announcement.drawOverScreenFade )
@@ -566,15 +567,13 @@ void function AnnouncementMessage_DisplayOnHud( AnnouncementData announcement )
 				RuiSetImage( rui, "iconImage", announcement.icon )
 			break
 
+
 		case ANNOUNCEMENT_STYLE_MILESTONE_SMALL:
-			
-			if ( announcement.drawOverScreenFade )
-				rui = RuiCreate( $"ui/announcement_objective.rpak", clGlobal.topoFullScreen, RUI_DRAW_HUD, RUI_SORT_SCREENFADE + 1 )
-			else
-				rui = CreatePermanentCockpitRui( $"ui/announcement_objective.rpak", announcement.sortKey )
+			rui = RuiCreate( $"ui/announcement_milestone_small.rpak", clGlobal.topoFullScreen, RUI_DRAW_POSTEFFECTS, RUI_SORT_SCREENFADE + 1 )
 			if ( announcement.soundAlias != "" )
 				EmitSoundOnEntity( player, announcement.soundAlias )
 			break
+
 
 		case ANNOUNCEMENT_STYLE_OBJECTIVE:
 			if ( announcement.drawOverScreenFade )
@@ -590,10 +589,11 @@ void function AnnouncementMessage_DisplayOnHud( AnnouncementData announcement )
 			if ( announcement.soundAlias != "" )
 				EmitSoundOnEntity( player, announcement.soundAlias )
 			break
+
+
 		case ANNOUNCEMENT_STYLE_FINAL_RING_NO_RESPAWNS:
-			
 			customAnnouncement = true
-			rui = RuiCreate( $"ui/sur_circle_warning_v2.rpak", clGlobal.topoFullScreen, RUI_DRAW_POSTEFFECTS, 0 )
+			rui = RuiCreate( $"ui/announcement_strikeout_norespawns.rpak", clGlobal.topoFullScreen, RUI_DRAW_POSTEFFECTS, 0 )
 
 			RuiSetGameTime( rui, "startTime", Time() )
 
@@ -611,6 +611,7 @@ void function AnnouncementMessage_DisplayOnHud( AnnouncementData announcement )
 
 			EmitSoundOnEntity( player, announcement.soundAlias )
 			break
+
 
 		case ANNOUNCEMENT_STYLE_CIRCLE_WARNING:
 			customAnnouncement = true
@@ -748,13 +749,15 @@ int function Announcement_GetActivePositionZone()
 		case ANNOUNCEMENT_STYLE_OBJECTIVE:
 		case ANNOUNCEMENT_STYLE_RESULTS:
 		case ANNOUNCEMENT_STYLE_CIRCLE_WARNING:
+
 		case ANNOUNCEMENT_STYLE_FINAL_RING_NO_RESPAWNS:
+		case ANNOUNCEMENT_STYLE_STRIKE:
+		case ANNOUNCEMENT_STYLE_MILESTONE_SMALL:
+
 		case ANNOUNCEMENT_STYLE_KILL_LEADER:
 		case ANNOUNCEMENT_STYLE_RATING_LEADER:
 		case ANNOUNCEMENT_STYLE_GOT_TREASURE_PACK:
 		case ANNOUNCEMENT_STYLE_GENERIC_WARNING:
-		case ANNOUNCEMENT_STYLE_STRIKE:
-		case ANNOUNCEMENT_STYLE_MILESTONE_SMALL:
 			return ANNOUNCEMENT_POSITION_ZONE_TOP_CENTER
 			break
 

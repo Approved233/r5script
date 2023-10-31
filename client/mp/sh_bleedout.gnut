@@ -18,8 +18,8 @@ global function Bleedout_GetPlayerBleedoutType
 global function Bleedout_GetPlayerBleedoutTypeCount
 global function Bleedout_GetRevivingPlayer
 
-
-
+global function Bleedout_GetIsInfiniteSelfResEnabled
+global function Bleedout_GetShouldAlliancePlayerBleedout
 
 
 global function BleedoutState_GetPlayerBleedoutState
@@ -50,7 +50,7 @@ global function Bleedout_OverrideBleedoutTime
 
 
 
-
+global function Bleedout_ServerCallback_DisplaySelfResDelayHintForPlayer
 
 
 
@@ -79,8 +79,8 @@ global const bool VOID_RING_CAN_FAST_REVIVE = true
 
 
 
-
-
+global const float INFINITE_SELFRES_REVIVE_TIME = 10.0
+const float INFINITE_SELFRES_MAX_DELAY_TIME = 90.0
 
 
 global enum eReviveTypes
@@ -181,13 +181,13 @@ void function BleedoutShared_Init()
 	file.bleedoutLogicActive = true
 
 
+		if ( Bleedout_GetIsInfiniteSelfResEnabled() )
+		{
+			Remote_RegisterClientFunction( "Bleedout_ServerCallback_DisplaySelfResDelayHintForPlayer", "float", 0.0, INFINITE_SELFRES_MAX_DELAY_TIME, 32 )
 
 
 
-
-
-
-
+		}
 
 }
 
@@ -861,44 +861,44 @@ bool function Bleedout_CheckPlayerUseTargetDist( entity player, entity useTarget
 
 
 
+bool function Bleedout_GetShouldAlliancePlayerBleedout( entity player )
+{
+	if ( !AllianceProximity_IsUsingAlliances() )
+		return false
+
+	if ( !IsValid( player ) )
+		return false
+
+	if ( !GetCurrentPlaylistVarBool( "bleedout_is_alliance_bleedout_enabled", false ) )
+		return false
+
+	int playerAlliance = AllianceProximity_GetAllianceFromTeam( player.GetTeam() )
+	return AllianceProximity_GetNumPlayersInAlliance( playerAlliance, IsEliminationBased() ) > 1
+}
 
 
 
 
+bool function Bleedout_GetIsInfiniteSelfResEnabled()
+{
+	return GetCurrentPlaylistVarBool( "bleedout_has_infinite_self_res", false )
+}
 
 
 
 
+bool function Bleedout_GetIsInfiniteSelfResOnlyAvailableWithLivingSquad()
+{
+	return GetCurrentPlaylistVarBool( "bleedout_infinite_self_res_only_with_living_squad", true )
+}
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+bool function Bleedout_ShouldBleedingOutSquadBeEliminatedEvenWithInfiniteSelfRes()
+{
+	return GetCurrentPlaylistVarBool( "bleedout_infinite_self_res_eliminate_with_self_res", true )
+}
 
 
 
@@ -933,12 +933,12 @@ bool function Bleedout_IsReviveOnlyAllowedOnSquadmates()
 
 
 
-
-
-
-
-
-
+const float HINT_DURATION = 5.0
+void function Bleedout_ServerCallback_DisplaySelfResDelayHintForPlayer( float delay )
+{
+	string hintString = delay > 0 ? Localize( "#BLEEDOUT_SELF_RES_DELAY", delay ) : Localize( "#BLEEDOUT_SELF_RES_AVAILABLE" )
+	AddPlayerHint( HINT_DURATION, 0.5, $"", hintString )
+}
 
 
 

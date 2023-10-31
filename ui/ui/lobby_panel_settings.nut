@@ -158,6 +158,7 @@ void function SendPINSettingsEvent()
 		ControlsGamepad = SettingsConVarsToTable( ControlsGamepadPanel_GetConVarData() ),
 		Video = PIN_GetVideoSettings(),
 		Hardware = PIN_GetHardwareInfo(),
+		Social = PIN_GetSocialSettings(),
 		opt_out_crossplay_flag = !CrossplayUserOptIn(),
 	}
 	PIN_Settings( settingsTable )

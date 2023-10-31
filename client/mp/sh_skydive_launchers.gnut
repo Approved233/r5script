@@ -73,6 +73,8 @@ enum eSkydiveLauncherVelocityType
 
 
 
+
+
 struct
 {
 
@@ -125,6 +127,9 @@ void function Sh_SkydiveLaunchers_Init()
 
 	file.holsterWeaponsOnAscent = GetCurrentPlaylistVarBool( "skydive_launchers_holster_weapons", true )
 }
+
+
+
 
 
 

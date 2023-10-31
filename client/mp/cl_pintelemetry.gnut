@@ -1,7 +1,10 @@
 global function PIN_Init
 global function PIN_Customization
 global function PIN_UltimateReadyPing
+global function PIN_DynamicDialogue
 global function PIN_NET_TraceRouteResult
+
+
 
 
 
@@ -132,6 +135,7 @@ void function PIN_Init()
 		Waypoints_RegisterCustomType( "PIN", OnPINWaypointCreated )
 
 }
+
 
 
 
@@ -680,6 +684,9 @@ string function GetPINRarity( int tier )
 		case 5:
 			return "heirloom"
 
+		case 6:
+			return "iconic"
+
 		default:
 			Assert( false, "Unhandled loot rarity " + tier )
 			return "unknown_" + tier
@@ -992,7 +999,53 @@ void function PIN_UltimateReadyPing( entity player, string pingType, bool isUlti
 	)
 }
 
+void function PIN_DynamicDialogue( string alias )
+{
+	AddPINTelemetryEvent( "tag",
+		PIN_StandardHeader(),
+		{
+			tag_type = alias,
+		}
+	)
+}
+
 void function PIN_NET_TraceRouteResult(entity player, table result)
 {
 	AddPINTelemetryEvent("trace_route_result", PIN_StandardHeader(), result)
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -17,6 +17,10 @@ global function SupportBin_EntityIsSupportBin
 
 
 
+
+
+
+
 global function Perk_SupportBin_SupportBinHasHudMarker
 global function Perk_SupportBin_ServerToClient_DisplayOpenedSupportBoxPrompt
 
@@ -263,6 +267,23 @@ bool function SupportBin_OnlyScaleSecretLoot()
 	return ( GetCurrentPlaylistVarBool("supportbin_disable_scaling_regular_loot", true ) )
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 bool function SupportBin_AllowArmorLootInBins()
 {
 	return ( GetCurrentPlaylistVarBool("supportbin_enable_armor_loot", false ) )
@@ -301,6 +322,87 @@ bool function SupportBin_EntityIsSupportBin( entity ent )
 		return false
 	return ent.GetSkin() == ent.GetSkinIndexByName( "SecretLoot" )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -35,7 +35,7 @@ global function MainWeapon_GetLoadoutOverviewRotation
 
 
 
-global const string WEAPON_STAT_CATEGORY_GOLD_WEAPON = "crate_unique"
+global const string WEAPON_STAT_CATEGORY_CRATE_WEAPON = "crate_unique"
 
 
 

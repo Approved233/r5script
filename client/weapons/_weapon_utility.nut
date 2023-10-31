@@ -236,7 +236,7 @@ global enum eShatterRoundsTypes
 	_count
 }
 global const string SHATTER_ROUNDS_HOPUP_MOD = "hopup_shatter_rounds"
-global const string SHATTER_ROUNDS_MOD = "altfire_shatter_rounds"
+global const string SHATTER_ROUNDS_ALTFIRE_MOD = "altfire_shatter"
 global const string SHATTER_ROUNDS_HIPFIRE_MOD = "shatter_rounds_hipfire"
 global const string SHATTER_ROUNDS_THINK_END_SIGNAL = "shatter_rounds_think_end"
 global const string SHATTER_ROUNDS_ADS_THINK_THREAD_ABORT_SIGNAL = "shatter_rounds_ads_think_end"
@@ -1725,7 +1725,7 @@ bool function PlantStickyEntity( entity ent, DeployableCollisionParams cp, vecto
 		}
 	}
 
-	if ( IsOriginInvalidForPlacingPermanentOnto( plantPosition ) )
+	if ( IsOriginInvalidForPlacingPermanentOnto( plantPosition, ent ) )
 		return false
 
 
@@ -4882,6 +4882,76 @@ void function PlayDelayedShellEject( entity weapon, float time, int count = 1, b
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function UICallback_UpdateLaserSightColor()
 {
 	Remote_ServerCallFunction( "ClientCallback_UpdateLaserSightColor" )
@@ -4893,11 +4963,6 @@ bool function TryCharacterButtonCommonReadyChecks( entity player )
 		return false
 	if ( player != GetLocalClientPlayer() )
 		return false
-	if ( IsControllerModeActive() )
-	{
-		if ( TryOnscreenPromptFunction( player, "quickchat" ) )
-			return false
-	}
 
 	if ( HoverVehicle_PlayerIsDriving( player ) )
 		return false
@@ -5831,6 +5896,8 @@ void function ShatterRounds_RemoveShatterRounds( entity weapon )
 
 
 
+
+
 void function OnWeaponActivate_Smart_Reload ( entity weapon, SmartReloadSettings settings )
 {
 	if ( !IsValid( weapon ) )
@@ -5894,6 +5961,22 @@ void function OnWeaponReload_Smart_Reload ( entity weapon, int milestoneIndex )
 	}
 	else
 	{
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6271,15 +6354,6 @@ void function KineticLoaderChokeFunctionality_ServerThink( entity player, entity
 }
 void function KineticLoaderFunctionality_ServerThink( entity player, entity weapon )
 {
-
-
-
-
-
-
-
-
-
 
 
 

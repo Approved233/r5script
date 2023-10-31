@@ -329,7 +329,7 @@ PlacementInfo function GetPlacementInfo( entity player )
 
 	if ( info.success )
 	{
-		if ( IsOriginInvalidForPlacingPermanentOnto( downResults.endPos ) )
+		if ( IsOriginInvalidForPlacingPermanentOnto( downResults.endPos, player ) )
 		{
 			info.success = false
 		}
@@ -359,7 +359,7 @@ PlacementInfo function GetPlacementInfo( entity player )
 
 	if ( info.success )
 	{
-		if ( IsOriginInvalidForPlacingPermanentOnto( info.origin ) )
+		if ( IsOriginInvalidForPlacingPermanentOnto( info.origin, player ) )
 		{
 			info.success = false
 			info.failReason = "#PLAYER_DEPLOY_FAIL_HINT_OBSTRUCTED"

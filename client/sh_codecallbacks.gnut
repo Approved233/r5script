@@ -19,6 +19,11 @@ global function RemoveCallback_OnUseButtonPressed
 global function AddCallback_OnUseButtonReleased
 global function RemoveCallback_OnUseButtonReleased
 
+global function CodeCallback_PlayerLanded
+global function RemoveCallback_PlayerLanded
+global function AddCallback_PlayerLanded
+global function HasCallback_PlayerLanded
+
 global function CodeCallback_ForceScriptError
 
 global function AddCallback_PlayerClassChanged
@@ -568,6 +573,34 @@ void function CodeCallback_OnUseButtonReleased( entity player )
 	{
 		callbackFunc( player )
 	}
+}
+
+void function CodeCallback_PlayerLanded( entity player )
+{
+	foreach ( callbackFunc in player.e.onPlayerLandedCallbacks )
+	{
+		callbackFunc( player )
+	}
+}
+
+void function AddCallback_PlayerLanded( entity player, void functionref( entity ) callbackFunc )
+{
+	Assert( player.IsPlayer() )
+	Assert( !player.e.onPlayerLandedCallbacks.contains( callbackFunc ), "Already added " + string( callbackFunc ) + " to entity" )
+
+	player.e.onPlayerLandedCallbacks.append( callbackFunc )
+}
+
+void function RemoveCallback_PlayerLanded( entity player, void functionref( entity ) callbackFunc )
+{
+	int ornull funcPos = player.e.onPlayerLandedCallbacks.find( callbackFunc )
+	Assert( funcPos != null, "Cannot remove " + string( callbackFunc ) + " that was not added to entity" )
+	player.e.onPlayerLandedCallbacks.remove( expect int( funcPos ) )
+}
+
+bool function HasCallback_PlayerLanded( entity player, void functionref( entity ) callbackFunc )
+{
+	return player.e.onPlayerLandedCallbacks.contains( callbackFunc )
 }
 
 

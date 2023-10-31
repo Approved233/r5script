@@ -88,9 +88,6 @@ void function OnPlayVideoMenu_Open()
 
 	Assert( file.videoSettings.video != "" )
 
-	if ( CanRunClientScript() )
-		RunClientScript( "UIToClient_SignalRevConvoStop" )
-
 	DisableBackgroundMovie()
 	SetMouseCursorVisible( false )
 	StopVideos( eVideoPanelContext.UI )

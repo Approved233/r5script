@@ -184,6 +184,8 @@ void function HoverVehicle_Init()
 {
 	RegisterSignal( SIG_VEHICLE_EMBARK_BEGIN )
 
+	AddCallback_EntitiesDidLoad( EntitiesDidLoad )
+
 	if ( !HoverVehiclesAreEnabled() )
 		return
 
@@ -384,6 +386,20 @@ void function HoverVehicle_InitFX()
 
 }
 
+void function EntitiesDidLoad()
+{
+	if ( !HoverVehiclesAreEnabled() || !HoverVehiclesAreEnabledOnMap() )
+	{
+		HoverVehicle_Shutdown()
+	}
+}
+
+void function HoverVehicle_Shutdown ()
+{
+	array<entity> arWalls = GetAllARWalls()
+	foreach( wall in arWalls )
+		wall.Destroy()
+}
 
 void function HoverVehicle_SetEffects( entity vehicle )
 {
@@ -412,7 +428,7 @@ void function HoverVehicle_RegisterNetworking()
 
 	if( HoverVehicles_PingFromMap_Enabled() )
 	{
-		Remote_RegisterServerFunction( FUNCNAME_PingVehicleFromMap, "entity" )
+		Remote_RegisterServerFunction( FUNCNAME_PingVehicleFromMap, "typed_entity", "player_vehicle" )
 
 		Remote_RegisterClientFunction( FUNCNAME_SetVehiclePresenceAtPlatform, "entity" )
 	}
