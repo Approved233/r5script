@@ -273,10 +273,20 @@ void function __EntitiesDidLoad()
 
 
 
+
+
+
+
+
+
+
 bool function Strikeout_IsPlayerRespawnDisabled( entity player )
 {
 	return player.GetPlayerNetBool( STRIKEOUT_RESPAWN_DISABLED)
 }
+
+
+
 
 
 
@@ -649,12 +659,17 @@ bool function GetPlaylistVar_AmmoOnKillEnabled()
 	return GetCurrentPlaylistVarBool( "strikeout_ammo_on_kill_enabled", false )
 }
 
-bool function GetPlaylistVar_FreeHealingItemsOnRespawnlEnabled()
+bool function GetPlaylistVar_FreeHealingItemsOnRespawnEnabled()
 {
 	return GetCurrentPlaylistVarBool( "strikeout_healing_items_on_respawn_enabled", false )
 }
 
-bool function GetPlaylistVar_AmmoOnRespawnlEnabled()
+bool function GetPlaylistVar_ArmorOnRespawnEnabled()
+{
+	return GetCurrentPlaylistVarBool( "strikeout_armor_on_respawn_enabled", true )
+}
+
+bool function GetPlaylistVar_AmmoOnRespawnEnabled()
 {
 	return GetCurrentPlaylistVarBool( "strikeout_ammo_on_respawn_enabled", false )
 }

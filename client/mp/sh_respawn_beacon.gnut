@@ -1420,6 +1420,12 @@ bool function IsNotBusy( entity player, entity ent, int useFlags )
 bool function Has_BR_Respawn_WithArmor()
 {
 	bool hasRespawnWithArmor = IsSurvivalMode() && GetCurrentPlaylistVarBool( "has_br_respawn_witharmor", true )
+
+
+	if (IsStrikeoutGamemode())
+		hasRespawnWithArmor = true
+
+
 	return( hasRespawnWithArmor )
 }
 
