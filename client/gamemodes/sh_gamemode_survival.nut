@@ -1371,6 +1371,11 @@ bool function CanWeaponInspect( entity player, int activity )
 
 
 
+
+
+
+
+
 void function SetVictorySequencePlatformModel( asset model, vector originOffset, vector modelAngles )
 {
 	VictoryPlatformModelData data

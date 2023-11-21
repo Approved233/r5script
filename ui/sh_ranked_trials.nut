@@ -24,11 +24,11 @@ global function RankedTrials_GetGamesAllowedInTrialsState
 global function RankedTrials_GetTimesFailedTrial
 global function RankedTrials_GetProgressValueForStatByIndex
 global function RankedTrials_GetTrialState
+global function RankedTrials_PlayerHasIncompleteTrial
 
 
 global function RankedTrials_GetDescription
 global function RankedTrials_GetTrialsCountForTrial
-global function RankedTrials_PlayerHasIncompleteTrial
 global function RankedTrials_NextRankHasTrial
 
 
@@ -479,11 +479,11 @@ int function RankedTrials_GetTrialState( entity player )
 	return state
 }
 
-
 bool function RankedTrials_PlayerHasIncompleteTrial( entity player )
 {
 	return RankedTrials_PlayerHasAssignedTrial( player ) && RankedTrials_GetTrialState( player ) == eRankedTrialState.INCOMPLETE
 }
+
 
 bool function RankedTrials_NextRankHasTrial( SharedRankedDivisionData currentDivision, SharedRankedDivisionData ornull nextDivision )
 {
@@ -512,6 +512,11 @@ int function RankedTrials_GetProgressValueForStatByIndex( entity player, int sta
 	Assert( false )
 	unreachable
 }
+
+
+
+
+
 
 
 

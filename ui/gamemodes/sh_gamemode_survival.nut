@@ -1440,6 +1440,11 @@ bool function Survival_ClampToRing()
 
 
 
+
+
+
+
+
 bool function IsSquadDataPersistenceEmpty( entity player )
 {
 	int maxTrackedSquadMembers = PersistenceGetArrayCount( "lastGameSquadStats" )

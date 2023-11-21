@@ -14,13 +14,13 @@
 
 
 
-
-
 global function ShadowArmy_Init
 global function ShGameMode_ShadowArmy_RegisterNetworking
 global function IsShadowArmyGamemode
 global function IsShadowArmyGamemodeCineVersion
 global function ShadowArmy_GetNumRevSquadsForMatchStart
+
+
 
 
 
@@ -508,6 +508,16 @@ bool function IsShadowArmyGamemodeCineVersion()
 {
 	return GetCurrentPlaylistVarBool( "is_shadow_army_cine_version", false )
 }
+
+
+
+
+
+
+
+
+
+
 
 
 const int UNSET_SQUAD_COUNT = -1
@@ -1547,7 +1557,12 @@ array < entity > function ShadowArmy_GetEnemySquadPlayersForAllianceIntro( int a
 	else
 	{
 		
-		finalSquad = AllianceProximity_GetTeamsInAlliance( enemyAlliance )[ 0 ]
+		array < int > teamsInAllianceArray = AllianceProximity_GetTeamsInAlliance( enemyAlliance )
+		
+		if ( teamsInAllianceArray.len() > 0 )
+			finalSquad = teamsInAllianceArray[ 0 ]
+		else
+			return []
 	}
 
 	
@@ -1797,6 +1812,50 @@ int function ShadowArmy_GetCurrentGamePhase()
 {
 	return GetGlobalNetInt( "shadowArmy_GamePhase" )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3846,7 +3905,6 @@ void function ShadowArmy_ServerCallback_SetDeathScreenCallbacks()
 {
 	DeathScreen_SetModeSpecificRuiUpdateFunc( ShadowArmy_DeathScreenUpdate )
 	DeathScreen_SetDataRuiAssetForGamemode( DEATH_SCREEN_RUI )
-	
 }
 
 
@@ -3897,6 +3955,22 @@ string function ShadowArmy_GetVictoryConditionForFlagset( int gameResultFlags )
 
 	return victoryCondition
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

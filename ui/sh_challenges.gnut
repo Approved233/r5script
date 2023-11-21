@@ -1906,7 +1906,7 @@ string function GetCategoryStringFromType( int categoryID, bool longName = false
 				break
 
 			case eChallengeCategory.EVENTSHOP_DAILY_CHALLENGE:
-				return "#CATEGORY_REWARD_SHOP_DAILY_CHALLENGE" + appendStr
+				return "#CATEGORY_REWARD_SHOP_DAILY" + appendStr
 				break
 		}
 	}

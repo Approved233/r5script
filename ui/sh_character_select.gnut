@@ -4926,6 +4926,17 @@ void function UI_CloseCharacterSelect()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
 bool function IsCharacterReselectEnabled()
 {
 	return GetCurrentPlaylistVarBool( "character_reselect_enabled", false )

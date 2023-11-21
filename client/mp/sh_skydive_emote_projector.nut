@@ -212,10 +212,6 @@ void function ShSkydiveEmoteProjector_LevelInit()
 
 
 
-
-
-
-
 void function SkydiveEmoteProjector_ActivateEmoteProjector( entity player, ItemFlavor quip )
 {
 	Remote_ServerCallFunction( "ClientCallback_ThrowProjector" )

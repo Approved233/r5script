@@ -82,6 +82,7 @@ global function GRX_MakeItemFlavorBagFromPriceArray
 global function GRX_CheckBundleAndUpdateOfferPrices
 global function GRXOffer_GetEventThematicPackCollectionInfo
 global function GRXOffer_GetEventThematicPackCollectionInfoFromScriptOffer
+global function GRXOffer_IsPurchaseWithinThematicPackLimit
 global function GRX_IsLocationActive
 global function GRX_ScriptOfferFromCraftingOffer
 global function GRX_GetPostGameRewards
@@ -1209,6 +1210,21 @@ bool function IsItemOwnedByPlayerInternal( ItemFlavor flav, entity player = null
 
 
 
+bool function GRXOffer_IsPurchaseWithinThematicPackLimit( GRXScriptOffer offerData )
+{
+	bool withinLimit = true
+
+	GRX_PackCollectionInfo packCollectionInfo = GRXOffer_GetEventThematicPackCollectionInfoFromScriptOffer( offerData )
+	if ( packCollectionInfo.numTotalInCollection > 0 )
+	{
+		withinLimit = offerData.output.quantities[0] <= ( packCollectionInfo.numTotalInCollection - packCollectionInfo.numCollected )
+	}
+
+	return withinLimit
+}
+
+
+
 GRX_PackCollectionInfo function GRXOffer_GetEventThematicPackCollectionInfoFromScriptOffer( GRXScriptOffer offerData )
 {
 	GRX_PackCollectionInfo packCollectionInfo
@@ -1439,13 +1455,24 @@ bool function GRXOffer_ContainsOnlySinglePack( GRXScriptOffer offer )
 	if ( offer.items.len() != 1 )
 		return false
 
-	bool hasSticker = GRXOffer_GetSpecialPackContainsStickers( offer )
+	if ( GRXOffer_IsSpecialPackType( offer ) )
+		return false
+
 	foreach ( ItemFlavor outputFlav in offer.output.flavors )
 	{
-		if ( ItemFlavor_GetGRXMode( outputFlav ) != eItemFlavorGRXMode.PACK || hasSticker )
+		if ( ItemFlavor_GetGRXMode( outputFlav ) != eItemFlavorGRXMode.PACK )
 			return false
 	}
 	return true
+}
+
+
+
+bool function GRXOffer_IsSpecialPackType( GRXScriptOffer offer)
+{
+	bool hasSticker = GRXOffer_GetSpecialPackContainsStickers( offer )
+	bool hasHolosprays = GRXOffer_GetSpecialPackContainsHolosprays( offer )
+	return ( hasSticker || hasHolosprays )
 }
 
 

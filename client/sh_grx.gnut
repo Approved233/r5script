@@ -113,6 +113,7 @@ global function DEV_IsValidGRXRef
 
 
 
+
 global function GRXPack_GetTickSoundAlias
 
 
@@ -1206,6 +1207,32 @@ bool function IsItemOwnedByPlayerInternal( ItemFlavor flav, entity player = null
 
 	return has
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

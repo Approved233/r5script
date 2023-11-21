@@ -1053,5 +1053,3 @@ int function RespawnNearSquad_GetRemainingRespawnsForPlayer( entity player )
 
 
 
-
-

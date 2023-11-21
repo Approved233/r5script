@@ -73,6 +73,7 @@ global function TropicsStoryEvents_Init
 
 
 
+
 struct
 {
 
@@ -150,6 +151,70 @@ void function EntitiesDidLoad()
 
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

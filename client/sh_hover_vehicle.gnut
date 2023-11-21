@@ -186,6 +186,8 @@ void function HoverVehicle_Init()
 
 	AddCallback_EntitiesDidLoad( EntitiesDidLoad )
 
+
+
 	if ( !HoverVehiclesAreEnabled() )
 		return
 
@@ -225,8 +227,6 @@ void function HoverVehicle_Init()
 	PrecacheParticleSystem( FX_VEHICLE_SPAWN_POINT )
 
 	HoverVehicle_InitFX()
-
-
 
 
 

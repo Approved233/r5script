@@ -215,7 +215,6 @@ string function HealingItem_GetHighlightString( LootData lootData )
 
 bool function HealingItemFilter( LootData lootData )
 {
-	printt( "lootData:" + lootData.lootType + ", "  )
 	return lootData.lootType == eLootType.HEALTH && ( lootData.ref == "health_pickup_health_small" || lootData.ref == "health_pickup_health_large" || lootData.ref == "health_pickup_combo_small" || lootData.ref == "health_pickup_combo_large" )
 }
 

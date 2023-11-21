@@ -3720,7 +3720,18 @@ void function UpdatePlayerModel( ItemFlavor character, ItemFlavor ornull charact
 	CreateNewCharacterModel( CharacterSkin_GetBodyModel( characterSkin ) )
 	CharacterSkin_Apply( fileLevel.characterModel, characterSkin )
 	
-	fileLevel.characterModel.Show()
+
+
+	if ( GetCurrentPlaylistVarBool( "use_custom_mode_intro", false ) && IsRevTakeover() && ShadowArmy_IsPlayerOnShadowArmy(GetLocalClientPlayer()) )
+	{
+		fileLevel.characterModel.Hide()
+	}
+	else
+
+	{
+		fileLevel.characterModel.Show()
+	}
+
 	Signal( fileLevel.signalDummy, "PlayerModelUpdated" )
 
 	

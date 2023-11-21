@@ -1010,17 +1010,21 @@ string function GetPlayerNameUnlessAnonymized( EHI playerEHI )
 
 bool function ShouldPlayerNameBeAnonymized( EHI playerEHI )
 {
+	
+	if ( GetLocalClientPlayer().GetTeam() == TEAM_SPECTATOR )
+		return false
+
+	
+	
+	if ( IsPrivateMatch() )
+		return ShouldPrivateMatchBeAnonymized()
+
+	
 	if ( IsViewingDeathScreen() )
 		return false
 
 	if ( IsLobby() )
 		return false
-
-	if ( GetLocalClientPlayer().GetTeam() == TEAM_SPECTATOR )
-		return false
-
-	if ( IsPrivateMatch() )
-		return ShouldPrivateMatchBeAnonymized()
 
 	if ( GetCurrentPlaylistVarBool( "DisablePlayerAnonymity", false ) == true )
 		return false

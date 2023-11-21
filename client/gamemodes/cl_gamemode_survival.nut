@@ -4429,7 +4429,7 @@ void function ShowVictorySequence( bool placementMode = false, bool isDevTest = 
 
 		foreach ( int i, SquadSummaryPlayerData data in file.winnerSquadSummaryData.playerData )
 		{
-			if ( i >= maxPlayersToShow )
+			if ( playersOnPodium >= maxPlayersToShow )
 				break
 
 			if ( !EHIHasValidScriptStruct( data.eHandle ) )
@@ -4453,6 +4453,9 @@ void function ShowVictorySequence( bool placementMode = false, bool isDevTest = 
 				continue
 
 			ItemFlavor characterSkin = LoadoutSlot_GetItemFlavor( data.eHandle, Loadout_CharacterSkin( character ) )
+
+			if ( ( ( maxPlayersToShow / squadSize) <= uniqueTeamNumbers.len() ) && !uniqueTeamNumbers.contains( teamOfCurrentPlayer ) )
+				continue
 
 			if ( !uniqueTeamNumbers.contains( teamOfCurrentPlayer ) )
 				uniqueTeamNumbers.append( teamOfCurrentPlayer )

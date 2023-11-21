@@ -2162,7 +2162,6 @@ void function UICallback_FreeDM_OpenCharacterSelect()
 	const bool showLockedCharacters = true
 	bool isJIP = GamemodeUtility_IsJIPPlayerSpawnBonusPending( clientPlayer )
 	HideScoreboard()
-
 	OpenCharacterSelectMenu( browseMode, showLockedCharacters, isJIP )
 }
 

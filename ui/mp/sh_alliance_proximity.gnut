@@ -65,6 +65,8 @@ global function AddCallback_AllianceProximity_OnTeamPutIntoAlliance
 
 
 
+
+
 global function AllianceProximity_GetAllianceColor
 global function AllianceProximity_GetAllianceColorFromTeam
 
@@ -80,6 +82,7 @@ struct {
 	table< int, int > teamToAllianceTable
 	table< int, array< int > > allianceToTeamsTable
 	array<void functionref( int, int )> callbacks_AllianceProximity_OnTeamPutIntoAlliance
+
 
 
 
@@ -127,6 +130,7 @@ void function AllianceProximity_Init()
 
 	file.isMidMatchAllianceSwitchEnabled = GetCurrentPlaylistVarBool( "allow_mid_match_alliance_switching", false )
 	Remote_RegisterClientFunction( "AllianceProximity_ServerCallback_SetTeamToAllianceOnClient", "int", TEAM_MULTITEAM_FIRST, TEAM_MULTITEAM_LAST, "int", ALLIANCE_NONE, file.maxAlliances + 1 )
+	Remote_RegisterClientFunction( "AllianceProximity_MuteAllianceOnMatchEndReassignment" )
 
 	file.isUsingAllianceProximity = GetCurrentPlaylistVarBool( "use_proximity_alliance_members", false )
 	file.maxDistAllianceProximity = GetCurrentPlaylistVarFloat( "max_dist_proximity_alliance_members", 0.0 )
@@ -383,6 +387,17 @@ int function AllianceProximity_GetOtherAlliance( int alliance )
 	Assert( file.maxAlliances == 2, "Running AllianceProximity_GetOtherAlliance in a mode with maxAlliances not equal to 2, you probably want to use AllianceProximity_GetOtherAlliances" )
 	return alliance == ALLIANCE_A ? ALLIANCE_B : ALLIANCE_A
 }
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -716,6 +731,21 @@ array< int > function AllianceProximity_GetTeamsInAlliance( int alliance )
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 int function AllianceProximity_GetRepresentativeTeamForAlliance( int alliance )
 {
 
@@ -749,6 +779,46 @@ int function AllianceProximity_GetRepresentativeTeamForAlliance( int alliance )
 
 	return team
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

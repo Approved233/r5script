@@ -299,8 +299,10 @@ void function StoreInspectMenu_UpdatePrices( StoreInspectOfferData offerData ,GR
 	int numOfferItemsOwned = GRXOffer_GetOwnedItemsCount( storeOffer )
 	HudElem_SetRuiArg( uiData.discountInfo, "ownedItemsDesc", numOfferItemsOwned > 0 && !isOfferFullyClaimed ? Localize( "#BUNDLE_OWNED_ITEMS_DESC", numOfferItemsOwned ) : "" )
 
+	bool isWithinThematicPackLimit = GRXOffer_IsPurchaseWithinThematicPackLimit( storeOffer )
+
 	offerData.isPurchasable = !isOfferFullyClaimed && !hasBundleRestrictions && !isPurchaseLimitReached
-						      && storeOffer.isAvailable && !isOverActiveBPLevelLimit
+						      && storeOffer.isAvailable && !isOverActiveBPLevelLimit && isWithinThematicPackLimit
 
 							  && GRXOffer_IsEligibleForPurchase( storeOffer )
 
@@ -362,6 +364,11 @@ void function StoreInspectMenu_UpdatePrices( StoreInspectOfferData offerData ,GR
 	{
 		offerData.purchaseText = Localize( "#LOCKED" )
 		offerData.purchaseDescText = Localize( "#BUNDLE_OVER_ACTIVE_BP_LEVEL_LIMIT" )
+	}
+	else if ( !isWithinThematicPackLimit )
+	{
+		offerData.purchaseText = Localize( "#LOCKED" )
+		offerData.purchaseDescText = ""
 	}
 
 	else if ( GetConVarBool( "mtx_useOffersV2" ) && !GRXOffer_IsEligibleForPurchase( storeOffer ) )

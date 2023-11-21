@@ -672,6 +672,7 @@ globalize_all_functions
 
 
 
+
 #if DEV
 void function DEV_script_ranked_debug ( string message,int indent = 0 )
 {

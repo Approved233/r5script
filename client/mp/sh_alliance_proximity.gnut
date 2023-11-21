@@ -51,11 +51,13 @@ global function AllianceProximity_GetAllianceScoreDifference
 
 
 
+
 global function AllianceProximity_ManageIconVisibility_Thread
 global function AllianceProximity_GetUIAllianceFromTeam
 global function AllianceProximity_GetAllianceFromTeamWithObserverCorrection
 global function AllianceProximity_GetUIAlliance
 global function AllianceProximity_ServerCallback_SetTeamToAllianceOnClient
+global function AllianceProximity_MuteAllianceOnMatchEndReassignment
 
 
 
@@ -85,6 +87,7 @@ struct {
 		table< EHI, int > playerEHIToOriginalTeamTable 
 		bool isMinimapDisabled
 		array < int > priorityPingTypes
+
 
 
 
@@ -127,6 +130,7 @@ void function AllianceProximity_Init()
 
 	file.isMidMatchAllianceSwitchEnabled = GetCurrentPlaylistVarBool( "allow_mid_match_alliance_switching", false )
 	Remote_RegisterClientFunction( "AllianceProximity_ServerCallback_SetTeamToAllianceOnClient", "int", TEAM_MULTITEAM_FIRST, TEAM_MULTITEAM_LAST, "int", ALLIANCE_NONE, file.maxAlliances + 1 )
+	Remote_RegisterClientFunction( "AllianceProximity_MuteAllianceOnMatchEndReassignment" )
 
 	file.isUsingAllianceProximity = GetCurrentPlaylistVarBool( "use_proximity_alliance_members", false )
 	file.maxDistAllianceProximity = GetCurrentPlaylistVarFloat( "max_dist_proximity_alliance_members", 0.0 )
@@ -401,6 +405,17 @@ int function AllianceProximity_GetOriginalPlayerTeam_FromPlayerEHI( EHI playerEH
 
 	return team
 }
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -716,6 +731,21 @@ array< int > function AllianceProximity_GetPopulatedTeamsInAlliance( int allianc
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 int function AllianceProximity_GetRepresentativeTeamForAlliance( int alliance )
 {
 
@@ -803,10 +833,50 @@ array<int> function AllianceProximity_GetLivingPlayerTeamsInAlliance( int allian
 
 
 
+
+
+
+
+
+
+
+
 void function AllianceProximity_OnPlayerCreated( entity player )
 {
 	if ( GetGameState() < eGameState.WinnerDetermined && IsValid( player ) )
 		file.playerEHIToOriginalTeamTable[ ToEHI( player ) ] <- player.GetTeam()
+}
+
+
+
+void function AllianceProximity_MuteAllianceOnMatchEndReassignment()
+{
+	if ( GetGameState() < eGameState.WinnerDetermined )
+		return
+
+	entity localPlayer = GetLocalClientPlayer()
+
+	if ( !IsValid( localPlayer ) )
+		return
+
+	EHI playerEhi = localPlayer.GetEncodedEHandle()
+	int playerTeam = AllianceProximity_GetOriginalPlayerTeam_FromPlayerEHI( playerEhi )
+
+	array< entity > teamPlayers = GetPlayerArrayOfTeam( localPlayer.GetTeam() )
+	foreach( teamplayer in teamPlayers )
+	{
+		if ( !IsValid( teamplayer ) )
+			continue
+
+		EHI teamplayerEhi = teamplayer.GetEncodedEHandle()
+		if ( playerTeam != AllianceProximity_GetOriginalPlayerTeam_FromPlayerEHI( teamplayerEhi ) )
+		{
+			if ( !teamplayer.IsVoiceAndTextMuted() )
+			{
+				TogglePlayerVoiceAndTextMute( teamplayer )
+			}
+		}
+	}
 }
 
 

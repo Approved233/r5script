@@ -53,6 +53,9 @@ const float SHIELD_MINES_AIM_PITCH_INCREMENT_MAX = 7
 
 struct
 {
+
+
+
 } file
 
 void function Mp_ability_shield_mines_init()
@@ -92,6 +95,21 @@ void function OnWeaponDeactivate_ability_shield_mines( entity weapon )
 	entity owner = weapon.GetOwner()
 	if ( IsValid(owner) )
 		owner.Signal( "ShieldMines_ArcPreviewStop" )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 }
 
@@ -170,6 +188,19 @@ var function OnWeaponPrimaryAttack_ability_shield_mines( entity weapon, WeaponPr
 		offset *= -1
 
 	finalTargetPos += offset
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
