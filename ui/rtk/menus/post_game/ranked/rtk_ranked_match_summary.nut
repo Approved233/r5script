@@ -18,6 +18,10 @@ global struct BonusBreakdownInfo
 {
 	string bonusName 	 = ""
 	int bonusValue 		 = 0
+	bool crossOut		 = false
+
+	string tooltipTitle	 = ""
+	string tooltipBody   = ""
 }
 
 global struct ConditionalElement
@@ -28,6 +32,9 @@ global struct ConditionalElement
 	vector 	colorL = <1.0, 1.0, 1.0>
 	vector 	colorR = <1.0, 1.0, 1.0>
 	vector	bgColor = <0.16, 0.16, 0.16>
+
+	string tooltipTitle	 = ""
+	string tooltipBody   = ""
 }
 
 global struct RankedPromoTrial
@@ -55,6 +62,12 @@ global struct RankedProgressBarTweenData
 
 	RTKRankedBadgeModel& badge1
 	RTKRankedBadgeModel& badge2
+
+	
+	int adjustedMinRankScore
+	int adjustedMaxRankScore
+	int adjustedStartScore
+	int adjustedEndScore
 }
 
 global struct RankedProgressBarData
@@ -215,6 +228,9 @@ void function BuildRankedMatchSummaryDataModel( rtk_behavior self )
 		BonusBreakdownInfo tempBonusBreakdownInfo
 		tempBonusBreakdownInfo.bonusName	= "#RANKED_HIGHEND_BONUS"
 		tempBonusBreakdownInfo.bonusValue	= scoreBreakdown.highEndAdjustment
+		tempBonusBreakdownInfo.tooltipTitle = "#RANKED_HIGHEND_BONUS"
+		tempBonusBreakdownInfo.tooltipBody  = "#RANKED_HIGHEND_BONUS_DESC"
+		tempBonusBreakdownInfo.crossOut		= false 
 		extraInfo.totalBonus				+= scoreBreakdown.highEndAdjustment
 		extraInfo.breakdownBonuses.push(tempBonusBreakdownInfo)
 	}
@@ -224,6 +240,9 @@ void function BuildRankedMatchSummaryDataModel( rtk_behavior self )
 		BonusBreakdownInfo tempBonusBreakdownInfo
 		tempBonusBreakdownInfo.bonusName	= "#RANKED_ELIMINATION_BONUS"
 		tempBonusBreakdownInfo.bonusValue	= scoreBreakdown.killBonus
+		tempBonusBreakdownInfo.tooltipTitle = "#RANKED_ELIMINATION_BONUS"
+		tempBonusBreakdownInfo.tooltipBody  = "#RANKED_ELIMINATION_BONUS_DESC"
+		tempBonusBreakdownInfo.crossOut		= scoreBreakdown.wasAbandoned
 		extraInfo.totalBonus				+= scoreBreakdown.killBonus
 		extraInfo.breakdownBonuses.push(tempBonusBreakdownInfo)
 	}
@@ -233,6 +252,9 @@ void function BuildRankedMatchSummaryDataModel( rtk_behavior self )
 		BonusBreakdownInfo tempBonusBreakdownInfo
 		tempBonusBreakdownInfo.bonusName	= "#RANKED_RATING_BONUS"
 		tempBonusBreakdownInfo.bonusValue	= scoreBreakdown.convergenceBonus
+		tempBonusBreakdownInfo.tooltipTitle = "#RANKED_RATING_BONUS"
+		tempBonusBreakdownInfo.tooltipBody  = "#RANKED_RATING_BONUS_DESC"
+		tempBonusBreakdownInfo.crossOut		= scoreBreakdown.wasAbandoned
 		extraInfo.totalBonus				+= scoreBreakdown.convergenceBonus
 		extraInfo.breakdownBonuses.push(tempBonusBreakdownInfo)
 	}
@@ -242,6 +264,9 @@ void function BuildRankedMatchSummaryDataModel( rtk_behavior self )
 		BonusBreakdownInfo tempBonusBreakdownInfo
 		tempBonusBreakdownInfo.bonusName	= "#RANKED_SKILL_BONUS"
 		tempBonusBreakdownInfo.bonusValue	= scoreBreakdown.skillDiffBonus
+		tempBonusBreakdownInfo.tooltipTitle = "#RANKED_SKILL_BONUS"
+		tempBonusBreakdownInfo.tooltipBody  = "#RANKED_SKILL_BONUS_DESC"
+		tempBonusBreakdownInfo.crossOut		= scoreBreakdown.wasAbandoned
 		extraInfo.totalBonus				+= scoreBreakdown.skillDiffBonus
 		extraInfo.breakdownBonuses.push(tempBonusBreakdownInfo)
 	}
@@ -251,6 +276,9 @@ void function BuildRankedMatchSummaryDataModel( rtk_behavior self )
 		BonusBreakdownInfo tempBonusBreakdownInfo
 		tempBonusBreakdownInfo.bonusName	= "#RANKED_PROVISIONAL_BONUS"
 		tempBonusBreakdownInfo.bonusValue	= scoreBreakdown.provisionalMatchBonus
+		tempBonusBreakdownInfo.tooltipTitle = "#RANKED_PROVISIONAL_BONUS"
+		tempBonusBreakdownInfo.tooltipBody  = "#RANKED_PROVISIONAL_BONUS_DESC"
+		tempBonusBreakdownInfo.crossOut		= scoreBreakdown.wasAbandoned
 		extraInfo.totalBonus				+= scoreBreakdown.provisionalMatchBonus
 		extraInfo.breakdownBonuses.push(tempBonusBreakdownInfo)
 	}
@@ -260,6 +288,9 @@ void function BuildRankedMatchSummaryDataModel( rtk_behavior self )
 		BonusBreakdownInfo tempBonusBreakdownInfo
 		tempBonusBreakdownInfo.bonusName	= "#RANKED_TIER_PROMOTION_BONUS"
 		tempBonusBreakdownInfo.bonusValue	= scoreBreakdown.promotionBonus
+		tempBonusBreakdownInfo.tooltipTitle = "#RANKED_TIER_PROMOTION_BONUS"
+		tempBonusBreakdownInfo.tooltipBody  = "#RANKED_TIER_PROMOTION_BONUS_DESC"
+		tempBonusBreakdownInfo.crossOut		= scoreBreakdown.wasAbandoned
 		extraInfo.totalBonus				+= scoreBreakdown.promotionBonus
 		extraInfo.breakdownBonuses.push(tempBonusBreakdownInfo)
 	}
@@ -276,6 +307,8 @@ void function BuildRankedMatchSummaryDataModel( rtk_behavior self )
 		tempCondEle.colorL	= <1, 0.26, 0.26>
 		tempCondEle.colorR	= <1, 0.26, 0.26>
 		tempCondEle.alternatingBGOffset = altBgOffset
+		tempCondEle.tooltipTitle = "#RANKED_ABANDON_PENALTY"
+		tempCondEle.tooltipBody  = "#RANKED_ABANDON_PENALTY_DESC"
 		extraInfo.conditionals.push(tempCondEle)
 	}
 
@@ -285,6 +318,8 @@ void function BuildRankedMatchSummaryDataModel( rtk_behavior self )
 		tempCondEle.stringL	= "#RANKED_LOSS_FORGIVENESS"
 		tempCondEle.stringR	= scoreBreakdown.lossProtectionAdjustment
 		tempCondEle.alternatingBGOffset = altBgOffset
+		tempCondEle.tooltipTitle = "#RANKED_LOSS_FORGIVENESS"
+		tempCondEle.tooltipBody  = "#RANKED_LOSS_FORGIVENESS_DESC"
 		extraInfo.conditionals.push(tempCondEle)
 	}
 
@@ -296,6 +331,8 @@ void function BuildRankedMatchSummaryDataModel( rtk_behavior self )
 		tempCondEle.colorL	= <1, 0.26, 0.26>
 		tempCondEle.colorR	= <1, 0.26, 0.26>
 		tempCondEle.alternatingBGOffset = altBgOffset
+		tempCondEle.tooltipTitle = "#RANKED_TIER_DERANKING"
+		tempCondEle.tooltipBody  = "#RANKED_TIER_DERANKING_DESC"
 		extraInfo.conditionals.push(tempCondEle)
 	}
 
@@ -304,6 +341,8 @@ void function BuildRankedMatchSummaryDataModel( rtk_behavior self )
 		ConditionalElement tempCondEle
 		tempCondEle.stringL	= "#RANKED_DEMOTION_PROTECTION_LINE2"
 		tempCondEle.stringR	= scoreBreakdown.demotionProtectionAdjustment
+		tempCondEle.tooltipTitle = "#RANKED_DEMOTION_PROTECTION_LINE2"
+		tempCondEle.tooltipBody  = "#RANKED_DEMOTION_PROTECTION_DESC"
 		tempCondEle.alternatingBGOffset = altBgOffset
 		extraInfo.conditionals.push(tempCondEle)
 	}
@@ -311,16 +350,22 @@ void function BuildRankedMatchSummaryDataModel( rtk_behavior self )
 	BonusBreakdownInfo kills
 	kills.bonusName = "#SCOREBOARD_KILLS"
 	kills.bonusValue = scoreBreakdown.kills
+	kills.tooltipTitle = "#SCOREBOARD_KILLS"
+	kills.tooltipBody = "#SCOREBOARD_KILLS_DESC"
 	extraInfo.stats.push(kills)
 
 	BonusBreakdownInfo assists
 	assists.bonusName = "#SCOREBOARD_ASSISTS"
 	assists.bonusValue = scoreBreakdown.assists
+	assists.tooltipTitle = "#SCOREBOARD_ASSISTS"
+	assists.tooltipBody = "#SCOREBOARD_ASSISTS_DESC"
 	extraInfo.stats.push(assists)
 
 	BonusBreakdownInfo participations
 	participations.bonusName = "#SCOREBOARD_PARTICIPATION"
 	participations.bonusValue = scoreBreakdown.participationUnique
+	participations.tooltipTitle = "#SCOREBOARD_PARTICIPATION"
+	participations.tooltipBody = "#SCOREBOARD_PARTICIPATION_DESC"
 	extraInfo.stats.push(participations)
 
 
@@ -406,7 +451,7 @@ void function BuildRankedMatchSummaryDataModel( rtk_behavior self )
 					extraInfo.trialsData.trialsStatusMessage = Localize( "#X/Y_STYLED", extraInfo.trialsData.trialsAttempts, extraInfo.trialsData.maxTrialsAttempts )
 					break
 				case eRankedTrialState.SUCCESS:
-					extraInfo.trialsData.trialsInfoString = Localize( "#RANKED_PROMOTION_SUCCESS_DESCRIPTION" )
+					extraInfo.trialsData.trialsInfoString = Localize( "#RANKED_PROMOTION_SUCCESS_DESCRIPTION", scoreBreakdown.promotionBonus )
 					extraInfo.trialsData.trialsStatusColor = <1, 0.86, 0.24>
 					extraInfo.trialsData.trialsStatusBannerColor = <1, 0.86, 0.24>
 					extraInfo.trialsData.trialsStatusBannerAlpha = 0.25
@@ -547,11 +592,13 @@ void function BuildRankedBadgeDataModel( rtk_behavior self )
 			if ( nextDivision != null )
 			{
 				expect SharedRankedDivisionData( nextDivision )
-				tween.hasPromoTrialAtEnd = RankedTrials_NextRankHasTrial( thisDivision, nextDivision )
+				tween.hasPromoTrialAtEnd = RankedTrials_NextRankHasTrial( thisDivision, nextDivision ) && !RankedTrials_IsKillswitchEnabled()
 				tween.promoTrialCapImage = nextDivision.tier.promotionalMetallicImage
 			}
 
 
+		tween.badge1.divisionName				= thisDivision.divisionName
+		tween.badge1.rankColor					= GetKeyColor( COLORID_RANKED_BORDER_COLOR_ROOKIE, thisDivision.tier.index ) / 255
 		tween.badge1.badgeRuiAsset 				= useProvisionalBadgeAsset ? RANKED_PLACEMENT_BADGE : thisDivision.tier.iconRuiAsset
 		tween.badge1.rankedIcon 				= string( thisDivision.tier.icon )
 		tween.badge1.emblemDisplayMode 			= thisDivision.emblemDisplayMode
@@ -628,6 +675,8 @@ void function BuildRankedBadgeDataModel( rtk_behavior self )
 		if ( tween.isDoubleBadge )
 		{
 			expect SharedRankedDivisionData( nextDivision )
+			tween.badge2.divisionName			= nextDivision.divisionName
+			tween.badge2.rankColor				= GetKeyColor( COLORID_RANKED_BORDER_COLOR_ROOKIE, nextDivision.tier.index ) / 255
 			tween.badge2.badgeRuiAsset 			= inProvisionals ? RANKED_PLACEMENT_BADGE : nextDivision.tier.iconRuiAsset
 			tween.badge2.rankedIcon 			= string( nextDivision.tier.icon )
 			tween.badge2.emblemDisplayMode 		= nextDivision.emblemDisplayMode
@@ -687,11 +736,20 @@ void function BuildRankedBadgeDataModel( rtk_behavior self )
 
 			tween.progressFracStart = float( tween.startScore - tween.minRankScore ) / float( tween.maxRankScore - tween.minRankScore )
 			tween.progressFracEnd = float( tween.endScore - tween.minRankScore ) / float( tween.maxRankScore - tween.minRankScore )
+
+			
+			tween.adjustedMinRankScore = 0
+			tween.adjustedMaxRankScore = tween.maxRankScore - tween.minRankScore
+			tween.adjustedStartScore = tween.startScore - tween.minRankScore
+			tween.adjustedEndScore = tween.endScore - tween.minRankScore
 		}
 		else
 		{
 			tween.minRankScore = thisDivision.scoreMin
 			tween.endScore = currentScore
+
+			tween.adjustedMinRankScore = 0
+			tween.adjustedEndScore = tween.endScore - tween.minRankScore
 		}
 
 		
@@ -802,13 +860,32 @@ void function StartRankUpAnimation( rtk_behavior self, bool isProvisionalGraduat
 	PrivateData p
 	self.Private( p )
 
+	
+	OnThreadEnd(
+		function() : ( self )
+		{
+			if ( self == null )
+				return
+
+			PrivateData p
+			self.Private( p )
+
+			RTKStruct_SetBool( p.rankedMatchSummaryScreenDataModel, "isRankUpAnimationInProgress", false )
+			SetContinueButtonRegistration( self, true )
+		}
+	)
+
+	
+	EndSignal( uiGlobal.signalDummy, "OnPostGameRankedMenu_Close" )
+
+	
 	SetContinueButtonRegistration( self, false )
 	RTKStruct_SetBool( p.rankedMatchSummaryScreenDataModel, "isRankUpAnimationInProgress", true )
+
+	
 	wait 0.1
 	RankUpAnimation( p.numRanksEarned, p.scoreStart, p.ladderPosition, p.scoreEnd, isProvisionalGraduation )
 	wait 0.1
-	RTKStruct_SetBool( p.rankedMatchSummaryScreenDataModel, "isRankUpAnimationInProgress", false )
-	SetContinueButtonRegistration( self, true )
 }
 
 bool function RTKRankedMatchSummary_UpdateTweenDataModel( rtk_behavior self, bool incrementTween = false )

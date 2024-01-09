@@ -61,6 +61,12 @@ global function IsPlaylistLockedForEvent
 global function HasEventTakeOverActive
 global function GetEventTakeoverPlaylist
 
+
+
+
+
+
+
 #if DEV
 global function DEV_PrintPartyInfo
 global function DEV_PrintUserInfo
@@ -72,6 +78,7 @@ global function Lobby_ShowQuestPopup
 global function Lobby_ShowStoryEventChallengesPopup
 global function Lobby_ShowStoryEventAutoplayDialoguePopup
 global function FillButton_Toggle
+global function FillButton_SetState
 global function ReadyButtonActivate
 #endif
 
@@ -82,6 +89,8 @@ global function ServerCallback_SetPlaylistById
 
 
 global function Lobby_OpenBattlePassMilestoneDialog
+
+const asset RANKED_DECAY_ICON = $"rui/menu/ranked/extrainfo_icon_small"
 
 const string SOUND_BP_POPUP = "UI_Menu_BattlePass_PopUp"
 
@@ -107,6 +116,8 @@ global enum ePlaylistState
 	RANKED_LARGE_RANK_DIFFERENCE,
 	RANKED_NOT_INITIALIZED,
 	RANKED_MATCH_ABANDON_DELAY,
+	RANKED_MATCH_PATCH_REQUIRED,
+	RANKED_MATCH_SEASON_ENDING,
 	ACCOUNT_LEVEL_REQUIRED,
 	ROTATION_GROUP_MISMATCH,
 	DEV_PLAYTEST,
@@ -129,6 +140,8 @@ const table< int, string > playlistStateMap = {
 	[ ePlaylistState.RANKED_LARGE_RANK_DIFFERENCE ] = "#PLAYLIST_STATE_RANKED_LARGE_RANK_DIFFERENCE",
 	[ ePlaylistState.RANKED_NOT_INITIALIZED ] = "#PLAYLIST_STATE_RANKED_NOT_INITIALIZED",
 	[ ePlaylistState.RANKED_MATCH_ABANDON_DELAY ] = "#RANKED_ABANDON_PENALTY_PLAYLIST_STATE",
+	[ ePlaylistState.RANKED_MATCH_PATCH_REQUIRED ] = "#PLAYLIST_STATE_RANKED_PATCH_REQUIRED",
+	[ ePlaylistState.RANKED_MATCH_SEASON_ENDING ] = "#PLAYLIST_STATE_RANKED_SPLIT_ROLLOVER",
 	[ ePlaylistState.ROTATION_GROUP_MISMATCH ] = "#PLAYLIST_UNAVAILABLE",
 	[ ePlaylistState.ACCOUNT_LEVEL_REQUIRED ] = "#PLAYLIST_STATE_RANKED_LEVEL_REQUIRED",
 	[ ePlaylistState.DEV_PLAYTEST ] = "#PLAYLIST_STATE_PLAYTEST",
@@ -266,6 +279,13 @@ struct
 
 	var partyMemberNotice
 
+
+
+
+
+
+
+
 } file
 
 void function InitPlayPanel( var panel )
@@ -289,6 +309,12 @@ void function InitPlayPanel( var panel )
 	Hud_AddEventHandler( file.gamemodeSelectButton, UIE_GET_FOCUS, GamemodeSelectButton_OnGetFocus )
 	Hud_AddEventHandler( file.gamemodeSelectButton, UIE_LOSE_FOCUS, GamemodeSelectButton_OnLoseFocus )
 	Hud_SetVisible( file.gamemodeSelectButton, false )
+
+
+
+
+
+
 
 	file.readyButton = Hud_GetChild( panel, "ReadyButton" )
 	Hud_AddEventHandler( file.readyButton, UIE_CLICK, ReadyButton_OnActivate )
@@ -407,8 +433,6 @@ void function Lobby_OnClickPlaylistAboutButton( var button )
 	string modeRules = GetPlaylist_UIRules()
 	if( FeatureHasTutorialTabs( modeRules ) )
 		OpenFeatureTutorialDialog( button, modeRules )
-	else
-		OpenAboutGameModePage( button )
 }
 
 void function PlayPanel_LevelInit()
@@ -1464,8 +1488,8 @@ void function UpdateLowerLeftButtonPositions()
 		RuiSetBool( rui, "inSeason", IsRankedInSeason() )
 		RuiSetBool( rui, "inProvisional", isProvisional )
 
-			RuiSetBool( rui, "inPromoTrials", hasPromoTrial )
-			RuiSetBool( rui, "showPromoPip", RankedTrials_NextRankHasTrial( data, nextData ) )
+			RuiSetBool( rui, "inPromoTrials", hasPromoTrial && !RankedTrials_IsKillswitchEnabled() )
+			RuiSetBool( rui, "showPromoPip", RankedTrials_NextRankHasTrial( data, nextData ) && !RankedTrials_IsKillswitchEnabled() )
 
 			asset promoCapImage = $""
 			if ( nextData != null )
@@ -1476,6 +1500,7 @@ void function UpdateLowerLeftButtonPositions()
 			RuiSetAsset( rui, "promoCapImage", promoCapImage )
 
 		RuiSetFloat( rui, "iconTextScale", currentTier.isLadderOnlyTier ? 0.66 : 1.0 )
+
 
 
 
@@ -1526,7 +1551,7 @@ void function UpdateLowerLeftButtonPositions()
 		}
 
 
-		if ( !hasPromoTrial )
+		if ( !hasPromoTrial && nextData != null )
 		{
 			tooltip.descText += Localize( "#RANKED_PROMOTION_NOT_ACTIVE_TOOLTIP" )
 		}
@@ -2040,6 +2065,10 @@ int function Lobby_GetPlaylistState( string playlistName )
 			return ePlaylistState.RANKED_LARGE_RANK_DIFFERENCE
 		else if ( !Ranked_HasBeenInitialized() )
 			return ePlaylistState.RANKED_NOT_INITIALIZED
+		else if ( Playlist_ShouldLockRankedPlaylistForPatch( playlistName ) )
+			return ePlaylistState.RANKED_MATCH_PATCH_REQUIRED
+		else if ( Playlist_IsPastRankedSeasonEndDate() )
+			return ePlaylistState.RANKED_MATCH_SEASON_ENDING
 	}
 
 
@@ -2308,6 +2337,10 @@ void function UpdateModeButton()
 
 
 
+
+
+
+
 	if ( file.wasReady != isReady )
 	{
 		UISize screenSize = GetScreenSize()
@@ -2351,6 +2384,11 @@ void function UpdateModeButton()
 	string invalidPlaylistText = isLeader ? "#SELECT_PLAYLIST" : "#PARTY_LEADER_CHOICE"
 	string name = GetPlaylistVarString( playlistName, "name", invalidPlaylistText )
 	HudElem_SetRuiArg( file.modeButton, "buttonText", Localize( name ) + file.selectedPlaylistMods )
+
+
+
+
+
 
 
 
@@ -2583,10 +2621,22 @@ bool function IsPreloadingMap()
 	return ( mmStatus.len() >= compareSting.len() && mmStatus.slice( 0, compareSting.len() ) == compareSting )
 }
 
+#if DEV
 void function FillButton_Toggle()
 {
 	FillButton_OnActivate( file.fillButton )
 }
+
+
+void function FillButton_SetState( bool state )
+{
+	file.fillButtonState = state
+	Hud_SetSelected( file.fillButton, file.fillButtonState )
+
+	SetConVarBool( "party_nofill_selected", !file.fillButtonState )
+	printt( "SHOULD WE FILL THE SQUAD? " + file.fillButtonState )
+}
+#endif
 
 void function FillButton_OnActivate( var button )
 {
@@ -2768,9 +2818,8 @@ void function ReadyButton_OnActivate( var button )
 		Remote_ServerCallFunction( "ClientCallback_CancelMatchSearch" )
 		EmitUISound( SOUND_STOP_MATCHMAKING_1P )
 
-
-			if ( CanRunClientScript() )
-				RunClientScript("Lobby_OnReadyFX", false)
+		if ( CanRunClientScript() )
+			RunClientScript("Lobby_OnReadyFX", false)
 
 	}
 	else
@@ -2855,10 +2904,8 @@ void function ReadyButtonActivate()
 		EmitUISound( SOUND_START_MATCHMAKING_1P )
 		Lobby_StartMatchmaking()
 
-
 		if ( CanRunClientScript() )
 			RunClientScript("Lobby_OnReadyFX", true)
-
 
 		RTKTutorialOverlay_Deactivate( eTutorialOverlayID.READY_UP )
 	}
@@ -3120,6 +3167,74 @@ bool function InviteLastPlayedButton_OnKeyPress( var button, int keyId, bool isD
 }
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function InviteLastPlayedButton_OnRightClick( var button )
 {
 	if ( IsSocialPopupActive() )
@@ -3358,10 +3473,11 @@ void function UpdateLootBoxButton( var button, array<ItemFlavor> specificPackFla
 		if ( totalPackCount > 0 )
 		{
 			expect ItemFlavor( nextPack )
-			GRX_GetPackCount( ItemFlavor_GetGRXIndex( nextPack ) )
 			packIcon = GRXPack_GetOpenButtonIcon( nextPack )
 			if ( packIcon != "" )
+			{
 				specialPackCount = GRX_GetPackCount( ItemFlavor_GetGRXIndex( nextPack ) )
+			}
 		}
 
 		descText = "#REMAINING"
@@ -3371,23 +3487,28 @@ void function UpdateLootBoxButton( var button, array<ItemFlavor> specificPackFla
 			foreach ( ItemFlavor specificPackFlav in specificPackFlavs )
 			{
 				int count = GRX_GetPackCount( ItemFlavor_GetGRXIndex( specificPackFlav ) )
-
-				if ( packFlav == null || (lootBoxCount == 0 && count > 0) )
+				if ( packFlav == null && count > 0 )
+				{
 					packFlav = specificPackFlav
-
+				}
 				lootBoxCount += count
 			}
 		}
-		else if ( specialPackCount > 0 )
+		if ( packFlav == null )
 		{
+			if ( specialPackCount > 0 )
+			{
 				lootBoxCount = specialPackCount
 				packFlav = nextPack
-		}
-		else
-		{
-			lootBoxCount = totalPackCount
-			if ( lootBoxCount > 0 )
-				packFlav = nextPack
+			}
+			else
+			{
+				lootBoxCount = totalPackCount
+				if ( lootBoxCount > 0 )
+				{
+					packFlav = nextPack
+				}
+			}
 		}
 	}
 
@@ -3399,6 +3520,17 @@ void function UpdateLootBoxButton( var button, array<ItemFlavor> specificPackFla
 		{
 			buttonText = ItemFlavor_GetShortName( packFlav )
 			descText = (lootBoxCount == 1 ? "#EVENT_PACK" : "#EVENT_PACKS")
+		}
+		else if ( ItemFlavor_GetAccountPackType( packFlav ) == eAccountPackType.SIRNGE )
+		{
+			buttonText = (lootBoxCount == 1 ? "#EVENT_PACK" : "#EVENT_PACKS")
+			ItemFlavor ornull milestoneEvent = GetActiveMilestoneEvent( GetUnixTimestamp() )
+			if ( milestoneEvent != null )
+			{
+				expect ItemFlavor( milestoneEvent )
+				lootBoxCount = GRX_GetPackCount( ItemFlavor_GetGRXIndex( MilestoneEvent_GetMainPackFlav( milestoneEvent ) ) ) +
+							   GRX_GetPackCount( ItemFlavor_GetGRXIndex( MilestoneEvent_GetGuaranteedPackFlav( milestoneEvent ) ) )
+			}
 		}
 		else if ( ItemFlavor_GetAccountPackType( packFlav ) == eAccountPackType.THEMATIC || ItemFlavor_GetAccountPackType( packFlav ) == eAccountPackType.EVENT_THEMATIC )
 		{

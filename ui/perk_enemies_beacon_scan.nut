@@ -19,8 +19,14 @@ global function Perk_EnemyBeaconScan_Init
 
 
 
+
 struct
 {
+
+
+
+
+
 
 
 
@@ -107,6 +113,38 @@ bool function EnemyBeaconScan_RevealScannerLocation()
 {
 	return GetCurrentPlaylistVarBool( "perk_enemy_beacon_use_scanner_location", true )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

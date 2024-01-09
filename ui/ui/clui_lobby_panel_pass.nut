@@ -1728,9 +1728,6 @@ void function BattlePass_SetPage( int pageNumber )
 
 	if ( file.currentPage == pageNumber )
 	{
-#if PC_PROG_NX_UI
-		UpdateRewardPanel( file.currentRewardGroups )
-#endif
 		return
 	}
 
@@ -2715,7 +2712,7 @@ void function PassPurchaseMenu_OnGetTopLevel()
 void function UpdatePassPurchaseButtons()
 {
 	ItemFlavor ornull activeBattlePass = GetPlayerActiveBattlePass( ToEHI( GetLocalClientPlayer() ) )
-	if ( activeBattlePass == null || !GRX_IsInventoryReady() )
+	if ( activeBattlePass == null || !GRX_IsInventoryReady() || !GRX_AreOffersReady() )
 		return
 	expect ItemFlavor( activeBattlePass )
 
@@ -2732,15 +2729,10 @@ void function UpdatePassPurchaseButtons()
 	{
 		GRXScriptOffer basicPurchaseOffer = basicPurchaseOffers[0]
 
-
-		if ( GetConVarBool( "mtx_useIneligibilityCode" ) )
+		if ( canPurchasePass )
 		{
-			if ( canPurchasePass )
-			{
-				canPurchasePass = GRXOffer_IsEligibleForPurchase( basicPurchaseOffer )
-			}
+			canPurchasePass = GRXOffer_IsEligibleForPurchase( basicPurchaseOffer )
 		}
-
 
 		Assert( basicPurchaseOffer.prices.len() == 1 )
 		if ( basicPurchaseOffer.prices.len() == 1 )
@@ -2774,15 +2766,10 @@ void function UpdatePassPurchaseButtons()
 	{
 		GRXScriptOffer bundlePurchaseOffer = bundlePurchaseOffers[0]
 
-
-		if ( GetConVarBool( "mtx_useIneligibilityCode" ) )
+		if ( canPurchaseBundle )
 		{
-			if ( canPurchaseBundle )
-			{
-				canPurchaseBundle = GRXOffer_IsEligibleForPurchase( bundlePurchaseOffer )
-			}
+			canPurchaseBundle = GRXOffer_IsEligibleForPurchase( bundlePurchaseOffer )
 		}
-
 
 		Assert( bundlePurchaseOffer.prices.len() == 1 )
 		if ( bundlePurchaseOffer.prices.len() == 1 )
@@ -2791,6 +2778,13 @@ void function UpdatePassPurchaseButtons()
 			HudElem_SetRuiArg( s_passPurchaseMenu.passBundleInfo, "price",  GRX_GetFormattedPrice( bundlePurchaseOffer.prices[0] ) )
 			HudElem_SetRuiArg( s_passPurchaseMenu.passBundleInfo, "canAfford", canAfford )
 			HudElem_SetRuiArg( s_passPurchaseMenu.bundlePurchaseButton, "buttonText", canAfford ? "#UPGRADE" : "#CONFIRM_GET_PREMIUM" )
+
+			array<bool> canAffordPremiumAndCraft = [true, true]
+
+				UpdateGiftButtonToolTip( file.giftButton, bundlePurchaseOffer.prices[0], canAffordPremiumAndCraft, null, 1, false, true )
+
+
+
 		}
 		else Warning( "Expected 1 price for bundle pack offer of '%s'", string(ItemFlavor_GetAsset( activeBattlePass )) )
 	}
@@ -2813,15 +2807,6 @@ void function UpdatePassPurchaseButtons()
 	{
 		Hud_ClearToolTipData( s_passPurchaseMenu.bundlePurchaseButton )
 	}
-
-	array<bool> canAffordPremiumAndCraft = [true, true]
-
-
-	UpdateGiftButtonToolTip( file.giftButton, bundlePurchaseOffers[0].prices[0], canAffordPremiumAndCraft, null, 1, false, true )
-
-
-
-
 }
 
 void function UpdatePadNavigationPurchaseButtons( bool canAfford )
@@ -2956,6 +2941,68 @@ int function SortByAwardLevel( BattlePassReward a, BattlePassReward b )
 
 	return 0
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

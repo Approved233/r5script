@@ -36,9 +36,7 @@ struct
 	bool hasFocusedNews = false
 
 	var postGameButton
-
 	var progressionModifiersButton
-
 	var newsButton
 	var newsButtonStatusIcon
 	var socialButton
@@ -150,12 +148,10 @@ void function InitLobbyMenu( var newMenuArg )
 	HudElem_SetRuiArg( postGameButton, "shortcutText", "%[BACK|TAB]%" )
 	Hud_AddEventHandler( postGameButton, UIE_CLICK, PostGameButton_OnActivate )
 
-
 	var progressionModifiersButton = Hud_GetChild( menu, "ProgressionModifiersButton" )
 	file.progressionModifiersButton = progressionModifiersButton
 	HudElem_SetRuiArg( progressionModifiersButton, "icon", $"rui/menu/xp_boost/BoostXP_lrg" )
 	Hud_AddEventHandler( progressionModifiersButton, UIE_CLICK, ProgressionModifiersButton_OnActivate )
-
 	var newsButton = Hud_GetChild( menu, "NewsButton" )
 	file.newsButton = newsButton
 	file.newsButtonStatusIcon = Hud_GetChild( menu, "NewsButtonStatusIcon" )
@@ -185,10 +181,6 @@ void function InitLobbyMenu( var newMenuArg )
 	HudElem_SetRuiArg( gameMenuButton, "icon", $"rui/menu/lobby/settings_icon" )
 	HudElem_SetRuiArg( gameMenuButton, "shortcutText", "%[START|ESCAPE]%" )
 	Hud_AddEventHandler( gameMenuButton, UIE_CLICK, GameMenuButton_OnActivate )
-
-
-
-
 
 	var socialEventPopup = Hud_GetChild( menu, "SocialPopupPanel" )
 	file.socialEventPopup = socialEventPopup
@@ -246,6 +238,7 @@ void function OnLobbyMenu_Open()
 			TabDef tab = AddTab( file.menu, panel, GetPanelTabTitle( panel ) )
 			tab.isBannerLogoSmall = true
 			SetTabBaseWidth( tab, 180 )
+			tab.new = HasNewPersonalisedOffers()
 		}
 		{
 			var panel = Hud_GetChild( file.menu, "ClubLandingPanel" )
@@ -355,9 +348,6 @@ void function Lobby_OnTabChanged()
 		return
 
 	UpdateCornerButtons()
-
-
-
 }
 
 void function OnLobbyMenu_GetTopLevel()
@@ -489,65 +479,13 @@ void function LobbyMenuUpdateLowFrequencyElements()
 	{
 		UpdateCornerButtons()
 		UpdatePromoToast()
-
-
+		SetPanelTabNew( GetPanel( "StorePanel" ), HasNewPersonalisedOffers() )
 
 		Boost_LowFreqUpdate()
 		UpdateProgressionModifiersButton()
-
 		wait 1.0
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 void function UpdatePromoToast()
 {
@@ -591,6 +529,26 @@ void function UpdatePromoToast()
 	RuiSetColorAlpha( rui, "seasonColor", GetSeasonStyle().seasonColor, 1 )
 }
 
+bool function IsSameVendorPlatform( string hardware1, string hardware2 )
+{
+	if ( hardware1 != hardware2 )
+	{
+		if( hardware1 == "PS4" || hardware1 == "PS5" ) 
+		{
+			if( hardware2 == "PS4" || hardware2 == "PS5" )
+				return true
+		}
+		else if( hardware1 == "X1" || hardware1 == "XB5" )
+		{
+			if( hardware2 == "X1" || hardware2 == "XB5" )
+				return true
+		}
+
+		return false
+	}
+	return true
+}
+
 void function HandleCrossplayPartyInvalid()
 {
 	
@@ -608,14 +566,13 @@ void function HandleCrossplayPartyInvalid()
 	Party myParty     = GetParty()
 	foreach ( p in myParty.members )
 	{
-		if ( hardware != p.hardware )
+		if ( !IsSameVendorPlatform( hardware , p.hardware  ) )
 		{
 			LeaveParty()
 
 			ConfirmDialogData data
 			data.headerText = "#CROSSPLAY_DIALOG_INVALID_PARTY_HEADER"
 			data.messageText = Localize( "#CROSSPLAY_DIALOG_INVALID_PARTY_MSG" )
-
 			OpenOKDialogFromData( data )
 			break
 		}
@@ -676,9 +633,11 @@ void function TrackPlaylistRotation()
 		{
 			Lobby_UpdateSelectedPlaylistUsingUISlot( selectedPlaylist )
 		}
+
+
+
 	}
 }
-
 
 void function UpdateProgressionModifiersButton()
 {
@@ -704,7 +663,6 @@ void function UpdateProgressionModifiersButton()
 	RuiSetBool( rui, "isNew", Boost_UI_HasNewBoosts() )
 }
 
-
 void function UpdateCornerButtons()
 {
 	var playPanel           = GetPanel( "PlayPanel" )
@@ -721,9 +679,7 @@ void function UpdateCornerButtons()
 	Hud_SetVisible( file.newsButtonStatusIcon, isPlayPanelActive )
 	Hud_SetVisible( file.socialButton, isPlayPanelActive )
 	Hud_SetVisible( file.gameMenuButton, isPlayPanelActive )
-
 	Hud_SetVisible( file.progressionModifiersButton, isPlayPanelActive )
-
 
 	var accessibilityHint = Hud_GetChild( playPanel, "AccessibilityHint" )
 	Hud_SetVisible( accessibilityHint, isPlayPanelActive && IsAccessibilityChatHintEnabled() && !VoiceIsRestricted() && (GetPartySize() > 1) )
@@ -743,9 +699,6 @@ void function UpdateCornerButtons()
 		Hud_ReturnToBaseSize( file.socialButton )
 		InitButtonRCP( file.socialButton )
 	}
-
-
-
 
 	string str = (( IsNetGraphEnabled() && isPlayPanelActive ) ? Localize( "#NETGRAPH_SERVERID", GetServerDebugId() ) : "")
 	Hud_SetText( file.serverDebugID, str )
@@ -1043,6 +996,10 @@ void function KeyEscape_OnActivate( var button )
 void function ButtonX_OnActivate( var button )
 {
 	DispatchLobbyPopupInput( BUTTON_X )
+
+
+
+
 }
 
 
@@ -1073,6 +1030,10 @@ void function KeyN_OnActivate( var button )
 void function KeyB_OnActivate( var button )
 {
 	DispatchLobbyPopupInput( KEY_B )
+
+
+
+
 }
 
 

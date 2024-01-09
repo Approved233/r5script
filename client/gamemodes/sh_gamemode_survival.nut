@@ -804,6 +804,13 @@ void function Sur_SetPlaneCenterEnt( entity ent )
 void function Sur_SetPlaneEnt( entity ent )
 {
 	file.planeEnt = ent
+
+
+
+
+
+
+
 }
 
 

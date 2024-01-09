@@ -205,6 +205,7 @@ void function CollectionEventPanel_UpdateGRXDependantElements()
 		HudElem_SetRuiArg( file.bigInfoBox, "bgPatternImage", CollectionEvent_GetBGPatternImage( activeCollectionEvent ) )
 		HudElem_SetRuiArg( file.bigInfoBox, "headerIcon", CollectionEvent_GetHeaderIcon( activeCollectionEvent ) )
 		UpdatePackGiftButton( file.giftButton )
+		UpdateDisclaimer( file.bigInfoBox )
 
 		if (  CollectionEvent_GetPackOffers( activeCollectionEvent ) != null )
 		{
@@ -282,8 +283,7 @@ void function CollectionEventPanel_UpdateGRXDependantElements()
 
 	bool isPackOfferPurchasable = currentMaxEventPackPurchaseCount > 0
 
-
-	if ( GetConVarBool( "mtx_useIneligibilityCode" ) && isPackOfferPurchasable )
+	if ( isPackOfferPurchasable )
 	{
 		array<GRXScriptOffer> ornull packOffers = CollectionEvent_GetPackOffers( expect ItemFlavor( activeCollectionEvent ) )
 		if ( packOffers != null )
@@ -292,7 +292,6 @@ void function CollectionEventPanel_UpdateGRXDependantElements()
 			isPackOfferPurchasable = GRXOffer_IsEligibleForPurchase( offer )
 		}
 	}
-
 
 	Hud_SetLocked( file.purchaseButton, !isPackOfferPurchasable )
 }

@@ -34,12 +34,41 @@ const string CROSS_PROGRESSION_DATA_MODEL_NAME = "crossProgression"
 const string FLOW_DATA_MODEL_NAME = "flow"
 const string MIGRATION_DATA_MODEL_NAME = "migration"
 
+struct
+{
+	int offlineMigrationState = eCrossProgressionState.ANNOUNCEMENT
+} file
+
 void function OnStartMigrate()
 {
 	RTKCrossProgressionPanel_SetHeader()
 	RTKCrossProgressionPanel_SetDialogHeight()
 	UI_CrossProgression_DoMigrateFlow()
 	RTKCrossProgressionPanel_SetFlowModel()
+}
+
+void function OnAnnouncementContiue()
+{
+	if ( CrossProgression_IsOfflineMigration() )
+	{
+		XProgMigrateData migrateData = CrossProgressionGetMigrateData()
+
+		if ( migrateData.hasMultipleProfiles )
+		{
+			file.offlineMigrationState = eCrossProgressionState.MIGRATED
+			RTKCrossProgressionPanel_SetHeader()
+			RTKCrossProgressionPanel_SetDialogHeight()
+			RTKCrossProgressionPanel_UpdateDataModel()
+		}
+		else
+		{
+			UI_CloseCrossProgressionDialog()
+		}
+	}
+	else
+	{
+		OnStartMigrate()
+	}
 }
 
 void function OnContinue( var button )
@@ -50,7 +79,7 @@ void function OnContinue( var button )
 	switch ( state )
 	{
 		case eCrossProgressionState.ANNOUNCEMENT:
-			OnStartMigrate()
+			OnAnnouncementContiue()
 			break
 
 		case eCrossProgressionState.MIGRATED:
@@ -108,7 +137,7 @@ void function RTKCrossProgressionPanel_OnInitialize( rtk_behavior self )
 		expect rtk_behavior( migrateButton )
 		self.AutoSubscribe( migrateButton, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( self ) {
 			if ( RTKCrossProgressionPanel_GetState() == eCrossProgressionState.ANNOUNCEMENT )
-				OnStartMigrate()
+				OnAnnouncementContiue()
 		} )
 	}
 
@@ -158,6 +187,9 @@ void function RTKCrossProgressionPanel_UpdateDataModel()
 
 int function RTKCrossProgressionPanel_GetState()
 {
+	if ( CrossProgression_IsOfflineMigration() )
+		return file.offlineMigrationState
+
 	if ( CrossProgression_IsMigrated() )
 		return eCrossProgressionState.MIGRATED
 

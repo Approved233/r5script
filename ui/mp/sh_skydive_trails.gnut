@@ -299,7 +299,7 @@ void function RegisterSkydiveTrails()
 		fileLevel.skyDiveTrailPackageIndexTable[ skyDiveTrailPackageIndex++ ] <- trailPackage
 	}
 
-	MakeItemFlavorSet( trailFlavs, fileLevel.skyDiveTrailsSortOrdinalMap )
+	MakeItemFlavorSet( trailFlavs, fileLevel.skyDiveTrailsSortOrdinalMap, true )
 
 	LoadoutEntry entry = RegisterLoadoutSlot( eLoadoutEntryType.ITEM_FLAVOR, "skydive_trail", eLoadoutEntryClass.ACCOUNT )
 	entry.category     = eLoadoutCategory.SKYDIVE_TRAIL
@@ -446,6 +446,18 @@ SkyDiveTrailPackage function SkydiveTrail_GetPackageForIndex( int skydiveTrailIn
 	return fileLevel.skyDiveTrailPackageIndexTable[ skydiveTrailIndex ]
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

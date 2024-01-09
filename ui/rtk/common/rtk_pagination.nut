@@ -4,6 +4,7 @@ global function RTKPagination_OnPreDraw
 global function RTKPagination_OnDestroy
 global function RTKPagination_GetCurrentPage
 global function RTKPagination_GetTargetPage
+global function RTKPagination_GoToPage
 
 global struct RTKPagination_Properties
 {
@@ -32,6 +33,9 @@ global struct RTKPagination_Properties
 	bool fillEmptySpace = true
 	bool canWrap = false
 	bool forceShowNav = false
+	bool showNonInteractiveNavButtons = true
+	bool supportShoulderButtonNav = false
+	bool globalInput = false
 
 	rtk_behavior animator
 }
@@ -42,6 +46,11 @@ struct PrivateData
 	int nextPageIndex = 0
 
 	bool firstDrawComplete = false
+
+	void functionref( var button ) prevPageFunc
+	void functionref( var button ) nextPageFunc
+	array<int> keycodesPrev
+	array<int> keycodesNext
 }
 
 global struct RTKPaginationPip
@@ -108,13 +117,25 @@ void function RTKPagination_OnInitialize( rtk_behavior self )
 		} )
 	}
 
-	RTKPagination_SetupCursorInteractArea( self, cursorInteract1Area )
-	RTKPagination_SetupCursorInteractArea( self, cursorInteract2Area )
+	if ( self.PropGetBool( "globalInput" ) )
+	{
+		RTKPagination_RegisterGlobalInput( self )
+	}
+	else
+	{
+		RTKPagination_SetupCursorInteractArea( self, cursorInteract1Area )
+		RTKPagination_SetupCursorInteractArea( self, cursorInteract2Area )
+	}
 }
 
 void function RTKPagination_OnDestroy( rtk_behavior self )
 {
 	RTKPagination_ClearDataModel(self )
+
+	if ( self.PropGetBool( "globalInput" ) )
+	{
+		RTKPagination_DeregisterGlobalInput( self )
+	}
 }
 
 void function RTKPagination_OnPreDraw( rtk_behavior self )
@@ -161,11 +182,11 @@ void function RTKPagination_OnKeyCodePressed( rtk_behavior self, int code )
 	}
 	else
 	{
-		if( code == STICK2_RIGHT || code == KEY_RIGHT ) 
+		if( code == STICK2_RIGHT || code == KEY_RIGHT || code == BUTTON_SHOULDER_RIGHT ) 
 		{
 			RTKPagination_NextPage( self, true )
 		}
-		else if( code == STICK2_LEFT  || code == KEY_LEFT ) 
+		else if( code == STICK2_LEFT  || code == KEY_LEFT || code == BUTTON_SHOULDER_LEFT ) 
 		{
 			RTKPagination_PrevPage( self, true )
 		}
@@ -323,11 +344,12 @@ void function RTKPagination_RefreshPaginationButtons( rtk_behavior self )
 	self.Private( p )
 
 	rtk_panel ornull paginationButtons = self.PropGetPanel( "paginationButtons" )
-	rtk_behavior ornull nextButton = self.PropGetBehavior( "nextButton" )
-	rtk_behavior ornull prevButton = self.PropGetBehavior( "prevButton" )
-	int pageCount = RTKPagination_GetTotalPages( self )
-	bool canWrap = self.PropGetBool( "canWrap" )
-	bool showNav = RTKPagination_GetShowNav( self )
+	rtk_behavior ornull nextButton     = self.PropGetBehavior( "nextButton" )
+	rtk_behavior ornull prevButton     = self.PropGetBehavior( "prevButton" )
+	int pageCount                      = RTKPagination_GetTotalPages( self )
+	bool canWrap                       = self.PropGetBool( "canWrap" )
+	bool showNonInteractiveNavButtons  = self.PropGetBool( "showNonInteractiveNavButtons" )
+	bool showNav                       = RTKPagination_GetShowNav( self )
 
 	if( nextButton != null )
 	{
@@ -338,7 +360,7 @@ void function RTKPagination_RefreshPaginationButtons( rtk_behavior self )
 		if ( nextButton.PropGetBool( "interactive" ) != interactive )
 			nextButton.PropSetBool( "interactive", interactive )
 
-		nextButton.GetPanel().SetVisible( showNav )
+		nextButton.GetPanel().SetVisible( showNav && ( showNonInteractiveNavButtons || interactive ) )
 	}
 
 	if( prevButton != null )
@@ -350,7 +372,7 @@ void function RTKPagination_RefreshPaginationButtons( rtk_behavior self )
 		if ( prevButton.PropGetBool( "interactive" ) != interactive )
 			prevButton.PropSetBool( "interactive", interactive )
 
-		prevButton.GetPanel().SetVisible( showNav )
+		prevButton.GetPanel().SetVisible( showNav && ( showNonInteractiveNavButtons || interactive )  )
 	}
 
 	if ( paginationButtons != null )
@@ -385,6 +407,15 @@ void function RTKPagination_RefreshPaginationButtons( rtk_behavior self )
 		if( listBinder.PropGetString( "bindingPath" ) == "" )
 		{
 			listBinder.PropSetString( "bindingPath", RTKDataModelType_GetDataPath( RTK_MODELTYPE_MENUS, string( self.GetInternalId() ), true, [ "pagination" ] ) )
+		}
+	}
+
+	if ( !showNav )
+	{
+		rtk_behavior animator = self.PropGetBehavior( "hintAnimator" )
+		if( animator != null && RTKAnimator_HasAnimation( animator, "Hide" ) )
+		{
+			RTKAnimator_PlayAnimation( animator, "Hide" )
 		}
 	}
 }
@@ -679,12 +710,75 @@ bool function RTKPagination_GetShowNav( rtk_behavior self )
 void function RTKPagination_UpdateKeycodes( rtk_behavior self, rtk_behavior area )
 {
 	array< int > keycodes = [ KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, STICK2_LEFT, STICK2_RIGHT, STICK2_UP, STICK2_DOWN ]
+	if ( self.PropGetBool( "supportShoulderButtonNav" ) )
+	{
+		keycodes.extend( [ BUTTON_SHOULDER_LEFT, BUTTON_SHOULDER_RIGHT ] )
+	}
 	rtk_array rtk_keycodes = area.PropGetArray( "keycodes" )
 
-	foreach( int keycode in keycodes)
-		RTKArray_PushInt( rtk_keycodes, keycode )
+	RTKArray_SetValue( rtk_keycodes, keycodes )
 }
 
+void function RTKPagination_RegisterGlobalInput( rtk_behavior self )
+{
+	PrivateData p
+	self.Private( p )
+
+	array<int> keycodesPrev = [ MOUSE_WHEEL_UP ]
+	array<int> keycodesNext = [ MOUSE_WHEEL_DOWN ]
+
+	if ( self.PropGetBool( "vertical" ) )
+	{
+		keycodesPrev.extend( [ KEY_UP, STICK2_UP ] )
+		keycodesNext.extend( [ KEY_DOWN, STICK2_DOWN ] )
+	}
+	else
+	{
+		keycodesPrev.extend( [ KEY_LEFT, STICK2_LEFT ] )
+		keycodesNext.extend( [ KEY_RIGHT, STICK2_RIGHT ] )
+	}
+
+	if ( self.PropGetBool( "supportShoulderButtonNav" ) )
+	{
+		keycodesPrev.append( BUTTON_SHOULDER_LEFT )
+		keycodesNext.append( BUTTON_SHOULDER_RIGHT )
+	}
+
+	p.keycodesPrev = keycodesPrev
+	p.keycodesNext = keycodesNext
+	p.prevPageFunc = void function( var button ) : ( self ) { RTKPagination_PrevPage( self, true ) }
+	p.nextPageFunc = void function( var button ) : ( self ) { RTKPagination_NextPage( self, true ) }
+
+	foreach( keycode in keycodesPrev )
+	{
+		RegisterButtonPressedCallback( keycode, p.prevPageFunc )
+	}
+	foreach( keycode in keycodesNext )
+	{
+		RegisterButtonPressedCallback( keycode, p.nextPageFunc )
+	}
+
+	rtk_behavior animator = self.PropGetBehavior( "hintAnimator" )
+	if( animator != null && RTKAnimator_HasAnimation( animator, "FadeIn" ) )
+	{
+		RTKAnimator_PlayAnimation( animator, "FadeIn" )
+	}
+}
+
+void function RTKPagination_DeregisterGlobalInput( rtk_behavior self )
+{
+	PrivateData p
+	self.Private( p )
+
+	foreach( keycode in p.keycodesPrev )
+	{
+		DeregisterButtonPressedCallback( keycode, p.prevPageFunc )
+	}
+	foreach( keycode in p.keycodesNext )
+	{
+		DeregisterButtonPressedCallback( keycode, p.nextPageFunc )
+	}
+}
 
 void function RTKPagination_SetupCursorInteractArea( rtk_behavior self, rtk_behavior ornull area )
 {

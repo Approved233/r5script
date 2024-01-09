@@ -189,6 +189,7 @@ struct FileForeverStruct
 	var equipButton
 	var equipToWheelButton
 	var purchaseButton
+	var thematicShopLinkButton
 	var trackChallengeButton
 	var mouseClickElem
 	var inspectVideoPanel
@@ -306,6 +307,49 @@ void function LootBoxCeremony_SharedInit()
 	Remote_RegisterServerFunction( "Server_GrantLegendaryStickersIfCollectionCompleted" )
 	Remote_RegisterUIFunction( "ForceOpenRewardPacks" )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1874,6 +1918,16 @@ const float REWARDS_DELAY_TIER1 = 0.2
 
 
 
+
+
+
+
+
+
+
+
+
+
 const float MODEL_ROTATE_SPEED = 15.0
 const float CURRENCY_Z_OFFSET = 26.0
 
@@ -3036,31 +3090,103 @@ const float BADGE_Z_OFFSET = 20.0
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 const float RUI_PLACARD_WIDTH 			= 550.0
 const float RUI_PLACARD_HEIGHT 			= 256.0
 const float RUI_PLACARD_Z_OFFSET		= 7.0
 const float RUI_PLACARD_FORWARD_OFFSET 	= 32.0
 const bool  RUI_PLACARD_DEBUG 			= false
-const int   MYTHIC_RARITY_INDEX 		= eRarityTier.MYTHIC + 1 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+const int   MYTHIC_PRESTIGE_RARITY_INDEX = eRarityTier._COUNT 
 
 
 
@@ -3682,8 +3808,21 @@ array<LoadoutEntry> function EquipButton_GetItemLoadoutEntries( ItemFlavor item,
 			break
 
 		case eItemType.melee_skin:
+
+			if ( !MeleeSkin_HasSpecificCharacterFlavor( item ) )
+			{
+				loadoutEntries = [ Loadout_MeleeSkin( LoadoutSlot_GetItemFlavor( LocalClientEHI(), Loadout_Character() ) ) ]
+				break
+			}
+
 			loadoutEntries = [ Loadout_MeleeSkin( MeleeSkin_GetCharacterFlavor( item ) ) ]
 			break
+
+
+		case eItemType.artifact_component_deathbox:
+			loadoutEntries = [ Loadout_Deathbox( LoadoutSlot_GetItemFlavor( LocalClientEHI(), Loadout_Character() ) ) ]
+			break
+
 
 		case eItemType.gladiator_card_badge:
 			ItemFlavor character = LoadoutSlot_GetItemFlavor( LocalClientEHI(), Loadout_Character() )
@@ -3746,14 +3885,17 @@ array<LoadoutEntry> function EquipButton_GetItemLoadoutEntries( ItemFlavor item,
 			}
 			break
 
-		
+			case eItemType.reward_set_tracker:
+				break
+			case eItemType.voucher:
+				break
 
+
+		
 		case eItemType.character:
-			
 			ItemFlavor characterSkin = CharacterClass_GetDefaultSkin( item )
 			loadoutEntries = [ Loadout_CharacterSkin( CharacterSkin_GetCharacterFlavor( characterSkin ) ) ]
 			break
-
 
 		default:
 			Assert( false, "Loot Ceremony equip button does not support reward type: " + DEV_GetEnumStringSafe( "eItemType", itemType ) )
@@ -3912,6 +4054,18 @@ const float INSPECT_RIGHT_OFFSET_CURRENCY = -20.0
 const float INSPECT_UP_OFFSET = 30.0
 const float INSPECT_UP_OFFSET_EXECUTION = 28.0
 const float INSPECT_UP_OFFSET_CHARM = 30.0
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5411,6 +5565,11 @@ void function InitLootBoxMenu( var newMenuArg )
 	HudElem_SetRuiArg( fileForever.battlePassButton, "descText", Localize( "#STORE_WITH_PREMIUM" ) )
 	AddButtonEventHandler( fileForever.battlePassButton, UIE_CLICK, BattlePassButtonOnClick )
 
+	fileForever.thematicShopLinkButton = Hud_GetChild( fileForever.menu, "InspectMilestoneEventStoreButton" )
+	HudElem_SetRuiArg( fileForever.thematicShopLinkButton, "buttonText", "#MILESTONE_STORE_PURCHASE" )
+	HudElem_SetRuiArg( fileForever.thematicShopLinkButton, "descText", "#MILESTONE_STORE_PURCHASE_DESC" )
+	AddButtonEventHandler( fileForever.thematicShopLinkButton, UIE_CLICK, InspectMilestoneEventStoreButtonOnClick )
+
 	fileForever.mouseClickElem = Hud_GetChild( fileForever.menu, "ModelRotateMouseCapture" )
 	fileForever.inspectVideoPanel = Hud_GetChild( fileForever.menu, "InspectVideoPanel" )
 
@@ -5449,6 +5608,7 @@ void function LootCeremony_UpdateOpenAdditionalButton()
 
 	if ( HasLootBeenPresented() && !IsInspectModeActive() && !IsSpecialItemPresentationModeActive() )
 	{
+		
 		if ( GRX_IsInventoryReady() )
 		{
 			
@@ -5746,12 +5906,7 @@ bool function InspectItemTypePresentationSupported( ItemFlavor item )
 	{
 		case eItemType.account_currency_bundle:
 		case eItemType.account_pack:
-
-		
-
 		case eItemType.character:
-
-
 		case eItemType.character_skin:
 		case eItemType.character_execution:
 		case eItemType.weapon_skin:
@@ -5769,6 +5924,11 @@ bool function InspectItemTypePresentationSupported( ItemFlavor item )
 		case eItemType.emote_icon:
 		case eItemType.character_emote:
 		case eItemType.sticker:
+
+
+		case eItemType.artifact_component_deathbox:
+
+
 			return true
 
 		case eItemType.account_currency:
@@ -5838,6 +5998,9 @@ void function OnLootBoxMenu_Open()
 		Hud_SetVisible( fileForever.purchaseButton, false )
 		Hud_SetEnabled( fileForever.purchaseButton, false )
 
+		Hud_SetVisible( fileForever.thematicShopLinkButton, false )
+		Hud_SetEnabled( fileForever.thematicShopLinkButton, false )
+
 		Hud_SetVisible( fileForever.battlePassButton, false )
 		Hud_SetEnabled( fileForever.battlePassButton, false )
 
@@ -5852,6 +6015,7 @@ void function OnLootBoxMenu_Open()
 void function OnLootBoxMenu_Close()
 {
 	fileLevel.forceParticularPackFlav = null
+	MilestoneEvent_LootBoxMenuOnClose()
 	if ( IsSpecialItemPresentationModeActive() )
 	{
 		fileLevel.specialItemPresentationModeActive = false
@@ -6020,6 +6184,19 @@ void function ClientToUI_EquipToWheelButtonShowDialog( SettingsAssetGUID itemGUI
 
 void function PurchaseButtonOnClick( var button )
 {
+	ItemFlavor ornull milestoneEvent = GetActiveMilestoneEvent( GetUnixTimestamp() )
+	if ( milestoneEvent != null )
+	{
+		expect ItemFlavor( milestoneEvent )
+		bool isEventItem = MilestoneEvent_IsItemEventItem( milestoneEvent, fileLevel.specialItemPresentationModeItemFlav.grxIndex ) || MilestoneEvent_IsMilestoneGrantReward(  milestoneEvent, fileLevel.specialItemPresentationModeItemFlav.grxIndex )
+		if ( isEventItem )
+		{
+			EventsPanel_SetOpenPageIndex( 1 ) 
+			JumpToSeasonTab( "RTKEventsPanel" )
+			return
+		}
+	}
+
 	if ( fileLevel.storeItemPresentationModeItemPrereq != null )
 	{
 		ItemFlavor prereqFlav = expect ItemFlavor( fileLevel.storeItemPresentationModeItemPrereq )
@@ -6052,6 +6229,23 @@ void function PurchaseButtonOnClick( var button )
 		PurchaseDialogConfig pdc
 		pdc.flav = fileLevel.specialItemPresentationModeItemFlav
 		PurchaseDialog( pdc )
+	}
+}
+
+
+
+void function InspectMilestoneEventStoreButtonOnClick( var button )
+{
+	ItemFlavor ornull activeThemedShopEvent = GetActiveThemedShopEvent( GetUnixTimestamp() )
+	if ( activeThemedShopEvent != null )
+	{
+		expect ItemFlavor( activeThemedShopEvent )
+		array<GRXScriptOffer> offers = GRX_GetItemDedicatedStoreOffers( fileLevel.specialItemPresentationModeItemFlav, ThemedShopEvent_GetGRXOfferLocation( activeThemedShopEvent ) )
+		if ( offers.len() == 1 )
+		{
+			JumpToSeasonTab( "ThemedShopPanel" )
+			StoreInspectMenu_AttemptOpenWithOffer( offers[0] )
+		}
 	}
 }
 
@@ -6106,14 +6300,15 @@ void function LootBoxOpenSequenceUI( bool firstTime )
 	Hud_SetEnabled( fileForever.storeButton, false )
 
 	
-	ItemFlavor ornull pack
+	ItemFlavor ornull pack = GetNextLootBox()
 	if ( fileLevel.forceParticularPackFlav )
 	{
-		pack = fileLevel.forceParticularPackFlav
-	}
-	else
-	{
-		pack = GetNextLootBox()
+		ItemFlavor ornull forcePack = fileLevel.forceParticularPackFlav
+		expect ItemFlavor( forcePack )
+		if ( GRX_GetPackCount( ItemFlavor_GetGRXIndex( forcePack ) ) > 0 )
+		{
+			pack = fileLevel.forceParticularPackFlav
+		}
 	}
 	Assert( pack != null )
 	expect ItemFlavor( pack )
@@ -6191,14 +6386,12 @@ void function UpdateSpecialItemPresentationPurchaseButton()
 		if ( !GRX_IsItemOwnedByPlayer_AllowOutOfDateData( prereqFlav, null ) )
 			HudElem_SetRuiArg( fileForever.purchaseButton, "descText", Localize( "#STORE_REQUIRES_LOCKED", Localize( ItemFlavor_GetLongName( prereqFlav ) ) ) )
 	}
-
-	else if ( GetConVarBool( "mtx_useIneligibilityCode" ) && fileLevel.storeItemPresentationModeOffer != null && !GRXOffer_IsEligibleForPurchase( expect GRXScriptOffer( fileLevel.storeItemPresentationModeOffer ) ))
+	else if ( fileLevel.storeItemPresentationModeOffer != null && !GRXOffer_IsEligibleForPurchase( expect GRXScriptOffer( fileLevel.storeItemPresentationModeOffer ) ))
 	{
 		isOfferUnavailable = true
 		HudElem_SetRuiArg( fileForever.purchaseButton, "buttonText", "#UNAVAILABLE" )
 		HudElem_SetRuiArg( fileForever.purchaseButton, "descText", "" )
 	}
-
 
 	ItemFlavor itemFlav = fileLevel.specialItemPresentationModeItemFlav
 	int itemType = ItemFlavor_GetType( itemFlav )
@@ -6224,10 +6417,10 @@ void function UpdateSpecialItemPresentationPurchaseButton()
 			if ( !fileLevel.specialItemHideEquipButton )
 				showEquip = isOwned
 		}
-		
-		
-		
-		
+		else if ( itemType == eItemType.reward_set_tracker )
+		{
+			showPurchase = !isOwned
+		}
 		else if ( fileLevel.storeItemPresentationModeOffer != null )
 		{
 			showPurchase = !GRXOffer_IsFullyClaimed( expect GRXScriptOffer(fileLevel.storeItemPresentationModeOffer) )
@@ -6237,6 +6430,25 @@ void function UpdateSpecialItemPresentationPurchaseButton()
 	Hud_SetVisible( fileForever.purchaseButton, showPurchase )
 	Hud_SetEnabled( fileForever.purchaseButton, !fileLevel.specialItemLockPurchaseButton && !isOfferUnavailable )
 	Hud_SetLocked( fileForever.purchaseButton, fileLevel.specialItemLockPurchaseButton || isOfferUnavailable )
+
+	ItemFlavor ornull milestoneEvent = GetActiveMilestoneEvent( GetUnixTimestamp() )
+	if ( milestoneEvent != null )
+	{
+		expect ItemFlavor( milestoneEvent )
+		bool isEventItem = MilestoneEvent_IsItemEventItem( milestoneEvent, fileLevel.specialItemPresentationModeItemFlav.grxIndex ) || MilestoneEvent_IsMilestoneGrantReward( milestoneEvent, fileLevel.specialItemPresentationModeItemFlav.grxIndex )
+		Hud_SetEnabled( fileForever.purchaseButton, isEventItem )
+		Hud_SetLocked( fileForever.purchaseButton, !isEventItem )
+
+		ItemFlavor ornull activeThemedShopEvent = GetActiveThemedShopEvent( GetUnixTimestamp() )
+		if ( activeThemedShopEvent != null )
+		{
+			expect ItemFlavor( activeThemedShopEvent )
+			bool isInStore = ThemedShopEvent_IsItemInStore( activeThemedShopEvent, fileLevel.specialItemPresentationModeItemFlav )
+			Hud_SetVisible( fileForever.thematicShopLinkButton, isInStore && !isOwned )
+			Hud_SetEnabled( fileForever.thematicShopLinkButton, true )
+			Hud_SetLocked( fileForever.thematicShopLinkButton, false )
+		}
+	}
 
 	Hud_SetVisible( fileForever.equipButton, showEquip )
 	Hud_SetEnabled( fileForever.equipButton, true )
@@ -6382,7 +6594,6 @@ void function ForceOpenRewardPacks()
 	foreach ( basePack in GRX_GetStickerPacksWithRewards() )
 	{
 		ItemFlavor rewardPack = GetItemFlavorByAsset( GRXPack_GetStickerCompletionRewardPack( basePack ) )
-		printt( "*** starting force open thread for base pack guid: " + basePack.guid )
 		thread TryForceOpenRewardPackThread( rewardPack )
 	}
 }
@@ -6393,20 +6604,35 @@ void function TryForceOpenRewardPackThread( ItemFlavor pack )
 	if ( !grxReady )
 	{
 		WaitFrame()
-		printt( "*** waiting a frame for GRX to report ready" )
 	}
 
 	int packCount = GRX_GetPackCount( ItemFlavor_GetGRXIndex( pack ) )
 	if ( packCount > 0 )
 	{
-		printt( "*** force opening reward pack for guid: " + pack.guid )
 		OnLobbyOpenLootBoxMenu_ButtonPress( pack )
 	}
-	else
-	{
-		printt( "*** we didn't have a pack to open with guid: " + pack.guid )
-	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

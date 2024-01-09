@@ -1021,6 +1021,7 @@ void function PIN_UIInteraction_PersonalisedStoreInteraction( string menuName, s
 	AddPINTelemetryEvent( "ui_interaction",
 		PIN_StandardHeader(),
 		{
+			action = "Offer Inspect"
 			object_id = objectName.tolower()
 			pgid = menuName.tolower()
 			sdur = PIN_GetSessionDuration()
@@ -1037,6 +1038,7 @@ void function PIN_UIInteraction_PersonalisedStoreReveal( string menuName, string
 	AddPINTelemetryEvent( "ui_interaction",
 		PIN_StandardHeader(),
 		{
+			action = "Offer Reveal"
 			object_id = objectName.tolower()
 			pgid = menuName.tolower()
 			sdur = PIN_GetSessionDuration()

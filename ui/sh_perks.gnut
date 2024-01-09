@@ -93,6 +93,7 @@ global struct PerkInfo
 
 
 
+
 }
 
 global struct ClassRoleSettingsInfo
@@ -133,6 +134,7 @@ struct
 	table< int, PerkSettingsInfo  >		 perkToPerkSettingsTable
 	table< int, PerkInfo > 				 perkInfoTable
 	table< ItemFlavor, int > 		 	 characterToRoleTable
+
 
 
 
@@ -346,6 +348,28 @@ void function Perks_RegisterClassPerk( PerkInfo perkToRegister )
 
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

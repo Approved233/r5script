@@ -7,6 +7,7 @@ global function UpdateFooterOptions
 global function UpdateFooterLabels
 global function SetFooterText
 global function ClearMenuFooterOptions
+global function ClearPanelFooterOptions
 
 const int MAX_LEFT_FOOTERS = 8
 const int MAX_RIGHT_FOOTERS = 8
@@ -127,6 +128,11 @@ InputDef function AddPanelFooterOption( var panel, int alignment, int input, boo
 	footerData.append( data )
 
 	return data
+}
+
+void function ClearPanelFooterOptions( var panel )
+{
+	uiGlobal.panelData[ panel ].footerData.clear()
 }
 
 void function ClearRegisteredInputs()

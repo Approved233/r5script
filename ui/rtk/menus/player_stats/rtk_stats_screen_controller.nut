@@ -38,6 +38,8 @@ global struct RTKRankedBadgeModel
 	int emblemDisplayMode
 	int ladderPosition
 	int rankScore
+	string divisionName
+	vector rankColor
 }
 
 global struct RTKAccountProgressModel
@@ -316,7 +318,7 @@ void function SetStatsData( rtk_struct dataModelStruct, int gameMode, string sea
 
 			rtk_struct badge1 = RTKStruct_GetStruct( rankedModel, "badge1" )
 
-			if ( rankedPeriodItemType == eItemType.ranked_2pt0_period && !Ranked_HasCompletedProvisionalMatches( player ) )
+			if ( rankedPeriodItemType == eItemType.ranked_2pt0_period && !Ranked_HasCompletedProvisionalMatches( player ) && isRankedPeriodActive )
 			{
 				int matchesCompleted = Ranked_GetNumProvisionalMatchesCompleted( player )
 				int maxMatches = Ranked_GetNumProvisionalMatchesRequired()

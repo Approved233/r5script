@@ -363,17 +363,16 @@ void function BattlepassMilestone_UpdatePurchaseButtons()
 		ItemFlavor basicPurchaseFlav = BattlePass_GetBasicPurchasePack ( activeBattlePass )
 
 		array<GRXScriptOffer> basicPurchaseOffers = GRX_GetItemDedicatedStoreOffers( basicPurchaseFlav, "battlepass" )
-		purchaseOffer = basicPurchaseOffers[0]
 
 		if ( basicPurchaseOffers.len() == 1 )
 		{
+			purchaseOffer = basicPurchaseOffers[0]
 			expect GRXScriptOffer( purchaseOffer )
 			HudElem_SetRuiArg( file.purchaseButton, "offerDesc", "#BP_MILESTONE_TOGGLE_PREMIUM" )
-			HudElem_SetRuiArg( file.purchaseButton, "price", " " + GRX_GetFormattedPrice ( purchaseOffer.prices[0] ) )
 		}
 		else
 		{
-			Warning( "Expected 1 offer for basic pack of '%s'", string(ItemFlavor_GetAsset( activeBattlePass )) )
+			Assert( false, "Expected 1 offer for basic pack of " + string( ItemFlavor_GetAsset( activeBattlePass ) ) )
 		}
 	}
 	else
@@ -385,28 +384,38 @@ void function BattlepassMilestone_UpdatePurchaseButtons()
 		ItemFlavor bundlePurchaseFlav = BattlePass_GetBundlePurchasePack ( activeBattlePass )
 
 		array<GRXScriptOffer> bundlePurchaseOffers = GRX_GetItemDedicatedStoreOffers( bundlePurchaseFlav, "battlepass" )
-		purchaseOffer = bundlePurchaseOffers[0]
 
 		if ( bundlePurchaseOffers.len() == 1 )
 		{
+			purchaseOffer = bundlePurchaseOffers[0]
 			expect GRXScriptOffer( purchaseOffer )
 			HudElem_SetRuiArg( file.purchaseButton, "offerDesc", "#BP_MILESTONE_TOGGLE_BUNDLE" )
+		}
+		else
+		{
+			Assert( false, "Expected 1 offer for basic pack of " + string( ItemFlavor_GetAsset( activeBattlePass ) ) )
+		}
+	}
+
+	if ( purchaseOffer != null )
+	{
+		expect GRXScriptOffer( purchaseOffer )
+		if ( purchaseOffer.prices.len() == 1)
+		{
 			HudElem_SetRuiArg( file.purchaseButton, "price", " " + GRX_GetFormattedPrice ( purchaseOffer.prices[0] ) )
 		}
 		else
 		{
-			Warning( "Expected 1 offer for basic pack of '%s'", string(ItemFlavor_GetAsset( activeBattlePass )) )
+			Assert( false, "Expected 1 price for offer of " + purchaseOffer.offerAlias )
 		}
 	}
 
 	bool isOfferPurchasable = DoesPlayerOwnBattlePass( player, activeBattlePass )
 
-
-	if ( GetConVarBool( "mtx_useIneligibilityCode" ) && isOfferPurchasable && purchaseOffer != null )
+	if ( isOfferPurchasable && purchaseOffer != null )
 	{
 		isOfferPurchasable = GRXOffer_IsEligibleForPurchase( expect GRXScriptOffer( purchaseOffer ) )
 	}
-
 
 	Hud_SetLocked( file.purchaseButton, isOfferPurchasable )
 }

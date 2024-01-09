@@ -34,7 +34,6 @@ global function ShadowArmy_GetNumRevSquadsForMatchStart
 
 
 
-
 global function ShadowArmy_ServerCallback_ShowAnnouncementMessage
 global function ShadowArmy_ServerCallback_ShowHinttMessage
 global function ShadowArmy_ServerCallback_GivePlayerRepeatingEnemyMapScans
@@ -330,8 +329,6 @@ struct
 
 
 
-
-
 	int evacTargetCount = 0
 
 
@@ -349,6 +346,12 @@ void function ShadowArmy_Init()
 {
 	if ( !IsShadowArmyGamemode() )
 		return
+
+
+
+
+
+
 
 
 
@@ -496,9 +499,6 @@ void function ShGameMode_ShadowArmy_RegisterNetworking()
 
 
 
-
-
-
 bool function IsShadowArmyGamemode()
 {
 	return GetCurrentPlaylistVarBool( "is_shadow_army_gamemode", false )
@@ -508,16 +508,6 @@ bool function IsShadowArmyGamemodeCineVersion()
 {
 	return GetCurrentPlaylistVarBool( "is_shadow_army_cine_version", false )
 }
-
-
-
-
-
-
-
-
-
-
 
 
 const int UNSET_SQUAD_COUNT = -1
@@ -1132,54 +1122,6 @@ float function GetShadowRevBaseSpawnCooldown()
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 void function ShadowArmy_ServerCallback_SetAllianceAssignmentCompleteFlag()
 {
 	FlagSet( "AllianceAssignmentComplete" )
@@ -1213,9 +1155,6 @@ void function ShadowArmy_OnRoundChanged_Client( int stage, float nextCircleStart
 	if ( stage == GetRingStageWhenEvacLocationRevealed() )
 		UpdateMusicRampUpLevel( eShadowArmyMusicRampLevels.PRE_EVAC_SEQUENCE )
 }
-
-
-
 
 
 
@@ -2728,7 +2667,6 @@ int function ShadowArmy_GetLegendSpawnGroupsNumber()
 
 
 
-
 void function ShadowArmy_OnTeamChangedAlliance_Client( int team, int newAlliance )
 {
 	entity localViewPlayer = GetLocalViewPlayer()
@@ -3100,6 +3038,10 @@ void function OnShadowArmyGamePhaseChanged_Client( entity player, int newGamePha
 
 
 
+
+
+
+
 void function ShadowArmy_ServerCallback_GivePlayerRepeatingEnemyMapScans()
 {
 	thread RunRepeatingEnemyMapScans_Thread()
@@ -3231,12 +3173,6 @@ void function RunRepeatingEnemyMapScans_Thread()
 		wait REPEAT_INTERVAL
 	}
 }
-
-
-
-
-
-
 
 
 
@@ -4469,14 +4405,6 @@ void function ShadowArmy_ServerCallback_UpdateEvacTargetCountOnHud( int targetCo
 
 
 
-
-
-
-
-
-
-
-
 void function CreateMusicEntityIfNotValid()
 {
 	if ( !IsValid( file.musicEntity ) )
@@ -5162,9 +5090,6 @@ void function RunPostAllianceAssignmentCompleteLogic_Thread( entity localPlayer 
 
 void function ShadowArmy_OnSpectateTargetChanged( entity player, entity previousTarget, entity currentTarget )
 {
-	if ( IsShadowArmyGamemodeCineVersion() && GetGameState() >= eGameState.Resolution)
-		return
-
 	if ( IsValid( currentTarget ) && currentTarget.IsPlayer() && GetGameState() == eGameState.Playing )
 	{
 		thread RunPostAllianceAssignmentCompleteLogic_Thread( player )

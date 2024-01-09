@@ -27,6 +27,9 @@ global function LoadoutSlot_GetInteger
 global function LoadoutSlot_WaitForItemFlavor
 global function LoadoutSlot_GetUsableFavorites
 global function LoadoutSlot_GetFavorites
+
+global function LoadoutSlot_GetBackups
+
 global function LoadoutSlot_GetRawStorageContents
 
 global function AddCallback_ItemFlavorLoadoutSlotDidChange_AnyPlayer
@@ -112,6 +115,8 @@ const bool LOADOUTS_DBG = false
 
 
 global const string LOADOUT_TREE_TOP_TIER = "! general"
+global const string LOADOUT_PDEF_PREFIX = "loadouts."
+global const string LOADOUT_ID_READY = "Loadout_%s_Ready"
 
 
 
@@ -165,6 +170,9 @@ global enum eLoadoutCategory
 	STICKERS,
 	CHARACTER_QUIPS,
 
+		DEATHBOX,
+
+
 
 
 
@@ -190,6 +198,8 @@ global const table< int, string > LOADOUT_CATEGORIES_TO_NAMES_MAP = {
 	[eLoadoutCategory.SKYDIVE_TRAIL] = "skydive_trail",
 	[eLoadoutCategory.STICKERS] = "stickers",
 	[eLoadoutCategory.CHARACTER_QUIPS] = "character_quips",
+
+	[eLoadoutCategory.DEATHBOX] = "deathbox",
 
 
 
@@ -238,20 +248,24 @@ global struct LoadoutEntry
 	int maxFavoriteCount = 0 
 	
 
+	int backupCount = 0 
+	array<string> ornull backupPdefKeys = null 
+
+
 	
 	int           networkTo = eLoadoutNetworking.PLAYER_EXCLUSIVE
 	string ornull networkVarName = ""
 
 	
-	LoadoutEntry_IsSlotLocked                     isSlotLocked = null 
-	bool                                          isAllowedToChangeDuringMatch = false 
+	LoadoutEntry_IsSlotLocked      isSlotLocked = null 
+	bool           isAllowedToChangeDuringMatch = false 
 	ItemFlavor ornull associatedCharacterOrNull = null 
 
 	ItemFlavor& defaultItemFlavor 
 	ItemFlavor& favoriteItemFlavor 
 
 	array<ItemFlavor> validItemFlavorList = [] 
-	array<string>     favoritePdefKeys = [] 
+	array<string> ornull favoritePdefKeys = null 
 	
 	
 
@@ -403,6 +417,10 @@ void function ShLoadouts_LevelInit_Begin()
 
 
 
+
+
+
+
 	
 
 
@@ -518,12 +536,24 @@ void function ShLoadouts_LevelInit_Finish()
 
 
 
+
+
+
 	foreach ( LoadoutEntry entry in fileLevel.loadoutSlotEntries )
 	{
 		if ( entry.type == eLoadoutEntryType.ITEM_FLAVOR )
 		{
 			Assert( entry.validItemFlavorList.len() > 0, "Entry " + entry.id + " had an empty validItemFlavorList" )
 			Assert( IsItemFlavorStructValid( entry.defaultItemFlavor.guid, eValidation.DONT_ASSERT ), "entry.defaultValue must have a valid value." )
+
+
+
+
+
+
+
+
+
 		}
 		else if ( entry.type == eLoadoutEntryType.INTEGER )
 		{
@@ -558,7 +588,7 @@ void function ShLoadouts_LevelInit_Finish()
 			}
 		}
 
-		RegisterSignal( "Loadout_" + entry.id + "_Ready" )
+		RegisterSignal( format( LOADOUT_ID_READY, entry.id ) )
 
 		if ( entry.networkTo == eLoadoutNetworking.PLAYER_GLOBAL )
 		{
@@ -655,10 +685,31 @@ void function ShLoadouts_LevelInit_Finish()
 		{
 			Assert( entry.validItemFlavorList.len() > 0, "No item flavors are registered that are valid for loadout slot '" + entry.id + "'" )
 
-			for ( int favoriteIdx = 0; favoriteIdx < entry.maxFavoriteCount; favoriteIdx++ )
+			if ( entry.maxFavoriteCount > 0 )
 			{
-				entry.favoritePdefKeys.append( format( "%s_fav%02d", entry.id, favoriteIdx ) )
+				array<string> favorites = []
+				for ( int favoriteIdx = 0; favoriteIdx < entry.maxFavoriteCount; favoriteIdx++ )
+				{
+					favorites.append( format( "%s_fav%02d", entry.id, favoriteIdx ) )
+				}
+				entry.favoritePdefKeys = favorites
 			}
+
+
+			if ( entry.backupCount > 0 )
+			{
+				Assert( ( entry.backupCount != 0 && entry.maxFavoriteCount == 0 )
+							|| ( entry.backupCount == 0 && entry.maxFavoriteCount != 0 )
+							|| ( entry.backupCount == 0 && entry.maxFavoriteCount == 0 ) )
+
+				array<string> backups = []
+				for ( int bakIdx = 0; bakIdx < entry.backupCount; bakIdx++ )
+				{
+					backups.append( format( "%s_bak_%02d", entry.id, bakIdx ) )
+				}
+				entry.backupPdefKeys = backups
+			}
+
 		}
 
 		if ( entry.associatedCharacterOrNull != null )
@@ -816,7 +867,13 @@ array<ItemFlavor> function LoadoutSlot_GetFavorites( EHI playerEHI, LoadoutEntry
 
 
 	array<ItemFlavor> items
-	foreach ( key in entry.favoritePdefKeys )
+
+	if ( entry.favoritePdefKeys == null )
+		return items
+
+	array<string> ornull favorites = entry.favoritePdefKeys
+	expect array<string>( favorites )
+	foreach ( key in favorites )
 	{
 
 
@@ -828,7 +885,40 @@ array<ItemFlavor> function LoadoutSlot_GetFavorites( EHI playerEHI, LoadoutEntry
 
 
 			Assert( playerEHI == LocalClientEHI() )
-			int guid = expect int(GetPersistentVar( "loadouts." + key ))
+			int guid = expect int(GetPersistentVar( LOADOUT_PDEF_PREFIX + key ))
+
+
+		if ( guid != 0 && IsValidItemFlavorGUID( guid, eValidation.DONT_ASSERT ) )  
+		{
+			ItemFlavor flav = GetItemFlavorByGUID( guid )
+			if ( IsItemFlavorGRXUnlockedForLoadoutSlot( playerEHI, flav ) )
+				items.append( flav )
+		}
+	}
+
+	return items
+}
+
+
+array<ItemFlavor> function LoadoutSlot_GetBackups( EHI playerEHI, LoadoutEntry entry )
+{
+	array<ItemFlavor> items
+	Assert( entry.backupPdefKeys != null )
+	array<string> ornull backups = entry.backupPdefKeys
+	expect array<string>( backups )
+	foreach ( key in backups )
+	{
+
+
+
+
+
+
+
+
+
+			Assert( playerEHI == LocalClientEHI() )
+			int guid = expect int(GetPersistentVar( LOADOUT_PDEF_PREFIX + key ))
 
 
 		if ( guid != 0 && IsValidItemFlavorGUID( guid, eValidation.DONT_ASSERT ) )  
@@ -884,7 +974,7 @@ ItemFlavor function LoadoutSlot_WaitForItemFlavor( EHI playerEHI, LoadoutEntry e
 				break
 		}
 
-		WaitSignal( WaitForEHISignalDummy( playerEHI ), "Loadout_" + entry.id + "_Ready" )
+		WaitSignal( WaitForEHISignalDummy( playerEHI ), format( LOADOUT_ID_READY, entry.id ) )
 	}
 
 	return ConvertLoadoutSlotContentsIndexToItemFlavor( entry, slotContentsIndex )
@@ -1582,6 +1672,19 @@ array<LoadoutEntry> function GetAllLoadoutSlots()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function ShLoadouts_OnPlayerEHICreated( EHI player, bool thisCallIsHappeningBecauseTheUIVMReset = false )
 {
 	EHIScriptStruct ehiss = GetEHIScriptStruct( player )
@@ -1938,7 +2041,7 @@ int function GetLoadoutSlotContentsIndexFromPersistence( EHI playerEHI, LoadoutE
 			return SLOT_CONTENTS_SENTINEL_NOTREADY
 
 		Assert( playerEHI == LocalClientEHI() )
-		int slotContentsIndex = expect int(GetPersistentVar( "loadouts." + entry.id ))
+		int slotContentsIndex = expect int(GetPersistentVar( LOADOUT_PDEF_PREFIX + entry.id ))
 
 
 
@@ -2234,6 +2337,20 @@ int function GetLoadoutSlotContentsIndexFromCache( EHI playerEHI, LoadoutEntry e
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function RefreshLoadoutSlotInternal( EHI playerEHI, LoadoutEntry entry, table<LoadoutEntry, bool> ornull refreshedSlotsSet, array<int> ornull queuedSlotsIndicesForRpc, bool isDependent )
 {
 #if LOADOUTS_DBG
@@ -2314,7 +2431,7 @@ void function RefreshLoadoutSlotInternal( EHI playerEHI, LoadoutEntry entry, tab
 
 	if ( slotContentsIndex != SLOT_CONTENTS_SENTINEL_NOTREADY && slotContentsIndex != SLOT_CONTENTS_SENTINEL_INVALID )
 	{
-		Signal( GetEHISignalDummy( playerEHI ), "Loadout_" + entry.id + "_Ready" )
+		Signal( GetEHISignalDummy( playerEHI ), format( LOADOUT_ID_READY, entry.id ) )
 	}
 
 	if ( slotContentsIndex == SLOT_CONTENTS_SENTINEL_NOTREADY || slotContentsIndex == SLOT_CONTENTS_SENTINEL_INVALID )
@@ -2529,8 +2646,6 @@ array<ItemFlavor> function GetLoadoutItemsSortedForMenu( array<LoadoutEntry> loa
 		else if ( bIsEquipped && !aIsEquipped )
 			return 1
 
-		int itemType = ItemFlavor_GetType( a )
-
 		array<ItemFlavor> favs = LoadoutSlot_GetFavorites( playerEHI, entry )
 		bool aInFavs           = favs.contains( a )
 		bool bInFavs           = favs.contains( b )
@@ -2544,6 +2659,7 @@ array<ItemFlavor> function GetLoadoutItemsSortedForMenu( array<LoadoutEntry> loa
 		else if ( !ItemFlavor_IsTheFavoriteSentinel( a ) && ItemFlavor_IsTheFavoriteSentinel( b ) )
 			return 1
 
+		int itemType = ItemFlavor_GetType( a )
 		if ( ItemTypeHasDefault( itemType ) )
 		{
 			if ( ItemFlavor_IsTheDefault( a ) && !ItemFlavor_IsTheDefault( b ) )
@@ -2579,9 +2695,7 @@ array<ItemFlavor> function GetLoadoutItemsSortedForMenu( array<LoadoutEntry> loa
 		else if ( aTag < bTag )
 			return 1
 
-		if ( itemType == eItemType.gladiator_card_intro_quip || itemType == eItemType.gladiator_card_kill_quip || itemType == eItemType.weapon_charm
-				|| itemType == eItemType.character_skin || itemType == eItemType.music_pack || itemType == eItemType.loadscreen
-				|| itemType == eItemType.gladiator_card_stance || itemType == eItemType.gladiator_card_frame || itemType == eItemType.weapon_skin)
+		if ( ItemTypeAlphabetizable(itemType))
 			return SortStringAlphabetize( Localize( ItemFlavor_GetLongName( a ) ), Localize( ItemFlavor_GetLongName( b ) ) )
 
 		return sortOrdinalFunc( a ) - sortOrdinalFunc( b )

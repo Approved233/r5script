@@ -336,6 +336,8 @@ const string ARMORED_LEAP_ALLY_TARGETED_CHATTER_3P 				= "diag_mp_newcastle_bc_s
 const string ARMORED_LEAP_ALLY_BUDDY_TARGETED_CHATTER_3P 		= "diag_mp_newcastle_bc_superSquadObserving_3p"
 const string CASTLE_WALL_DESTROYED_CHATTER_VO_1P 				= "diag_mp_newcastle_bc_superDestroyed_1p"
 const string CASTLE_WALL_DESTROYED_CHATTER_VO_3P 				= "diag_mp_newcastle_bc_superDestroyed_3p"
+const string CASTLE_WALL_REMOVED_CHATTER_VO_1P 					= "diag_mp_newcastle_bc_superAdjust_1p"
+const string CASTLE_WALL_REMOVED_CHATTER_VO_3P 					= "diag_mp_newcastle_bc_superAdjust_3p"
 
 const string ARMORED_LEAP_TARGET_FAIL_DEFAULT					= "#HINT_NEWCASTLE_LEAP_TARGET_FAIL_DEFAULT"
 const string ARMORED_LEAP_TARGET_FAIL_BLOCKED_LAND				= "#HINT_NEWCASTLE_LEAP_TARGET_FAIL_BLOCKED_LAND"
@@ -495,6 +497,8 @@ struct
 
 	bool hasVisorThreatDetection	= VISOR_THREAT_DETECTION
 
+	table< entity, bool > canDoWallRemoveChatter = {}
+
 
 
 
@@ -608,7 +612,6 @@ void function MpAbilityArmoredLeap_Init()
 	AddCallback_PlayerCanUseZipline( ArmoredLeap_CanUseZipline )
 
 	AddCallback_OnPassiveChanged( ePassives.PAS_AXIOM, OnNewcastlePassiveChanged )
-
 
 
 
@@ -3561,14 +3564,6 @@ void function ArmoredLeap_VisionMode_Thread( entity player )
 
 	WaitForever()
 }
-
-
-
-
-
-
-
-
 
 
 
@@ -7454,6 +7449,52 @@ bool function CastleWall_CanUse( entity player, entity ent, int useFlags )
 	SURVIVAL_PlayerAllowedToPickup( player ) &&
 	! GradeFlagsHas( ent, eGradeFlags.IS_BUSY )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

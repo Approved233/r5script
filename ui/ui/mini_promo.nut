@@ -185,6 +185,7 @@ void function UpdateValidityOfPages( array<MiniPromoPageData> pages )
 			case "heirloom":
 			case "prestigeskin":
 			case "monthlystoreoffer":
+			case "personalizedstore":
 				page.isValid = true
 				break
 
@@ -427,7 +428,7 @@ void function SetPage( int pageIndex, bool instant = false )
 		RuiSetColorAlpha( rui, "rarityColor", SrgbToLinear( rarityColor ), 1.0 )
 		string nextPackDescription = "#APEX"
 
-		if ( ItemFlavor_GetAccountPackType( pack ) == eAccountPackType.EVENT )
+		if ( ItemFlavor_GetAccountPackType( pack ) == eAccountPackType.EVENT || ItemFlavor_GetAccountPackType( pack ) == eAccountPackType.SIRNGE )
 		{
 			nextPackDescription = "#PACK_BUNDLE_EVENT_TEXT"
 		}

@@ -296,13 +296,72 @@ void function OnSurvivalQuickInventoryPanel_Show( var panel )
 	if ( IsLobby() )
 		return
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	RunClientScript( "UICallback_BackpackOpened" )
+
+
+
+
+
+
+
+
+
+
+
 
 	RunClientScript( "UICallback_UpdatePlayerInfo", Hud_GetChild( file.mainInventoryPanel, "PlayerInfo" ) )
 	RunClientScript( "UICallback_UpdateTeammateInfo", Hud_GetChild( file.mainInventoryPanel, "TeammateInfo0" ), false )
 	RunClientScript( "UICallback_UpdateTeammateInfo", Hud_GetChild( file.mainInventoryPanel, "TeammateInfo1" ), false )
 	RunClientScript( "UICallback_UpdateUltimateInfo", Hud_GetChild( file.mainInventoryPanel, "PlayerUltimate" ) )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 void function ClientToUI_UpdateInventoryUltimateTooltip( var button, string ultName )
@@ -854,6 +913,20 @@ void function SurvivalInventoryMenu_SetSpaceForSling( bool hasSling )
 
 	Hud_SetVisible(Hud_GetChild( file.mainInventoryPanel, "SlingDecorations" ), hasSling)
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -87,12 +87,6 @@ void function StoreMythicInspectMenu_OnShow()
 	AddCallbackAndCallNow_OnGRXInventoryStateChanged( StoreMythicInspectMenu_OnGRXUpdated )
 	AddCallback_OnGRXOffersRefreshed( StoreMythicInspectMenu_OnGRXUpdated )
 
-	if ( !GetConVarBool( "mtx_useOffersV2" ) )
-
-	{
-		AddCallback_OnGRXBundlesRefreshed( StoreMythicInspectMenu_OnGRXBundlesUpdated )
-	}
-
 	RegisterButtonPressedCallback( KEY_TAB, ToggleVCPopUp )
 	RegisterButtonPressedCallback( BUTTON_BACK, ToggleVCPopUp )
 
@@ -115,25 +109,6 @@ void function StoreMythicInspectMenu_OnHide()
 
 	RemoveCallback_OnGRXInventoryStateChanged( StoreMythicInspectMenu_OnGRXUpdated )
 	RemoveCallback_OnGRXOffersRefreshed( StoreMythicInspectMenu_OnGRXUpdated )
-
-
-	if ( !GetConVarBool( "mtx_useOffersV2" ) )
-
-	{
-		RemoveCallback_OnGRXBundlesRefreshed( StoreMythicInspectMenu_OnGRXBundlesUpdated )
-	}
-}
-
-void function StoreMythicInspectMenu_OnGRXBundlesUpdated()
-{
-	if ( s_inspectOffers.currentOffers.len() == 0 )
-		return
-
-	if( !GRX_IsInventoryReady() )
-		return
-
-	StoreInspectMenu_UpdatePrices( s_inspectOffers, s_inspectOffers.currentOffers[0], true, s_inspectUIData )
-	StoreInspectMenu_UpdatePurchaseButton( s_inspectOffers.currentOffers[0], s_inspectOffers, s_inspectUIData )
 }
 
 void function StoreMythicInspectMenu_OnGRXUpdated()
@@ -153,7 +128,7 @@ void function StoreMythicInspectMenu_OnGRXUpdated()
 
 	s_inspectOffers.purchaseLimit = ( "purchaselimit" in storeOffer.attributes && GRXOffer_ContainsStackablesOnly( storeOffer ) ) ? storeOffer.attributes["purchaselimit"].tointeger() : -1
 
-	StoreInspectMenu_UpdatePrices( s_inspectOffers, storeOffer, false, s_inspectUIData )
+	StoreInspectMenu_UpdatePrices( storeOffer,s_inspectOffers, s_inspectUIData )
 	StoreInspectMenu_UpdatePurchaseButton( storeOffer, s_inspectOffers, s_inspectUIData)
 
 	HudElem_SetRuiArg( file.pageHeader, "offerName", storeOffer.titleText )

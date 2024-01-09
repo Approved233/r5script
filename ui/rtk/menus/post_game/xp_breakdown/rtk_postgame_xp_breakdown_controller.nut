@@ -77,12 +77,6 @@ struct AccountXPData
 	float levelFrac
 }
 
-global struct BadgeDisplayData
-{
-	ItemFlavor& badge
-	GladCardBadgeTierData& tierData
-}
-
 struct
 {
 	int levelUps
@@ -145,13 +139,8 @@ void function RTKPostGameXpBreakdown_OnInitialize( rtk_behavior self )
 		} )
 
 		ItemFlavor ornull character = GetLastMatchCharacter()
-		array<BadgeDisplayData> unlockedBadges
-		if ( character != null )
-		{
-			expect ItemFlavor( character )
-			unlockedBadges = GetPostMatchUnlockedBadges( character, player )
-			file.badgeUnlocks =  unlockedBadges.len()
-		}
+		array<BadgeDisplayData> unlockedBadges = GetPostMatchUnlockedBadges( player )
+		file.badgeUnlocks =  unlockedBadges.len()
 
 		if ( isFirstTime && file.badgeUnlocks == 0 )
 		{
@@ -707,84 +696,41 @@ void function BuildBadgeDisplayModel( rtk_struct postGameXpModel, entity player,
 ItemFlavor ornull function GetLastMatchCharacter()
 {
 	int characterGUID = GetPersistentVarAsInt( "lastGameCharacter" )
-	if ( !IsValidItemFlavorGUID( characterGUID ) )
+	ItemFlavor ornull character = null
+	if ( IsValidItemFlavorGUID( characterGUID ) )
+	{
+		character = GetItemFlavorByGUID( characterGUID )
+	}
+	else
 	{
 		Warning( "Cannot display post-game summary banner because character \"" + string(characterGUID) + "\" is not registered right now." )
 	}
-	ItemFlavor ornull character = null
-	character = GetItemFlavorByGUID( characterGUID )
 	return character
 }
 
-array<BadgeDisplayData> function GetPostMatchUnlockedBadges( ItemFlavor character, entity player )
+array<BadgeDisplayData> function GetPostMatchUnlockedBadges( entity player )
 {
 	array<BadgeDisplayData> unlockedBadgesData
 
-	array<ItemFlavor> allBadges                           = GetAllItemFlavorsOfType( eItemType.gladiator_card_badge )
 	table<int, int> grxPostGameRewardGUIDToPersistenceIdx = GRX_GetPostGameRewards()
-
-	foreach ( badge in allBadges )
+	foreach ( int guid, int _ in grxPostGameRewardGUIDToPersistenceIdx )
 	{
-		bool isCharacterBadge = GladiatorCardBadge_IsCharacterBadge( badge )
-		if ( isCharacterBadge && character != GladiatorCardBadge_GetCharacterFlavor( badge ) )
+		if ( !IsValidItemFlavorGUID( guid ) )
 			continue
 
-		array<GladCardBadgeTierData> tierDataList = GladiatorCardBadge_GetTierDataList( badge )
-
-		
-		if ( ItemFlavor_GetGRXMode( badge ) == GRX_ITEMFLAVORMODE_REGULAR )
-		{
-			if ( ItemFlavor_GetGUID( badge ) in grxPostGameRewardGUIDToPersistenceIdx )
-			{
-				BadgeDisplayData unlockedBadgeData
-				unlockedBadgeData.badge = badge
-				unlockedBadgeData.tierData = tierDataList[0]
-				unlockedBadgesData.append( unlockedBadgeData )
-				GRX_MarkRewardAcknowledged( ItemFlavor_GetGUID( badge ), grxPostGameRewardGUIDToPersistenceIdx[ ItemFlavor_GetGUID( badge ) ] )
-			}
-			continue
-		}
-		
-
-		string unlockStatRef = GladiatorCardBadge_GetUnlockStatRef( badge, GladiatorCardBadge_GetCharacterFlavor( badge ) )
-		if ( !GladiatorCardBadge_IsGeneralStat( unlockStatRef ) )
+		ItemFlavor item = GetItemFlavorByGUID( guid )
+		if ( ItemFlavor_GetType( item ) != eItemType.gladiator_card_badge )
 			continue
 
-		if ( !IsValidStatEntryRef( unlockStatRef ) )
-			continue
-
-		
-		if ( unlockStatRef == ACCOUNT_BADGE_STAT )
-			continue
-
-		foreach ( tierData in tierDataList )
-		{
-			StatEntry se = GetStatEntryByRef( unlockStatRef )
-			int currentVal = GetStat_Int( player, se, eStatGetWhen.CURRENT )
-			if ( currentVal < tierData.unlocksAt )
-				continue
-
-			if ( (se.flags & eStatFlags.STORE_START_OF_PREVIOUS_MATCH) == 0 )
-				continue
-
-			int previousVal = GetStat_Int( player, se, eStatGetWhen.START_OF_PREVIOUS_MATCH )
-			if ( previousVal >= tierData.unlocksAt )
-				continue
-
-			if ( currentVal >= tierData.unlocksAt && previousVal < tierData.unlocksAt )
-			{
-				BadgeDisplayData unlockedBadgeData
-				unlockedBadgeData.badge = badge
-				unlockedBadgeData.tierData = tierData
-				unlockedBadgesData.append( unlockedBadgeData )
-
-				if ( GetCurrentPlaylistVarBool( "do_on_demand_stats", true ) )
-				{
-					Remote_ServerCallFunction( "ClientCallback_UpdateSOPMStatValue", se.index )
-				}
-			}
-		}
+		BadgeDisplayData unlockedBadgeData
+		unlockedBadgeData.badge = item
+		unlockedBadgeData.tierData = GladiatorCardBadge_GetTierDataList( item )[0]
+		unlockedBadgesData.append( unlockedBadgeData )
+		GRX_MarkRewardAcknowledged( guid, grxPostGameRewardGUIDToPersistenceIdx[ guid ] )
 	}
+
+	unlockedBadgesData.extend( GladiatorCardBadge_GetPostGameStatUnlockBadgesDisplayData() )
+
 	return unlockedBadgesData
 }
 

@@ -19,6 +19,7 @@ global function ToggleVCPopUp
 global function OnGRXStoreUpdate
 global function GetLootTickPurchaseOffers
 global function UpdatePackGiftButton
+global function UpdateDisclaimer
 
 global function GetBPPresaleOfferData
 global function JumpToBPPresaleStoreOffer
@@ -29,8 +30,10 @@ global function DEV_OffersPanel_DoFakeOffers
 global function DEV_OffersPanel_DoFakeLayout
 #endif
 
-global function TEMP_ReturnStoreOffer
-global function TEMP_ReturnStoreOffer2
+
+global function HasNewPersonalisedOffers
+global function UpdateHotDropsTab
+
 
 enum eStoreSection
 {
@@ -69,6 +72,7 @@ struct
 	bool tabsInitialized = false
 	bool storeCacheValid = false
 	var  tabBar
+	var  hotDropsTab
 	bool openDLCStoreCallbackCalled = false
 	bool isOpened = false
 
@@ -244,38 +248,43 @@ void function InitStorePanel( var panel )
 	
 	
 
+	bool showStoreV2 = GRX_AreStoreSectionsEnabled()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	
+	if ( showStoreV2 )
 	{
-		var tabBody = Hud_GetChild( panel, SPECIALS_STORE_PANEL )
-		AddTab( panel, tabBody, "#MENU_STORE_PANEL_SPECIALS" )
+
+
+
+
 	}
-
-	
+	else
 	{
-		var tabBody = Hud_GetChild( panel, FEATURED_STORE_PANEL )
+
 		
-		AddTab( panel, tabBody, "#MENU_STORE_PANEL_SHOP" )
-	}
+		{
+			var tabBody = Hud_GetChild( panel, PERSONALIZED_STORE_PANEL )
+			AddTab( panel, tabBody, "#MENU_STORE_PANEL_HOT_DROPS" )
+		}
 
-	
-	{
-		var tabBody = Hud_GetChild( panel, SEASONAL_STORE_PANEL )
-		AddTab( panel, tabBody, "#MENU_STORE_PANEL_SEASONAL" )
+
+		
+		{
+			var tabBody = Hud_GetChild( panel, SPECIALS_STORE_PANEL )
+			AddTab( panel, tabBody, "#MENU_STORE_PANEL_SPECIALS" )
+		}
+
+		
+		{
+			var tabBody = Hud_GetChild( panel, FEATURED_STORE_PANEL )
+			
+			AddTab( panel, tabBody, "#MENU_STORE_PANEL_SHOP" )
+		}
+
+		
+		{
+			var tabBody = Hud_GetChild( panel, SEASONAL_STORE_PANEL )
+			AddTab( panel, tabBody, "#MENU_STORE_PANEL_SEASONAL" )
+		}
 	}
 
 	
@@ -482,12 +491,18 @@ void function OnGRXStoreUpdate()
 				enableTab = showTab
 			}
 
+			else if ( Hud_GetHudName( tabDef.panel ) == PERSONALIZED_STORE_PANEL )
+			{
+				array<GRXPersonalizedStoreSlotData> slotData = GetPersonalizedStoreSlotData()
 
+				bool hasOffers = slotData.len() > 0
+				showTab = hasOffers
+				enableTab = showTab
 
-
-
-
-
+				bool hasNew = HasNewPersonalisedOffers()
+				tabDef.new = hasNew
+				file.hotDropsTab = tabDef.panel
+			}
 
 
 			SetTabDefVisible( tabDef, showTab )
@@ -1022,8 +1037,9 @@ GRXScriptOffer ornull function GetLootTickPurchaseOffer()
 
 void function UpdateLootTickButtons()
 {
-	UpdatePackGiftButton( s_loot.lootButtonGift )
+	UpdatePackGiftButton( s_loot.lootButtonGift, false )
 	UpdateLootBoxButton( s_loot.lootButtonOpen )
+	UpdateDisclaimer( s_loot.lootPanel )
 }
 
 void function UpdateLootTickButton( var button, int quantity )
@@ -1347,15 +1363,6 @@ void function UpdateOffersPanel()
 	{
 		if ( GRX_AreOffersReady() )
 		{
-
-			if ( !GetConVarBool( "mtx_useOffersV2" ) )
-
-			{
-				if( GRX_HasUpToDateBundleOffers() )
-				{
-					UpdateBundleOffers()
-				}
-			}
 			InitOffers()
 		}
 		else
@@ -1372,18 +1379,6 @@ void function UpdateOffersPanel()
 		}
 	}
 }
-
-void function UpdateBundleOffers()
-{
-	foreach( OfferButtonData buttonData in s_offers.shopButtonDataArray )
-	{
-		foreach( GRXScriptOffer offer in buttonData.offerData )
-		{
-			GRX_CheckBundleAndUpdateOfferPrices( offer )
-		}
-	}
-}
-
 
 void function OffersPanel_Think( var panel )
 {
@@ -2127,7 +2122,6 @@ void function OfferButton_SetDisplay( var button, GRXScriptOffer offerData, bool
 	{
 		priceText = "#OWNED"
 	}
-
 	else if ( GRXOffer_IsPurchaseLimitReached( offerData ) )
 	{
 		bool canGift = offerData.isGiftable && IsGiftingEnabled() && CanLocalPlayerGift()
@@ -2141,7 +2135,6 @@ void function OfferButton_SetDisplay( var button, GRXScriptOffer offerData, bool
 			priceText = "#PURCHASE_AS_GIFT"
 		}
 	}
-
 	else if ( offerData.prices.len() > 0 )
 	{
 		
@@ -2196,12 +2189,6 @@ void function OfferButton_SetDisplay( var button, GRXScriptOffer offerData, bool
 	RuiSetString( rui, "ecPrice", priceText )
 	RuiSetInt( rui, "numCollected", packCollectionInfo.numCollected )
 	RuiSetInt( rui, "numTotalInCollection", packCollectionInfo.numTotalInCollection )
-
-	if ( !GetConVarBool( "mtx_useOffersV2" ) )
-
-	{
-		RuiSetBool( rui, "isPriceLoading", ( offerData.offerType == GRX_OFFERTYPE_BUNDLE ) && !GRX_HasUpToDateBundleOffers() )
-	}
 
 	int remainingTime = offerData.expireTime - GetUnixTimestamp()
 	if ( remainingTime > 0 )
@@ -2345,7 +2332,7 @@ void function OpenBPPresaleDialog( bpPresaleOfferData bpPresaleOffers )
 			JumpToBPPresaleStoreOffer( expect GRXScriptOffer( bpPresaleOffers.bundleOffer ), offersTab )
 		}
 	}
-	OpenABDialogFromData( data )
+	OpenConfirmDialogFromData( data )
 }
 
 bpPresaleOfferData function GetBPPresaleOfferData()
@@ -2468,26 +2455,42 @@ void function EventStoreTabButton_OnActivate( var button )
 
 void function UpdatePackGiftButton( var button, bool hasAsterisk = true )
 {
-		int giftsLeft = Gifting_GetRemainingDailyGifts()
-		bool isTwoFactorEnabled = IsTwoFactorAuthenticationEnabled()
+	int giftsLeft = Gifting_GetRemainingDailyGifts()
+	bool isPlayerLeveledForGifting = IsPlayerLeveledForGifting()
+	bool isPlayerWithinGiftingLimit = IsPlayerWithinGiftingLimit()
+	bool isTwoFactorEnabled = IsTwoFactorAuthenticationEnabled()
+	bool canLocalPlayerGift = CanLocalPlayerGift()
 
-		string giftMainText = Localize( hasAsterisk ? "#BUY_GIFT_STAR" : "#BUY_GIFT"  )
-		string giftDescText = Localize( "#GIFTS_LEFT_FRACTION", giftsLeft )
+	string giftMainText = Localize( hasAsterisk ? "#BUY_GIFT_STAR" : "#BUY_GIFT"  )
+	string giftDescText = Localize( "#GIFTS_LEFT_FRACTION", giftsLeft )
 
+	Hud_ClearToolTipData( button )
+
+	if ( !canLocalPlayerGift )
+	{
 		ToolTipData giftTooltipData
-		bool purchaseLock   = true
+		giftMainText = Localize( "#LOCKED_GIFT" )
 
-		Hud_ClearToolTipData( button )
-
-		if ( GRX_IsInventoryReady() && GRX_AreOffersReady() )
+		if( !isPlayerLeveledForGifting )
 		{
-			if ( GetLootTickPurchaseOffers() != null )
-				purchaseLock = false
+			giftDescText = Localize( "#LEVEL_REQUIRED", GetConVarInt( "mtx_giftingMinAccountLevel" ) )
 		}
-
-		if ( !isTwoFactorEnabled )
+		else if ( !isPlayerWithinGiftingLimit )
 		{
-			giftMainText = Localize( "#LOCKED_GIFT" )
+			giftTooltipData.titleText =  Localize( "#GIFTS_LEFT", giftsLeft )
+
+			DisplayTime giftTime = SecondsToDHMS( GRX_GetGiftingLimitResetDate() - GetUnixTimestamp() )
+			if ( giftTime.hours > 0 )
+				giftTooltipData.descText =  Localize( "#GIFTS_MAXED_OUT_REASON_HOURS", string( GetGiftingMaxLimitPerResetPeriod() ), giftTime.hours )
+			else if ( giftTime.minutes > 0 )
+				giftTooltipData.descText =  Localize( "#GIFTS_MAXED_OUT_REASON_MINUTES", string( GetGiftingMaxLimitPerResetPeriod() ), giftTime.minutes )
+			else
+				giftTooltipData.descText =  Localize( "#GIFTS_MAXED_OUT_REASON_MINUTES", string( GetGiftingMaxLimitPerResetPeriod() ), "<1" )
+
+			Hud_SetToolTipData( button, giftTooltipData )
+		}
+		else if ( !isTwoFactorEnabled )
+		{
 			giftDescText = Localize( "#TWO_FACTOR_NEEDED" )
 
 			giftTooltipData.titleText = Localize( "#ENABLE_TWO_FACTOR" )
@@ -2497,33 +2500,26 @@ void function UpdatePackGiftButton( var button, bool hasAsterisk = true )
 
 			Hud_SetToolTipData( button, giftTooltipData )
 		}
-		else if ( !CanLocalPlayerGift() )
-		{
-			giftMainText = Localize( "#LOCKED_GIFT" )
-			purchaseLock = true
+	}
 
-			if ( !IsPlayerWithinGiftingLimit() )
-			{
-				giftTooltipData.titleText =  Localize( "#GIFTS_LEFT", giftsLeft )
+	bool purchaseLock = true
+	bool isPurchaseReady = GRX_IsInventoryReady() && GRX_AreOffersReady() && GetLootTickPurchaseOffers() != null
+	bool onlyMissingTwoFactor = isPlayerLeveledForGifting && isPlayerWithinGiftingLimit && !isTwoFactorEnabled
+	if ( isPurchaseReady && ( canLocalPlayerGift || onlyMissingTwoFactor ) )
+	{
+		purchaseLock = false
+	}
 
-				DisplayTime giftTime = SecondsToDHMS( GRX_GetGiftingLimitResetDate() - GetUnixTimestamp() )
-				if ( giftTime.hours > 0 )
-					giftTooltipData.descText =  Localize( "#GIFTS_MAXED_OUT_REASON_HOURS", string( GetGiftingMaxLimitPerResetPeriod() ), giftTime.hours )
-				else if ( giftTime.minutes > 0 )
-					giftTooltipData.descText =  Localize( "#GIFTS_MAXED_OUT_REASON_MINUTES", string( GetGiftingMaxLimitPerResetPeriod() ), giftTime.minutes )
-				else
-					giftTooltipData.descText =  Localize( "#GIFTS_MAXED_OUT_REASON_MINUTES", string( GetGiftingMaxLimitPerResetPeriod() ), "<1" )
+	Hud_SetLocked( button, purchaseLock )
 
-				Hud_SetToolTipData( button, giftTooltipData )
-			}
-		}
-		else
-			purchaseLock = false
+	HudElem_SetRuiArg( button, "buttonText", giftMainText )
+	HudElem_SetRuiArg( button, "buttonDescText", giftDescText )
+}
 
-		Hud_SetLocked( button, purchaseLock )
-
-		HudElem_SetRuiArg( button, "buttonText", giftMainText )
-		HudElem_SetRuiArg( button, "buttonDescText", giftDescText )
+void function UpdateDisclaimer( var container )
+{
+	
+	HudElem_SetRuiArg( container, "hideDisclaimer", true )
 }
 
 void function TEMP_StoreOffer( var button, table< string, SeasonalStoreData > seasonalDataMap )
@@ -2539,14 +2535,26 @@ void function TEMP_StoreOffer( var button, table< string, SeasonalStoreData > se
 	file.TEMP_FOR_RTK_TESTING2 = seasonalDataMap[seasonTag].tallImage
 }
 
-GRXScriptOffer function TEMP_ReturnStoreOffer()
+
+bool function HasNewPersonalisedOffers()
 {
-	return file.TEMP_FOR_RTK_TESTING
+	array<GRXPersonalizedStoreSlotData> slotData = GetPersonalizedStoreSlotData()
+	bool hasNew = false
+
+	foreach ( GRXPersonalizedStoreSlotData data in slotData )
+	{
+		if ( data.revealStatus == false )
+		{
+			hasNew = true
+			break
+		}
+	}
+
+	return hasNew
 }
 
-asset function TEMP_ReturnStoreOffer2()
+
+void function UpdateHotDropsTab()
 {
-	return file.TEMP_FOR_RTK_TESTING2
+	SetPanelTabNew( file.hotDropsTab, HasNewPersonalisedOffers() )
 }
-
-

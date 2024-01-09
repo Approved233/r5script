@@ -125,6 +125,9 @@ void function _Show()
 	if ( !IsFullyConnected() )
 		return
 
+	if ( !IsPersistenceAvailable() )
+		return
+
 	UI_SetPresentationType( ePresentationType.WEAPON_CATEGORY )
 
 	float maxTimeToWaitForLoadScreen = UITime() + LOADSCREEN_FINISHED_MAX_WAIT_TIME
@@ -324,8 +327,8 @@ void function InitRankedScoreBarRuiForDoubleBadge( var rui, int score, int ladde
 	RuiSetBool( rui, "showSingleBadge", nextRank == null )
 
 
-		RuiSetBool( rui, "inPromoTrials", RankedTrials_PlayerHasIncompleteTrial( GetLocalClientPlayer() ) )
-		RuiSetBool( rui, "showPromoPip", RankedTrials_NextRankHasTrial( currentRank, nextRank ) )
+		RuiSetBool( rui, "inPromoTrials", RankedTrials_PlayerHasIncompleteTrial( GetLocalClientPlayer() ) && !RankedTrials_IsKillswitchEnabled() )
+		RuiSetBool( rui, "showPromoPip", RankedTrials_NextRankHasTrial( currentRank, nextRank ) && !RankedTrials_IsKillswitchEnabled() )
 
 
 	if ( nextRank != null )

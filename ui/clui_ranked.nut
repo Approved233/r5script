@@ -594,6 +594,11 @@ bool function Ranked_HasBeenInitialized()
 		return false
 
 #if DEV
+		if( GetConVarBool( "script_ranked_debug" ) )
+		{
+			return true
+		}
+
 		
 		if ( GetBugReproNum() == 9000  )
 		{

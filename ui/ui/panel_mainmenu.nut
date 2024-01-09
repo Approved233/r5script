@@ -11,6 +11,7 @@ global function UICodeCallback_XProgCheckRolloutRequestFinished
 global function UICodeCallback_XProgMigrateRequestFinished
 global function UICodeCallback_XProgMigrateStatusRequestFinished
 global function UICodeCallback_XProgMigrateFlowFailed
+global function UICodeCallback_XProgMigrateNotificationRequestFinished
 global function UI_CrossProgression_DoMigrateFlow
 
 global function UICodeCallback_GetOnPartyServer
@@ -57,6 +58,7 @@ struct
 
 
 		bool xProgCheckRolloutRequestFinished = false
+		bool xProgCheckNotificationRequestFinished = false
 		bool xProgRequestMigrateFinished = false
 		bool xProgMigrateDoneWithMTXData = false
 		bool xProgMigrateFailed = false
@@ -751,6 +753,62 @@ void function PrelaunchValidation( bool autoContinue = false )
 			WaitFrame()
 		}
 	}
+	else if ( CrossProgression_IsOfflineMigration() && !file.xProgCheckNotificationRequestFinished )
+	{
+#if SPINNER_DEBUG_INFO
+			SetSpinnerDebugInfo( "CheckNotificationForCrossProgression" )
+#endif
+
+		const float CHECK_NOTIFICATION_TIMEOUT = 10.0
+		float startTimeCheckNotification = UITime()
+
+		CrossProgression_RequestMigrateNotification();
+
+		while ( true )
+		{
+			PrintLaunchDebugVal( "[CrossProgression] xProgCheckNotificationRequestFinished", file.xProgCheckNotificationRequestFinished )
+
+			if ( file.xProgCheckNotificationRequestFinished )
+				break
+
+			if ( UITime() - startTimeCheckNotification > CHECK_NOTIFICATION_TIMEOUT )
+			{
+				file.xProgCheckNotificationRequestFinished = true
+				printt( "[CrossProgression] CheckNotification Timeout" )
+				break
+			}
+
+			WaitFrame()
+		}
+	}
+
+	if ( GetConVarBool("CrossProgression_ForceMigrate" ) && !CrossProgression_IsMigrated() )
+	{
+		SetLaunchState( eLaunchState.CANT_CONTINUE, Localize( "#CROSS_PROGRESSION_FORCE_MIGRATE" ) )
+		return;
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 	if ( autoContinue )
@@ -999,6 +1057,15 @@ void function UICodeCallback_XProgMigrateStatusRequestFinished()
 			printt( "[CrossProgression] Nintendo AC", migrateData.premiumNx )
 			printt( "[CrossProgression] All other AC", migrateData.premium )
 		}
+
+}
+
+void function UICodeCallback_XProgMigrateNotificationRequestFinished()
+{
+
+		printt( "[CrossProgression] UICodeCallback_XProgMigrateNotificationRequestFinished")
+		file.xProgCheckNotificationRequestFinished = true;
+		UI_OpenCrossProgressionDialog();
 
 }
 

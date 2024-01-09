@@ -204,8 +204,6 @@
 
 
 
-
-
 struct
 {
 
@@ -316,9 +314,13 @@ struct
 
 
 
+
+
 	array<void functionref()> mouseWheelDownCallbacks
 	array<void functionref()> mouseWheelUpCallbacks
 } file
+
+
 
 
 
@@ -5111,6 +5113,179 @@ void function ShMenuModels_UIInit()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function RunMenuClientFunction( string func, var arg1 = null, var arg2 = null, var arg3 = null )
 {
 	if ( !CanRunClientScript() )
@@ -5215,34 +5390,6 @@ void function ClientToUI_PROTO_UpdateClientWithLocalClientUID()
 {
 	RunClientScript( "UIToClient_PROTO_UpdateClientWithLocalClientUID", GetPlayerUID() )
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

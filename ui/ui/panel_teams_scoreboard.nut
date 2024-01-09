@@ -1167,6 +1167,7 @@ bool function TryDisplayInspect( var button )
 		Friend customMatchPlayerToFriend
 		customMatchPlayerToFriend.name = player.name
 		customMatchPlayerToFriend.id = player.uid
+		customMatchPlayerToFriend.unspoofedid = player.firstPartyID
 		customMatchPlayerToFriend.hardware = player.hardware
 		customMatchPlayerToFriend.eadpData = CreateEADPDataFromEAID( player.eaid )
 

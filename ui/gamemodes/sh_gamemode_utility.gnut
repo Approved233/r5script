@@ -10,6 +10,8 @@ global function GamemodeUtility_GetMixtapeAbandonPenaltyActive
 global function GamemodeUtility_ParseCircleString 
 global function GamemodeUtility_ParseVectorString 
 global function GamemodeUtility_ParseStringOfVectors 
+global function GamemodeUtility_GetKillReplayActive 
+
 
 
 
@@ -181,6 +183,15 @@ void function GamemodeUtility_Init()
 
 
 
+
+
+
+
+
+
+
+
+
 }
 
 void function GamemodeUtility_RegisterNetworking()
@@ -207,6 +218,9 @@ void function GamemodeUtility_RegisterNetworking()
 
 		Remote_RegisterClientFunction( "GamemodeUtility_ServerCallback_PlayerJoinedMatchInProgress" )
 	}
+
+	if ( GamemodeUtility_ShouldPingVictimSquadLocationOnDown() || GamemodeUtility_ShouldPingVictimSquadLocationOnKill() )
+		Remote_RegisterClientFunction( "GamemodeUtility_ServerCallback_TriggerScanOfVictimTeam", "int", 0, TEAM_MULTITEAM_FIRST + MAX_TEAMS + 1 )
 }
 
 
@@ -241,6 +255,225 @@ bool function GamemodeUtility_GetShouldTweakDVSForGamemode()
 {
 	return GetCurrentPlaylistVarBool( "should_tweak_dvs_for_gamemode", false )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+bool function GamemodeUtility_ShouldPingVictimSquadLocationOnDown()
+{
+	return GetCurrentPlaylistVarBool( "map_ping_victim_squad_on_down", false )
+}
+
+
+bool function GamemodeUtility_ShouldPingVictimSquadLocationOnKill()
+{
+	return GetCurrentPlaylistVarBool( "map_ping_victim_squad_on_kill", false )
+}
+
+
+float function GamemodeUtility_GetDurationOfVictimSquadMapPing()
+{
+	return GetCurrentPlaylistVarFloat( "victim_squad_map_ping_duration", 0.0 )
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1959,6 +2192,11 @@ string function GamemodeUtility_GetParsedStringForCircleValues( array< string > 
 	}
 
 	return parsedPlaylistString
+}
+
+bool function GamemodeUtility_GetKillReplayActive()
+{
+	return GetCurrentPlaylistVarBool( "killreplay_enabled", false )
 }
 
 

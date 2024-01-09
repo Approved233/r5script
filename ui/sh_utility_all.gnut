@@ -191,6 +191,8 @@ struct
 	bool devUnlockedSPMissions
 
 	int hud_setting_accessibleChatCache
+
+	float skyZPos = MAX_WORLD_COORD_BUFFER
 } file
 
 void function ShUtilityAll_Init()
@@ -1046,7 +1048,6 @@ int function LOWORD( int value )
 	return value
 }
 
-
 bool function IsWeaponKeyFieldDefined( string ref, string variable )
 {
 	var val = GetWeaponInfoFileKeyField_Global( ref, variable )
@@ -1057,6 +1058,13 @@ bool function IsWeaponKeyFieldDefined( string ref, string variable )
 	return false
 }
 
+bool function IsWithinRadius( vector testLoc, vector center, float radius )
+{
+	float radiusToTestSqr = pow( radius, 2 )
+	float positionDistSqr = Distance2DSqr( testLoc, center )
+
+	return( positionDistSqr <= radiusToTestSqr )
+}
 
 string function GetWeaponInfoFileKeyField_GlobalString( string ref, string variable )
 {
@@ -1084,6 +1092,13 @@ int function GetWeaponInfoFileKeyField_WithMods_GlobalInt( string ref, array<str
 	var val = GetWeaponInfoFileKeyField_WithMods_Global( ref, mods, variable )
 	Assert( val != null, "Weapon key \"" + variable + "\" does not exist in weapon \"" + ref + "\" !" )
 	return expect int( val )
+}
+
+float function GetWeaponInfoFileKeyField_WithMods_GlobalFloat( string ref, array<string> mods, string variable )
+{
+	var val = GetWeaponInfoFileKeyField_WithMods_Global( ref, mods, variable )
+	Assert( val != null, "Weapon key \"" + variable + "\" does not exist in weapon \"" + ref + "\" !" )
+	return expect float( val )
 }
 
 int function GetWeaponInfoFileKeyField_GlobalInt_WithDefault( string ref, string variable, int defaultVal )
@@ -2106,6 +2121,60 @@ int function real_int_modulo( int x, int n )
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function Shuffle_Init( ShuffleData sd, int count )
 {
 	Assert( count > 0 )
@@ -2226,7 +2295,7 @@ bool function IsLobbyEvent1Active()
 #endif
 
 
-	if ( IsAcidWraithEventActive() )
+	if ( GoldenHorse_IsGoldenHorseEventActive() )
 		return true
 
 
@@ -2247,33 +2316,21 @@ bool function IsLobbyEvent2Active()
 		}
 #endif
 
-
-	if ( IsUprisingEventActive() )
-		return true
-
-
-	return false
-
-}
-
-
-bool function IsUprisingEventActive()
-{
-	if ( CalEvent_IsActive( GetItemFlavorByAsset( $"settings/itemflav/calevent/s19ce01/collection.rpak" ), GetUnixTimestamp() ) )
-		return true
-
 	return false
 }
 
 
 
-bool function IsAcidWraithEventActive()
-{
-	if ( CalEvent_IsActive( GetItemFlavorByAsset( $"settings/itemflav/calevent/s19fe01/event_shop.rpak" ), GetUnixTimestamp() ) )
-		return true
 
-	return false
-}
+
+
+
+
+
+
+
+
+
 
 
 bool function IsVDUDialogueEnabled()
@@ -3287,6 +3344,11 @@ void function __WaitEndSignalInternal( var obj, string signal )
 
 
 
+
+
+
+
+
 vector function DirFBLRUD_ToDir( DirFBLRUD dir )
 {
 	switch ( dir )
@@ -4055,12 +4117,6 @@ bool function IsPlayerCharacter( entity player, string characterCheck )
 	return true
 }
 
-
-bool function POIPlayerSpawning_Exists()
-{
-	return( GetCurrentPlaylistVarBool( "poiplayerspawning_exists", false ))
-}
-
 #if DEV
 bool function DEV_ForceLoadAllEntityTypes()
 {
@@ -4073,6 +4129,13 @@ bool function IsRevTakeover()
 {
 	return GetCurrentPlaylistVarBool("rev_takeover", false)
 }
+
+
+
+
+
+
+
 
 
 

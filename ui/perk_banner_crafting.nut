@@ -17,6 +17,7 @@ global function Perk_Get_CraftedBannerTimeoutDuration
 
 
 
+
 global const string EXPIRED_BANNER_RECOVERY_NETVAR 		= "hasExpiredBannerPerk"
 global const string DEATH_BOX_BANNER_EXPIRED_NETVAR 	= "DeathBoxBannerExpired"
 global const string CRAFTED_BANNER_REF = "expired_banners"
@@ -73,6 +74,23 @@ float function Perk_Get_CraftedBannerTimeoutDuration()
 {
 	return GetCurrentPlaylistVarFloat( "perk_crafted_banner_timeout_duration", 90.0 )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

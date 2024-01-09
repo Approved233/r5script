@@ -620,72 +620,6 @@ void function Entitlements_LevelInit()
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 void function UnlockFuncRegister( ItemFlavor flavor )
 {
 	if ( !ItemFlavor_HasUnlockFunc( flavor ) )
@@ -1049,7 +983,7 @@ bool function TryEntitlementMenus()
 		string persistenceVarName = Entitlement_GetMenuPersistenceVarName( entitlementFlav )
 		int guid = ItemFlavor_GetGUID( entitlementFlav )
 
-		if ( hasEntitlement && GetDialogFlowTablesValueOrPersistence( persistenceVarName ) == false )
+		if ( hasEntitlement && GetDialogFlowTablesValueOrPersistence( persistenceVarName, true ) == false )
 		{
 			SetDialogFlowPersistenceTables( persistenceVarName, true )
 			Remote_ServerCallFunction( "ClientCallback_MarkEntitlementMenuSeen", guid )
@@ -1065,14 +999,16 @@ bool function TryEntitlementMenus()
 	{
 		DialogQueueEntry dqe = dialogQueue.pop()
 
-		SetDialogFlowPersistenceTables( dqe.persistenceVarName, true )
-		Remote_ServerCallFunction( "ClientCallback_MarkEntitlementMenuSeen", dqe.entitlementGUID )
-		Remote_ServerCallFunction( "ClientCallback_lastSeenPremiumCurrency" )
-		if ( GetGlobalSettingsBool( dqe.assetRef, "isMenuEnabled" ) )
+		if ( GetGlobalSettingsBool( dqe.assetRef, "isMenuEnabled" ) ) 
 		{
+			SetDialogFlowPersistenceTables( dqe.persistenceVarName, true )
+			Remote_ServerCallFunction( "ClientCallback_MarkEntitlementMenuSeen", dqe.entitlementGUID )
+			Remote_ServerCallFunction( "ClientCallback_lastSeenPremiumCurrency" )
+
 			OpenEntitlementMenu( dqe.assetRef )
 			IncrementNumDialogFlowDialogsDisplayed()
 		}
+
 		return true
 	}
 

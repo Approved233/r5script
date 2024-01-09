@@ -2,6 +2,9 @@ global function InitSystemMenu
 global function UpdateSystemMenu
 global function OpenSystemMenu
 
+global function MatchRequeueCancel
+global function UpdateSystemMenuRespawnStatus
+global function UpdateSystemMenuPartySquadPresence
 global function ShouldDisplayOptInOptions
 global function EnableCharacterChangeInFiringRange
 global function SetFiringRangeChallengeInProgress
@@ -9,6 +12,7 @@ global function IsOptInEnabled
 
 #if DEV
 global function ToggleOptIn
+global function SetOptIn
 #endif
 
 
@@ -44,9 +48,13 @@ struct
 		ButtonData rangeCustomizationButtonData
 
 	ButtonData suicideButtonData
+	ButtonData matchmakeFromMatchButtonData
+	ButtonData cancelMatchmakeFromMatchButtonData
 
 	bool enableChangeCharacterButton = true
 	bool challengeInProgress = false
+	int respawnStatus = eRespawnStatus.NONE
+	bool isWholePartyActiveInSquad = false
 
 	InputDef& qaFooter
 	bool isOptInEnabled = false
@@ -112,6 +120,12 @@ void function InitSystemMenu( var newMenuArg )
 
 	file.suicideButtonData.label = "#BUTTON_SUICIDE"
 	file.suicideButtonData.activateFunc = TryRespawnAndChangeCharacters
+
+	file.matchmakeFromMatchButtonData.label = "#MATCHMAKE_REQUEUE"
+	file.matchmakeFromMatchButtonData.activateFunc = MatchRequeue
+
+	file.cancelMatchmakeFromMatchButtonData.label = "#MATCHMAKE_REQUEUE_CANCEL"
+	file.cancelMatchmakeFromMatchButtonData.activateFunc = MatchRequeueCancel
 
 
 	AddMenuFooterOption( menu, LEFT, BUTTON_B, true, "#B_BUTTON_BACK", "#B_BUTTON_BACK" )
@@ -197,6 +211,27 @@ void function TryRespawnAndChangeCharacters()
 	RunClientScript( "UICallback_DieAndChangeCharacters" )
 }
 
+void function MatchRequeue()
+{
+	
+	
+	if ( !AreWeMatchmaking() && file.isWholePartyActiveInSquad )
+		thread UpdateMatchmakeFromMatchPlaylistRotation_Thread()
+
+	UpdateSystemMenu()
+}
+
+void function MatchRequeueCancel()
+{
+	
+	
+	if ( AreWeMatchmaking() )
+		CancelMatchmaking()
+
+	Signal( uiGlobal.signalDummy, "MatchmakeFromMatchRotations" )
+	UpdateSystemMenu()
+}
+
 void function EnableCharacterChangeInFiringRange( bool enable )
 {
 	file.enableChangeCharacterButton = enable
@@ -214,6 +249,26 @@ void function OnSystemMenu_Open()
 	SetBlurEnabled( true )
 
 	UpdateOptInFooter()
+}
+
+void function UpdateSystemMenuPartySquadPresence( bool isWholePartyActiveInSquad )
+{
+	if ( file.isWholePartyActiveInSquad && !isWholePartyActiveInSquad )
+		MatchRequeueCancel()
+
+	file.isWholePartyActiveInSquad = isWholePartyActiveInSquad
+}
+
+void function UpdateSystemMenuRespawnStatus( int respawnStatus )
+{
+	file.respawnStatus = respawnStatus
+	if ( respawnStatus == eRespawnStatus.SQUAD_ELIMINATED )
+	{
+		file.isWholePartyActiveInSquad = false
+		RunClientScript( "MatchmakingStatus_AddOverlayToFullscreen" )
+		thread UpdateMatchmakingStatus()
+		RunClientScript( "PollPartyMembersInSquad", GetLocalClientPlayer() )
+	}
 }
 
 
@@ -251,15 +306,37 @@ void function UpdateSystemMenu()
 		int gameState = GetGameState()
 		{
 			if ( IsPVEMode() )
+			{
 				SetButtonData( buttonIndex++, file.abandonMissionButtonData )
+			}
 			else if ( IsSurvivalTraining() || IsFiringRangeGameMode() )
+			{
 				SetButtonData( buttonIndex++, file.lobbyReturnButtonData )
+			}
 			else if( !MenuStack_Contains( GetMenu( "CharacterSelectMenu" ) )
 
 				&& !MenuStack_Contains( GetMenu( "SpecialCharacterSelectMenu" ) )
 
 			)
+			{
 				SetButtonData( buttonIndex++, file.leaveMatchButtonData )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+			}
 		}
 
 
@@ -394,11 +471,17 @@ void function OnReturnToMainMenu( int result )
 }
 
 
-
 void function ToggleOptIn( var button )
 {
 	file.isOptInEnabled = !file.isOptInEnabled
 
+	if ( GetActiveMenu() == file.menu )
+		CloseActiveMenu()
+}
+
+void function SetOptIn( bool state )
+{
+	file.isOptInEnabled = state
 	if ( GetActiveMenu() == file.menu )
 		CloseActiveMenu()
 }

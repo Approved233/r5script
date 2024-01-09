@@ -931,6 +931,13 @@ void function UIInputChanged( bool controllerModeActive )
 
 
 
+
+
+
+
+
+
+
 bool function Survival_ClampToRing()
 {
 	return GetCurrentPlaylistVarBool( "dropship_bounds_clamp_to_ring", false )

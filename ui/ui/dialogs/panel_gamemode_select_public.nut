@@ -4,10 +4,14 @@ global function GamemodeSelect_UpdateSelectButton
 global function UpdateOpenModeSelectDialog
 global function GamemodeSelect_PlayVideo
 global function GamemodeSelect_SetFeaturedSlot
+global function GameModeSelect_GetPlaylists
 
 #if DEV
 global function ShippingPlaylistCheck
 #endif
+
+
+
 
 
 struct
@@ -47,6 +51,10 @@ struct
 
 	string mapPreviewSlotKey = ""
 	string mapPreviewPlaylistName = ""
+
+
+
+
 } file
 
 const int DRAW_NONE = 0
@@ -121,6 +129,8 @@ void function OnShowModePublicPanel( var panel )
 		file.modeSelectButtonList.append( button )
 	}
 
+
+
 	AnimateIn()
 }
 
@@ -145,6 +155,35 @@ void function OnHidePublicPanel( var panel )
 		Hud_RemoveEventHandler( button, UIE_LOSE_FOCUS, GamemodeButton_OnLoseFocus )
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 void function ToggleCraftingTooltip( bool turnOn )
@@ -182,6 +221,8 @@ void function GamemodeButton_Activate( var button )
 	else
 		Lobby_SetSelectedPlaylist( playlistName )
 
+
+
 	CloseAllDialogs()
 }
 
@@ -197,6 +238,11 @@ void function GamemodeButton_OnGetFocus( var button )
 	CrossFadeCraftingMapPreview(button, true)
 	ToggleCraftingTooltip(false)
 	UpdateFooterOptions()
+
+
+
+
+
 }
 
 void function GamemodeButton_OnLoseFocus( var button )
@@ -309,8 +355,17 @@ void function UpdateGameModes()
 
 			if( isRankedBR )
 			{
-				RuiSetString( rui, "modeLockedReason", "#PLAYLIST_STATE_RANKED_SPLIT_ROLLOVER" )
-				RuiSetGameTime( rui, "expireTime", RUI_BADGAMETIME )
+				if ( !Playlist_IsPastRankedSeasonEndDate() )
+				{
+					RuiSetString( rui, "modeLockedReason", "#PLAYLIST_STATE_RANKED_PATCH_REQUIRED" )
+					RuiSetGameTime( rui, "expireTime", RUI_BADGAMETIME )
+				}
+				else
+				{
+					RuiSetString( rui, "modeLockedReason", "#PLAYLIST_STATE_RANKED_SPLIT_ROLLOVER" )
+					RuiSetGameTime( rui, "expireTime", RUI_BADGAMETIME )
+				}
+
 			}
 			else
 			{
@@ -384,6 +439,17 @@ void function UpdateGameModes()
 
 
 
+
+			
+			if ( isRankedBR )
+			{
+				if ( Playlist_ShouldLockRankedPlaylistForPatch( playlistName ) || Playlist_IsPastRankedSeasonEndDate() )
+				{
+					isEnabled = false
+					RuiSetBool( rui, "showLockedIcon", true )
+					RuiSetBool( rui, "isLocked", true )
+				}
+			}
 
 			Hud_SetEnabled( button, isEnabled )
 
@@ -681,6 +747,15 @@ void function GamemodeSelect_UpdateSelectButton( var button, string playlistName
 		{
 			TimestampRange currentBlock = expect TimestampRange(scheduleData.currentBlock)
 			int remainingDuration       = currentBlock.endUnixTime - GetUnixTimestamp()
+
+			
+			if ( IsRankedPlaylist( playlistName ) && Playlist_HasRankedSeasonEndDate() )
+			{
+				int ornull seasonEndDate = Playlist_GetRankedSeasonEndDate()
+				expect int( seasonEndDate )
+				remainingDuration = seasonEndDate - GetUnixTimestamp()
+			}
+
 			RuiSetGameTime( rui, "expireTime", ClientTime() + remainingDuration )
 		}
 	}

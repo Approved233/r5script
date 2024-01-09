@@ -38,6 +38,8 @@ global function SupportBin_UseBasicLootConfiguration
 const string LOOT_ITEM_MEDKIT_NAME = "health_pickup_health_large"
 const string LOOT_ITEM_BATTERY_NAME = "health_pickup_combo_large"
 const string LOOT_ITEM_PHEONIX_NAME = "health_pickup_combo_full"
+const string LOOT_ITEM_CELL_NAME = "health_pickup_combo_small"
+const string LOOT_ITEM_SYRINGE_NAME = "health_pickup_health_small"
 
 const string SUPPORT_BIN_INGAME_LOCKED_HINT = "Support Bins can be used by Support Legends"
 
@@ -114,6 +116,10 @@ enum SurvivalStatusType
 
 
 
+
+
+
+
 void function Perk_SupportLootbin_Init()
 {
 	if ( !SupportBin_ShouldUseDiscreteSupportBins() )
@@ -137,6 +143,8 @@ void function Perk_SupportLootbin_Init()
 
 
 	Perks_RegisterClassPerk( extraBinLoot )
+
+
 
 
 
@@ -222,9 +230,9 @@ bool function Perk_SupportBin_ShouldShowEveryoneSupportBins()
 	return ( GetCurrentPlaylistVarBool("supportbin_show_everyone", false ) )
 }
 
-bool function SupportBin_ShouldLimitSurvivalItems()
+bool function SupportBin_ShouldLimitAllSurvivalItems()
 {
-	return ( GetCurrentPlaylistVarBool("supportbin_enable_survival_rate_limiting", true ) )
+	return ( GetCurrentPlaylistVarBool("supportbin_enable_survival_rate_limiting", false ) )
 }
 
 bool function SupportBin_HardLimitSurvivalAssistanceCount()
@@ -267,6 +275,31 @@ bool function SupportBin_OnlyScaleSecretLoot()
 	return ( GetCurrentPlaylistVarBool("supportbin_disable_scaling_regular_loot", true ) )
 }
 
+bool function SupportBin_MedkitLimitingEnabled()
+{
+	return ( GetCurrentPlaylistVarBool("supportbin_medkit_limiting", true ) )
+}
+
+int function SupportBin_Get_MaxBinGivenMedkitLimit()
+{
+	return ( GetCurrentPlaylistVarInt("supportbin_bin_given_medkit_limit", 2 ) )
+}
+
+int function SupportBin_Get_MaxMedkitLimit()
+{
+	return ( GetCurrentPlaylistVarInt("supportbin_medkit_limit_max", 1 ) )
+}
+
+bool function SupportBin_HeatShieldAssistanceLimiting()
+{
+	return ( GetCurrentPlaylistVarBool("supportbin_heatshield_limiting", true ) )
+}
+
+int function SupportBin_HeatShieldAssistanceMax()
+{
+	return ( GetCurrentPlaylistVarInt("supportbin_heatshield_assistance_max", 3 ) )
+}
+
 
 
 
@@ -298,6 +331,327 @@ bool function SupportBin_ValidateSurvivalNeedAgainstTeamInvetory( )
 {
 	return ( GetCurrentPlaylistVarBool("supportbin_validate_survival_using_team_inventory", false ) )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

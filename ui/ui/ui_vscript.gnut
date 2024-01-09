@@ -11,6 +11,7 @@ global function AddUICallback_OnLevelInit
 global function AddUICallback_InputModeChanged
 global function AddUICallback_KeyBindSet
 global function AddUICallback_UIShutdown
+global function RemoveUICallback_InputModeChanged
 #if PC_PROG_NX_UI
 global function AddUICallback_NXOperationModeChanged
 global function RemoveUICallback_NXOperationModeChanged
@@ -434,6 +435,14 @@ void function AddUICallback_UIShutdown( void functionref() callbackFunc )
 void function AddUICallback_InputModeChanged( void functionref( bool ) callbackFunc )
 {
 	uiGlobal.inputModeChangeCallbacks.append( callbackFunc )
+}
+
+void function RemoveUICallback_InputModeChanged( void functionref( bool ) callbackFunc )
+{
+	if ( uiGlobal.inputModeChangeCallbacks.contains( callbackFunc ) )
+	{
+		uiGlobal.inputModeChangeCallbacks.removebyvalue( callbackFunc )
+	}
 }
 
 

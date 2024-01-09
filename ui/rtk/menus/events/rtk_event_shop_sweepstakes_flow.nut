@@ -45,7 +45,7 @@ void function RTKSweepstakesFlowPanel_OnInitialize( rtk_behavior self )
 	entity player = GetLocalClientPlayer()
 	rtk_struct sweepstakesFlow = RTKDataModelType_CreateStruct( RTK_MODELTYPE_MENUS, SWEEPSTAKES_FLOW_DATA_MODEL_NAME, "RTKSweepstakesFlowModel" )
 
-	GRXScriptOffer ornull offer = GetSweepstakeOffer()
+	GRXScriptOffer ornull offer = GetSweepstakesOffer()
 	if ( offer != null )
 	{
 		expect GRXScriptOffer( offer )
@@ -57,10 +57,10 @@ void function RTKSweepstakesFlowPanel_OnInitialize( rtk_behavior self )
 		sweepstakesFlowModel.purchaseLimit = offer.purchaseLimit
 		sweepstakesFlowModel.availablePurchases = offer.purchaseLimit - offer.purchaseCount
 		sweepstakesFlowModel.price = EventShop_GetItemPrice( offer )
-		sweepstakesFlowModel.tokenCount = RTKSweepstakeFlow_CanPurchaseTokens( offer, 1 ) ? 1 : 0
+		sweepstakesFlowModel.tokenCount = RTKSweepstakesFlow_CanPurchaseTokens( offer, 1 ) ? 1 : 0
 		sweepstakesFlowModel.totalEntries = AcidWraith_GetCurrentSweepstakesEntryCount( player )
 		sweepstakesFlowModel.prizeImage = EventShop_GetSweepstakesPrizeImage(expect ItemFlavor( EventShop_GetCurrentActiveEventShop() ) )
-		sweepstakesFlowModel.canPurchaseTokens = RTKSweepstakeFlow_CanPurchaseTokens( offer, 1 )
+		sweepstakesFlowModel.canPurchaseTokens = RTKSweepstakesFlow_CanPurchaseTokens( offer, 1 )
 
 		RTKStruct_SetValue( sweepstakesFlow, sweepstakesFlowModel )
 	}
@@ -167,9 +167,15 @@ void function RTKSweepstakesFlowPanel_OnPurchaseSuccessful( bool wasSuccessful )
 		thread function() : ()
 		{
 			wait 1.6
-			rtk_struct sweepstakesFlow = RTKDataModel_GetStruct( RTKDataModelType_GetDataPath( RTK_MODELTYPE_MENUS, SWEEPSTAKES_FLOW_DATA_MODEL_NAME ) )
-			RTKStruct_SetInt( sweepstakesFlow, "flow", eSweepstakesFlow.DONE )
-			RTKStruct_SetInt( sweepstakesFlow, "totalEntries", AcidWraith_GetCurrentSweepstakesEntryCount( GetLocalClientPlayer() ) )
+
+			string sweepstakesFlowPath = RTKDataModelType_GetDataPath( RTK_MODELTYPE_MENUS, SWEEPSTAKES_FLOW_DATA_MODEL_NAME )
+
+			if ( RTKDataModel_HasDataModel( sweepstakesFlowPath ) )
+			{
+				rtk_struct sweepstakesFlow = RTKDataModel_GetStruct( sweepstakesFlowPath )
+				RTKStruct_SetInt( sweepstakesFlow, "flow", eSweepstakesFlow.DONE )
+				RTKStruct_SetInt( sweepstakesFlow, "totalEntries", AcidWraith_GetCurrentSweepstakesEntryCount( GetLocalClientPlayer() ) )
+			}
 		}()
 	}
 }
@@ -195,14 +201,14 @@ void function RTKSweepstakesFlowPanel_TokenCounter( bool isAddition )
 	int counter = RTKStruct_GetInt( sweepstakesFlow, "tokenCount")
 	bool canPurchaseTokens = RTKStruct_GetBool( sweepstakesFlow, "canPurchaseTokens")
 
-	GRXScriptOffer ornull offer = GetSweepstakeOffer()
+	GRXScriptOffer ornull offer = GetSweepstakesOffer()
 	if ( offer != null )
 	{
 		expect GRXScriptOffer( offer )
 
 		if ( isAddition )
 		{
-			if ( ( counter < offer.purchaseLimit - offer.purchaseCount ) && RTKSweepstakeFlow_CanPurchaseTokens( offer, counter + 1 ) )
+			if ( ( counter < offer.purchaseLimit - offer.purchaseCount ) && RTKSweepstakesFlow_CanPurchaseTokens( offer, counter + 1 ) )
 				counter++
 		}
 		else
@@ -211,12 +217,12 @@ void function RTKSweepstakesFlowPanel_TokenCounter( bool isAddition )
 				counter--
 		}
 
-		RTKStruct_SetBool( sweepstakesFlow, "canPurchaseTokens", counter != 0 && RTKSweepstakeFlow_CanPurchaseTokens( offer, counter ) )
+		RTKStruct_SetBool( sweepstakesFlow, "canPurchaseTokens", counter != 0 && RTKSweepstakesFlow_CanPurchaseTokens( offer, counter ) )
 		RTKStruct_SetInt( sweepstakesFlow, "tokenCount", counter )
 	}
 }
 
-bool function RTKSweepstakeFlow_CanPurchaseTokens( GRXScriptOffer offer, int num )
+bool function RTKSweepstakesFlow_CanPurchaseTokens( GRXScriptOffer offer, int num )
 {
 	return GRX_CanAfford( offer.prices[0], num ) && ( offer.purchaseLimit - offer.purchaseCount > 0 )
 }

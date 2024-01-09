@@ -854,7 +854,7 @@ void function UIFullyConnectedInitialization()
 	CollectionEvents_Init()
 	ThemedShopEvents_Init()
 
-
+		MilestoneEvents_Init()
 
 	BuffetEvents_Init()
 
@@ -888,9 +888,7 @@ void function UIFullyConnectedInitialization()
 
 		ShEventAbilities_Init()
 
-
-		Sh_Boosts_Init()
-
+	Sh_Boosts_Init()
 	ShMusic_LevelInit()
 	ShBattlePass_LevelInit()
 
@@ -913,6 +911,9 @@ void function UIFullyConnectedInitialization()
 
 
 
+
+	ShRewardSetTracker_LevelInit()
+
 	ShItems_LevelInit_Finish()
 	ShItemPerPlayerState_LevelInit()
 	UserInfoPanels_LevelInit()
@@ -924,6 +925,9 @@ void function UIFullyConnectedInitialization()
 		Sh_RankedTrials_Init() 
 
 	ShChallenges_LevelInit_PostStats()
+
+
+
 	ShPlaylist_Init()
 
 	ShPersistentData_LevelInit_Finish()
@@ -956,9 +960,7 @@ void function UIFullyConnectedInitialization()
 		Gifting_LevelInit()
 
 
-
-		Sh_Mastery_Init()
-
+	Sh_Mastery_Init()
 }
 
 void function UICodeCallback_FullyConnected( string levelname )
@@ -1966,14 +1968,23 @@ bool function AreDialogFlowPersistenceValuesSet( string persistenceVar, var valu
 	return true
 }
 
-var function GetDialogFlowTablesValueOrPersistence( string persistenceVar, float timeBeforeDialogFlowTableValuesAreOutdated = 5.0 ) 
+
+
+var function GetDialogFlowTablesValueOrPersistence( string persistenceVar, bool useScriptTable = false, float timeBeforeDialogFlowTableValuesAreOutdated = 5.0 )
 {
+	if ( useScriptTable )
+	{
+		timeBeforeDialogFlowTableValuesAreOutdated = 9999
+	}
+
 	if ( (persistenceVar in file.dialogFlowPersistenceChecksValuesTable ) )
 	{
 		Assert( persistenceVar in file.dialogFlowPersistenceChecksTimeTable )
 
-		if ( file.dialogFlowPersistenceChecksTimeTable[ persistenceVar] + timeBeforeDialogFlowTableValuesAreOutdated > UITime() )
+		if ( file.dialogFlowPersistenceChecksTimeTable[ persistenceVar ] + timeBeforeDialogFlowTableValuesAreOutdated > UITime() )
+		{
 			return file.dialogFlowPersistenceChecksValuesTable[ persistenceVar ]
+		}
 	}
 
 	return GetPersistentVar( persistenceVar )
@@ -2024,7 +2035,7 @@ void function DialogFlow()
 	else if ( persistenceAvailable && TryEntitlementMenus() )
 	{
 	}
-	else if ( PlayerHasStarterPack( null ) && persistenceAvailable && ( GetDialogFlowTablesValueOrPersistence ("starterAcknowledged", 9999 )  == false ) )
+	else if ( PlayerHasStarterPack( null ) && persistenceAvailable && ( GetDialogFlowTablesValueOrPersistence ( "starterAcknowledged", true )  == false ) )
 	{
 		SetDialogFlowPersistenceTables( "starterAcknowledged", true )
 		Remote_ServerCallFunction( "ClientCallback_MarkEntitlementMenuSeen", STARTER_PACK )
@@ -2035,7 +2046,7 @@ void function DialogFlow()
 
 		DialogFlow_DidCausePotentiallyInterruptingPopup()
 	}
-	else if ( PlayerHasFoundersPack( null ) && persistenceAvailable && ( GetDialogFlowTablesValueOrPersistence( "founderAcknowledged", 9999 ) == false )  )
+	else if ( PlayerHasFoundersPack( null ) && persistenceAvailable && ( GetDialogFlowTablesValueOrPersistence( "founderAcknowledged", true ) == false )  )
 	{
 		SetDialogFlowPersistenceTables( "founderAcknowledged", true )
 		Remote_ServerCallFunction( "ClientCallback_MarkEntitlementMenuSeen", FOUNDERS_PACK )
@@ -2363,12 +2374,15 @@ void function InitMenus()
 	var storePanel = AddPanel( lobbyMenu, "StorePanel", InitStorePanel )
 	AddPanel( storePanel, "LootPanel", InitLootPanel )
 	AddMenu( "PackInfoDialog", $"resource/ui/menus/dialogs/pack_information_dialog.menu", InitPackInfoDialog )
+
+		AddMenu( "MilestonePackInfoDialog", $"resource/ui/menus/dialogs/milestone_information_dialog.menu", InitMilestonePackInfoDialog )
+
 	AddPanel( storePanel, "HeirloomShopPanel", HeirloomShopPanel_Init )
 	AddPanel( storePanel, FEATURED_STORE_PANEL, InitOffersPanel )
 	AddPanel( storePanel, SPECIALS_STORE_PANEL, InitSpecialsPanel )
 	AddPanel( storePanel, SEASONAL_STORE_PANEL, InitSpecialsPanel )
 
-
+		AddPanel( storePanel, PERSONALIZED_STORE_PANEL, InitPersonalizedStore )
 
 
 
@@ -2481,7 +2495,16 @@ void function InitMenus()
 	AddPanel( customizeCharacterMenu, "CharacterExecutionsPanel", InitCharacterExecutionsPanel )
 
 
+		AddPanel( customizeCharacterMenu, "LegendMeleePanel", InitRTKLegendMeleePanel )
 		AddPanel( customizeCharacterMenu, "LegendLorePanel", InitRTKLegendLorePanel )
+
+
+			var meleeCustomizationMenu = AddMenu( "MeleeCustomizationMenu", $"resource/ui/menus/dialogs/customize_melee.menu", InitMeleeCustomizationMenu )
+			AddPanel( meleeCustomizationMenu, "MeleeCustomizationPanel", InitMeleeCustomizationPanel )
+
+
+
+
 
 
 	var customizeWeaponMenu = AddMenu( "CustomizeWeaponMenu", $"resource/ui/menus/customize_weapon.menu", InitCustomizeWeaponMenu )
@@ -2578,10 +2601,8 @@ void function InitMenus()
 
 	AddMenu( "RankedInfoMenu", $"resource/ui/menus/ranked_info.menu", InitRankedInfoMenu )
 	AddMenu( "RankedInfoMoreMenu", $"resource/ui/menus/ranked_info_more.menu", InitRankedInfoMoreMenu ) 
-	AddMenu( "AboutGameModeMenu", $"resource/ui/menus/about_game_mode.menu", InitAboutGameModeMenu )
 
 	AddMenu( "PostGameWeaponTrialCelebrationsMenu", $"resource/ui/menus/postgame_weapon_trial_celebrations.menu", InitPostGameWeaponTrialCelebrationsMenu )
-
 
 
 
@@ -2592,7 +2613,6 @@ void function InitMenus()
 	var progressionModifiersMenu = AddMenu( "ProgressionModifiersMenu", $"resource/ui/menus/progression_modifiers.menu", InitRTKProgressionModifiersMenu )
 	AddPanel( progressionModifiersMenu, "ProgressionModifiersInfoPanel", InitRTKProgressionModifiersInfoPanel )
 	AddPanel( progressionModifiersMenu, "ProgressionModifiersBoostPanel", InitRTKProgressionModifiersBoostPanel )
-
 
 	AddMenu( "BattlePassMilestoneMenu", $"resource/ui/menus/battlepass_milestone.menu", InitBattlepassMilestoneMenu )
 
@@ -2674,6 +2694,10 @@ void function InitMenus()
 
 		var controlSpawnSelectorMenu = AddMenu( "ControlSpawnSelector", $"resource/ui/menus/control_respawn_menu.menu", InitControlSpawnMenu )
 		AddPanel( controlSpawnSelectorMenu, "ControlRespawn_GenericScoreboardPanel", InitTeamsScoreboardPanel )
+
+
+
+
 
 
 

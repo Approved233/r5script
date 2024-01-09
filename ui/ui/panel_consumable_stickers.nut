@@ -232,6 +232,7 @@ void function ConsumableStickersPanel_Update( var panel )
 			var rui = Hud_GetRui( button )
 			RuiDestroyNestedIfAlive( rui, "badge" )
 			RuiSetBool( rui, "displayQuality", true )
+			RuiSetBool( rui, "displayShimmer", true )
 
 			var nestedRui = CreateNestedRuiForSticker( rui, "badge", stickerItem )
 

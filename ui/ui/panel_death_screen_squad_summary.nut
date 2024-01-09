@@ -195,6 +195,7 @@ void function UI_UpdateSquadSummary()
 void function SquadSummaryOnClosePanel( var panel )
 {
 	RunClientScript( "UICallback_HideSquadSummary" )
+	RunClientScript( "SignalShowRoundEndSquadResults" )
 
 	foreach ( elem in file.panelData[ panel ].gCards )
 	{

@@ -1,5 +1,10 @@
 global function InitCharacterSkillsDialog
 global function OpenCharacterSkillsDialog
+
+
+
+
+
 global function ClientToUI_OpenCharacterSkillsDialog
 
 struct
@@ -48,11 +53,20 @@ void function InitCharacterSkillsDialog( var newMenuArg )
 
 void function OpenCharacterSkillsDialog( ItemFlavor character )
 {
-
-	printt("jmasse OpenCharacterSkillsDialog")
 	file.character = character
 	AdvanceMenu( file.menu )
 }
+
+
+
+
+
+
+
+
+
+
+
 
 void function ClientToUI_OpenCharacterSkillsDialog( int characterGUID )
 {

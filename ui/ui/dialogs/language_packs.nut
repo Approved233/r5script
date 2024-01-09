@@ -68,8 +68,8 @@ void function LanguagePackOutOfDateDialog()
 	dialogData.message = "#LANGUAGE_PACK_OUT_OF_DATE_MESSAGE"
 	dialogData.darkenBackground = true 
 
-	AddDialogButton( dialogData, "#B_BUTTON_CLOSE" )
 	AddDialogButton( dialogData, "#LANGUAGE_PACK_UPDATE_NOW", UpdateNow )
+	AddDialogButton( dialogData, "#B_BUTTON_CLOSE" )
 
 	OpenDialog( dialogData )
 	file.seenOutOfDateDialogue = true

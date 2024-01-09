@@ -40,11 +40,6 @@ global function Strikeout_UI_SetIsRespawnDisabled
 
 
 
-
-
-
-
-
 struct
 {
 
@@ -59,29 +54,6 @@ struct
 	bool respawnDisabled = false
 
 } file
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -692,11 +664,6 @@ int function GetPlaylistVar_RespawnDisabledDeathstage()
 int function GetPlaylistVar_BonusHealingGrantDeathstage()
 {
 	return GetCurrentPlaylistVarInt( "strikeout_bonus_healing_items_deathstage", 3 )
-}
-
-int function GetPlaylistVar_TransparencyAmount()
-{
-	return GetCurrentPlaylistVarInt( "strikeout_transparency_amount", 140 )
 }
 
 bool function IsStrikeoutGamemode()

@@ -54,7 +54,6 @@ global function ShadowArmy_GetNumRevSquadsForMatchStart
 
 
 
-
 global function ShadowArmy_PopulateAboutText
 
 
@@ -341,14 +340,18 @@ struct
 
 
 
-
-
 } file
 
 void function ShadowArmy_Init()
 {
 	if ( !IsShadowArmyGamemode() )
 		return
+
+
+
+
+
+
 
 
 
@@ -496,9 +499,6 @@ void function ShGameMode_ShadowArmy_RegisterNetworking()
 
 
 
-
-
-
 bool function IsShadowArmyGamemode()
 {
 	return GetCurrentPlaylistVarBool( "is_shadow_army_gamemode", false )
@@ -508,16 +508,6 @@ bool function IsShadowArmyGamemodeCineVersion()
 {
 	return GetCurrentPlaylistVarBool( "is_shadow_army_cine_version", false )
 }
-
-
-
-
-
-
-
-
-
-
 
 
 const int UNSET_SQUAD_COUNT = -1
@@ -1757,75 +1747,10 @@ int function GetNumLivingSquadsForEmergencyEvac()
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 int function ShadowArmy_GetCurrentGamePhase()
 {
 	return GetGlobalNetInt( "shadowArmy_GamePhase" )
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

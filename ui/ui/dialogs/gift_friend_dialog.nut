@@ -297,9 +297,7 @@ void function GiftPurchase_OnActive( var button )
 	}
 
 	GRXScriptOffer offer = file.elegibleFriendOffer
-	if ( GRXOffer_ContainsOnlySinglePack( offer ) )
-		HandleGiftPurchaseOperation( offer )
-	else if ( GRXOffer_ContainsPack( offer ) )
+	if ( GRXOffer_ContainsPack( offer ) && !IsUserAwaitingForConfirmation() )
 		OpenPurchaseConfirmationDialog()
 	else
 		HandleGiftPurchaseOperation( offer )
@@ -609,10 +607,10 @@ array<ItemFlavorBag> function GetBagFromOfferArrayPrice( array< array< int > > p
 
 	foreach ( int priceIdx, array<int> currencyArray in prices )
 	{
-		if ( currencyArray[GRX_CURRENCY_PREMIUM] != 0 )
+		if ( currencyArray[GRX_CURRENCY_PREMIUM] != -1 )
 			quantity = minint( quantity, currencyArray[GRX_CURRENCY_PREMIUM] )
 	}
-	Assert( 0 < quantity && quantity < INT_MAX, "Price quantity is Invalid." )
+	Assert( -1 < quantity && quantity < INT_MAX, "Price quantity is Invalid." )
 
 	ItemFlavorBag price
 	array<ItemFlavorBag> bagPrices
@@ -639,9 +637,26 @@ void function GiftingMenu_OnClose()
 void function FriendDataReferenceReset()
 {
 	file.isProcessingSelection = false
+
 	if ( file.actionButton != null )
+	{
 		HudElem_SetRuiArg( file.actionButton, "isProcessing", file.isProcessingSelection )
-	HudElem_SetRuiArg( file.dialogContent, "friendSelectText", Localize( "#GIFT_DIALOG_SELECT_FRIEND" ) )
+		HudElem_SetRuiArg( file.dialogContent, "friendSelectText", Localize( "#GIFT_DIALOG_SELECT_FRIEND" ) )
+
+		GiftingFriend ornull friend = file.actionFriend
+		expect GiftingFriend( friend )
+
+		if ( friend.activePresence.online )
+		{
+			HudElem_SetRuiArg( file.actionButton, "statusText", "#PRESENSE_ONLINE" )
+			HudElem_SetRuiArg( file.actionButton, "status", eFriendGiftStatus.ONLINE )
+		}
+		else
+		{
+			HudElem_SetRuiArg( file.actionButton, "statusText", "#PRESENSE_OFFLINE" )
+			HudElem_SetRuiArg( file.actionButton, "status", eFriendGiftStatus.OFFLINE )
+		}
+	}
 
 	if ( file.originalPriceStr != "" )
 	{

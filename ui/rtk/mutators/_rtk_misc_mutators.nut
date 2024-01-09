@@ -8,9 +8,9 @@ string function RTKMutator_PanelName( rtk_panel input )
 vector function RTKMutator_QualityColor( int input, bool exception )
 {
 	if (exception)
-		return GetKeyColor( COLORID_HUD_LOOT_TIER0, 1 ) / 255.0
+		return GetKeyColor( COLORID_LOOT_TIER0, 1 ) / 255.0
 
-	return GetKeyColor( COLORID_HUD_LOOT_TIER0, input ) / 255.0
+	return GetKeyColor( COLORID_LOOT_TIER0, input ) / 255.0
 }
 
 string function RTKMutator_QualityName( int input )

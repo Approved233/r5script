@@ -70,6 +70,22 @@ global function SetShouldIgnorePersistence
 
 
 
+global function UISafeGetPersistentVar
+global function UISafeGetPersistentVarAsInt
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -671,4 +687,43 @@ void function ClientToUI_OnPersistentDataReady()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+var function UISafeGetPersistentVar( string key )
+{
+	if ( IsConnected() )
+		return GetPersistentVar( key )
+	return null
+}
+
+int function UISafeGetPersistentVarAsInt( string key )
+{
+	if ( IsConnected() )
+		return GetPersistentVarAsInt( key )
+	return 0
+}
 

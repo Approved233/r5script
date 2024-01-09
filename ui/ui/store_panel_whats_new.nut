@@ -307,8 +307,7 @@ void function ThemedShop_UpdateGRXDependantElements()
 	remainingPacksAvailable = GetCurrentMaxEventPackPurchaseCount( GetLocalClientPlayer() )
 	bool offerIsPurchasable = true
 
-
-	if ( GetConVarBool( "mtx_useIneligibilityCode" ) && activeThemedShopEvent != null )
+	if ( activeThemedShopEvent != null )
 	{
 		GRXScriptOffer ornull offer = ThemedShopEvent_GetPackOffer( expect ItemFlavor( activeThemedShopEvent ) )
 
@@ -317,7 +316,6 @@ void function ThemedShop_UpdateGRXDependantElements()
 			offerIsPurchasable = GRXOffer_IsEligibleForPurchase( expect GRXScriptOffer( offer ) )
 		}
 	}
-
 
 	Hud_SetLocked( file.purchaseSinglePackButton, !offerIsPurchasable || remainingPacksAvailable < 1  )
 	Hud_SetLocked( file.purchaseMultiplePacksButton, !offerIsPurchasable || remainingPacksAvailable < 2  )

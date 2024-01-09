@@ -131,7 +131,7 @@ void function OnRankedInfoMenu_Open()
 
 	RuiSetBool( mainRui, "inPromoTrials", hasPromoTrial )
 	RuiSetAsset( mainRui, "promoCapImage", promoCapImage )
-	RuiSetBool( mainRui, "showPromoPip", RankedTrials_NextRankHasTrial( currentRank, nextDivision ) )
+	RuiSetBool( mainRui, "showPromoPip", RankedTrials_NextRankHasTrial( currentRank, nextDivision ) && !RankedTrials_IsKillswitchEnabled() )
 
 	RuiSetString( mainRui, "currentRankString", currentRank.divisionName )
 	RuiSetString( mainRui, "currentRankBracketString", (currentRank.emblemDisplayMode == emblemDisplayMode.DISPLAY_DIVISION) ? currentRank.emblemText : "" )
@@ -343,7 +343,7 @@ void function InitRankedScoreBarRui( var rui, int score, int ladderPosition )
 		RuiSetBool( rui, "inPromoTrials", hasTrial )
 
 		SharedRankedDivisionData ornull nextDivision = GetNextRankedDivisionFromScore( score )
-		RuiSetBool( rui, "showPromoPip", RankedTrials_NextRankHasTrial( currentRank, nextDivision ) )
+		RuiSetBool( rui, "showPromoPip", RankedTrials_NextRankHasTrial( currentRank, nextDivision ) && !RankedTrials_IsKillswitchEnabled() )
 
 		asset promoCapImage = $""
 		if ( nextTier != null )

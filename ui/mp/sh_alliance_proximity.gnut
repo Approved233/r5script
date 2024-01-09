@@ -21,6 +21,7 @@ global function AllianceProximity_IsTeamInAnAlliance
 global function AllianceProximity_GetOtherAlliances 
 global function AllianceProximity_GetOtherAlliance 
 global function AllianceProximity_GetAllAlliances 
+global function AllianceProximity_GetAllTeamsOrAlliances 
 global function AllianceProximity_GetAllTeamsInAlliances 
 global function AllianceProximity_RegisterNonPlayerTeamToAlliances 
 global function AddCallback_AllianceProximity_OnTeamPutIntoAlliance 
@@ -369,6 +370,14 @@ array < int > function AllianceProximity_GetAllAlliances()
 {
 	array< int > resultArray = clone file.allAlliances
 	return resultArray
+}
+
+array < int > function AllianceProximity_GetAllTeamsOrAlliances()
+{
+	if ( AllianceProximity_IsUsingAlliances() )
+		return AllianceProximity_GetAllAlliances()
+
+	return GetAllTeams()
 }
 
 
@@ -973,9 +982,6 @@ void function AllianceProximity_SetTeamToAlliance_Internal( int team, int allian
 		func( team, alliance )
 	}
 }
-
-
-
 
 
 

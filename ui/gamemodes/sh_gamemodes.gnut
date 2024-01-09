@@ -264,6 +264,13 @@ void function GameModes_Init()
 
 
 
+		AddCallback_UI_FeatureTutorialDialog_PopulateTabsForMode( GoldenHorse_PopulateAboutText, GAMEMODE_GOLDEN_HORSE )
+		AddCallback_UI_FeatureTutorialDialog_SetTitle( FeatureTutorial_GetGameModeName, GAMEMODE_GOLDEN_HORSE )
+
+
+
+
+
 
 
 
@@ -314,8 +321,22 @@ void function GameModes_Init()
 
 
 
+
+
+
+
+
+
+
 		AddCallback_UI_FeatureTutorialDialog_PopulateTabsForMode( EventAbilities_PopulateAboutText, EVENT_ABILITIES )
 		AddCallback_UI_FeatureTutorialDialog_SetTitle( EventAbilities_GetAboutHeader, EVENT_ABILITIES )
+
+
+
+
+
+
+
 
 
 

@@ -384,67 +384,25 @@ var function DisplayPostGameSummary( bool isFirstTime )
 
 	if ( character != null && isFirstTime )
 	{
+		expect ItemFlavor( character )
 		table<ItemFlavor, GladCardBadgeTierData> unlockedBadgeMap
 
-		expect ItemFlavor( character )
-		array<ItemFlavor> allBadges = GetAllItemFlavorsOfType( eItemType.gladiator_card_badge )
 		table<int, int> grxPostGameRewardGUIDToPersistenceIdx = GRX_GetPostGameRewards()
-		foreach ( badge in allBadges )
+		foreach ( int guid, int _ in grxPostGameRewardGUIDToPersistenceIdx )
 		{
-			bool isCharacterBadge = GladiatorCardBadge_IsCharacterBadge( badge )
-			if ( isCharacterBadge && character != GladiatorCardBadge_GetCharacterFlavor( badge ) )
+			if ( !IsValidItemFlavorGUID( guid ) )
 				continue
 
-			array<GladCardBadgeTierData> tierDataList = GladiatorCardBadge_GetTierDataList( badge )
-
-			
-			if ( ItemFlavor_GetGRXMode( badge ) == GRX_ITEMFLAVORMODE_REGULAR )
-			{
-				if ( ItemFlavor_GetGUID( badge ) in grxPostGameRewardGUIDToPersistenceIdx )
-				{
-					unlockedBadgeMap[badge] <- tierDataList[0]
-					GRX_MarkRewardAcknowledged( ItemFlavor_GetGUID( badge ), grxPostGameRewardGUIDToPersistenceIdx[ ItemFlavor_GetGUID( badge ) ] )
-				}
-
-				continue
-			}
-			
-
-			string unlockStatRef = GladiatorCardBadge_GetUnlockStatRef( badge, GladiatorCardBadge_GetCharacterFlavor( badge ) )
-			if( !GladiatorCardBadge_IsGeneralStat( unlockStatRef ) )
+			ItemFlavor item = GetItemFlavorByGUID( guid )
+			if ( ItemFlavor_GetType( item ) != eItemType.gladiator_card_badge )
 				continue
 
-			if ( !IsValidStatEntryRef( unlockStatRef ) )
-				continue
-
-			
-			if ( unlockStatRef == ACCOUNT_BADGE_STAT )
-				continue
-
-			foreach ( tierData in tierDataList )
-			{
-				StatEntry se = GetStatEntryByRef( unlockStatRef )
-
-				int currentVal = GetStat_Int( player, se, eStatGetWhen.CURRENT )
-				if ( currentVal < tierData.unlocksAt )
-					continue
-
-				if ( (se.flags & eStatFlags.STORE_START_OF_PREVIOUS_MATCH) == 0 )
-					continue
-
-				int previousVal = GetStat_Int( player, se, eStatGetWhen.START_OF_PREVIOUS_MATCH )
-				if ( previousVal >= tierData.unlocksAt )
-					continue
-
-				if ( currentVal >= tierData.unlocksAt && previousVal < tierData.unlocksAt )
-				{
-					unlockedBadgeMap[badge] <- tierData
-
-					if ( GetCurrentPlaylistVarBool( "do_on_demand_stats", true ) )
-						Remote_ServerCallFunction( "ClientCallback_UpdateSOPMStatValue", se.index )
-				}
-			}
+			unlockedBadgeMap[ item ] <- GladiatorCardBadge_GetTierDataList( item )[0]
+			GRX_MarkRewardAcknowledged( guid, grxPostGameRewardGUIDToPersistenceIdx[ guid ] )
 		}
+
+		foreach ( BadgeDisplayData displayData in GladiatorCardBadge_GetPostGameStatUnlockBadgesDisplayData() )
+			unlockedBadgeMap[ displayData.badge ] <- displayData.tierData
 
 		if ( unlockedBadgeMap.len() > 0 )
 		{

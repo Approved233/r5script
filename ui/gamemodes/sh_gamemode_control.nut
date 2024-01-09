@@ -99,7 +99,6 @@ global function Control_RegisterNetworking
 
 
 
-
 global function Control_PopulateAboutText
 
 
@@ -578,6 +577,22 @@ enum eControlTimedEventType
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 struct ControlAnnouncementData
 {
 	bool isInitialized = false
@@ -780,7 +795,6 @@ struct {
 
 
 
-
 } file
 
 
@@ -815,6 +829,7 @@ void function Control_Init()
 		return
 
 	
+
 
 
 
@@ -1512,6 +1527,132 @@ array< featureTutorialTab > function Control_PopulateAboutText()
 
 	return tabs
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7830,6 +7971,17 @@ string function Control_GetObjectiveNameFromObjectiveID( int objectiveID )
 
 
 
+
+
+
+
+
+
+
+
+
+
+
 bool function Control_IsPointAnFOB( int pointIndex )
 {
 	return pointIndex == eControlWaypointTypeIndex.OBJECTIVE_A || pointIndex == eControlWaypointTypeIndex.OBJECTIVE_C
@@ -7852,6 +8004,15 @@ bool function Control_IsSpawnWaypointIndexAnObjective( int waypointIndex )
 {
 	return waypointIndex == eControlWaypointTypeIndex.OBJECTIVE_A || waypointIndex == eControlWaypointTypeIndex.OBJECTIVE_B || waypointIndex == eControlWaypointTypeIndex.OBJECTIVE_C
 }
+
+
+
+
+
+
+
+
+
 
 
 

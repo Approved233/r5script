@@ -1,0 +1,210 @@
+
+
+
+
+const array< string > BASE_ITEMFLAV_TYPES =
+[
+	"calevents",
+	"ranked2Pt0Periods",
+	"entitlements",
+	"characters",
+	"weapons",
+	"meleeWeapons",
+	"loadscreens",
+	"images2D",
+	"musicPacks",
+	"diveTrails",
+	"stickers",
+	"vouchers",
+	"packs",
+	"currencyBundles",
+	"apexCoinAmounts",
+	"pings",
+	"clubLogoElements",
+	"clubSearchTags",
+	"beginnerChallenges",
+	"classes",
+	"battlepassPresaleVouchers",
+	"battlepassPurchasableXP",
+	"boostTypes",
+	"boostEvents",
+	"eventAbilities",
+	"keplerScenarios"
+] 
+
+const array< string > CHARACTER_ITEM_TYPES =
+[
+	"skins",
+	"executions",
+	"emotes",
+	"skydiveEmotes",
+	"introQuips",
+	"killQuips",
+	"gcardStances",
+	"gcardFrames",
+	"gcardBadges",
+	"gcardStatTrackers",
+	"emoteIcons",
+	"nonCombatPets",
+	"mythicBundles"
+] 
+
+const array< string > MAIN_WEAPON_ITEM_TYPES =
+[
+	"skins",
+	"charms"
+] 
+
+const array< string > MELEE_WEAPON_ITEM_TYPES =
+[
+	"skins"
+] 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

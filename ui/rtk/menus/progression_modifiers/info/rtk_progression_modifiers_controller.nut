@@ -1,4 +1,3 @@
-
 global function RTKProgressionModifiersBoost_OnInitialize
 global function RTKProgressionModifiersBoost_OnDestroy
 global function InitRTKProgressionModifiersMenu
@@ -137,4 +136,3 @@ void function AppendLegacyBoostsToModel( array<RTKProgressionModifiersBoostModel
 	model.append( GenerateLegacyPartyUpBoostModel() )
 	model.append( GenerateLegacyXPBoostModel( GetLegacyXPBoostPercentage() ) )
 }
-      

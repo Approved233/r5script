@@ -16,8 +16,11 @@ void function RTKFooterButton_OnInitialize( rtk_behavior self )
 		self.AutoSubscribe( btn, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( self ) {
 			int activateGUID = self.PropGetInt( "activateGUID" )
 			printl( "Footer button pressed. keyCode:" + keycode + ", activateGUID:" + activateGUID )
-			EmitUISound( "ui_menu_accept" )
-			RTKFooters_OnFooterActivate( activateGUID )
+			if ( activateGUID != -1 )
+			{
+				EmitUISound( "ui_menu_accept" )
+				RTKFooters_OnFooterActivate( activateGUID )
+			}
 		} )
 	}
 }

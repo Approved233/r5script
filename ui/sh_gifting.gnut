@@ -150,12 +150,16 @@ bool function HasFriendshipTenureBeenLongEnough( int friendshipCreationTime )
 	if ( !IsConnected() )
 		return false
 
+	int minFriendshipInDays = GetConVarInt( "mtx_giftingMinFriendshipInDays" )
+#if DEV
+		if (minFriendshipInDays == 0)
+			return true
+#endif
 	int currentTime = GetUnixTimestamp()
 	int friendshipLengthInSeconds = currentTime - friendshipCreationTime
 
 	
 	int friendshipLengthInDays = friendshipLengthInSeconds / (  60 * 60 * 24 )
-	int minFriendshipInDays = GetConVarInt( "mtx_giftingMinFriendshipInDays" )
 
 	return friendshipLengthInDays >= minFriendshipInDays
 }

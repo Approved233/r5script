@@ -23,9 +23,7 @@ global struct PostGameMasteryXpChangesModel
 	int xpChange = 0
 
 	bool leveledUp = false
-
-		bool boosted = false
-
+	bool boosted = false
 	array< MasteryXpChangesActionsModel > actions = []
 }
 
@@ -87,9 +85,7 @@ void function BuildWeaponXPDataModel(  rtk_behavior self, rtk_struct postGameWea
 		weaponXp.currentLevel = Mastery_CalculateLevelFromXP( matchXP.currentXP )
 		weaponXp.xpChange     = weaponXp.currentXP - weaponXp.lastXP
 		weaponXp.leveledUp 	  = weaponXp.lastLevel < weaponXp.currentLevel
-
-			weaponXp.boosted	  = matchXP.lastBonusXP > 0
-
+		weaponXp.boosted	  = matchXP.lastBonusXP > 0
 
 		array< MasteryXpChangesActionsModel > xpChangesActions = []
 		int actionXPIndex = 0
@@ -105,21 +101,19 @@ void function BuildWeaponXPDataModel(  rtk_behavior self, rtk_struct postGameWea
 			xpChangesActions.push( xpChangesAction )
 		}
 
-
-			if( matchXP.lastBonusXP > 0 )
-			{
-				MasteryXpChangesActionsModel xpChangesAction
-				xpChangesAction.index = actionXPIndex
-				xpChangesAction.action = "#PROGRESSION_MODIFIERS_MASTERY_WEAPON_TOOLTIP_TITLE"
-				int baseXP = weaponXp.xpChange - matchXP.lastBonusXP
-				float modifiedPercent = baseXP == 0 ? 0.0 : float ( weaponXp.xpChange ) / float( baseXP )
-				int bonusPercentage = int ( ( modifiedPercent - 1 ) * 100 )
-				string categoryName = Localize( ItemFlavor_GetLongName( WeaponItemFlavor_GetCategory( weapon ) ) )
-				xpChangesAction.actionDescription = Localize( "#PROGRESSION_MODIFIERS_MASTERY_WEAPON_TOOLTIP_DESC", bonusPercentage, categoryName )
-				xpChangesAction.xp = matchXP.lastBonusXP
-				xpChangesActions.push( xpChangesAction )
-			}
-
+		if( matchXP.lastBonusXP > 0 )
+		{
+			MasteryXpChangesActionsModel xpChangesAction
+			xpChangesAction.index = actionXPIndex
+			xpChangesAction.action = "#PROGRESSION_MODIFIERS_MASTERY_WEAPON_TOOLTIP_TITLE"
+			int baseXP = weaponXp.xpChange - matchXP.lastBonusXP
+			float modifiedPercent = baseXP == 0 ? 0.0 : float ( weaponXp.xpChange ) / float( baseXP )
+			int bonusPercentage = int ( ( modifiedPercent - 1 ) * 100 )
+			string categoryName = Localize( ItemFlavor_GetLongName( WeaponItemFlavor_GetCategory( weapon ) ) )
+			xpChangesAction.actionDescription = Localize( "#PROGRESSION_MODIFIERS_MASTERY_WEAPON_TOOLTIP_DESC", bonusPercentage, categoryName )
+			xpChangesAction.xp = matchXP.lastBonusXP
+			xpChangesActions.push( xpChangesAction )
+		}
 
 		weaponXp.actions = xpChangesActions
 		weaponXpChanges.push( weaponXp )

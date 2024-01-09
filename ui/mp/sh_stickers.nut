@@ -44,6 +44,7 @@ global function Sticker_GetDecalScale
 
 
 
+
 #if DEV
 global function DEV_PrintStickerLoadout
 #endif
@@ -122,7 +123,7 @@ void function RegisterStickers()
 		stickerItemList.append( stickerItem )
 	}
 
-	MakeItemFlavorSet( stickerItemList, fileLevel.stickerSortOrdinalMap )
+	MakeItemFlavorSet( stickerItemList, fileLevel.stickerSortOrdinalMap, true )
 
 	foreach ( int stickerObjectType in eStickerObjectType )
 	{
@@ -615,3 +616,13 @@ void function DEV_PrintStickerLoadout()
 	printt( "phoenixKitStickerSlot contains:   ", string(ItemFlavor_GetAsset( phoenixKitSticker )) )
 }
 #endif
+
+
+
+
+
+
+
+
+
+

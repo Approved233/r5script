@@ -155,6 +155,7 @@ enum eChallengeCategory
 	DAILY,
 	TOP_WEEKLY,
 	EVENTSHOP_DAILY_CHALLENGE,
+	EVENTSHOP_EVENT_CHALLENGE,
 	FAVORITES,
 }
 
@@ -209,6 +210,7 @@ global enum eChallengeTimeSpanKind
 {
 	BEGINNER,
 	EVENTSHOP_DAILY_CHALLENGE, 
+	EVENTSHOP_EVENT_CHALLENGE, 
 	DAILY,
 	SEASON_WEEKLY,
 	SEASON_WEEKLY_RECURRING,
@@ -264,10 +266,8 @@ global struct ChallengeProgressData
 	bool        isEventMain
 	bool        isPinned
 	bool		isAlt
-
 	int         bonus
 	int			progressBonus
-
 
 	array<ChallengeProgressData> groupArray
 }
@@ -601,17 +601,11 @@ void function ShChallenges_LevelInit_PostStats()
 
 					StatEntry stat = GetStatEntryByRef( statRef )
 
-					if ( (StatEntry_GetFlags( stat ) & eStatFlags.STORE_START_OF_PREVIOUS_MATCH) == 0 )
-					{
-						Assert( false, format( "Challenge '%s' refers to stat that does not have the STORE_END_OF_PREVIOUS_MATCH flag: '%s'", string(ItemFlavor_GetAsset( challenge )), statRef ) )
-						continue
-					}
-
-					if ( (StatEntry_GetFlags( stat ) & eStatFlags.PERSISTENCE_WRITE_IMMEDIATELY) == 0 )
-					{
-						Assert( false, format( "Challenge '%s' refers to stat that does not have the PERSISTENCE_WRITE_IMMEDIATELY flag: '%s'", string(ItemFlavor_GetAsset( challenge )), statRef ) )
-						continue
-					}
+					
+					
+					
+					
+					
 
 					if ( Challenge_GetTimeSpanKind( challenge ) == eChallengeTimeSpanKind.EVENT_HIDDEN )
 					{
@@ -644,11 +638,6 @@ void function ShChallenges_LevelInit_PostStats()
 
 
 		thread InitChallengesThread()
-
-
-	
-
-
 
 }
 
@@ -745,8 +734,6 @@ void function OnChallengeRegistered( ItemFlavor challenge )
 {
 	
 }
-
-
 
 
 
@@ -985,7 +972,7 @@ void function UpdateLobbyChallengeMenu()
 	}
 	else
 	{
-		if ( IsEventShopChallengeCategory( challengeCategory ) && EventShop_CurrentActiveEventShopHasDailyChallenges() )
+		if ( IsEventShopChallengeCategory( challengeCategory ) && ( EventShop_CurrentActiveEventShopHasDailyChallenges() || EventShop_CurrentActiveEventShopHasEventChallenges() ) )
 		{
 			currentEvent = currentEventShop
 		}
@@ -1236,6 +1223,10 @@ array<ItemFlavor> function GetChallengesByCategory( entity player, int challenge
 
 			case eChallengeCategory.EVENTSHOP_DAILY_CHALLENGE:
 				challenges = GetAssignedChallengesByTimeSpan( player, eChallengeTimeSpanKind.EVENTSHOP_DAILY_CHALLENGE )
+				break
+
+			case eChallengeCategory.EVENTSHOP_EVENT_CHALLENGE:
+				challenges = GetAssignedChallengesByTimeSpan( player, eChallengeTimeSpanKind.EVENTSHOP_EVENT_CHALLENGE )
 				break
 
 				unreachable
@@ -1631,6 +1622,15 @@ array<int> function GetChallengeCategoryIDArray( bool hideStories = false )
 		categoryIDtoStringArray.append( eChallengeCategory.EVENTSHOP_DAILY_CHALLENGE )
 	}
 
+	if ( EventShop_CurrentActiveEventShopHasEventChallenges() )
+	{
+		ItemFlavor ornull activeEventShop = EventShop_GetCurrentActiveEventShop()
+		if ( EventShop_GetShowEventChallengesInLobby( expect ItemFlavor(activeEventShop) ) )
+		{
+			categoryIDtoStringArray.append( eChallengeCategory.EVENTSHOP_EVENT_CHALLENGE )
+		}
+	}
+
 
 	
 	if( !hideStories )
@@ -1752,6 +1752,10 @@ void function UpdateChallengeCategorySelection( var rui, bool longName = false, 
 				case eChallengeCategory.EVENTSHOP_DAILY_CHALLENGE:
 					int remainingDuration = GetPersistentVarAsInt( "dailyExpirationTime" ) - Daily_GetCurrentTime()
 					RuiSetGameTime( rui, "expireTime", remainingDuration > 0 ? ClientTime() + remainingDuration : RUI_BADGAMETIME )
+					RuiSetBool( rui, "eventActive", true )
+					break
+
+				case eChallengeCategory.EVENTSHOP_EVENT_CHALLENGE:
 					RuiSetBool( rui, "eventActive", true )
 					break
 			}
@@ -1908,6 +1912,10 @@ string function GetCategoryStringFromType( int categoryID, bool longName = false
 			case eChallengeCategory.EVENTSHOP_DAILY_CHALLENGE:
 				return "#CATEGORY_REWARD_SHOP_DAILY" + appendStr
 				break
+
+			case eChallengeCategory.EVENTSHOP_EVENT_CHALLENGE:
+				return "#CATEGORY_REWARD_SHOP_EVENT" + appendStr
+				break
 		}
 	}
 
@@ -1999,6 +2007,26 @@ array<ChallengeGroupData> function GetPlayerChallengeGroupData( entity player )
 	challenges = GetAssignedChallengesByTimeSpan( player, eChallengeTimeSpanKind.EVENT_SPECIAL )
 	groupData.append( CreateChallengeGroup( player, Localize( "#CHALLENGE_GROUP_EVENT_SPECIAL" ), challenges, eChallengeTimeSpanKind.EVENT_SPECIAL ) )
 
+	
+	ItemFlavor ornull currentEventShop = EventShop_GetCurrentActiveEventShop()
+	if ( currentEventShop != null )
+	{
+		expect ItemFlavor( currentEventShop )
+		array< ItemFlavor > currentDailyEventShopChallenges = EventShop_GetCurrentActiveEventShopDailyChallenges()
+		array< ItemFlavor > currentAssignedDailyEventShopChallenges = GetAssignedChallengesByTimeSpan( player, eChallengeTimeSpanKind.EVENTSHOP_DAILY_CHALLENGE, -1, currentEventShop )
+
+		Assert( currentDailyEventShopChallenges.len() == currentAssignedDailyEventShopChallenges.len(), "Event shop API & assigned Daily challenges API did not return arrays of equal length.")
+
+		array< ItemFlavor > currentEventEventShopChallenges = EventShop_GetCurrentActiveEventShopEventChallenges()
+		array< ItemFlavor > currentAssignedEventEventShopChallenges = GetAssignedChallengesByTimeSpan( player, eChallengeTimeSpanKind.EVENTSHOP_EVENT_CHALLENGE, -1, currentEventShop )
+
+		Assert( currentEventEventShopChallenges.len() == currentAssignedEventEventShopChallenges.len(), "Event shop API & assigned Event challenges API did not return arrays of equal length.")
+
+		EventShopData data = EventShop_GetEventShopData( currentEventShop )
+		groupData.append( CreateChallengeGroup( player, Localize( data.eventShopButtonText ), currentAssignedDailyEventShopChallenges, eChallengeTimeSpanKind.EVENTSHOP_DAILY_CHALLENGE ) )
+		groupData.append( CreateChallengeGroup( player, Localize( data.eventShopButtonText ), currentAssignedEventEventShopChallenges, eChallengeTimeSpanKind.EVENTSHOP_EVENT_CHALLENGE ) )
+	}
+
 	challenges = GetAssignedChallengesByTimeSpan( GetLocalClientPlayer(), eChallengeTimeSpanKind.DAILY )
 	groupData.append( CreateChallengeGroup( player, Localize( "#CHALLENGE_GROUP_DAILY" ), challenges, eChallengeTimeSpanKind.DAILY ) )
 
@@ -2025,20 +2053,6 @@ array<ChallengeGroupData> function GetPlayerChallengeGroupData( entity player )
 	challenges = GetFavoriteChallenges( player )
 	groupData.append( CreateChallengeGroup( player, Localize( "#CATEGORY_FAVORITES" ), challenges, eChallengeTimeSpanKind.FAVORITE ) )
 
-	
-	ItemFlavor ornull currentEventShop = EventShop_GetCurrentActiveEventShop()
-	if ( currentEventShop != null )
-	{
-		expect ItemFlavor( currentEventShop )
-		array< ItemFlavor > currentDailyEventShopChallenges = EventShop_GetCurrentActiveEventShopDailyChallenges()
-		array< ItemFlavor > currentAssignedDailyEventShopChallenges = GetAssignedChallengesByTimeSpan( player, eChallengeTimeSpanKind.EVENTSHOP_DAILY_CHALLENGE, -1, currentEventShop )
-
-		Assert( currentDailyEventShopChallenges.len() == currentAssignedDailyEventShopChallenges.len(), "Event shop API & assigned challenges API did not return arrays of equal length.")
-
-		EventShopData data = EventShop_GetEventShopData( currentEventShop )
-		groupData.append( CreateChallengeGroup( player, Localize( data.eventShopButtonText ), currentAssignedDailyEventShopChallenges, eChallengeTimeSpanKind.EVENTSHOP_DAILY_CHALLENGE ) )
-	}
-
 	return groupData
 }
 
@@ -2057,6 +2071,35 @@ array<ItemFlavor> function GetPinnedChallenges()
 
 	return pinnedChallenges
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2414,6 +2457,15 @@ bool function Challenge_IsChallengesStateInititated( entity player )
 	PlayerChallengesState pcs = GetPlayerChallengesState( player )
 	return pcs.challengeStateMap.len() > 0
 }
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4487,7 +4539,7 @@ void function UpdateChallengeBoxRowButtons( entity player, array<ItemFlavor> cha
 void function UpdateChallengeRowsRui( entity player, array<ItemFlavor> challenges, array<var> rowRuis = [] )
 {
 	
-	Assert( challenges.len() <= NUM_DAILY_CHALLENGES, "total:" + challenges.len() )
+	Assert( challenges.len() <= NUM_DAILY_CHALLENGES, "total:" + challenges.len() + " Are Event Challenges set to show a set of more than 5 challenges in the lobby?" )
 
 	foreach ( int rowIdx, var rui in rowRuis )
 	{
@@ -4710,7 +4762,7 @@ void function UpdateChallengeBoxHeader( entity player, var challengesBoxHeader, 
 		RuiSetInt( rui, "challengeTierGoal", challengesCount )
 		RuiSetInt( rui, "challengeTierProgress", challengesProgress )
 	}
-	else if ( IsEventShopChallengeCategory( challengeCat ) )
+	else if ( IsEventShopChallengeCategory( challengeCat ) || IsEventShopEventChallengeCategory( challengeCat ) )
 	{
 		Assert( eventFlav != null )
 		expect ItemFlavor( eventFlav )
@@ -4720,10 +4772,12 @@ void function UpdateChallengeBoxHeader( entity player, var challengesBoxHeader, 
 		RuiSetString( rui, "progressTitle",  "" )
 		RuiSetString( rui, "subText", "" )
 		RuiSetString( rui, "challengeCategoryString", "#EVENTS_EVENT_SHOP" )
-		RuiSetBool( rui, "useAltHeaderTextAnchor", true )
 
 		int endTime = CalEvent_GetFinishUnixTime( eventFlav )
 		int remainingDuration = endTime - GetUnixTimestamp()
+
+		asset headerImage = EventShop_GetChallengeHeaderImage( eventFlav )
+		RuiSetImage( rui, "headerImage", headerImage )
 
 		RuiSetGameTime( rui, "expireTime", remainingDuration > 0 ? ClientTime() + remainingDuration : RUI_BADGAMETIME )
 		RuiSetBool( rui, "eventActive", true )
@@ -4946,6 +5000,11 @@ void function UpdateEventShopButton( entity player, var button, ItemFlavor ornul
 			{
 				void functionref(var) headerClickHandler = (void function( var button ) : ( eventFlav ) {
 					EmitUISound( "ui_menu_accept" )
+					ItemFlavor ornull milestoneEvent = GetActiveMilestoneEvent( GetUnixTimestamp() )
+					if ( milestoneEvent != null )
+					{
+						EventsPanel_SetOpenPageIndex( eEventsPanelPage.EVENT_SHOP )
+					}
 					JumpToSeasonTab( "RTKEventsPanel" )
 				})
 
@@ -5075,8 +5134,16 @@ void function UpdateChallengeBoxButtonEvent( var mainElem, ItemFlavor ornull eve
 
 				void functionref( var ) headerClickHandler = ( void function( var button ) : ( eventFlav ) {
 					EmitUISound( "ui_menu_accept" )
-					AdvanceMenu( GetMenu( "EventShopTierDialog" ) )
+					ItemFlavor ornull milestoneEvent = GetActiveMilestoneEvent( GetUnixTimestamp() )
+					if ( milestoneEvent != null )
+					{
+						EventsPanel_SetOpenPageIndex( eEventsPanelPage.LANDING )
+					}
+						JumpToSeasonTab( "RTKEventsPanel" )
 				} )
+
+				Hud_AddEventHandler( mainElem, UIE_CLICK, headerClickHandler )
+				WORKAROUND_challengeButtonToClickHandlerMap[mainElem] <- headerClickHandler
 			}
 		}
 	}
@@ -5656,6 +5723,8 @@ void function MaybeAddChallengeClickEventToButton( var menu, var button, ItemFla
 	void functionref(var) clickHandlerXButton
 	ToolTipData toolTipData
 
+	int timeSpan = Challenge_GetTimeSpanKind( challenge )
+
 	if ( canReroll )
 	{
 		addAButtonClickEvent = true
@@ -5699,6 +5768,8 @@ void function MaybeAddChallengeClickEventToButton( var menu, var button, ItemFla
 	}
 	else
 	{
+
+
 		ItemFlavorBag challengeRewards = Challenge_GetRewards( challenge, activeTier )
 		if ( challengeRewards.flavors.len() == 1 && InspectItemTypePresentationSupported( challengeRewards.flavors[0] ) )
 		{
@@ -5719,6 +5790,11 @@ void function MaybeAddChallengeClickEventToButton( var menu, var button, ItemFla
 			toolTipData.tooltipStyle = eTooltipStyle.BUTTON_PROMPT
 			toolTipData.actionHint1  = Localize( "#VIEW_REWARD_TOOLTIP" )
 		}
+	}
+
+	if ( timeSpan == eChallengeTimeSpanKind.EVENT_SPECIAL )
+	{
+		SpecialEventChallengeToolTipSetup( button, challenge, toolTipData )
 	}
 
 	if ( allowSetFavorites && IsChallengeValidAsFavorite( GetLocalClientPlayer(), challenge ) )
@@ -5757,25 +5833,6 @@ void function MaybeAddChallengeClickEventToButton( var menu, var button, ItemFla
 			})
 		}
 	}
-
-	
-	
-
-	if ( ItemFlavor_GetGUIDString( challenge ) == "SAID01584463887" ) 
-	{
-		toolTipData.actionHint1 += "\n\n\n" + Localize( "#S18RR_METACHALLENGE_TOOLTIP" )
-
-		RemoveChallengeClickEventToButton( button )
-		RemoveChallengeRightClickEventToButton( button )
-
-		Hud_AddEventHandler( button, UIE_CLICK, clickHandlerAButton )
-		WORKAROUND_challengeButtonToClickHandlerMap[button] <- clickHandlerAButton
-
-		Hud_SetEnabled( button, true )
-
-		return
-	}
-
 
 	
 	
@@ -5906,43 +5963,6 @@ bool function DoesPlayerHaveChallenge( entity player, ItemFlavor flavor )
 	PlayerChallengesState pcs = GetPlayerChallengesState( player )
 	return (flavor in pcs.challengeStateMap)
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -6530,10 +6550,8 @@ array<ChallengeProgressData> function GetPlayerChallengesWithNewProgress( entity
 					challengeProgress.isEventMain      = isEventMain
 					challengeProgress.isPinned         = isPinned
 					challengeProgress.isAlt            = useAlt
-
 					challengeProgress.bonus            = Boost_GetPostGameChallengeBonus( player, index )
 					challengeProgress.progressBonus    = Boost_GetBonusPostGameMythicProgressBonus( player, index )
-
 
 					
 					if ( shouldGroup )
@@ -7444,7 +7462,12 @@ bool function IsStoryCategory( int challengeCategory )
 
 bool function IsEventShopChallengeCategory( int challengeCategory )
 {
-	return challengeCategory == eChallengeCategory.EVENTSHOP_DAILY_CHALLENGE
+	return challengeCategory == eChallengeCategory.EVENTSHOP_DAILY_CHALLENGE || challengeCategory == eChallengeCategory.EVENTSHOP_EVENT_CHALLENGE
+}
+
+bool function IsEventShopEventChallengeCategory( int challengeCategory )
+{
+	return challengeCategory == eChallengeCategory.EVENTSHOP_EVENT_CHALLENGE
 }
 
 ItemFlavor ornull function GetActiveBuffetEventForCategory( int t, int currCat )
@@ -7558,55 +7581,35 @@ bool function Challenge_CanBeCompletedInBR( ItemFlavor flavor )
 
 
 
+void function SpecialEventChallengeToolTipSetup( var button, ItemFlavor challenge, ToolTipData toolTipData )
+{
+	
+	
+	
+	
+	
 
+	
+	
+	
+	
+	
 
+	
+	
+	
+	
+	
 
+	
+	
+	
+	
+	
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	
+	
+	
+	
+	
+}

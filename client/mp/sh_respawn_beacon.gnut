@@ -60,6 +60,7 @@ global function GetStartingRespawnCount
 
 
 
+
 global function ServerCallback_RespawnPodStarted
 global function ServerCallback_DisplayWaitingForRespawn
 global function ServerCallback_RespawnDNAHint
@@ -203,6 +204,8 @@ struct
 		table<entity, int> chamberToBeamFX
 
 		bool mobileRespawnSpawnInProgress
+
+
 
 
 
@@ -1404,20 +1407,6 @@ void function AddBeaconEntToRespawnBeaconsArray( entity beacon )
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 bool function IsNotBusy( entity player, entity ent, int useFlags )
 {
 	if ( Bleedout_IsBleedingOut( player ) )
@@ -1459,6 +1448,22 @@ bool function Has_BR_Respawn_Restore_NoSuicide()
 	bool hasPreventSuicideExploit = IsSurvivalMode() && GetCurrentPlaylistVarBool( "has_br_respawn_restore_nosuicide", true )
 	return( hasPreventSuicideExploit )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 bool function Has_BR_Respawn_WithWeapons()
 {
@@ -2147,18 +2152,6 @@ void function ServerCallback_RespawnDNAHint()
 
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

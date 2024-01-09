@@ -5,18 +5,12 @@
 
 
 
-global function RTKAnimatorAutoPlay_InitMetaData
 global function RTKAnimatorAutoPlay_OnInitialize
 
 global struct RTKAnimatorAutoPlay_Properties
 {
 	rtk_behavior animator
 	array<string> animations
-}
-
-void function RTKAnimatorAutoPlay_InitMetaData( string behaviorType, string structType )
-{
-	RTKMetaData_BehaviorIsRuiBehavior( behaviorType, true )
 }
 
 void function RTKAnimatorAutoPlay_OnInitialize( rtk_behavior self )

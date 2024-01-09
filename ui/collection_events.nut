@@ -114,9 +114,9 @@ global struct CollectionEventRewardGroup
 }
 
 
+	global const array< int > HEIRLOOM_EVENTS = [ eItemType.calevent_collection, eItemType.calevent_themedshop, eItemType.calevent_milestone ]
 
 
-	global const array< int > HEIRLOOM_EVENTS = [ eItemType.calevent_collection, eItemType.calevent_themedshop ]
 
 
 
@@ -381,10 +381,10 @@ string function CollectionEvent_GetFrontPageGRXOfferLocation( ItemFlavor event )
 array<CollectionEventRewardGroup> function CollectionEvent_GetRewardGroups( ItemFlavor event )
 {
 
+		
+		Assert( ItemFlavor_GetType( event ) == eItemType.calevent_collection || ItemFlavor_GetType( event ) == eItemType.calevent_milestone )
 
 
-
-		Assert( ItemFlavor_GetType( event ) == eItemType.calevent_collection )
 
 	array<CollectionEventRewardGroup> groups = []
 	foreach ( var groupBlock in IterateSettingsAssetArray( ItemFlavor_GetAsset( event ), "rewardGroups" ) )
@@ -787,9 +787,9 @@ int function HeirloomEvent_GetItemCount( ItemFlavor event, bool onlyOwned, entit
 	int count = 0
 	array < ItemFlavor > eventItems
 
+	if ( ItemFlavor_GetType( event ) == eItemType.calevent_collection || ItemFlavor_GetType( event ) == eItemType.calevent_milestone )
 
 
-	if ( ItemFlavor_GetType( event ) == eItemType.calevent_collection )
 
 	{
 		eventItems = []
@@ -833,9 +833,9 @@ array<ItemFlavor> function CollectionEvent_GetEventItems( ItemFlavor event )
 {
 	array<ItemFlavor> eventItems
 
+	if ( ItemFlavor_GetType( event ) == eItemType.calevent_collection || ItemFlavor_GetType( event ) == eItemType.calevent_milestone )
 
 
-	if ( ItemFlavor_GetType( event ) == eItemType.calevent_collection )
 
 	{
 		array<CollectionEventRewardGroup> rewardGroups = CollectionEvent_GetRewardGroups( event )
@@ -910,9 +910,6 @@ int function CollectionEvent_GetCurrentMaxEventPackPurchaseCount( ItemFlavor eve
 
 	return HeirloomEvent_GetCurrentRemainingItemCount( event, player ) - ownedPackCount
 }
-
-
-
 
 
 

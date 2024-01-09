@@ -18,6 +18,7 @@ global function InitEventThematicPackDisclosureDialogContentPanel
 global function UpdateGiftButtonToolTip
 
 global function PurchaseDialog
+global function IsUserAwaitingForConfirmation
 
 global enum ePurchaseDialogStatus
 {
@@ -674,6 +675,7 @@ void function PurchaseDialog( PurchaseDialogConfig cfg )
 
 
 	bool hasApexPack = false
+	bool hasSirngePack = false
 	bool hasEventPack = false
 	bool hasThematicPack = false
 	bool hasEventThematicPack = false
@@ -766,31 +768,32 @@ void function PurchaseDialog( PurchaseDialogConfig cfg )
 
 			isOnlyPackOffer = GRXOffer_ContainsOnlySinglePack( offer )
 			hasApexPack = GRXOffer_ContainsApexPack( offer )
+			
+			hasSirngePack = GRXOffer_ContainsSirngePack( offer )
 			hasEventPack = GRXOffer_ContainsEventPack( offer )
 			hasThematicPack = GRXOffer_ContainsThematicPack( offer )
 			hasEventThematicPack = GRXOffer_ContainsEventThematicPack( offer )
 			specialPackName = Localize( GRXOffer_GetSpecialPackName( offer ) )
 
-			file.isAllApexPacks = !hasEventPack && !hasThematicPack && !hasEventThematicPack && hasApexPack
+			file.isAllApexPacks = !hasEventPack && !hasThematicPack && !hasEventThematicPack && !hasSirngePack && hasApexPack
 
 
 			bool isEventPackPurchaseOffer = isOnlyPackOffer && ( hasEventPack || hasEventThematicPack )
-			bool isApexPackPurchaseOffer = isOnlyPackOffer && !hasPurchaseLimit && hasApexPack
-
+			bool isApexPackPurchaseOffer = isOnlyPackOffer && !hasPurchaseLimit && !hasSirngePack && hasApexPack
 			if ( isApexPackPurchaseOffer || isEventPackPurchaseOffer )
 			{
 				file.activeDialog = file.packPurchaseDialog
 				RuiSetBool( Hud_GetRui( Hud_GetChild( file.activeDialog, "DialogBackground" ) ) , "isPackSelection", true )
 			}
 
-			else if ( packFlavors.len() > 1 && !file.isAllApexPacks )
+			else if ( packFlavors.len() > 1 && !file.isAllApexPacks && !hasSirngePack )
 			{
 				file.activeDialog = file.multiPackBundlePurchaseDialog
 				file.isMultipackDisclosure = true
 				RuiSetBool( Hud_GetRui( Hud_GetChild( file.activeDialog, "DialogBackground" ) ) , "isPackSelection", false )
 			}
 
-			else
+			else if( !hasSirngePack )
 			{
 				file.activeDialog = file.packBundlePurchaseDialog
 				RuiSetBool( Hud_GetRui( Hud_GetChild( file.activeDialog, "DialogBackground" ) ) , "isPackSelection", false )
@@ -856,6 +859,10 @@ void function PurchaseDialog( PurchaseDialogConfig cfg )
 	AdvanceMenu( file.activeDialog )
 }
 
+bool function IsUserAwaitingForConfirmation()
+{
+	return file.status == ePurchaseDialogStatus.AWAITING_USER_CONFIRMATION
+}
 
 void function GotoPremiumStoreTab()
 {
@@ -1078,13 +1085,11 @@ void function OnPurchaseOperationFinished( int status, GRXScriptOffer offer, Ite
 
 	if ( wasSuccessful )
 	{
-
 		offer.purchaseCount += quantity
 		if ( GRXOffer_IsPurchaseLimitReached( offer ) )
 		{
 			offer.ineligibilityCode = eIneligibilityCode.PURCHASE_LIMIT
 		}
-
 
 		
 		foreach ( item in offer.items )
@@ -1336,11 +1341,13 @@ void function UpdatePurchaseDialog()
 
 	array<GRXScriptOffer> offerList = clone file.state.purchaseOfferList
 	bool isWithPack
+	bool isMilestonePack
 	array<bool> canAffordPremiumAndCraft = [true, true] 
 
 	foreach ( GRXScriptOffer offer in offerList )
 	{
 		isWithPack = GRXOffer_ContainsPack( offer )
+		isMilestonePack = GRXOffer_ContainsSirngePack( offer )
 		array<ItemFlavorBag> priceList = clone offer.prices
 		priceList.sort( int function( ItemFlavorBag a, ItemFlavorBag b ) {
 			if ( GRXCurrency_GetCurrencyIndex( a.flavors[0] ) > GRXCurrency_GetCurrencyIndex( b.flavors[0] ) )
@@ -1462,9 +1469,8 @@ void function UpdatePurchaseDialog()
 
 
 		return
-	UpdateAffordabilityAndButtonPositions( canAffordPremiumAndCraft, isWithPack, usedPurchaseButtonCount )
+	UpdateAffordabilityAndButtonPositions( canAffordPremiumAndCraft, isWithPack, isMilestonePack, usedPurchaseButtonCount )
 }
-
 
 void function ConfirmPurchaseDialog_OnClose()
 {
@@ -1483,7 +1489,6 @@ void function ConfirmPurchaseDialog_OnClose()
 	UpdateProcessingElements()
 	Signal( uiGlobal.signalDummy, "ConfirmPurchaseClosed" )
 }
-
 
 void function ConfirmPurchaseDialog_OnNavigateBack()
 {
@@ -1506,7 +1511,6 @@ void function UpdateButtonPositions( int state, int usedButtons = 0 )
 
 	RuiSetArg( rui, "showCoins", true )
 	RuiSetArg( rui, "showPacks", !GRX_IsOfferRestricted() )
-
 
 	const float singleButtonPremiumOffset = -70
 	const float singleButtonCraftOffset = -150
@@ -1630,7 +1634,17 @@ void function SetPurchaseButtonAndTooltip( ItemFlavorBag price, var button, GRXS
 	ItemFlavor currency
 	array<int> priceArray = GRX_GetCurrencyArrayFromBag( price )
 
-	ButtonCurrencyCheck( currency, currencyName, priceArray, canAffordPremiumAndCraft, canAfford, file.activeDialog )
+	ButtonCurrencyCheck( priceArray, canAffordPremiumAndCraft, canAfford, file.activeDialog )
+
+	foreach ( currencyIndex, priceInt in priceArray )
+	{
+		if ( priceInt >= 0 )
+		{
+			currency = GRX_CURRENCIES[currencyIndex]
+			currencyName = ItemFlavor_GetShortName( currency )
+			break
+		}
+	}
 
 	currencyName = Localize( currencyName )
 
@@ -1701,7 +1715,7 @@ void function SetPurchaseButtonAndTooltip( ItemFlavorBag price, var button, GRXS
 
 }
 
-void function UpdateAffordabilityAndButtonPositions( array<bool> canAffordPremiumAndCraft, bool isWithPack, int usedPurchaseButtonCount )
+void function UpdateAffordabilityAndButtonPositions( array<bool> canAffordPremiumAndCraft, bool isWithPack, bool isMilestonePack, int usedPurchaseButtonCount )
 {
 	if ( !isWithPack )
 	{
@@ -1724,7 +1738,17 @@ void function UpdateAffordabilityAndButtonPositions( array<bool> canAffordPremiu
 	}
 	else
 	{
-		UpdateButtonPositions( eButtonDisplayStatus.NONE )
+		if ( isMilestonePack )
+		{
+			if ( !canAffordPremiumAndCraft[0] )
+				UpdateButtonPositions( eButtonDisplayStatus.ONLY_PREMIUM, usedPurchaseButtonCount )
+			else
+				UpdateButtonPositions( eButtonDisplayStatus.NONE, usedPurchaseButtonCount )
+		}
+		else
+		{
+			UpdateButtonPositions( eButtonDisplayStatus.NONE )
+		}
 	}
 }
 
@@ -1820,12 +1844,10 @@ void function UpdateCollectionPackPurchaseButton( int quantity )
 		{
 			bool isPurchasable = quantity <= CollectionEvent_GetCurrentMaxEventPackPurchaseCount( event , GetLocalClientPlayer() )
 
-
-			if ( GetConVarBool( "mtx_useIneligibilityCode" ) && isPurchasable && file.state.cfg.offer != null )
+			if ( isPurchasable && file.state.cfg.offer != null )
 			{
 				isPurchasable = GRXOffer_IsEligibleForPurchase( expect GRXScriptOffer( file.state.cfg.offer ) )
 			}
-
 
 			Hud_SetLocked( file.purchaseButtonBottomToTopList[0], !isPurchasable )
 		}
@@ -1867,8 +1889,17 @@ void function UpdateGiftButtonToolTip( var giftButton, ItemFlavorBag price, arra
 	ItemFlavor currency
 	array<int> priceArray = GRX_GetCurrencyArrayFromBag( price )
 
-	ButtonCurrencyCheck( currency, currencyName, priceArray, canAffordPremiumAndCraft, canAfford, activeDialog )
+	ButtonCurrencyCheck( priceArray, canAffordPremiumAndCraft, canAfford, activeDialog )
 
+	foreach ( currencyIndex, priceInt in priceArray )
+	{
+		if ( priceInt >= 0 )
+		{
+			currency = GRX_CURRENCIES[currencyIndex]
+			currencyName = ItemFlavor_GetShortName( currency )
+			break
+		}
+	}
 	currencyName = Localize( currencyName )
 
 	ToolTipData giftToolTipData
@@ -1895,15 +1926,15 @@ void function UpdateGiftButtonToolTip( var giftButton, ItemFlavorBag price, arra
 	}
 }
 
-void function ButtonCurrencyCheck( ItemFlavor currency, string currencyName, array<int> priceArray, array<bool> canAffordPremiumAndCraft, bool canAfford, var activeDialog  )
+void function ButtonCurrencyCheck( array<int> priceArray, array<bool> canAffordPremiumAndCraft, bool canAfford, var activeDialog  )
 {
 	foreach ( currencyIndex, priceInt in priceArray )
 	{
-		if ( priceInt == 0 )
+		if ( priceInt < 0 )
 			continue
 
-		currency = GRX_CURRENCIES[currencyIndex]
-		currencyName = ItemFlavor_GetShortName( currency )
+		ItemFlavor currency = GRX_CURRENCIES[currencyIndex]
+		string currencyName = ItemFlavor_GetShortName( currency )
 
 		if ( !canAfford )
 		{

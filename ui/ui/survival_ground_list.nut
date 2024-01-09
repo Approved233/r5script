@@ -124,6 +124,9 @@ struct FileStruct_LifetimeLevel
 
 
 
+
+
+
 }
 
 
@@ -1663,6 +1666,77 @@ void function OpenSurvivalGroundListMenu()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function ClientToUI_RestrictedLootConfirmDialog_Open( bool isBlackMarketOwner, int restrictedLootType )
 {
 	ConfirmDialogData data
@@ -1689,6 +1763,30 @@ void function ClientToUI_RestrictedLootConfirmDialog_Open( bool isBlackMarketOwn
 		OpenOKDialogFromData( data )
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

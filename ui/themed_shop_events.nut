@@ -16,6 +16,7 @@ global function ThemedShopEvent_HasSpecialsTab
 
 
 
+global function ThemedShopEvent_IsItemInStore
 global function ThemedShopEvent_GetTabText
 global function ThemedShopEvent_GetGRXOfferLocation
 global function ThemedShopEvent_GetTabTextDefaultCol
@@ -127,6 +128,15 @@ ItemFlavor ornull function GetActiveThemedShopEvent( int t )
 	return event
 }
 
+
+
+bool function ThemedShopEvent_IsItemInStore( ItemFlavor event, ItemFlavor itemFlav )
+{
+	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_themedshop )
+
+	array<GRXScriptOffer> offers = GRX_GetItemDedicatedStoreOffers( itemFlav, ThemedShopEvent_GetGRXOfferLocation( event ) )
+	return offers.len() > 0
+}
 
 
 

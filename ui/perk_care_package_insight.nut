@@ -1179,3 +1179,6 @@ bool function S16_PathfinderSkirmisherPassiveActive()
 
 
 
+
+
+

@@ -295,6 +295,7 @@ string function Squads_GetSquadNameLong( int squadIndex, bool forceWinterExpress
 
 
 
+
 int function Squads_GetArrayIndexForTeam( int team )
 {
 	return team - TEAM_IMC

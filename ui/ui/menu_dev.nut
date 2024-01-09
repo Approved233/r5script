@@ -421,10 +421,8 @@ void function SetupDefaultDevCommandsMP()
 	SetupDevCommand( "[HOVER VEHICLE] Spawn Hover Vehicle At Player", "script HoverVehicle_CreateForPlayer(gp()[0])" )
 
 
-
 	SetupDevCommand( "[WEAPON MASTERY] Toggle Weapon Mastery Debug Window", "script_client DEV_ToggleWeaponMasteryDebugWindow()" )
 	SetupDevCommand( "[WEAPON MASTERY] Dump Weapon Mastery Info", "mastery_dump" )
-
 
 
 
@@ -835,9 +833,6 @@ void function SetDevMenu_NarrativeDebug ( var _ )
 void function SetupNarrativeDebugDevMenu()
 {
 	SetupDevMenu( "Dynamic Dialogue Debug", SetDevMenu_DynamicDialogueDebug )
-
-	SetupDevMenu( "S19 Cinematic Debug Menu", SetDevMenu_S19ChronicleDebug )
-
 }
 
 void function SetDevMenu_VictorySceen( var _ )
@@ -918,27 +913,6 @@ void function SetupDynamicDialogueDebug()
 	}
 }
 
-
-void function SetDevMenu_S19ChronicleDebug( var _ )
-{
-	ChangeToThisMenu( SetupS19ChronicleDebug )
-}
-
-void function SetupS19ChronicleDebug()
-{
-	SetupDevCommand("Load Map", "launchplaylist survival_shadow_army_cinematic_debug")
-	if ( GetActiveLevel() == "mp_rr_tropic_island_mu2" )
-	{
-		SetupDevCommand("Test Hero Moment 1 (Sample Spot)", "script Cinematic_HeroMoment(0, <33205, -13867, 648>, <0,60,0>);setpos 32990.835938 -13687.494141 650.303955;setang 12.160866 -29.423136 0.000000")
-		SetupDevCommand("Test Hero Moment 2 (Sample Spot)", "script Cinematic_HeroMoment(1, <33205, -13867, 648>, <0,60,0>);setpos 32990.835938 -13687.494141 650.303955;setang 12.160866 -29.423136 0.000000")
-		SetupDevCommand("Test Hero Moment 3 (Sample Spot)", "script Cinematic_HeroMoment(2, <33205, -13867, 648>, <0,60,0>);setpos 32990.835938 -13687.494141 650.303955;setang 12.160866 -29.423136 0.000000")
-		SetupDevCommand("Test Opening Cinematic", "script thread PlayOpeningCinematic(  <34683.0547, 8913.93164, 36019.8281>, <0, 0, 0> )")
-		SetupDevCommand("Test End Cinematic", "script thread PlayEndCinematic()")
-		SetupDevCommand("Post Cinematic Fix (HACK)", "respawn; kick_all_bots")
-	}
-}
-
-
 void function SetupRespawnOverrideDevMenu()
 {
 	SetupDevCommand( "Use gamemode behaviour", "set_respawn_override off" )
@@ -1009,7 +983,7 @@ void function SetupFreelanceDevMenu()
 void function SetupPrototypesDevMenu()
 {
 
-
+		SetupDevCommand( "Change to Shadow Zombie", "script DEV_GiveShadowZombieAbilities( gp()[0] )" )
 
 }
 

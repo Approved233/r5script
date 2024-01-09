@@ -4,8 +4,9 @@ global function RTKMutator_AlphaFromShopItemState
 global function RTKMutator_TierXPosition
 global function RTKMutator_TierYPosition
 global function GetActiveTierBindingPath
-global function GetSweepstakeOffer
+global function GetSweepstakesOffer
 global function IsOfferPartOfEventShop
+global function EventShop_UpdatePreviewedOffer
 
 global struct RTKEventShopPanel_Properties
 {
@@ -112,7 +113,7 @@ struct
 	string activeTierBindingPath = ""
 	string currencyShortName = ""
 	string currencyLongName = ""
-	GRXScriptOffer& sweepstakeOffer
+	GRXScriptOffer& sweepstakesOffer
 } file
 
 void function RTKEventShopPanel_OnInitialize( rtk_behavior self )
@@ -120,9 +121,13 @@ void function RTKEventShopPanel_OnInitialize( rtk_behavior self )
 	PrivateData p
 	self.Private( p )
 
+	if ( !GRX_IsInventoryReady() || !GRX_AreOffersReady() )
+		return
 	
 	entity player = GetLocalClientPlayer()
-	file.accumulatedCurrency = GetStat_Int( player, ResolveStatEntry( CAREER_STATS.s19aw_event_currency_total), eStatGetWhen.CURRENT )
+
+	file.accumulatedCurrency = GoldenHorse_GetEventCurrencyLifetimeTotal( player )
+
 
 	rtk_struct eventShop = RTKDataModelType_CreateStruct( RTK_MODELTYPE_MENUS, "eventShop", "RTKEventShopModel" )
 	rtk_array offersArray = RTKDataModel_GetArray( RTKDataModelType_GetDataPath( RTK_MODELTYPE_MENUS, "offers", true, ["eventShop"] ) )
@@ -164,7 +169,7 @@ void function RTKEventShopPanel_OnInitialize( rtk_behavior self )
 		expect ItemFlavor( coreItemFlav )
 
 		
-		EventShopOfferData offerData = EventShop_GetOfferData( expect ItemFlavor( file.activeEventShop ), index )
+		EventShopOfferData offerData = EventShop_GetOfferByCoreItem( expect ItemFlavor( file.activeEventShop ), coreItemFlav )
 
 		
 
@@ -241,9 +246,7 @@ void function RTKEventShopPanel_OnInitialize( rtk_behavior self )
 		RTKStruct_SetValue( tierStruct, tierModel )
 	}
 
-	
-	if (file.offers.len() > 0)
-		UpdateItemPresentation( file.offers[file.offers.len() - 1] )
+	EventShop_UpdatePreviewedOffer()
 
 	
 	rtk_panel ornull offersGrid = self.PropGetPanel( "offersGrid" )
@@ -270,7 +273,7 @@ void function RTKEventShopPanel_OnInitialize( rtk_behavior self )
 
 					if ( offerData.isSweepstakesOffer )
 					{
-						file.sweepstakeOffer = file.offers[newChildIndex]
+						file.sweepstakesOffer = file.offers[newChildIndex]
 						UI_OpenEventShopSweepstakesFlowDialog()
 					}
 					else
@@ -331,9 +334,9 @@ string function GetActiveTierBindingPath()
 	return file.activeTierBindingPath
 }
 
-GRXScriptOffer function GetSweepstakeOffer()
+GRXScriptOffer function GetSweepstakesOffer()
 {
-	return file.sweepstakeOffer
+	return file.sweepstakesOffer
 }
 
 int function ItemShopState( GRXScriptOffer offer, bool isLocked )
@@ -435,6 +438,24 @@ void function UpdateItemPresentation( GRXScriptOffer offer )
 	{
 		expect ItemFlavor( offerCoreItem )
 		RunClientScript( "UIToClient_ItemPresentation", ItemFlavor_GetGUID( offerCoreItem ), -1, 1.19, false, null, false, "collection_event_ref", false, false, false, false )
+	}
+}
+
+void function EventShop_UpdatePreviewedOffer()
+{
+	if (file.offers.len() > 0)
+	{
+		foreach ( int index, GRXScriptOffer offer in file.offers )
+		{
+			EventShopOfferData offerData = EventShop_GetOfferData( expect ItemFlavor( file.activeEventShop ), index )
+			if ( offerData.isFeaturedOffer )
+			{
+				UpdateItemPresentation( file.offers[index] )
+				return
+			}
+		}
+
+		UpdateItemPresentation( file.offers[file.offers.len() - 1] )
 	}
 }
 

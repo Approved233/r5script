@@ -26,6 +26,9 @@ global function DeathScreenIsOpen
 global function DeathScreenOnReportButtonClick
 global function DeathScreenOnBlockButtonClick
 global function DeathScreenTryToggleGladCard
+
+
+
 global function DeathScreenPingRespawn
 global function DeathScreenSpectateNext
 global function DeathScreenSkipDeathCam
@@ -45,6 +48,9 @@ struct
 	bool      tabsInitialized
 	float     menuOpenTime
 	bool      isGladCardShowing = true	
+
+
+
 	bool      canShowGladCard = true	
 	bool      canReportRecapPlayer
 	int       observerMode
@@ -641,7 +647,16 @@ void function DeathScreenMenuOnNavBack()
 				if( GetGameState() < eGameState.Playing ) 
 					UI_CloseDeathScreenMenu()
 				else
-					ActivateTab( tabData, eDeathScreenPanel.SPECTATE )
+				{
+					if ( file.isEliminated && IsTabIndexEnabled( tabData, eDeathScreenPanel.SPECTATE ) )
+					{
+						ActivateTab( tabData, eDeathScreenPanel.SPECTATE )
+					}
+					else if ( InputIsButtonDown( KEY_ESCAPE ) )
+					{
+						OpenSystemMenu()
+					}
+				}
 			}
 		}
 		else
@@ -793,25 +808,27 @@ bool function CanSkipDeathCam()
 	if ( GetGameState() > eGameState.Playing )
 		return false
 
+	bool playlistEnabled = GamemodeUtility_GetKillReplayActive()
 
-	if ( IsFullyConnected() && Control_IsModeEnabled() )
+
+	if ( IsFullyConnected() && Control_IsModeEnabled() && !playlistEnabled)
 		return false
 
 
 
-	if ( IsFullyConnected() && TDM_IsModeEnabled() )
+	if ( IsFullyConnected() && TDM_IsModeEnabled() && !playlistEnabled)
 		return false
 
 
 
-	if ( IsFullyConnected() && GunGame_IsModeEnabled() )
+	if ( IsFullyConnected() && GunGame_IsModeEnabled() && !playlistEnabled)
 		return false
 
-
-
-
-
-
+	
+	
+	
+	
+	
 
 	return file.shouldShowSkip
 }
@@ -912,6 +929,13 @@ void function DeathScreenTryToggleGladCard( var button )
 	file.gladCardToggleInputData.gamepadLabel = gladCardMessageString
 	UpdateFooterLabels()
 }
+
+
+
+
+
+
+
 
 
 void function DeathScreenUpdateCursor()

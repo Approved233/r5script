@@ -259,6 +259,12 @@ void function PreviewQuip( ItemFlavor flav )
 				expect ItemFlavor( character )
 				chGUID = ItemFlavor_GetGUID( character )
 			}
+			else
+			{
+				character = LoadoutSlot_GetItemFlavor( LocalClientEHI(), Loadout_Character() )
+				expect ItemFlavor( character )
+				chGUID = ItemFlavor_GetGUID( character )
+			}
 			RunClientScript( "UIToClient_PreviewCharacterEmote", ItemFlavor_GetGUID( flav ), chGUID )
 			break
 
