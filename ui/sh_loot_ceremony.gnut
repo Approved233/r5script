@@ -5975,6 +5975,8 @@ void function OnLobbyOpenLootBoxMenu_ButtonPress( ItemFlavor ornull forceParticu
 
 void function OnLootBoxMenu_Open()
 {
+	GRX_SetOfferRefreshSuppressed( true )
+
 	UI_SetPresentationType( ePresentationType.INACTIVE )
 	Lobby_AdjustScreenFrameToMaxSize( Hud_GetChild( fileForever.menu, "ScreenFrame" ), true )
 
@@ -6014,6 +6016,8 @@ void function OnLootBoxMenu_Open()
 
 void function OnLootBoxMenu_Close()
 {
+	GRX_SetOfferRefreshSuppressed( false )
+
 	fileLevel.forceParticularPackFlav = null
 	MilestoneEvent_LootBoxMenuOnClose()
 	if ( IsSpecialItemPresentationModeActive() )
@@ -6294,6 +6298,12 @@ void function PreviewButtonOnLeaveHover( var button )
 
 void function LootBoxOpenSequenceUI( bool firstTime )
 {
+	if ( GRX_GetTotalPackCount() == 0 )
+	{
+		CloseActiveMenu()
+		return
+	}
+
 	fileLevel.lootHasBeenPresented = false
 	UpdateFooterOptions()
 	Hud_SetVisible( fileForever.storeButton, false )

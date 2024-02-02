@@ -5424,7 +5424,10 @@ int function GetCommsActionForPing( entity pingingPlayer, int pingType, entity p
 
 
 		case ePingType.LOOT:
-			return GetPingLootCommsAction( pingedEnt )
+			if ( IsValid( pingedEnt ) )
+				return GetPingLootCommsAction( pingedEnt )
+			else
+				return eCommsAction.PING_WE_GO
 
 		case ePingType.MAP_WAYPOINT:
 

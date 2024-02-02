@@ -186,6 +186,7 @@ void function UpdateValidityOfPages( array<MiniPromoPageData> pages )
 			case "prestigeskin":
 			case "monthlystoreoffer":
 			case "personalizedstore":
+			case "milestoneevent":
 				page.isValid = true
 				break
 
@@ -300,6 +301,8 @@ bool function IsLinkFormatValid( string linkType, array<string> linkData )
 	else if ( linkType == "url" && linkData.len() == 1 ) 
 		return true
 	else if ( linkType == "storeoffer" && linkData.len() == 1 )
+		return true
+	else if ( linkType == "milestoneevent" )
 		return true
 
 	return false

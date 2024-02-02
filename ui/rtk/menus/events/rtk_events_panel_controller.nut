@@ -78,6 +78,11 @@ void function RTKEventsPanel_OnInitialize( rtk_behavior self )
 		return
 	}
 
+	if ( !GRX_AreOffersReady() )
+	{
+		return
+	}
+
 	file.didInitialize = true
 
 	rtk_struct activeEvents = RTKDataModelType_CreateStruct( RTK_MODELTYPE_COMMON, "activeEvents" )

@@ -175,16 +175,63 @@ void function TitanSword_Super_OnWeaponActivate( entity player, entity weapon )
 	}
 	else
 	{
-		if ( !weapon.HasMod( TITAN_SWORD_SUPER_MOD ) )
+		
+		if ( GetCurrentPlaylistVarBool( "titan_sword_super_activate_hotfix", true ) )
 		{
-			weapon.RemoveMod( TITAN_SWORD_SUPER_MOD )
+			if ( weapon.HasMod( TITAN_SWORD_SUPER_MOD ) )
+			{
+				weapon.RemoveMod( TITAN_SWORD_SUPER_MOD )
+			}
+		}
+		else
+		{
+			if ( !weapon.HasMod( TITAN_SWORD_SUPER_MOD ) )
+			{
+				weapon.RemoveMod( TITAN_SWORD_SUPER_MOD )
+			}
 		}
 	}
 
 
 
 
+
+
+
+
+
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function TitanSword_Super_OnWeaponDeactivate( entity player, entity weapon )
 {
 	TitanSword_Super_StopGlowingVFX( weapon )

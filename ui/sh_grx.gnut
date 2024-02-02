@@ -124,6 +124,7 @@ global function GRX_GetPackFlavOfType
 
 
 
+
 global function GRX_GetAllPackFlavors
 global function GRX_GetPackCounts
 global function GRX_GetTotalPackCount
@@ -162,6 +163,7 @@ global function GRX_IsBadLuckProtectionActive
 global function GRXPack_GetOpenButtonIcon
 global function GRX_InitScriptOfferFromStoreOffer
 global function GRX_AreStoreSectionsEnabled
+global function GRX_SetOfferRefreshSuppressed
 
 
 
@@ -191,6 +193,7 @@ global function DEV_GRX_TestPurchase
 global function DEV_GRX_PreviewStoreItem
 
 #endif
+
 
 
 
@@ -533,6 +536,7 @@ struct PlayerGRXScriptState
 
 
 
+
 		bool isInventoryReady
 		bool isInventoryValidated = false
 		bool hasInventoryEverBeenClean = false
@@ -712,6 +716,7 @@ void function ShGRX_LevelInit()
 
 
 	RegisterSignal( "ScriptGRXOperationDone" )
+
 
 
 
@@ -1922,6 +1927,12 @@ ItemFlavor ornull function GRX_GetPackFlavOfType( entity player, int packType )
 	}
 	return null
 }
+
+
+
+
+
+
 
 
 
@@ -3610,6 +3621,19 @@ bool function DisplayQueuedRewardsGiven()
 
 	return false
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5616,6 +5640,18 @@ array<ItemFlavor> function GRX_GetStickerPacksWithRewards()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 bool function GRX_IsOfferRestricted( entity player = null )
 {
 
@@ -5926,5 +5962,13 @@ bool function GRX_IsLegendOffer( GRXScriptOffer offer )
 bool function GRX_AreStoreSectionsEnabled()
 {
 	return ( GetConVarBool( "mtx_store_sections_enabled" ) && GetCurrentPlaylistVarBool( "grx_store_sections_enabled", true ) )
+}
+
+
+
+void function GRX_SetOfferRefreshSuppressed( bool isSuppressed )
+{
+	printf( "Setting offer refresh suppressed state: " + isSuppressed )
+	Remote_ServerCallFunction( "ClientCallback_SetOfferRefreshSuppressed", isSuppressed )
 }
 

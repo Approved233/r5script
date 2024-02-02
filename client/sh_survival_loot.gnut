@@ -1645,7 +1645,10 @@ bool function SURVIVAL_Loot_RunConditionalCheck( string ref, entity player )
 array<string> function GetAttachPointsForAttachment( string attachmentName )
 {
 	if ( !IsValidAttachment( attachmentName ) )
+	{
 		Assert( false, "Attachment " + attachmentName + " not defined in datatable/weapon_attachment_matrix.rpak" )
+		return []
+	}
 
 	AttachmentData aData = GetAttachmentData( attachmentName )
 	return aData.attachPoints

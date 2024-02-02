@@ -902,6 +902,11 @@ bool function ShouldBlastHitVictim( vector startPos, vector blastVector, vector 
 	{
 		vector blastToPlayer = Normalize( victim.GetWorldSpaceCenter() - startPos )
 
+		if( IsTrainingDummie( victim ) && !victim.IsEntAlive() ) 
+		{
+			return false
+		}
+
 		
 		if ( DotProduct( blastVecNormalized, blastToPlayer ) > 0.0 )
 		{

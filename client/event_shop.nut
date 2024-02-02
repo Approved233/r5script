@@ -509,9 +509,15 @@ array<EventShopOfferData> function EventShop_GetOffers( ItemFlavor event )
 
 
 
-EventShopOfferData function EventShop_GetOfferData( ItemFlavor event, int index )
+EventShopOfferData ornull function EventShop_GetOfferData( ItemFlavor event, int index )
 {
 	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_event_shop )
+
+	if ( index >= fileLevel.eventShopDataMap[event].offers.len() )
+	{
+		return null
+	}
+
 	return fileLevel.eventShopDataMap[event].offers[index]
 }
 

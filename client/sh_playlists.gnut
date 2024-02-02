@@ -218,6 +218,8 @@ global const table<string, asset> GAMEMODE_IMAGE_MAP = {
 		strikeout_divided_moon = $"rui/menu/gamemode/playlist_bg_strikeout_divided_moon",
 		strikeout_olympus_mu2 = $"rui/menu/gamemode/playlist_bg_strikeout_olympus_mu2",
 		strikeout_storm_point_mu2 = $"rui/menu/gamemode/playlist_bg_strikeout_storm_point_mu2",
+		strikeout_canyonlands_hu = $"rui/menu/gamemode/playlist_bg_strikeout_kings_canyon",
+		strikeout_desertlands_hu = $"rui/menu/gamemode/playlist_bg_strikeout_worlds_edge",
 
 
 		shadow_army = $"rui/menu/gamemode/playlist_bg_shadowarmy"
@@ -402,6 +404,8 @@ global const table<string, asset> GAMEMODE_THUMBNAIL_IMAGE_MAP = {
 		strikeout_divided_moon = $"rui/menu/gamemode/playlist_bg_sq_strikeout_divided_moon",
 		strikeout_olympus_mu2 = $"rui/menu/gamemode/playlist_bg_sq_strikeout_olympus_mu2",
 		strikeout_storm_point_mu2 = $"rui/menu/gamemode/playlist_bg_sq_strikeout_storm_point_mu2",
+		strikeout_canyonlands_hu = $"rui/menu/gamemode/playlist_bg_sq_strikeout_kings_canyon",
+		strikeout_desertlands_hu = $"rui/menu/gamemode/playlist_bg_sq_strikeout_worlds_edge",
 
 
 

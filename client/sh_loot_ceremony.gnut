@@ -6497,6 +6497,16 @@ bool function IsSpecialItemPresentationModeActive()
 
 
 
+
+
+
+
+
+
+
+
+
+
 const float BLACK_FADE_TIME = 0.25
 const float BLACK_FADE_TIME_HOLD = 0.25
 

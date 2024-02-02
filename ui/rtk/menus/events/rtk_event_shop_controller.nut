@@ -269,16 +269,21 @@ void function RTKEventShopPanel_OnInitialize( rtk_behavior self )
 					continue
 
 				self.AutoSubscribe( button, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( self, newChildIndex ) {
-					EventShopOfferData offerData = EventShop_GetOfferData( expect ItemFlavor( file.activeEventShop ), newChildIndex )
+					EventShopOfferData ornull offerData = EventShop_GetOfferData( expect ItemFlavor( file.activeEventShop ), newChildIndex )
 
-					if ( offerData.isSweepstakesOffer )
+					if ( offerData != null )
 					{
-						file.sweepstakesOffer = file.offers[newChildIndex]
-						UI_OpenEventShopSweepstakesFlowDialog()
-					}
-					else
-					{
-						StoreInspectMenu_AttemptOpenWithOffer( file.offers[newChildIndex], true )
+						expect EventShopOfferData( offerData )
+
+						if ( offerData.isSweepstakesOffer )
+						{
+							file.sweepstakesOffer = file.offers[newChildIndex]
+							UI_OpenEventShopSweepstakesFlowDialog()
+						}
+						else
+						{
+							StoreInspectMenu_AttemptOpenWithOffer( file.offers[newChildIndex], true )
+						}
 					}
 				} )
 			}
@@ -402,12 +407,18 @@ void function UpdateGridTooltipInfo( int index = 0 )
 	}
 
 	
-	EventShopOfferData offerData = EventShop_GetOfferData( expect ItemFlavor( file.activeEventShop ), index )
-	if ( offerData.isSweepstakesOffer )
+	EventShopOfferData ornull offerData = EventShop_GetOfferData( expect ItemFlavor( file.activeEventShop ), index )
+
+	if ( offerData != null )
 	{
-		tooltipInfoModel.subtitleText = Localize( "#EVENTS_EVENT_SHOP_GRID_SUBTITLE_DAILY_LIMIT" )
-		tooltipInfoModel.bodyText = Localize( "#EVENTS_EVENT_SHOP_GRID_BODY_SWEEPSTAKES", purchaseLimit )
-		tooltipInfoModel.additionalText = Localize( "#EVENTS_EVENT_SHOP_GRID_COUNTER_DAILY_LIMIT", (purchaseLimit - purchaseCount), purchaseLimit )
+		expect EventShopOfferData( offerData )
+
+		if ( offerData.isSweepstakesOffer )
+		{
+			tooltipInfoModel.subtitleText = Localize( "#EVENTS_EVENT_SHOP_GRID_SUBTITLE_DAILY_LIMIT" )
+			tooltipInfoModel.bodyText = Localize( "#EVENTS_EVENT_SHOP_GRID_BODY_SWEEPSTAKES", purchaseLimit )
+			tooltipInfoModel.additionalText = Localize( "#EVENTS_EVENT_SHOP_GRID_COUNTER_DAILY_LIMIT", (purchaseLimit - purchaseCount), purchaseLimit )
+		}
 	}
 
 	
@@ -447,7 +458,15 @@ void function EventShop_UpdatePreviewedOffer()
 	{
 		foreach ( int index, GRXScriptOffer offer in file.offers )
 		{
-			EventShopOfferData offerData = EventShop_GetOfferData( expect ItemFlavor( file.activeEventShop ), index )
+			EventShopOfferData ornull offerData = EventShop_GetOfferData( expect ItemFlavor( file.activeEventShop ), index )
+
+			if ( offerData == null )
+			{
+				break
+			}
+
+			expect EventShopOfferData ( offerData )
+
 			if ( offerData.isFeaturedOffer )
 			{
 				UpdateItemPresentation( file.offers[index] )

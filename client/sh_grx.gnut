@@ -120,7 +120,9 @@ global function DEV_IsValidGRXRef
 
 
 
+
 global function GRXPack_GetTickSoundAlias
+
 
 
 
@@ -191,6 +193,7 @@ global function DEV_GRX_ForcePackResults
 
 
 #endif
+
 
 
 
@@ -533,6 +536,7 @@ struct PlayerGRXScriptState
 
 
 
+
 		bool isInventoryReady
 		bool isInventoryValidated = false
 		bool hasInventoryEverBeenClean = false
@@ -720,6 +724,7 @@ void function ShGRX_LevelInit()
 
 		Remote_RegisterServerFunction( "UICallback_AutoOpenMilestonePacks" )
 		Remote_RegisterServerFunction( "ClientCallback_acknowledge_reward", "int", 0, QUEUED_REWARDS_MAX_COUNT, "int", INT_MIN, INT_MAX )
+		Remote_RegisterServerFunction( "ClientCallback_SetOfferRefreshSuppressed", "bool" )
 
 
 
@@ -1900,6 +1905,12 @@ ItemFlavorBag function GRX_GetMostRecentPackOpeningResults()
 	fileLevel.mostRecentPackOpeningResultsOrNull = null
 	return bag
 }
+
+
+
+
+
+
 
 
 
@@ -4420,6 +4431,19 @@ void function UIToClient_GRXInventoryCleanStateChange( bool isClean, int marketp
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
 #if DEV
 
 
@@ -5616,6 +5640,18 @@ array<ItemFlavor> function GRX_GetStickerPacksWithRewards()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 bool function GRX_IsOfferRestricted( entity player = null )
 {
 
@@ -5903,6 +5939,14 @@ bool function GRX_IsItemCoveredByOfferRestrictions( ItemFlavor flav )
 
 
 #endif
+
+
+
+
+
+
+
+
 
 
 

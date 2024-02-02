@@ -71,8 +71,10 @@ struct
 	float nextOfferChangeTime = 0
 	array<MilestoneEventGrantReward> milestones
 	rtk_struct trackingModel
+	rtk_behavior self
 	
 	bool isAutoOpeningMilestonePacks = false
+	bool willTriggerMilestonePackOpen = true
 } file
 
 const int SINGLE_BUTTON_PACK_QUANTITY = 1
@@ -87,6 +89,7 @@ void function RTKMilestoneEventMainPanel_OnInitialize( rtk_behavior self )
 {
 	rtk_struct trackingPanel = RTKDataModelType_CreateStruct( RTK_MODELTYPE_MENUS, "trackingPage", "RTKMilestoneEventPanelModel" )
 	file.trackingModel = trackingPanel
+	file.self = self
 	BuildMilestoneGeneralPanelInfo( trackingPanel )
 	BuildMilestoneRewardsItemsInfo( trackingPanel )
 
@@ -104,12 +107,17 @@ void function RTKMilestoneEventMainPanel_OnInitialize( rtk_behavior self )
 	self.GetPanel().SetBindingRootPath( RTKDataModelType_GetDataPath( RTK_MODELTYPE_MENUS, "trackingPage", true ) )
 
 	thread TryOpenMilestoneRewardPack()
+	AddCallbackAndCallNow_OnGRXOffersRefreshed( OnGRXStateChanged )
+	AddCallback_OnGRXInventoryStateChanged( OnGRXStateChanged )
+
 }
 
 void function RTKMilestoneEventMainPanel_OnDestroy( rtk_behavior self )
 {
 	Signal( uiGlobal.signalDummy, "EndAutoAdvanceFeaturedItems" )
 	RTKDataModelType_DestroyStruct( RTK_MODELTYPE_MENUS, "trackingPage" )
+	RemoveCallback_OnGRXOffersRefreshed( OnGRXStateChanged )
+	RemoveCallback_OnGRXInventoryStateChanged( OnGRXStateChanged )
 }
 
 void function BuildMilestoneGeneralPanelInfo( rtk_struct trackingPanelModel )
@@ -172,6 +180,10 @@ void function SetUpButtons( rtk_behavior self )
 	}
 
 	self.AutoSubscribe( informationButton, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( self, event ) {
+		if ( file.isAutoOpeningMilestonePacks || file.willTriggerMilestonePackOpen )
+		{
+			return
+		}
 		OpenMilestonePackInfoDialog( null )
 	} )
 }
@@ -201,6 +213,10 @@ void function SetUpPurchaseButtons( rtk_behavior self, rtk_struct trackingPanelM
 	}
 
 	self.AutoSubscribe( singlePurchaseButton, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( event, singlePurchaseOffers ) {
+		if ( file.isAutoOpeningMilestonePacks || file.willTriggerMilestonePackOpen )
+		{
+			return
+		}
 		if ( singlePurchaseOffers.len() == 0 )
 		{
 			return
@@ -212,6 +228,10 @@ void function SetUpPurchaseButtons( rtk_behavior self, rtk_struct trackingPanelM
 	} )
 
 	self.AutoSubscribe( multiplePurchaseButton, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( event, multiplePurchaseOffers ) {
+		if ( file.isAutoOpeningMilestonePacks || file.willTriggerMilestonePackOpen )
+		{
+			return
+		}
 		if ( multiplePurchaseOffers.len() == 0 )
 		{
 			return
@@ -463,6 +483,7 @@ void function SetIsAutoOpeningMilestonePacks( bool isAutoOpeningPacks )
 void function MilestoneEvent_LootBoxMenuOnClose()
 {
 	SetIsAutoOpeningMilestonePacks( true )
+	file.willTriggerMilestonePackOpen = false
 	Remote_ServerCallFunction( "UICallback_AutoOpenMilestonePacks" )
 }
 
@@ -471,7 +492,7 @@ void function TryOpenMilestoneRewardPack()
 	
 	
 	
-	wait 1.6
+	file.willTriggerMilestonePackOpen = false
 	if ( !GRX_IsInventoryReady() || !GRX_AreOffersReady() )
 	{
 		return
@@ -480,17 +501,13 @@ void function TryOpenMilestoneRewardPack()
 	{
 		return
 	}
-	if ( file.activeEvent == null )
-	{
-		return
-	}
+
 	ItemFlavor ornull activeEvent = file.activeEvent
 	if ( activeEvent == null )
 	{
 		return
 	}
 	expect ItemFlavor( activeEvent )
-
 	ItemFlavor mainPackFlav = MilestoneEvent_GetMainPackFlav( activeEvent )
 	int mainPackFlavCount =  GRX_GetPackCount( ItemFlavor_GetGRXIndex( mainPackFlav ) )
 	ItemFlavor guaranteedPackFlav = MilestoneEvent_GetGuaranteedPackFlav( activeEvent )
@@ -501,7 +518,9 @@ void function TryOpenMilestoneRewardPack()
 		return
 	}
 	
+	file.willTriggerMilestonePackOpen = true
 	ItemFlavor milestonePackFlav = mainPackFlavCount > 0 ? mainPackFlav : guaranteedPackFlav
+	wait 1.6
 	OnLobbyOpenLootBoxMenu_ButtonPress( milestonePackFlav )
 }
 
@@ -510,4 +529,16 @@ void function ResetCarouselVars()
 	file.lastOfferChangeTimeUpdate = -1
 	file.nextOfferChangeTime = 0
 	file.offerChangeStartTime = 0
+}
+
+void function OnGRXStateChanged()
+{
+	bool ready = GRX_IsInventoryReady() && GRX_AreOffersReady() && IsPersistenceAvailable()
+
+	if ( !ready )
+	{
+		return
+	}
+
+	SetUpPurchaseButtons( file.self, file.trackingModel )
 }

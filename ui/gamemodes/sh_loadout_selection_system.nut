@@ -166,6 +166,7 @@ const asset LOADOUTSELECTION_WEAPON_DATA_DATATABLE = $"datatable/loadoutselectio
 
 
 
+
 global enum eLoadoutSelectionSlotType
 {
 	INVALID,
@@ -225,7 +226,6 @@ global enum eLoadoutSelectionSlotType
 
 
 struct {
-
 
 
 
@@ -311,6 +311,7 @@ bool function LoadoutSelection_ShouldAvoidDuplicateWeaponsInLoadoutRotation()
 {
 	return GetCurrentPlaylistVarBool( "loadoutselection_avoid_duplicate_weapons_in_loadouts", false )
 }
+
 
 
 
@@ -1287,6 +1288,26 @@ int function LoadoutSelection_GetSelectedLoadoutSlotIndex_CL_UI()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 int function LoadoutSelection_GetWeaponCountByLoadoutIndex( int loadoutIndex )
 {
 	int weaponCount = 0
@@ -1295,9 +1316,6 @@ int function LoadoutSelection_GetWeaponCountByLoadoutIndex( int loadoutIndex )
 
 	return weaponCount
 }
-
-
-
 
 
 
