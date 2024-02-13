@@ -1,4 +1,6 @@
+global function RTKSound_InitMetaData
 global function RTKSound_OnUpdate
+global function RTKSound_OnDestroy
 
 global struct RTKSound_Properties
 {
@@ -10,6 +12,16 @@ global struct RTKSound_Properties
 struct PrivateData
 {
 	bool hasPlayed = false
+}
+
+void function RTKSound_InitMetaData( string behaviorType, string structType )
+{
+	RegisterSignal( "RTKSound_OnDestroy" )
+}
+
+void function RTKSound_OnDestroy( rtk_behavior self )
+{
+	Signal( self, "RTKSound_OnDestroy" )
 }
 
 void function RTKSound_OnUpdate( rtk_behavior self, float dt )
@@ -27,14 +39,21 @@ void function RTKSound_OnUpdate( rtk_behavior self, float dt )
 	if( sound != "" && play && !p.hasPlayed )
 	{
 		p.hasPlayed = true
-		thread RTKSound_PlayThread(self, sound, delay)
+		if ( delay < 0.01 ) 
+			EmitUISound( sound )
+		else
+			thread RTKSound_PlayThread( self, sound, delay )
 	}
 }
 
 void function RTKSound_PlayThread( rtk_behavior self, string sound, float delay )
 {
+	EndSignal( self, "RTKSound_OnDestroy" )
+
+	rtk_panel panel = self.GetPanel()
+
 	wait( delay )
 
-	if (self.GetPanel().IsActiveSelf())
+	if ( IsValid( panel ) && panel.IsActiveInHierarchy() )
 		EmitUISound( sound )
 }

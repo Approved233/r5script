@@ -4,6 +4,8 @@ global function TitanSword_Super_OnWeaponActivate
 global function TitanSword_Super_OnWeaponDeactivate
 global function TitanSword_Super_ClearMods
 
+global function TitanSword_Super_BlockAction
+
 
 global function ServerToClient_TitanSword_StartSuperFx
 global function ServerToClient_TitanSword_StopSuperFx
@@ -83,6 +85,46 @@ struct
 	var superRui
 }file
 
+bool function TitanSword_Super_BlockAction( entity player, string action )
+{
+	
+	if ( !GetCurrentPlaylistVarBool( "titan_sword_super_allow_context_blocking", true ) )
+		return false
+
+	
+	if ( !GetCurrentPlaylistVarBool( "titan_sword_super_context_" + action, true ) )
+		return false
+
+	entity weapon = TitanSword_GetMainWeapon( player )
+
+	if ( !IsValid( weapon ) )
+		return false
+
+	int activity = weapon.GetWeaponActivity()
+
+	
+	if ( activity == ACT_VM_RELOADEMPTY )
+		return true
+
+	return false
+}
+
+bool function TitanSword_Super_HotfixConsumables()
+{
+	return GetCurrentPlaylistVarBool( "titan_sword_super_consumables", true )
+}
+
+bool function TitanSword_Super_HotfixContextActions()
+{
+	
+	
+	return GetCurrentPlaylistVarBool( "titan_sword_super_context_actions", false )
+}
+
+bool function TitanSword_Super_HotfixAnimPostStart()
+{
+	return GetCurrentPlaylistVarBool( "titan_sword_super_anim_post_start", true )
+}
 
 void function MpWeaponTitanSword_Super_Init()
 {
@@ -583,6 +625,46 @@ bool function TitanSword_Super_IsActive( entity player )
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function OnSelectFirePressed( entity player )
 {
 	if ( player != GetLocalViewPlayer() )
@@ -675,6 +757,17 @@ bool function TryActivateSuper( entity player )
 
 	if ( player.IsMantling() || player.IsWallRunning() || player.IsWallHanging() )
 		return false
+
+	
+	if ( TitanSword_PostCopySanityCheck( "super_try_anim" ) )
+	{
+		if ( IsPlayerBusyOrAnimating( player ) )
+			return false
+
+		
+		if ( !PlayerInValidState( player, TitanSword_PostCopySanityCheck( "super_zip_activate" ) ) )
+			return false
+	}
 
 	entity activeWeapon = TitanSword_GetMainWeapon( player )
 	if ( !IsValid( activeWeapon ) )

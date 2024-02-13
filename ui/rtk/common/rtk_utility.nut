@@ -15,7 +15,4 @@ void function RTKAnim_SetAnimationDuration( rtk_behavior animator, string animNa
 		int tweenCount = RTKArray_GetCount( tweens )
 		for ( int j = 0; j < tweenCount; j++ )
 		{
-			RTKStruct_SetFloat( RTKArray_GetStruct( tweens, j ), "duration", duration )
-		}
-	}
-}
+			RTKStruct_SetFlo

@@ -72,10 +72,10 @@ global function LobaTacticalTranslocation_LevelInit
 
 
 
-
-
-
-
+struct
+{
+	array<entity> canceledTeleports
+}file
 
 
 
@@ -120,14 +120,6 @@ void function LobaTacticalTranslocation_LevelInit()
 
 
 }
-
-
-
-
-
-
-
-
 
 
 

@@ -1,4 +1,6 @@
 global function LeaveMatch
+global function LeaveMatch_WasInitiated
+global function LeaveMatch_ResetInitiated
 global function LeaveMatch_Freelance
 global function LeaveParty
 global function LeaveMatchAndParty
@@ -9,7 +11,18 @@ global function SendOpenInvite
 struct
 {
 	bool sendOpenInvite = false
+	bool leaveMatchInitiated = false
 } file
+
+void function LeaveMatch_ResetInitiated()
+{
+	file.leaveMatchInitiated = false
+}
+
+bool function LeaveMatch_WasInitiated()
+{
+	return file.leaveMatchInitiated
+}
 
 void function LeaveMatch()
 {
@@ -24,6 +37,8 @@ void function LeaveMatch()
 
 	CancelMatchmaking()
 	Remote_ServerCallFunction( "ClientCallback_LeaveMatch" )
+
+	file.leaveMatchInitiated = true
 }
 
 void function LeaveMatch_Freelance()

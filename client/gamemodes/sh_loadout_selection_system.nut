@@ -29,6 +29,7 @@ global function LoadoutSelection_Init
 
 
 global function LoadoutSelection_RegisterNetworking
+global function LoadoutSelection_GetWeaponLootTierForMenu
 
 
 
@@ -1176,10 +1177,9 @@ string function LoadoutSelection_GetWeaponRefByIndex( int loadoutIndex, int weap
 
 
 
-int function LoadoutSelection_GetWeaponLootTierForMenu( string weaponRef )
+int function LoadoutSelection_GetWeaponLootTierForMenu( LootData data )
 {
-	LootData data = SURVIVAL_Loot_GetLootDataByRef( weaponRef )
-	bool isLockedSet = data.baseMods.contains( "crate" ) || SURVIVAL_Weapon_IsAttachmentLocked( weaponRef )
+	bool isLockedSet = data.baseMods.contains( "crate" ) || SURVIVAL_Weapon_IsAttachmentLocked( data.ref ) || data.baseMods.contains( "hopup_april_fools_light" ) || data.baseMods.contains( "hopup_april_fools_heavy" ) || data.baseMods.contains( "hopup_april_fools_sniper" ) || data.baseMods.contains( "hopup_april_fools_energy" )
 	return isLockedSet ? data.tier : 0
 }
 
@@ -2003,7 +2003,7 @@ void function LoadoutSelection_BindWeaponButton_Thread( entity player, var eleme
 					if ( SURVIVAL_Loot_IsRefValid( item.ref ) )
 					{
 						LootData data = SURVIVAL_Loot_GetLootDataByRef( item.ref )
-						int lootTier = LoadoutSelection_GetWeaponLootTierForMenu( item.ref )
+						int lootTier = LoadoutSelection_GetWeaponLootTierForMenu( data )
 						LoadoutSelection_AttemptToSetValueInRuiIntTable( "lootTier", ruiIntNameToIntTable, lootTier )
 
 						if ( data.lootType == eLootType.MAINWEAPON )
@@ -2346,7 +2346,10 @@ int function LoadoutSelection_GetWeaponLootTeir( int loadoutIndex, int weaponInd
 	}
 
 	if ( SURVIVAL_Loot_IsRefValid( item.ref ) )
-		lootTier = LoadoutSelection_GetWeaponLootTierForMenu( item.ref )
+	{
+		LootData data = SURVIVAL_Loot_GetLootDataByRef( item.ref )
+		lootTier = LoadoutSelection_GetWeaponLootTierForMenu( data )
+	}
 
 	return lootTier
 }
@@ -2397,7 +2400,7 @@ void function UICallback_LoadoutSelection_BindWeaponElement( var element, int se
 	if ( SURVIVAL_Loot_IsRefValid( item.ref ) )
 	{
 		LootData data = SURVIVAL_Loot_GetLootDataByRef( item.ref )
-		int lootTier = LoadoutSelection_GetWeaponLootTierForMenu( item.ref )
+		int lootTier = LoadoutSelection_GetWeaponLootTierForMenu( data )
 		RuiSetInt( rui, "lootTier", lootTier )
 		if ( data.lootType == eLootType.MAINWEAPON )
 		{

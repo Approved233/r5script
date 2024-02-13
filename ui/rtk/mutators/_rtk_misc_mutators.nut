@@ -13,6 +13,22 @@ vector function RTKMutator_QualityColor( int input, bool exception )
 	return GetKeyColor( COLORID_LOOT_TIER0, input ) / 255.0
 }
 
+vector function RTKMutator_HUDQualityColor( int input, bool exception )
+{
+	if (exception)
+		return (GetKeyColor( COLORID_HUD_LOOT_TIER0, 1 ) / 255.0) * 1.6
+
+	return (GetKeyColor( COLORID_HUD_LOOT_TIER0, input ) / 255.0) * 1.6
+}
+
+vector function RTKMutator_StoreQualityColor( int input, bool exception )
+{
+	if (exception)
+		return GetKeyColor( COLORID_STORE_LOOT_TIER0, 1 ) / 255.0
+
+	return GetKeyColor( COLORID_STORE_LOOT_TIER0, input ) / 255.0
+}
+
 string function RTKMutator_QualityName( int input )
 {
 	return Localize( ItemQuality_GetQualityName( input ) )
