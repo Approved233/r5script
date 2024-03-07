@@ -166,7 +166,6 @@ StatCalcFuncInfo function SetupS20CE01CombinedBadge( StatEntry calcEntry, array<
 
 	info.calcFunc_Int = ( int function ( entity player, array< StatEntry > sourceEntries, int when ) {
 		array< ItemFlavor > hiddenChallenges = [
-			GetItemFlavorByAsset( $"settings/itemflav/challenge/s20ce01/legend_upgrades.rpak" ),
 			GetItemFlavorByAsset( $"settings/itemflav/challenge/s20ce01/hidden_wins.rpak" ),
 			GetItemFlavorByAsset( $"settings/itemflav/challenge/s20ce01/hidden_upgrades.rpak" ),
 			GetItemFlavorByAsset( $"settings/itemflav/challenge/s20ce01/hidden_placements.rpak" ),

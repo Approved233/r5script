@@ -126,7 +126,7 @@ float function Deathfield_EnforcedRingLethality_LethalityEffectDuration()
 
 bool function Deathfield_EnforcedRingLethality_LowerIconEnabled()
 {
-	return GetCurrentPlaylistVarBool( "deathfield_enforced_ring_lethality_lower_icon_enabled", false )	
+	return GetCurrentPlaylistVarBool( "deathfield_enforcedringlethality_lowericon_enabled", false )
 }
 
 
@@ -158,7 +158,7 @@ float function SimplifiedRingLethality_ResetTime()
 bool function SimplifiedRingLethality_ShouldSkipRound1()
 {
 	
-	return GetCurrentPlaylistVarBool( "simplifiedringlethality_shouldskipround1", false ) 
+	return GetCurrentPlaylistVarBool( "simplifiedringlethality_shouldskipround1", true )
 }
 
 bool function SimplifiedRingLethality_ShouldShowWarning( entity player )
@@ -181,6 +181,11 @@ bool function SimplifiedRingLethality_ShouldShowWarning( entity player )
 
 	return shouldWarn
 }
+
+
+
+
+
 
 
 

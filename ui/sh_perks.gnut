@@ -1,0 +1,1107 @@
+global asset PERK_MINIMAP_OBJECT = $"ui/minimap_square_perk_icon.rpak"
+global asset PERK_FULL_MINIMAP_OBJECT = $"ui/in_world_minimap_square_perk_icon.rpak"
+global asset PERK_IN_WORLD_HUD_OBJECT = $"ui/in_world_perk_icon_marker.rpak"
+
+
+
+
+
+
+
+
+
+
+
+global function Perks_Init
+global function Perks_RegisterClassPerk
+global function Perks_Enabled
+global function Perks_GetSettingsInfoForClassRole
+global function Perks_GetSettingsInfoForPerk
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+global enum ePerkIndex
+{
+	
+	INVALID = -1,
+	BEACON_SCAN,
+	EXTRA_BIN_LOOT,
+	DEFENSIVE_EVO_BOOST,
+	EXTRA_FIREPOWER,
+	KILL_BOOST_ULT,
+	BEACON_ENEMY_SCAN,
+	CARE_PACKAGE_INSIGHT,
+	MUNITIONS_DROP,
+	WEAPON_INFUSION,
+	MUNITIONS_BOX,
+	BANNER_CRAFTING,
+	COUNT	
+}
+
+global struct PerkInfo
+{
+	int perkId = ePerkIndex.INVALID
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+}
+
+global struct ClassRoleSettingsInfo
+{
+	array<int> perks
+
+	
+	
+	string name
+	string fullDescription
+	string shortDescription
+	vector uiColor
+	asset icon
+}
+
+global struct PerkSettingsInfo
+{
+	asset icon
+	asset mapIcon
+	asset smallMapIcon
+	string description
+	string shortDescription
+	string perkPropName
+}
+
+
+
+
+
+
+
+
+
+
+struct
+{
+	table< int, ClassRoleSettingsInfo >  classRoleToSettingsTable
+	table< int, PerkSettingsInfo  >		 perkToPerkSettingsTable
+	table< int, PerkInfo > 				 perkInfoTable
+	table< ItemFlavor, int > 		 	 characterToRoleTable
+
+
+
+
+
+
+
+} file
+
+void function Perks_Init()
+{
+	
+	AddCallback_RegisterRootItemFlavors( OnRegisterRootItemFlavors )
+	AddCallback_OnItemFlavorRegistered( eItemType.character_class, OnItemFlavorRegistered_Class )
+	AddCallback_OnItemFlavorRegistered( eItemType.character_perk, OnItemFlavorRegistered_Perk )
+
+	if ( !Perks_Enabled() )
+		return
+
+	RegisterSignal( "UpdatePerkMinimapVisibility" )
+	RegisterSignal( "HidePerkMinimapVisibility" )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	AddCallbackOrMaybeCallNow_OnAllItemFlavorsRegistered( InitializePerkTables )
+}
+
+void function OnRegisterRootItemFlavors()
+{
+	foreach ( asset characterClass in GetBaseItemFlavorsFromArray( "classes" ) )
+	{
+		if ( characterClass == $"" )
+			continue
+
+		ItemFlavor ornull classOrNull = RegisterItemFlavorFromSettingsAsset( characterClass )
+	}
+}
+
+void function OnItemFlavorRegistered_Class( ItemFlavor characterClass )
+{
+	array<int> perks = []
+	asset classAsset = ItemFlavor_GetAsset( characterClass )
+
+
+	string name = GetGlobalSettingsString( classAsset, "localizationKey_NAME" )
+	string fullDescription = "`1" + Localize( name ) + "`0:"
+
+
+
+	foreach ( var perkBlock in IterateSettingsAssetArray( classAsset, "perks" ) )
+	{
+		asset settingsAsset = GetSettingsBlockAsset( perkBlock, "flavor" )
+		if ( settingsAsset != $"" )
+		{
+			ItemFlavor ornull perk = RegisterItemFlavorFromSettingsAsset( settingsAsset )
+			if ( perk != null )
+			{
+				expect ItemFlavor( perk )
+				int perkIndex = Perks_GetPerkIndex( perk )
+				Assert( perkIndex != ePassives.INVALID )  
+				perks.append( perkIndex )
+
+
+				string shortDesc = GetGlobalSettingsString( ItemFlavor_GetAsset( perk ), "localizationKey_DESCRIPTION_SHORT" )
+				fullDescription += " "
+				fullDescription += Localize( shortDesc )
+
+			}
+		}
+	}
+
+	ClassRoleSettingsInfo settingsInfo
+	settingsInfo.perks = perks
+
+
+	string shortDescription = GetGlobalSettingsString( classAsset, "localizationKey_DESCRIPTION_SHORT" )
+	asset icon = GetGlobalSettingsAsset( classAsset, "icon" )
+	vector color = GetGlobalSettingsVector( classAsset, "uiColor" )
+	settingsInfo.fullDescription = fullDescription
+	settingsInfo.shortDescription = shortDescription
+	settingsInfo.icon = icon
+	settingsInfo.name = name
+	settingsInfo.uiColor = color
+
+
+	int role = eCharacterClassRole[GetGlobalSettingsString( classAsset, "role" )]
+	file.classRoleToSettingsTable[role] <- settingsInfo
+}
+
+void function OnItemFlavorRegistered_Perk( ItemFlavor characterPerk )
+{
+	asset perkAsset = ItemFlavor_GetAsset( characterPerk )
+	string description = GetGlobalSettingsString( perkAsset, "localizationKey_DESCRIPTION_LONG" )
+	string shortDescription = GetGlobalSettingsString( perkAsset, "localizationKey_DESCRIPTION_SHORT" )
+	string perkPropName = GetGlobalSettingsString( perkAsset, "localizationKey_PropName" )
+	asset icon = GetGlobalSettingsAsset( perkAsset, "icon" )
+	asset mapIcon = GetGlobalSettingsAsset( perkAsset, "tagIcon" )
+	asset smallMapIcon = GetGlobalSettingsAsset( perkAsset, "fullmapSmallIcon" )
+
+
+	PerkSettingsInfo settingsInfo
+	settingsInfo.icon = icon
+	settingsInfo.description = description
+	settingsInfo.shortDescription = shortDescription
+	settingsInfo.mapIcon = mapIcon
+	settingsInfo.smallMapIcon = smallMapIcon
+	settingsInfo.perkPropName = perkPropName
+
+	int perkIndex = Perks_GetPerkIndex( characterPerk )
+	file.perkToPerkSettingsTable[perkIndex] <- settingsInfo
+}
+
+
+ClassRoleSettingsInfo function Perks_GetSettingsInfoForClassRole( int role )
+{
+	if( role in file.classRoleToSettingsTable )
+		return file.classRoleToSettingsTable[role]
+	ClassRoleSettingsInfo emptyResult
+	return emptyResult
+}
+
+PerkSettingsInfo function Perks_GetSettingsInfoForPerk( int perk )
+{
+	return file.perkToPerkSettingsTable[perk]
+}
+
+int function Perks_GetPerkIndex( ItemFlavor flavor )
+{
+	Assert( ItemFlavor_GetType( flavor ) == eItemType.character_perk )
+
+	string perkRef = GetGlobalSettingsString( ItemFlavor_GetAsset( flavor ), "perkScriptRef" )
+	if ( perkRef == "" )
+		return ePerkIndex.INVALID
+
+	Assert( perkRef in ePerkIndex, "Unknown passive script ref: " + perkRef )
+	return ePerkIndex[perkRef]
+}
+
+bool function Perks_Enabled()
+{
+	return !GetCurrentPlaylistVarBool( "disable_all_perks", false )
+}
+
+bool function Perks_NotifyClassChangeOnSpawn()
+{
+	return GetCurrentPlaylistVarBool( "perks_notify_class_change_on_spawn", true )
+}
+
+void function InitializePerkTables()
+{
+	
+
+		file.characterToRoleTable.clear()		
+
+
+	array<ItemFlavor> characterArray = GetAllCharacters()
+	
+	foreach( character in characterArray )
+	{
+		int characterRole = CharacterClass_GetRole( character )
+		
+		file.characterToRoleTable[character] <- characterRole
+	}
+}
+
+void function Perks_RegisterClassPerk( PerkInfo perkToRegister )
+{
+	Assert( perkToRegister.perkId > ePerkIndex.INVALID && perkToRegister.perkId < ePerkIndex.COUNT, "Registering perk with invalid ID" )
+	file.perkInfoTable[ perkToRegister.perkId ] <- perkToRegister
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

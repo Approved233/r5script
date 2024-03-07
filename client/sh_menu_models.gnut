@@ -5446,7 +5446,7 @@ void function FlashMenuModel( entity model, int flashType, vector flashColor, bo
 	if ( !IsValid( model ) )
 		return
 
-	WaitForOdlModelLoad( model, true )
+	
 
 	WaitFrame() 
 

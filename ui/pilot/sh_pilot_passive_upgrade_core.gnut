@@ -1,0 +1,3852 @@
+global function ShPassiveUpgradeCore_Init
+global function ShPassiveUpgradeCore_LobbyInit
+global function ShPassiveUpgradeCore_NetvarsInit
+
+global function UpgradeCore_GetUpgradesForCharacter
+global function UpgradeCore_GetUpgradesForPlayer
+global function UpgradeCore_IsEquipmentArmorCore
+global function UpgradeCore_GetPlayerLevel
+global function UpgradeCore_GetSelectedUpgrades
+global function UpgradeCore_IsUpgradeSelectable
+global function UpgradeCore_IsUpgradeSelected
+global function UpgradeCore_GetArmorTierForLevel
+global function UpgradeCore_GetPlayerArmorTier
+global function GetShieldTierFromShieldAmount
+global function GetShieldCoreIconFromShieldAmount
+global function UpgradeCore_InitTuningValues
+global function UpgradeCore_IsLevelMaxLevel
+global function UpgradeCore_IsPlayerAtMaxLevel
+global function UpgradeCore_ParseUpgradeOverrides
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+global function UpgradeCore_SetProgressionLocked
+global function UpgradeCore_SetUpgradesLocked
+global function UpgradeCore_AreUpgradesLocked
+global function UpgradeCore_PlayerHasUpgradesDefined
+global function UpgradeCore_ShiftInventoryRight
+global function UpgradeCore_GladCardShowUpgrades
+global function UpgradeCore_ShowHudUpgradeSelection
+global function UpgradeCore_ShowUpgradeTreeInventory
+global function UpgradeCore_ShowUpgradesUnitframe
+global function UpgradeCore_IsEnabled
+global function UpgradeCore_ArmorTiedToUpgrades
+global function UpgradeCore_RegisterUpgradesForCharacter
+
+global function UpgradeCore_ReKnockRewardEvo
+global function UpgradeCore_GetUpgradeChoiceStructByIndex
+global function UpgradeCore_UsePersonalObituaryNotifications
+
+global function UpgradeCore_ShowUpgradeTree_LobbyMenu
+global function UpgradeCore_ShowUpgradeTree_SkillsMenu
+global function UpgradeCore_ShowUpgradeTree_CharacterSelect
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+global enum eUpgradeXPActions
+{
+	INVALID = -1,
+	RESPAWN,
+	REVIVE,
+	KNOCK,
+	ASSIST,
+	SQUADWIPE,
+	LOOTBIN,
+	BEACONSCAN,
+	RINGSCAN,
+	PERKBIN,
+	CRATEREVEAL,
+	XPSTATION,
+	EXPLORATION,
+	RINGCLOSE,
+	WILDLIFE,
+	BANNERPICKUP,
+	FINISHER,
+	CRATELOOT,
+	VAULT,
+	BOUNTY,
+	DAMAGE,
+	EXPLOSIVEHOLD,
+	FLYERKILL,
+	XPCACHE,
+	CACHESHARE,
+	SHARED_CACHE,
+	BLOODHOUNDTRIALS,
+	MODESTARTXP,
+	HUNTSUCCESS,
+	HUNTSURVIVED,
+	UNDERDOGBONUS,
+	ARMORY,
+	MINGUARANTEEDLOOT_RESPAWN,
+	COUNT
+}
+
+
+global struct UpgradeCoreChoice
+{
+	int 							passiveIndex
+
+	string							shortDesc
+	string                          title
+	string                          desc
+	asset                           icon
+
+	string 							passiveWeaponMod
+}
+
+struct UpgradeBinData
+{
+	array<entity> 	upgradedPlayers
+	entity			minimapEnt
+}
+
+struct AdrenalineStatusEffectIndexes
+{
+	int speedBoostID
+	int adrenalineVisualsID
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+struct
+{
+	table< ItemFlavor, array< ItemFlavor > > characterToPassiveUpgrades
+	table< ItemFlavor, array<SettingsAssetGUID> > characterToPassiveUpgradeOverrides
+	table< ItemFlavor , UpgradeCoreChoice > passiveFlavorToUpgradeData
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+} file
+
+struct
+{
+	array<int> xpLevelThresholds
+
+
+
+	int respawnXp = 250
+	int reviveXp = 150
+	int knockXp = 100
+	int assistXp = 75
+	int squadwipeXp = 100
+	int beaconScanXp = 200
+	int consoleScanXp = 200
+	int wildlifeClearXp = 150
+	int bannerRecoveryXp = 150
+	int finisherXp = 150
+	int carePackageOpenXp = 100
+	int vaultOpenXp = 200
+	int perkBinOpenXp = 100
+	int carePackageRevealXp = 50
+	int evoHarvesterXp = 400
+	int explosiveHoldOpenXp = 150
+	int bloodhoundTrialsXp = 250
+	int flyerKillXp = 75
+	int xpCacheSmallXp = 150
+	int xpCacheLargeXp = 500
+	int xpCacheDynamicMinXp = 500
+	float evoHarvesterTimegateDuration = 100.0
+	int largeXpThreshold = 250
+	bool shiftInventoryRight = true
+	bool showGladCardUpgrades = true
+	bool showHudUpgradeSelection = true
+	bool showUpgradeTreeInventory = true
+	bool showUpgradesUnitframe = true
+	bool isEnabled = true
+	bool upgradesLocked = false
+	bool progressionLocked = false
+	bool earnProgressWhileDead = false
+	bool awardOvermatchOnKnock = true
+	bool  awardOvermatchOnSquadWipe = true
+	bool  armorTiedToUpgrades = true
+	bool  preventFriendlyFireExploits = true
+	bool  usePersonalObitNotifications = true
+	bool  evoCacheUseDynamicAward = true
+	bool  modesSetInitialLevel = false
+	int   modesInitialLevel = 0
+	float upgradedShieldRegenRate = 2.0
+	float upgradedShieldRegenStartDelay = 0.0
+	int numEvoHarvestersToSpawn = 20
+	float upgradeSelectionReminderDelay = 60.0
+	int explorationXp = 0
+	float explorationCooldownDuration = 45.0
+	int armoryCompletionXp = 200
+	bool showUpgradeTreeLobbyMenu = true
+	bool showUpgradeTreeSkillsMenu = true
+	bool showUpgradeTreeCharacterSelect = true
+	
+	float harvesterSpawnInitialAngleDeviation = 30.0
+	float harvesterSpawnInitialMinScale= 0.4
+	float harvesterSpawnInitialMaxScale = 0.7
+	float harvesterSpawnInitialSeperationDistance = 15000.0
+	float harvesterSpawnVerticalOffset = -20.0
+	int harvesterSpawnNumRetries = 4
+	bool harvestersNotAccessibleBeforeAnnounce = true
+
+	bool preventDoubleRingScanRewards = true
+	bool messageDoubleRingScan = true
+
+	float harvester_idealTileArea = 2500.0
+	float harvester_minTileSize = 800.0
+	float harvester_minSurroundingArea = 10000.0
+	float harvester_maxSurroundingArea = 38000.0
+	float harvester_maxPathCost = 10000.0
+	int harvester_minNumAdjacentTiles = 8
+}tunings
+
+
+const string FUNCNAME_PingConsoleFromMap = "Crafting_ClientToServer_PingConsoleFromMap"
+const string FUNCNAME_ClientToServer_UpgradeCore_HandleUpgradeSelection = "Server_UpgradeCore_HandleSelection"
+const string FUNCNAME_ServerToClient_UpgradeCore_RefreshArmorHud = "ServerToClient_UpgradeCore_RefreshArmorHud"
+const string FUNCNAME_ServerToClient_UpgradeCore_Play1pEvoGainVfx = "ServerCallback_Play1P_EvoGain_VFX"
+const string FUNCNAME_ServerToClient_UpgradeCore_XPAwarded = "ServertoClient_UpgradeCore_XPAwarded"
+const string FUNCNAME_ServerToClient_UpgradeCore_ConsoleUsed = "ServerToClient_UpgradeCore_ConsoleUsed"
+const string FUNCNAME_ServerToClient_PlayFPEvoShieldUpgradeFx = "ServerCallback_PlayFPEvoShieldUpgradeFX"
+const string FUNCNAME_ServerToClient_AcknowledgeUpgradeSelection = "ServerToClient_AcknowledgeUpgradeSelection"
+const string FUNCNAME_ServerToClient_NotifyLeveledUp = "ServerToClient_NotifyLeveledUp"
+
+
+
+global const asset UPGRADE_CORE_ICON = $"rui/hud/gametype_icons/survival/data_knife"
+global const asset SHIELD_CORE_PARTICLE_SYSTEM =  $"P_Lgnd_Upgrade_Armor_Holo"
+global const string UPGRADE_SELECTED_SOUND = "UI_InGame_Ability_UpgradeSelected"
+const asset TROPHY_ELECTRICITY_FX = $"P_wpn_trophy_loop_2"
+const asset EVO_STATION_MINIMAP_ICON = $"rui/hud/gametype_icons/survival/upgrade_station_large"
+const asset EVO_STATION_MINIMAP_ICON_SMALL = $"rui/hud/gametype_icons/survival/upgrade_station_small"
+const asset EVO_HARVESTER_MODEL_OLD =  $"mdl/props/crafting_siphon/crafting_siphon.rmdl"
+const asset EVO_HARVESTER_MODEL =  $"mdl/props/evo_harvester/evo_harvester.rmdl"
+const string EVO_HARVESTER_LOOP = "Crafting_Harvester_Active_AmbientLoop_3p"
+const string EVO_HARVESTER_COLLECT_1P = "Crafting_Harvester_Active_Collect_1P"
+const string EVO_HARVESTER_COLLECT_3P = "Crafting_Harvester_Active_Collect_3P"
+const string EVO_LEVELUP_LVL1_SFX_1P = "LevelUp_LegendsUpgrade_lvl1_1P"
+const string EVO_LEVELUP_LVL2_SFX_1P = "LevelUp_LegendsUpgrade_lvl2_1P"
+const string EVO_LEVELUP_LVL3_SFX_1P = "LevelUp_LegendsUpgrade_lvl3_1P"
+const string EVO_LEVELUP_LVL1_SFX_3P = "LevelUp_LegendsUpgrade_lvl1_3P"
+const string EVO_LEVELUP_LVL2_SFX_3P = "LevelUp_LegendsUpgrade_lvl2_3P"
+const string EVO_LEVELUP_LVL3_SFX_3P = "LevelUp_LegendsUpgrade_lvl3_3P"
+const string EVO_HARVESTER_COLLECT_TEAM = "UI_InGame_Crafting_Extractor_Collect_Squad"
+global const string EVO_HARVESTER_CLOSE_IDLE_ANIM = "evo_harvester_close_idle"
+global const string EVO_HARVESTER_CLOSE_TO_OPEN_ANIM = "evo_harvester_close_to_open"
+global const string EVO_HARVESTER_FULL_IDLE_ANIM = "evo_harvester_open_idle"
+global const string EVO_HARVESTER_OPEN_TO_CLOSE_IDLE_ANIM = "evo_harvester_open_to_close"
+global const string EVO_HARVESTER_FULL_TO_EMPTY_ANIM = "evo_harvester_full_to_empty"
+global const string EVO_HARVESTER_EMPTY_IDLE_ANIM = "evo_harvester_empty_idle"
+const asset EVO_HARVESTER_IDLE_FX = $"P_siphon_idle"
+const asset UPGRADE_CORE_LEVEL_UP_FX = $"P_loba_staff_ar_init"
+const string UPGRADE_CORE_IMPACT_TABLE = "black_market_activation"
+const FX_EVO_GAIN_FEEDBACK_1P = $"P_Lgnd_Upgrade_xp"
+const vector EVO_VFX_COLOR = <255, 195, 0>
+
+
+global const string UPGRADE_CORE_SELECTED_UPGRADES = "upgrade_core_selected_upgrades"
+global const string UPGRADE_CORE_HARVESTER_ACTIVATION_TIME = "upgrade_core_harvester_activation_time"
+global const string UPGRADE_CORE_XP_NETINT = "upgrade_core_xp"
+global const string UPGRADE_CORE_CONSOLE_SCRIPT_NAME = "upgrade_console"
+
+
+
+global const string UPGRADE_CORE_LOOT_BIN_SCRIPT_NAME = "upgradeCoreBin"
+global const float POSITIONAL_GROUPING_THRESHOLD_SQR = 500 * 500
+global const int UPGRADE_CORE_NUM_EXPECTED_UPGRADES = 4
+global const int UPGRADE_CORE_NUM_EXPECTED_UPGRADES_PER_LEVEL = 2
+global const int UPGRADE_CORE_TOTAL_LEVELS = 3
+global const int UPGRADE_CORE_MAX_EXPECTED_UPGRADES = UPGRADE_CORE_TOTAL_LEVELS * UPGRADE_CORE_NUM_EXPECTED_UPGRADES_PER_LEVEL
+global const float EVO_HARVESTER_ICON_UP_OFFSET = 50 
+const string UPGRADE_CORE_DEFAULT_OVERMATCH_BONUS_XP = "0 100 150 200"
+const string UPGRADE_CORE_DEFAULT_XP_THRESHOLDS_THREE_TIER = "500 1300 1900"
+const string UPGRADE_CORE_DEFAULT_XP_THRESHOLDS_THREE_TIER_DUOS = "400 1000 1650"
+const string UPGRADE_CORE_DEFAULT_XP_THRESHOLDS_FOUR_TIER = "450 750 800 1000"
+const int UPGRADE_CORE_LARGE_XP_THRESHOLD = 250
+const float UPGRADE_CORE_LEVEL_UP_NOTI_DURATION = 4.0
+const float EVO_HARVESTER_PING_DISTANCE = 3250 
+
+void function ShPassiveUpgradeCore_Init()
+{
+
+
+
+
+	UpgradeCore_InitTuningValues()
+
+
+
+	if( !UpgradeCore_IsEnabled() )
+		return
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	UpgradeCore_ParseUpgradeOverrides()
+
+
+
+
+
+
+}
+
+void function UpgradeCore_InitTuningValues()
+{
+	tunings.isEnabled = GetCurrentPlaylistVarBool( "passive_upgrade_core_enabled", true )
+	tunings.xpLevelThresholds = UpgradeCore_GetLevelXpThresholds()
+	tunings.respawnXp = GetCurrentPlaylistVarInt( "passive_upgrade_core_respawn_xp", tunings.respawnXp )
+	tunings.reviveXp = GetCurrentPlaylistVarInt( "passive_upgrade_core_revive_xp", tunings.reviveXp )
+	tunings.knockXp = GetCurrentPlaylistVarInt( "passive_upgrade_core_knock_xp", tunings.knockXp )
+	tunings.assistXp = GetCurrentPlaylistVarInt( "passive_upgrade_core_assist_xp", tunings.assistXp )
+	tunings.squadwipeXp = GetCurrentPlaylistVarInt( "passive_upgrade_core_squadwipe_xp", tunings.squadwipeXp )
+	tunings.beaconScanXp = GetCurrentPlaylistVarInt( "passive_upgrade_core_beacon_scan_xp", tunings.beaconScanXp )
+	tunings.consoleScanXp = GetCurrentPlaylistVarInt( "passive_upgrade_xp_ring_console_scan", tunings.consoleScanXp )
+	tunings.wildlifeClearXp = GetCurrentPlaylistVarInt( "passive_upgrade_xp_wildlife_clear", tunings.wildlifeClearXp )
+	tunings.bannerRecoveryXp = GetCurrentPlaylistVarInt( "passive_upgrade_xp_banner_recovery", tunings.bannerRecoveryXp )
+	tunings.finisherXp = GetCurrentPlaylistVarInt( "passive_upgrade_xp_finisher", tunings.finisherXp )
+	tunings.carePackageOpenXp = GetCurrentPlaylistVarInt( "passive_upgrade_xp_carepackage_opened", tunings.carePackageOpenXp )
+	tunings.vaultOpenXp = GetCurrentPlaylistVarInt( "passive_upgrade_xp_vault_opened", tunings.vaultOpenXp )
+	tunings.perkBinOpenXp = GetCurrentPlaylistVarInt( "passive_upgrade_core_perk_bin_xp_grant", tunings.perkBinOpenXp )
+	tunings.carePackageRevealXp = GetCurrentPlaylistVarInt( "passive_upgrade_core_care_package_reveal_xp", tunings.carePackageRevealXp )
+	tunings.evoHarvesterXp = GetCurrentPlaylistVarInt( "passive_upgrade_core_console_xp", tunings.evoHarvesterXp )
+	tunings.explosiveHoldOpenXp = GetCurrentPlaylistVarInt( "passive_upgrade_xp_explosivehold_open", tunings.explosiveHoldOpenXp )
+	tunings.bloodhoundTrialsXp = GetCurrentPlaylistVarInt( "passive_upgrade_xp_bloodhound_tt_complete", tunings.bloodhoundTrialsXp )
+	tunings.flyerKillXp = GetCurrentPlaylistVarInt( "passive_upgrade_xp_flyerkill", tunings.flyerKillXp )
+	tunings.xpCacheSmallXp = GetCurrentPlaylistVarInt( "passive_upgrade_xp_xpcache_small", tunings.xpCacheSmallXp )
+	tunings.xpCacheLargeXp = GetCurrentPlaylistVarInt( "passive_upgrade_xp_xpcache_large", tunings.xpCacheLargeXp )
+	tunings.xpCacheDynamicMinXp = GetCurrentPlaylistVarInt( "passive_upgrade_xp_min_val_dynamic_xpcache", tunings.xpCacheDynamicMinXp )
+	tunings.largeXpThreshold = GetCurrentPlaylistVarInt( "passive_upgrade_core_xp_notification_thresholds", tunings.largeXpThreshold )
+	tunings.shiftInventoryRight = GetCurrentPlaylistVarBool( "passive_upgrade_core_shift_inventory_right", tunings.shiftInventoryRight )
+	tunings.showGladCardUpgrades = UpgradeCore_IsEnabled() && GetCurrentPlaylistVarBool( "passive_upgrade_glad_card_show_upgrades", true )
+	tunings.showHudUpgradeSelection = UpgradeCore_IsEnabled() && GetCurrentPlaylistVarBool( "passive_upgrade_show_hud_selection", true )
+	tunings.showUpgradeTreeInventory = UpgradeCore_IsEnabled() && GetCurrentPlaylistVarBool( "passive_upgrade_show_upgrade_tree_inventory", true )
+	tunings.showUpgradesUnitframe = UpgradeCore_IsEnabled() && GetCurrentPlaylistVarBool( "passive_upgrade_show_upgrade_unitframe", true )
+	tunings.earnProgressWhileDead = GetCurrentPlaylistVarBool( "passive_upgrade_core_earn_progress_while_dead_enabled", tunings.earnProgressWhileDead )
+	tunings.awardOvermatchOnKnock = GetCurrentPlaylistVarBool( "passive_upgrade_core_overmatch_award_onknock", tunings.awardOvermatchOnKnock )
+	tunings.awardOvermatchOnSquadWipe = GetCurrentPlaylistVarBool( "passive_upgrade_core_overmatch_award_onsquadwipe", tunings.awardOvermatchOnSquadWipe )
+	tunings.armorTiedToUpgrades = UpgradeCore_IsEnabled() && GetCurrentPlaylistVarBool( "passive_upgrade_armor_tied_to_upgrades", true )
+	tunings.preventFriendlyFireExploits = GetCurrentPlaylistVarBool( "passive_upgrade_core_prevent_friendlyfire_exploits", tunings.preventFriendlyFireExploits )
+	tunings.usePersonalObitNotifications = UpgradeCore_IsEnabled() && GetCurrentPlaylistVarBool( "passive_upgrade_use_personal_obituary_notifications", true )
+	tunings.evoCacheUseDynamicAward = GetCurrentPlaylistVarBool( "passive_upgrade_core_xp_xpcache_dynamicaward_enabled", tunings.evoCacheUseDynamicAward )
+	tunings.modesInitialLevel = GetCurrentPlaylistVarInt( "passive_upgrade_core_modes_initial_level", tunings.modesInitialLevel )
+	tunings.upgradedShieldRegenRate = GetCurrentPlaylistVarFloat( "passive_upgrade_core_upgrade_shield_regen_rate_per_second", tunings.upgradedShieldRegenRate )
+	tunings.upgradedShieldRegenStartDelay = GetCurrentPlaylistVarFloat( "passive_upgrade_core_upgrade_shield_regen_start_delay", tunings.upgradedShieldRegenStartDelay )
+	tunings.numEvoHarvestersToSpawn = GetCurrentPlaylistVarInt( "passive_upgrade_core_num_consoles_to_spawn", tunings.numEvoHarvestersToSpawn )
+	tunings.upgradeSelectionReminderDelay = GetCurrentPlaylistVarFloat( "passive_upgrade_core_reminder_hint_delay", tunings.upgradeSelectionReminderDelay )
+	tunings.explorationXp = GetCurrentPlaylistVarInt( "passive_upgrade_core_exploration_xp_grant", tunings.explorationXp )
+	tunings.explorationCooldownDuration = GetCurrentPlaylistVarFloat( "passive_upgrade_core_exploration_cooldown_duration", tunings.explorationCooldownDuration )
+	tunings.armoryCompletionXp = GetCurrentPlaylistVarInt( "passive_upgrade_xp_armory_complete", tunings.armoryCompletionXp )
+	tunings.showUpgradeTreeLobbyMenu = GetCurrentPlaylistVarBool( "lobby_characters_upgrade_tree_enabled", true )
+	tunings.showUpgradeTreeSkillsMenu = GetCurrentPlaylistVarBool( "skills_menu_upgrade_tree_enabled", true )
+	tunings.showUpgradeTreeCharacterSelect = GetCurrentPlaylistVarBool( "character_select_upgrade_tree_enabled", true )
+	tunings.harvesterSpawnInitialAngleDeviation = GetCurrentPlaylistVarFloat( "evo_harvester_spawn_initial_angle_deviation", tunings.harvesterSpawnInitialAngleDeviation )
+	tunings.harvesterSpawnInitialMinScale= GetCurrentPlaylistVarFloat( "evo_harvester_spawn_initial_min_scale", tunings.harvesterSpawnInitialMinScale )
+	tunings.harvesterSpawnInitialMaxScale = GetCurrentPlaylistVarFloat( "evo_harvester_spawn_initial_max_scale", tunings.harvesterSpawnInitialMaxScale )
+	tunings.harvesterSpawnInitialSeperationDistance = GetCurrentPlaylistVarFloat( "evo_harvester_spawn_initial_seperation_distance", tunings.harvesterSpawnInitialSeperationDistance )
+	tunings.harvesterSpawnVerticalOffset = GetCurrentPlaylistVarFloat( "evo_harvester_spawn_vertical_offset", tunings.harvesterSpawnVerticalOffset )
+	tunings.harvester_idealTileArea = GetCurrentPlaylistVarFloat( "evo_harvester_idealTileArea", tunings.harvester_idealTileArea )
+	tunings.harvester_minTileSize = GetCurrentPlaylistVarFloat( "evo_harvester_minTileSize", tunings.harvester_minTileSize )
+	tunings.harvester_minSurroundingArea = GetCurrentPlaylistVarFloat( "evo_harvester_minSurroundingArea", tunings.harvester_minSurroundingArea )
+	tunings.harvester_maxSurroundingArea = GetCurrentPlaylistVarFloat( "evo_harvester_maxSurroundingArea", tunings.harvester_maxSurroundingArea )
+	tunings.harvester_maxPathCost = GetCurrentPlaylistVarFloat( "evo_harvester_maxPathCost", tunings.harvester_maxPathCost )
+	tunings.harvester_minNumAdjacentTiles = GetCurrentPlaylistVarInt( "evo_harvester_minNumAdjacentTiles", tunings.harvester_minNumAdjacentTiles )
+	tunings.harvesterSpawnNumRetries = GetCurrentPlaylistVarInt( "evo_harvester_spawn_num_retries", tunings.harvesterSpawnNumRetries )
+	tunings.harvestersNotAccessibleBeforeAnnounce = GetCurrentPlaylistVarBool( "evo_harvester_noninteractive_before_time_gate", true )
+	tunings.preventDoubleRingScanRewards = GetCurrentPlaylistVarBool( "passive_upgrade_prevent_double_ring_scan_rewards", true )
+	tunings.messageDoubleRingScan = GetCurrentPlaylistVarBool( "passive_upgrade_core_ring_rescan_messaging_enabled", true )
+}
+
+void function ShPassiveUpgradeCore_NetvarsInit()
+{
+	RegisterNetworkedVariable( UPGRADE_CORE_XP_NETINT, SNDC_PLAYER_GLOBAL, SNVT_BIG_INT , 0.0 )
+	RegisterNetworkedVariable( UPGRADE_CORE_SELECTED_UPGRADES, SNDC_PLAYER_GLOBAL, SNVT_INT , 0.0 )
+	RegisterNetworkedVariable( UPGRADE_CORE_HARVESTER_ACTIVATION_TIME, SNDC_GLOBAL, SNVT_TIME , 0.0 )
+}
+
+void function ShPassiveUpgradeCore_LobbyInit()
+{
+	ShPassiveUpgradeCore_NetvarsInit()
+	UpgradeCore_InitTuningValues()
+
+
+
+
+	thread ShPassiveUpgradeCore_LobbyInit_DelayedUpgradeOverridesParse()
+}
+
+void function ShPassiveUpgradeCore_LobbyInit_DelayedUpgradeOverridesParse()
+{
+	
+	WaitFrame()
+	UpgradeCore_ParseUpgradeOverrides()
+
+
+
+}
+
+void function UpgradeCore_RegisterUpgradesForCharacter( ItemFlavor character, array<ItemFlavor> upgrades )
+{
+	array<ItemFlavor> characterUpgrades
+
+#if DEV
+
+
+
+#endif
+
+	for( int i=0; i < upgrades.len(); i++ )
+	{
+		ItemFlavor upgrade = upgrades[i]
+		UpgradeCoreChoice parsedUpgrade
+		int passiveIndex = CharacterAbility_GetPassiveIndex( upgrade )
+
+		asset upgradeAsset = ItemFlavor_GetAsset( upgrade )
+		string description = GetGlobalSettingsString( upgradeAsset, "localizationKey_DESCRIPTION_LONG" )
+		string name = GetGlobalSettingsString( upgradeAsset, "localizationKey_NAME" )
+		string shortDesc = GetGlobalSettingsString( upgradeAsset, "localizationKey_DESCRIPTION_SHORT" )
+		if( shortDesc == "" )
+			shortDesc = description
+		asset icon = GetGlobalSettingsAsset( upgradeAsset, "icon" )
+		string passiveWeaponMod = CharacterAbility_GetPassiveWeaponMod( upgrade )
+
+		parsedUpgrade.passiveIndex = passiveIndex
+
+		parsedUpgrade.desc = Localize( description )
+		parsedUpgrade.title = Localize( name )
+		parsedUpgrade.shortDesc = Localize( shortDesc )
+		parsedUpgrade.icon = icon
+
+		parsedUpgrade.passiveWeaponMod = passiveWeaponMod
+		file.passiveFlavorToUpgradeData[upgrade] <- parsedUpgrade
+		characterUpgrades.append( upgrade )
+
+#if DEV
+
+
+
+
+
+
+
+
+
+
+
+
+
+#endif
+	}
+
+	file.characterToPassiveUpgrades[character] <- characterUpgrades
+
+	UpgradeCore_ApplyOverride( character )
+}
+
+void function UpgradeCore_ApplyOverride( ItemFlavor character )
+{
+	if( !( character in file.characterToPassiveUpgradeOverrides ) )
+		return
+
+	if( !( character in file.characterToPassiveUpgrades ) )
+		return
+
+	for( int i=0; i < file.characterToPassiveUpgradeOverrides[character].len(); i++ )
+	{
+		SettingsAssetGUID guid = file.characterToPassiveUpgradeOverrides[character][i]
+		if( !IsValidItemFlavorGUID( guid ) )
+		{
+			continue
+		}
+		ItemFlavor upgradeFlav = GetItemFlavorByGUID( guid )
+		file.characterToPassiveUpgrades[character][i] = upgradeFlav
+	}
+}
+
+void function UpgradeCore_ParseUpgradeOverrides()
+{
+
+	int expectedLength = UPGRADE_CORE_NUM_EXPECTED_UPGRADES + 1
+	string overrideStr = GetCurrentPlaylistVarString( "passive_upgrade_core_overrides", "" )
+	array<string> characterOverrides = GetTrimmedSplitString( overrideStr, " " )
+	foreach( string override in characterOverrides )
+	{
+		array<string> keys = GetTrimmedSplitString( override, ":" )
+		if( keys.len() < expectedLength ) 
+		{
+			continue
+		}
+		string characterStr = keys[0]
+		if( !IsValidItemFlavorCharacterRef( characterStr ) )
+		{
+			continue
+		}
+
+		ItemFlavor characterFlavor = GetItemFlavorByCharacterRef( characterStr )
+		array<SettingsAssetGUID> overrideGuids
+		for( int i=1; i < expectedLength; i++ )
+		{
+			SettingsAssetGUID guid = ConvertItemFlavorGUIDStringToGUID(keys[i])
+			overrideGuids.append( guid )
+		}
+		file.characterToPassiveUpgradeOverrides[characterFlavor] <- overrideGuids
+		UpgradeCore_ApplyOverride( characterFlavor )
+	}
+}
+
+const array<string> ALL_ARMOR_CORE_REFS = [
+	"armor_core_pickup_lv1",
+	"armor_core_pickup_lv2",
+	"armor_core_pickup_lv3",
+	"armor_core_pickup_lv5"
+]
+
+bool function UpgradeCore_IsEquipmentArmorCore( string ref )
+{
+	return ALL_ARMOR_CORE_REFS.contains( ref )
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+array<int> function UpgradeCore_ParseStringIntoIntArray( string fullStr )
+{
+	array<string> splitStr = GetTrimmedSplitString( fullStr, " " )
+	array<int> result
+	foreach( string str in splitStr )
+	{
+		int threshold = int(str)
+		result.append( threshold )
+	}
+	return result
+}
+
+bool function UpgradeCore_ShiftInventoryRight()
+{
+	return tunings.shiftInventoryRight
+}
+
+bool function UpgradeCore_GladCardShowUpgrades()
+{
+	return tunings.showGladCardUpgrades
+}
+
+bool function UpgradeCore_ShowHudUpgradeSelection()
+{
+	return tunings.showHudUpgradeSelection
+}
+
+bool function UpgradeCore_ShowUpgradeTreeInventory()
+{
+	return tunings.showUpgradeTreeInventory
+}
+
+bool function UpgradeCore_ShowUpgradesUnitframe()
+{
+	return tunings.showUpgradesUnitframe
+}
+
+bool function UpgradeCore_IsEnabled()
+{
+	return tunings.isEnabled
+}
+
+bool function UpgradeCore_ArmorTiedToUpgrades()
+{
+	return tunings.armorTiedToUpgrades
+}
+
+bool function UpgradeCore_UsePersonalObituaryNotifications()
+{
+	return tunings.usePersonalObitNotifications && !tunings.progressionLocked
+}
+
+bool function UpgradeCore_ShowUpgradeTree_LobbyMenu()
+{
+	return tunings.showUpgradeTreeLobbyMenu
+}
+
+bool function UpgradeCore_ShowUpgradeTree_SkillsMenu()
+{
+	return tunings.showUpgradeTreeSkillsMenu
+}
+
+bool function UpgradeCore_ShowUpgradeTree_CharacterSelect()
+{
+	return tunings.showUpgradeTreeCharacterSelect
+}
+
+array<int> function UpgradeCore_Get_OvermatchXpBonuses()
+{
+	string playlistStr = GetCurrentPlaylistVarString( "passive_upgrade_core_xp_overmatch_bonuses", UPGRADE_CORE_DEFAULT_OVERMATCH_BONUS_XP )
+	array<int> xpBonuses = UpgradeCore_ParseStringIntoIntArray( playlistStr )
+	int overmatchBonusXp = 0
+	array<int> result
+	for( int i=0; i < xpBonuses.len(); i++ )
+	{
+		overmatchBonusXp += xpBonuses[i]
+		result.append( overmatchBonusXp )
+	}
+	return result
+}
+
+bool function UpgradeCore_ReKnockRewardEvo()
+{
+	return GetCurrentPlaylistVarBool( "passive_upgrade_core_reknock_grants_evo", false )
+}
+
+bool function UpgradeCore_UseUpdatedHarvesterModel()
+{
+	return GetCurrentPlaylistVarBool( "passive_upgrade_core_use_new_model_harvester", true )
+}
+
+bool function UpgradeCore_Message_ReKnocks()
+{
+	return GetCurrentPlaylistVarBool( "passive_upgrade_core_reknock_messaging_enabled", true )
+}
+
+array<int> function UpgradeCore_GetLevelXpThresholds()
+{
+	string defaults = UPGRADE_CORE_DEFAULT_XP_THRESHOLDS_THREE_TIER
+	if( GetCurrentPlaylistVarString( "pin_match_type", "survival" ) == "duo" )
+	{
+		defaults = UPGRADE_CORE_DEFAULT_XP_THRESHOLDS_THREE_TIER_DUOS
+	}
+
+	string playlistStr = GetCurrentPlaylistVarString( "passive_upgrade_core_xp_thresholds", defaults )
+	array<int> xpRequirements = UpgradeCore_ParseStringIntoIntArray( playlistStr )
+	int cumulativeXp = 0
+	array<int> result
+	for( int i=0; i < xpRequirements.len(); i++ )
+	{
+		cumulativeXp += xpRequirements[i]
+		result.append( cumulativeXp )
+	}
+	return result
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+bool function UpgradeCore_EnabledForCharacter( entity player )
+{
+	return UpgradeCore_GetUpgradesForPlayer( player ).len() > 0
+}
+
+void function UpgradeCore_SetProgressionLocked( bool val )
+{
+	tunings.progressionLocked = val
+}
+
+void function UpgradeCore_SetUpgradesLocked( bool val )
+{
+	tunings.upgradesLocked = val
+
+
+
+
+
+
+
+
+
+
+}
+
+bool function UpgradeCore_AreUpgradesLocked()
+{
+	return tunings.upgradesLocked
+}
+
+bool function UpgradeCore_PlayerHasUpgradesDefined( entity player )
+{
+	ItemFlavor characterItemFlavor = LoadoutSlot_GetItemFlavor( ToEHI( player ), Loadout_Character() )
+	return UpgradeCore_GetDefinedUpgradesForCharacter( characterItemFlavor ).len() > 0
+}
+
+array< UpgradeCoreChoice > function UpgradeCore_GetUpgradesForPlayer( entity player )
+{
+	ItemFlavor characterItemFlavor = LoadoutSlot_GetItemFlavor( ToEHI( player ), Loadout_Character() )
+	return UpgradeCore_GetUpgradesForCharacter( characterItemFlavor )
+}
+
+array< UpgradeCoreChoice > function UpgradeCore_GetUpgradesForCharacter( ItemFlavor characterItemFlavor )
+{
+	array< UpgradeCoreChoice > upgrades =  UpgradeCore_GetDefinedUpgradesForCharacter( characterItemFlavor )
+
+	if( upgrades.len() > 0 )
+		return upgrades
+
+	UpgradeCoreChoice armorChoice
+
+	armorChoice.shortDesc = "Armor"
+	armorChoice.icon = $"rui/hud/loot/loot_armor_1"
+	armorChoice.desc = "Upgrade your armor"
+	armorChoice.title = "Armor Upgrade"
+
+	armorChoice.passiveIndex = ePassives.INVALID
+	return [armorChoice, armorChoice, armorChoice, armorChoice, armorChoice, armorChoice]
+}
+
+array< UpgradeCoreChoice > function UpgradeCore_GetDefinedUpgradesForCharacter( ItemFlavor characterItemFlavor )
+{
+	if( characterItemFlavor in file.characterToPassiveUpgrades )
+	{
+		array< UpgradeCoreChoice > result
+		foreach( ItemFlavor passiveFlavor in file.characterToPassiveUpgrades[characterItemFlavor] )
+		{
+			result.append( file.passiveFlavorToUpgradeData[ passiveFlavor ] )
+		}
+		return result
+	}
+	array< UpgradeCoreChoice > emptyResult
+	return emptyResult
+}
+
+array< string > function UpgradeCore_GetUpgradeNamesForPlayer( entity player )
+{
+	ItemFlavor characterItemFlavor = LoadoutSlot_GetItemFlavor( ToEHI( player ), Loadout_Character() )
+	if( !( characterItemFlavor in file.characterToPassiveUpgrades ) )
+	{
+		return []
+	}
+	array<string> result
+	foreach( upgrade in file.characterToPassiveUpgrades[characterItemFlavor] )
+	{
+		result.append( ItemFlavor_GetHumanReadableRefForPIN_Slow( upgrade ) )
+	}
+	return result
+}
+
+int function UpgradeCore_GetPlayerLevel( entity player )
+{
+	if( !UpgradeCore_IsEnabled() )
+	{
+		return 0
+	}
+
+	int currentScore = player.GetPlayerNetInt( UPGRADE_CORE_XP_NETINT )
+	int currentLevel = 0
+
+	array<int> levelThresholds = UpgradeCore_GetLevelXpThresholds()
+	for( int i=0; i < levelThresholds.len(); i++ )
+	{
+		if( currentScore < levelThresholds[i] )
+			break
+		currentLevel = i + 1
+	}
+	currentLevel = minint( UPGRADE_CORE_TOTAL_LEVELS, currentLevel )
+
+	return currentLevel
+}
+
+bool function UpgradeCore_IsLevelMaxLevel( int curLevel )
+{
+	return curLevel == UPGRADE_CORE_TOTAL_LEVELS
+}
+
+bool function UpgradeCore_IsPlayerAtMaxLevel( entity player )
+{
+	int curLevel = UpgradeCore_GetPlayerLevel( player )
+
+	return curLevel == UPGRADE_CORE_TOTAL_LEVELS
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+array<UpgradeCoreChoice> function UpgradeCore_GetSelectedUpgrades( entity player )
+{
+	int selectedUpgradesInt = player.GetPlayerNetInt( UPGRADE_CORE_SELECTED_UPGRADES )
+	array<UpgradeCoreChoice> upgrades = UpgradeCore_GetUpgradesForPlayer( player )
+	array<UpgradeCoreChoice> selectedUpgrades
+	for( int i=0; i < UPGRADE_CORE_NUM_EXPECTED_UPGRADES; i++ )
+	{
+		int bit = 1 << i
+		if( IsBitFlagSet( selectedUpgradesInt, bit ) )
+		{
+			selectedUpgrades.append( upgrades[i] )
+		}
+	}
+	return selectedUpgrades
+}
+
+bool function UpgradeCore_IsUpgradeSelectable( entity player, int index, bool checkLevel = true )
+{
+	if ( !UpgradeCore_IsEnabled() )
+		 return false
+	int upgradesBitFlag = player.GetPlayerNetInt( UPGRADE_CORE_SELECTED_UPGRADES )
+
+	if( checkLevel )
+	{
+		int level = UpgradeCore_GetPlayerLevel( player )
+		int levelForUpgrade = index / 2 + 1
+		if( level < levelForUpgrade )
+			return false
+	}
+
+	int levelUpgradeStart = ( index / 2 ) * 2
+	return !UpgradeCore_IsUpgradeSelected( player, levelUpgradeStart ) && !UpgradeCore_IsUpgradeSelected( player, levelUpgradeStart + 1 )
+}
+
+bool function UpgradeCore_IsUpgradeSelected( entity player, int index )
+{
+	int upgradesBitFlag = player.GetPlayerNetInt( UPGRADE_CORE_SELECTED_UPGRADES )
+	return IsBitFlagSet( upgradesBitFlag, ( 1 << index )  )
+}
+
+int function UpgradeCore_GetArmorTierForLevel( int level, bool skipGold = true  )
+{
+	if( level == 4 )
+	{
+		level = 5
+	}
+	return level
+}
+
+int function UpgradeCore_GetPlayerArmorTier( entity player, bool skipGold = true )
+{
+	int level = UpgradeCore_GetPlayerLevel( player ) + 1
+	return UpgradeCore_GetArmorTierForLevel( level )
+}
+
+int function GetShieldTierFromShieldAmount( int amount )
+{
+	amount -= 25
+	int tier = 0
+	while( amount > 0 )
+	{
+		amount -= 25
+		tier += 1
+	}
+	if( tier == 4 ) 
+		tier += 1
+	return tier
+}
+
+const array<asset> ARMOR_CORE_ICONS = [
+	$"rui/hud/loot/loot_upgrade_core_0",
+	$"rui/hud/loot/loot_upgrade_core_1",
+	$"rui/hud/loot/loot_upgrade_core_2",
+	$"rui/hud/loot/loot_upgrade_core_3",
+	$"",
+	$"rui/hud/loot/loot_upgrade_core_4",
+]
+
+asset function GetShieldCoreIconFromShieldAmount( int amount )
+{
+	int tier = GetShieldTierFromShieldAmount( amount )
+
+	if ( ARMOR_CORE_ICONS.len() < tier - 1 )
+		return $""
+
+	return ARMOR_CORE_ICONS[ tier ]
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+UpgradeCoreChoice function UpgradeCore_GetUpgradeChoiceStructByIndex( entity player, int upgradeIndex )
+{
+	array<UpgradeCoreChoice> upgradesList = UpgradeCore_GetUpgradesForPlayer( player )
+	if( upgradeIndex < 0 || upgradeIndex >= upgradesList.len() )
+	{
+		UpgradeCoreChoice invalidUpgrade
+		invalidUpgrade.passiveIndex = ePassives.INVALID
+		return invalidUpgrade
+	}
+	return clone upgradesList[upgradeIndex]
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

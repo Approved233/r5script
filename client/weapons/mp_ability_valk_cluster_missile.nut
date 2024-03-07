@@ -647,6 +647,9 @@ var function OnWeaponPrimaryAttack_valk_cluster_missile( entity weapon, WeaponPr
 	if (weapon.w.valkTac_targetData.len() < 1)
 		return
 
+	if( attackParams.burstIndex >= weapon.w.valkTac_targetData.len() )
+		return
+
 	WeaponMissileMultipleTargetData thisResult = weapon.w.valkTac_targetData[attackParams.burstIndex]
 	vector curTar                              = thisResult.pos
 

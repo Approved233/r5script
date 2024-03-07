@@ -4374,6 +4374,12 @@ void function RunWeaponModChangedCallbacks( entity weapon, string mod, bool modA
 
 
 
+
+
+
+
+
+
 int function GetMaxTrackerCountForTitan( entity titan )
 {
 	array<entity> primaryWeapons = titan.GetMainWeapons()

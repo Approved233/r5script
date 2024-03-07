@@ -84,6 +84,10 @@ struct DamageFlyoutData
 {
 	var stackingDamageRui
 
+	
+	float replayDelay
+	entity viewEntity
+
 	float lastDamageFlyoutTime
 	int   lastDamageFlyoutDamage
 	int   damageThisFrame
@@ -532,11 +536,13 @@ void function DamageFlyout( float damageAmount, vector damagePosition, entity vi
 	else
 		file.entityDamageFlyouts[victim] <- flyoutData
 
-	bool initNewStackingDamageText = Time() - flyoutData.lastDamageFlyoutTime > FDT_STACK_THRESHOLD || !showStackingDamageText
+	bool initNewStackingDamageText = Time() - flyoutData.lastDamageFlyoutTime > FDT_STACK_THRESHOLD || flyoutData.viewEntity != GetLocalViewPlayer() || flyoutData.replayDelay != GetReplayDelay() || !showStackingDamageText
 	if ( initNewStackingDamageText )
 	{
 		flyoutData.lastDamageFlyoutTime = Time()
 		flyoutData.lastDamageFlyoutDamage = 0
+		flyoutData.replayDelay = GetReplayDelay()
+		flyoutData.viewEntity = GetLocalViewPlayer()
 	}
 
 	float distance = Distance( victim.GetOrigin(), GetLocalViewPlayer().EyePosition() )

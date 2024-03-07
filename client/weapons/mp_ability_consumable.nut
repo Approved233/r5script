@@ -904,6 +904,12 @@ void function OnWeaponDeactivate_Consumable( entity weapon )
 
 
 
+
+
+
+
+
+
 		if ( IsValid( weaponOwner ) && weaponOwner != GetLocalViewPlayer() )
 			return
 

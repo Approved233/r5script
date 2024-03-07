@@ -188,11 +188,18 @@ struct AdrenalineStatusEffectIndexes
 
 
 
+
+
+
+
+
+
 struct
 {
 	table< ItemFlavor, array< ItemFlavor > > characterToPassiveUpgrades
 	table< ItemFlavor, array<SettingsAssetGUID> > characterToPassiveUpgradeOverrides
 	table< ItemFlavor , UpgradeCoreChoice > passiveFlavorToUpgradeData
+
 
 
 
@@ -288,6 +295,9 @@ struct
 	float harvesterSpawnVerticalOffset = -20.0
 	int harvesterSpawnNumRetries = 4
 	bool harvestersNotAccessibleBeforeAnnounce = true
+
+	bool preventDoubleRingScanRewards = true
+	bool messageDoubleRingScan = true
 
 	float harvester_idealTileArea = 2500.0
 	float harvester_minTileSize = 800.0
@@ -525,6 +535,8 @@ void function UpgradeCore_InitTuningValues()
 	tunings.harvester_minNumAdjacentTiles = GetCurrentPlaylistVarInt( "evo_harvester_minNumAdjacentTiles", tunings.harvester_minNumAdjacentTiles )
 	tunings.harvesterSpawnNumRetries = GetCurrentPlaylistVarInt( "evo_harvester_spawn_num_retries", tunings.harvesterSpawnNumRetries )
 	tunings.harvestersNotAccessibleBeforeAnnounce = GetCurrentPlaylistVarBool( "evo_harvester_noninteractive_before_time_gate", true )
+	tunings.preventDoubleRingScanRewards = GetCurrentPlaylistVarBool( "passive_upgrade_prevent_double_ring_scan_rewards", true )
+	tunings.messageDoubleRingScan = GetCurrentPlaylistVarBool( "passive_upgrade_core_ring_rescan_messaging_enabled", true )
 }
 
 void function ShPassiveUpgradeCore_NetvarsInit()
@@ -846,6 +858,65 @@ array<int> function UpgradeCore_GetLevelXpThresholds()
 	}
 	return result
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3096,6 +3167,7 @@ void function ServerToClient_NotifyLeveledUp_Delayed( entity player )
 	
 	if( localPlayer != localClient )
 	{
+		player.EndSignal( "OnDestroy", "OnDeath" )
 		Wait( .5 )
 	}
 

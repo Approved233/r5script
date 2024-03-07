@@ -1988,7 +1988,8 @@ void function EquipmentChanged( entity player, string equipSlot, int new )
 					RuiSetBool( file.pilotRui, "isEvolvingShield", true )
 					int playerTier = UpgradeCore_GetPlayerArmorTier( player, false )
 					RuiSetInt( file.pilotRui, "armorTierBarOverride", playerTier )
-					if( playerTier > tier && es.unitFrameTierVar != "" )
+
+					if( playerTier > tier && es.unitFrameTierVar != "" && equipSlot == "armor")
 					{
 						RuiSetInt( file.pilotRui, es.unitFrameTierVar, playerTier )
 					}
