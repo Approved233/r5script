@@ -1,0 +1,505 @@
+global function Cups_GetSquadCupData
+global function Cups_GetAllUserCupData
+global function Cups_GetUserCupMMRBucketForContainer
+global function Cups_GetAllUserCupMMRBucketData
+global function Cups_GetVisibleEvents
+
+
+global function Cups_WaitForResponse
+global function Cups_GetEligbleCup
+global function Cups_HasParticipated
+global function Cups_RegisterForCup
+global function Cups_IsCurrentSelectedPlaylistACupGame
+global function Cups_GetPlayerTierIndexForCup
+global function Cups_GetPlayerTierDataForCup
+global function Cups_RegisterOnLeaderboardChangedCallback
+global function Cups_UnRegisterOnLeaderboardChangedCallback
+global function UICodeCallback_OnLeaderboardDataRetrieved
+global function Cups_RegisterOnServerMessageRecievedCallback
+global function Cups_UnRegisterOnServerMessageRecievedCallback
+global function UICodeCallback_OnServerMessageRecieved
+
+
+#if DEV
+global function Cups_GrantAllCupRewards
+global function Cups_UnregisterFromCup
+global function Cups_UnregisterFromAllCups
+global function Cups_SetCupMatchHistory
+global function DEV_SetDebugCupLeaderboard
+global function Cups_GetCupLeaderboardData
+
+global function DEV_Cups_SetMMRBucket
+
+global function DEV_Cups_ClearCupsLastMatchPlayedData
+#endif
+
+const int CUPS_MMR_BUCKET_INVALID = -1
+
+
+struct {
+	array< void functionref( SettingsAssetGUID, int, array<CupLeaderboardEntry> ) > onLeaderboardChangedCallbacks
+	table< int, array< void functionref( SettingsAssetGUID, string ) > > onServerResponseCallbacks
+
+
+	int dev_MMRBucket = CUPS_MMR_BUCKET_INVALID
+
+} File;
+
+
+CupEntry ornull function Cups_GetSquadCupData( SettingsAssetGUID cupID )
+{
+	if( !GetConVarBool( "cups_enabled" ) ) return null
+
+
+		UserFullCupData ornull userFullCupData = Cups_GetUserFullCupData()
+		if ( userFullCupData == null )
+			return null
+
+		expect UserFullCupData( userFullCupData )
+
+		foreach ( CupEntry userCupData in userFullCupData.enteredCups )
+		{
+			if ( userCupData.cupID == cupID )
+			{
+				return userCupData
+			}
+		}
+
+	return null
+}
+
+array< CupEntry > ornull function Cups_GetAllUserCupData()
+{
+	if( !GetConVarBool( "cups_enabled" ) ) return null
+
+
+	UserFullCupData ornull userFullCupData = Cups_GetUserFullCupData()
+	if ( userFullCupData == null )
+		return null
+
+	expect UserFullCupData( userFullCupData )
+
+	return userFullCupData.enteredCups
+
+	return null
+}
+
+int function Cups_GetUserCupMMRBucketForContainer( SettingsAssetGUID containerID )
+{
+
+#if DEV
+			if ( File.dev_MMRBucket != CUPS_MMR_BUCKET_INVALID )
+				return File.dev_MMRBucket
+#endif
+
+		UserFullCupData ornull userFullCupData = Cups_GetUserFullCupData()
+		if ( userFullCupData == null )
+			return CUPS_MMR_BUCKET_INVALID
+
+		expect UserFullCupData( userFullCupData )
+
+		foreach ( CupPlayerMMRBucket userCupMMRData in userFullCupData.cupPlayerMMRData )
+		{
+			if ( userCupMMRData.cupID == containerID )
+			{
+				return userCupMMRData.bucket
+			}
+		}
+
+	return CUPS_MMR_BUCKET_INVALID
+}
+
+array< CupPlayerMMRBucket > ornull function Cups_GetAllUserCupMMRBucketData()
+{
+	if( !GetConVarBool( "cups_enabled" ) ) return null
+
+
+		UserFullCupData ornull userFullCupData = Cups_GetUserFullCupData()
+		if ( userFullCupData == null )
+			return null
+
+		expect UserFullCupData( userFullCupData )
+
+		return userFullCupData.cupPlayerMMRData
+
+	return null
+}
+
+array< SettingsAssetGUID > function Cups_GetVisibleEvents()
+{
+	array< SettingsAssetGUID > result
+	int unixTime = GetUnixTimestamp()
+
+	foreach ( ItemFlavor cupEvent in Cups_GetAllEvents() )
+	{
+		if ( CalEvent_IsVisible( cupEvent, unixTime ) )
+		{
+			result.append( cupEvent.guid )
+		}
+	}
+	return result
+}
+
+
+UserFullCupData ornull function Cups_GetUserFullCupData()
+{
+	array< SettingsAssetGUID > cups = Cups_GetVisibleEvents()
+	if ( cups.len() > 0 )
+		return GetUserFullCupData( GetPlayerHardware(), GetPlayerUID(), cups )
+
+	
+	UserFullCupData empty
+	return empty
+}
+
+UserFullCupData function Cups_WaitForResponse()
+{
+	UserFullCupData ornull response = Cups_GetUserFullCupData()
+	while ( response == null )
+	{
+		WaitFrame()
+		response = Cups_GetUserFullCupData()
+	}
+	return expect UserFullCupData( response )
+}
+
+ItemFlavor ornull function Cups_GetEligbleCup( ItemFlavor cupEvent )
+{
+	CommunityUserInfo ornull userInfo = GetUserInfo( GetPlayerHardware(), GetPlayerUID() )
+	if ( userInfo == null )
+	{
+		Warning( "User info is not yet available." )
+		return null
+	}
+	expect CommunityUserInfo( userInfo )
+
+	UserFullCupData ornull allCupInfo = Cups_GetUserFullCupData()
+	if ( allCupInfo == null )
+	{
+		Warning( "Cups eligibility is not yet available." )
+		return null
+	}
+
+	foreach ( ItemFlavor cup in CupEvent_GetCups( cupEvent ) )
+	{
+		if ( CupFlavor_HasLevelRequirement( cup ) )
+			if ( CupFlavor_GetLevelRequirement( cup ) > userInfo.charData[ePlayerStryderCharDataArraySlots.ACCOUNT_LEVEL] + 1 )  
+				continue
+
+		if ( CupFlavor_UseMMR( cup ) )
+			if ( CupFlavor_GetMMRBucket( cup ) != Cups_GetUserCupMMRBucketForContainer( cupEvent.guid ) )
+				continue
+
+		return cup
+	}
+
+	return null
+}
+
+bool function Cups_HasParticipated( ItemFlavor cupEvent )
+{
+	ItemFlavor ornull cupFlavor = Cups_GetEligbleCup( cupEvent )
+	if ( cupFlavor == null )
+		return false
+	expect ItemFlavor( cupFlavor )
+
+	UserCupEntryData data = Cups_GetPlayersPCupData( GetLocalClientPlayer(), cupFlavor.guid )
+	if ( !data.registered )
+		return false
+
+	CupEntry ornull entry = Cups_GetSquadCupData( cupFlavor.guid )
+	if ( entry == null )
+		return false
+	expect CupEntry( entry )
+
+	return entry.matchSummaryData.len() > 0
+}
+
+bool function Cups_RegisterForCup( SettingsAssetGUID cupID )
+{
+	if( !GetConVarBool( "cups_enabled" ) ) return false
+
+	printt( "Cups_RegisterForCup" )
+
+	int nextCupIndex = Cups_GetNextAvailablePersistentDataSlot( GetLocalClientPlayer() )
+	if( nextCupIndex < 0 )
+	{
+		
+		return false
+	}
+
+	int eligibility = Cups_GetSquadEligibility( cupID )
+
+	if( eligibility != eCupSquadEligibility.ELIGIBLE )
+	{
+		Warning(  "Player Not Eligible For Cup - Reason: " + GetEnumString( "eCupSquadEligibility", eligibility ) )
+		return false
+	}
+
+	Remote_ServerCallFunction( "ClientCallback_RegisterForCup", cupID )
+	return true
+}
+
+int function Cups_GetSquadEligibility( SettingsAssetGUID cupID )
+{
+	if( !GetConVarBool( "cups_enabled" ) )
+		return eCupSquadEligibility.CUP_NOT_ACTIVE
+
+	if ( !CrossplayUserOptIn() )
+		return eCupSquadEligibility.CROSSPLAY_DISABLED
+
+	if( !Cups_IsValidCupID( cupID ) || !Cups_IsCupActive( cupID ) )
+		return eCupSquadEligibility.CUP_NOT_ACTIVE
+
+	CupBakeryAssetData cupBakeryData = Cups_GetCupBakeryAssetDataFromGUID( cupID )
+
+	Party party = GetParty()
+	if( party.members.len() != cupBakeryData.squadSize )
+		return eCupSquadEligibility.INVALID_SQUAD_SIZE
+
+	CommunityUserInfo ornull userInfoOrNull = GetUserInfo( GetPlayerHardware(), GetPlayerUID() )
+	UserFullCupData ornull userFullCupDataOrNull = Cups_GetUserFullCupData()
+
+	if ( userInfoOrNull == null || userFullCupDataOrNull == null )
+		return eCupSquadEligibility.PLAYER_DATA_UNAVAILABLE
+
+	CommunityUserInfo userInfo = expect CommunityUserInfo( userInfoOrNull )
+	UserFullCupData userFullCupData = expect UserFullCupData( userFullCupDataOrNull )
+
+	if( cupBakeryData.entryRestrictions.hasMMREntryRequirement && Cups_GetUserCupMMRBucketForContainer( ItemFlavor_GetGUID( cupBakeryData.containerItemFlavor ) ) != cupBakeryData.entryRestrictions.requiredMMRBucket )
+		return eCupSquadEligibility.INVALID_MMR_BUCKET
+
+	int userLevel = userInfo.charData[ePlayerStryderCharDataArraySlots.ACCOUNT_LEVEL] + 1 
+	if( cupBakeryData.entryRestrictions.hasMinLevelLimit && cupBakeryData.entryRestrictions.minEntryLevel > userLevel )
+		return eCupSquadEligibility.INVALID_PLAYER_LEVEL
+
+	int userRankScore = userInfo.rankScore
+	if( ( cupBakeryData.entryRestrictions.hasMinRankLimit && userRankScore < cupBakeryData.entryRestrictions.minRankScore ) || ( cupBakeryData.entryRestrictions.hasMaxRankLimit && userRankScore > cupBakeryData.entryRestrictions.maxRankScore ) )
+		return eCupSquadEligibility.INVALID_RANK_SCORE
+
+	return eCupSquadEligibility.ELIGIBLE
+}
+
+SettingsAssetGUID ornull function Cups_IsCurrentSelectedPlaylistACupGame()
+{
+	if( !GetConVarBool( "cups_enabled" ) || !CrossplayUserOptIn() ) return null
+
+	foreach ( UserCupEntryData cupEntryData in Cups_GetPlayersFullPCupData( GetLocalClientPlayer() ) )
+	{
+		if( !Cups_IsValidCupID( cupEntryData.cupID ) )
+			return null
+		CupBakeryAssetData cupBakeryData = Cups_GetCupBakeryAssetDataFromGUID( cupEntryData.cupID )
+		bool isMode = GetPlaylistVarBool( LobbyPlaylist_GetSelectedPlaylist(), cupBakeryData.gameModePlaylistVar, false )
+		if( isMode )
+			return cupEntryData.cupID
+	}
+	return null
+}
+
+int function Cups_GetPlayerTierIndexForCup( SettingsAssetGUID cupID )
+{
+	if( !GetConVarBool( "cups_enabled" ) ) return -1
+
+	UserFullCupData ornull userFullCupData = Cups_GetUserFullCupData()
+	if( userFullCupData == null )
+		return -1
+
+	expect UserFullCupData( userFullCupData )
+	foreach( CupEntry cupEntry in userFullCupData.enteredCups )
+	{
+		if( cupEntry.cupID != cupID )
+			continue
+
+		for( int i = cupEntry.tierScoreBounds.len() - 1; i > 0; --i )
+		{
+			if ( cupEntry.currSquadScore <= cupEntry.tierScoreBounds[i - 1] )
+			{
+				printt( "Score: " + cupEntry.currSquadScore + " | Percentile: " + cupEntry.positionPercentage + " | Index: " + i )
+				return i
+			}
+		}
+		return 0
+	}
+	return -1
+}
+
+CupTierData ornull function Cups_GetPlayerTierDataForCup( SettingsAssetGUID cupID )
+{
+	if( !GetConVarBool( "cups_enabled" ) ) return null
+
+	int index = Cups_GetPlayerTierIndexForCup( cupID )
+	if( index < 0 )
+		return null
+
+	CupBakeryAssetData assetData = Cups_GetCupBakeryAssetDataFromGUID( cupID )
+	if( assetData.tiers.len() > index )
+		return assetData.tiers[index]
+
+	return null
+}
+void function Cups_RegisterOnLeaderboardChangedCallback( void functionref(SettingsAssetGUID, int, array<CupLeaderboardEntry>) callbackFunc )
+{
+	Assert( !File.onLeaderboardChangedCallbacks.contains( callbackFunc ), "Function is already registered for onLeaderboardChanged!" )
+
+	File.onLeaderboardChangedCallbacks.append( callbackFunc )
+}
+
+void function Cups_UnRegisterOnLeaderboardChangedCallback( void functionref(SettingsAssetGUID, int, array<CupLeaderboardEntry>) callbackFunc )
+{
+	File.onLeaderboardChangedCallbacks.fastremovebyvalue( callbackFunc )
+}
+
+void function UICodeCallback_OnLeaderboardDataRetrieved( int cupID, int start, array<CupLeaderboardEntry> entries )
+{
+	if( !GetConVarBool( "cups_enabled" ) ) return
+
+	foreach ( void functionref( SettingsAssetGUID, int, array<CupLeaderboardEntry> ) callback in File.onLeaderboardChangedCallbacks )
+	{
+		callback( cupID, start, entries )
+	}
+}
+
+void function Cups_RegisterOnServerMessageRecievedCallback( int messageType, void functionref( SettingsAssetGUID, string ) callback )
+{
+	if ( !( messageType in File.onServerResponseCallbacks ) )
+		File.onServerResponseCallbacks[ messageType ] <- []
+
+	Assert( !File.onServerResponseCallbacks[ messageType ].contains( callback ), "Callback function already registered for message type (" + messageType + ")!" )
+	File.onServerResponseCallbacks[ messageType ].append( callback )
+}
+
+void function Cups_UnRegisterOnServerMessageRecievedCallback( int messageType, void functionref( SettingsAssetGUID, string ) callback )
+{
+	if( !(messageType in File.onServerResponseCallbacks ) ) return
+	File.onServerResponseCallbacks[ messageType ].fastremovebyvalue( callback )
+}
+
+void function UICodeCallback_OnServerMessageRecieved( int messageType, SettingsAssetGUID cupID, string squadID )
+{
+	if ( !GetConVarBool( "cups_enabled" ) ) return
+	if ( !( messageType in File.onServerResponseCallbacks ) )
+	{
+		Warning("Server message recieved with type %d but no handlers found!", messageType )
+		return
+	}
+	foreach ( void functionref( SettingsAssetGUID, string ) cb in File.onServerResponseCallbacks[ messageType ] )
+	{
+		cb( cupID, squadID )
+	}
+}
+
+
+#if DEV
+bool function Cups_GrantAllCupRewards( SettingsAssetGUID cupID )
+{
+	if( !GetConVarBool( "cups_enabled" ) ) return false
+
+	Remote_ServerCallFunction( "ClientCallback_GrantAllCupRewards", cupID )
+	return true
+}
+
+bool function Cups_UnregisterFromCup( SettingsAssetGUID cupID )
+{
+	if( !GetConVarBool( "cups_enabled" ) ) return false
+
+	Remote_ServerCallFunction( "ClientCallback_DeleteCupEntry", cupID )
+	return true
+}
+
+bool function Cups_UnregisterFromAllCups()
+{
+	if( !GetConVarBool( "cups_enabled" ) ) return false
+
+
+	RunClientScript( "Cups_UnregisterFromAllCups" )
+
+
+
+
+
+
+
+
+
+	return true
+}
+
+bool function Cups_SetCupMatchHistory( SettingsAssetGUID cupID, int matchNum, int squadPlacement )
+{
+	if( !GetConVarBool( "cups_enabled" ) ) return false
+
+	Remote_ServerCallFunction( "ClientCallback_SetCupMatchHistory", cupID, matchNum, squadPlacement )
+	return true
+}
+
+void function DEV_SetDebugCupLeaderboard( SettingsAssetGUID cupID, int start, int count,
+		string squadID = "", int matchHistoryCount = 1,	array<entity> squad = [] )
+{
+	Assert( GetConVarBool( "cups_enabled" ) )
+
+
+
+
+	if( squad.len() < 1 )
+		squad.append( GetLocalClientPlayer() )
+
+	CupBakeryAssetData bakeryData = Cups_GetCupBakeryAssetDataFromGUID( cupID )
+	array<CupLeaderboardEntry> entries;
+
+	for( int i = 0; i < count; ++i )
+	{
+		CupLeaderboardEntry currEntry
+		currEntry.squadID = squadID + "_" + i
+
+		for( int j = 0; j < bakeryData.squadSize; ++j )
+		{
+			CupPlayerInfo currPlayer
+			currPlayer.name = GetPlayerName()
+			currPlayer.playerUID = GetPlayerUID()
+			currPlayer.hardware = GetPlayerHardware()
+			currEntry.squadInfo.append(currPlayer)
+		}
+
+		for( int j = 0; j < matchHistoryCount; ++j )
+		{
+			CupMatchSummary matchSummary = DEV_GenerateDummyMatchHistory( cupID, RandomIntRange(0, 20), squad )
+			currEntry.matchHistoryData.append( matchSummary )
+			currEntry.squadScore += matchSummary.squadCalculatedScore
+		}
+		entries.append(currEntry)
+	}
+
+	entries.sort( int function( CupLeaderboardEntry left, CupLeaderboardEntry right ){ return right.squadScore - left.squadScore } )
+
+	UICodeCallback_OnLeaderboardDataRetrieved( cupID, start, entries )
+
+}
+
+bool function Cups_GetCupLeaderboardData( SettingsAssetGUID cupID, int start, int count )
+{
+	if( !GetConVarBool( "cups_enabled" ) ) return false
+
+	Remote_ServerCallFunction( "ClientCallback_GetLeaderboardData", cupID, start, count )
+	return true
+}
+
+
+void function DEV_Cups_SetMMRBucket( int bucket )
+{
+	File.dev_MMRBucket = bucket
+}
+
+
+
+bool function DEV_Cups_ClearCupsLastMatchPlayedData()
+{
+	if( !GetConVarBool( "cups_enabled" ) ) return false
+
+
+		RunClientScript( "DEV_Cups_ClearCupsLastMatchPlayedData" )
+
+
+
+	return true
+}
+#endif

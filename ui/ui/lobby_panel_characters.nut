@@ -792,7 +792,7 @@ void function CharacterClassButton_Init( var button, ItemFlavor character, bool 
 		{
 			toolTipData.boostedToolTipData.state = eBoostedToolTipState.UNLOCKED
 			toolTipData.titleText = Localize( RewardCampaign_GetUnlockedLegendTooltipTitle( rewardCampaign ) )
-			toolTipData.descText = RewardCampaign_GetUnlockedLegendTooltipDesc( rewardCampaign, GRX_IsItemOwnedByPlayer( character )  )
+			toolTipData.descText = RewardCampaign_GetUnlockedLegendTooltipDesc( rewardCampaign, GRX_IsInventoryReady() && GRX_IsItemOwnedByPlayer( character )  )
 			Hud_SetToolTipData( button, toolTipData )
 		}
 

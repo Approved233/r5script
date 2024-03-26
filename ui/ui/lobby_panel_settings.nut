@@ -123,12 +123,26 @@ void function InitSettingsPanel( var panel )
 
 void function SettingsPanel_SetContentPanelHeight( var contentPanel )
 {
-	array<var> rewardButtonArray = GetPanelElementsByClassname( contentPanel, "SettingScrollSizer" )
+	array<var> contentPanelRows = GetPanelElementsByClassname( contentPanel, "SettingScrollSizer" )
 	int height = 0
-	foreach( var b in rewardButtonArray )
+	int totalPreviousInvisHeights = 0
+	foreach( var row in contentPanelRows )
 	{
-		if( Hud_IsVisible( b ) )
-			height += Hud_GetHeight(b) + Hud_GetBaseY( b )
+		
+		
+		
+		
+		if( Hud_IsVisible( row ) )
+		{
+			height += Hud_GetHeight( row ) + Hud_GetBaseY( row ) + totalPreviousInvisHeights
+			totalPreviousInvisHeights = 0
+		}
+		else
+		{
+			
+			
+			totalPreviousInvisHeights += Hud_GetHeight( row ) + Hud_GetBaseY( row )
+		}
 	}
 
 	Hud_SetHeight(contentPanel, height)

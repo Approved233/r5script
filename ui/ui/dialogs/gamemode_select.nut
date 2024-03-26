@@ -1,8 +1,7 @@
 global function InitGamemodeSelectDialog
 global function GamemodeSelect_IsEnabled
-
 global function GamemodeSelect_PlaylistIsDefaultSlot
-
+global function GamemodeSelect_JumpToCups
 
 struct {
 	var menu
@@ -44,21 +43,25 @@ void function GamemodeSelect_Open()
 		SetTabBaseWidth( tabDef, 300 )
 	}
 
+
+	if ( CupsEnabled() )
+	{
+		
+		if ( Cups_GetVisibleEvents().len() > 0 )
+		{
+			TabDef tabDef = AddTab( file.menu, Hud_GetChild( file.menu, "RTKGamemodeSelectApexCups" ), "#GAMEMODE_APEX_CUPS_TAB" )
+			SetTabBaseWidth( tabDef, 300 )
+		}
+	}
+
+
+
 		{
 			TabDef tabDef = AddTab( file.menu, Hud_GetChild( file.menu, "GamemodeSelectDialogPrivatePanel" ), "#GAMEMODE_CATEGORY_PRIVATE_MATCH" )
 			SetTabBaseWidth( tabDef, 300 )
 
 			GamemodeSelect_SetPrivateMatchEnabled()
 		}
-
-
-
-
-
-
-
-
-
 
 
 	TabData tabData = GetTabDataForPanel( file.menu )
@@ -162,4 +165,15 @@ bool function GamemodeSelect_PlaylistIsDefaultSlot( string playlist )
 {
 	string uiSlot = GetPlaylistVarString( playlist, "ui_slot", "" )
 	return (uiSlot == DEFAULT_PLAYLIST_UI_SLOT_NAME)
+}
+
+void function GamemodeSelect_JumpToCups( var button )
+{
+	while ( GetActiveMenu() != GetMenu( "LobbyMenu" ) )
+		CloseActiveMenu()
+
+	var menu = GetMenu( "GamemodeSelectDialog" )
+	AdvanceMenu( menu )
+	TabData gamemodeTabData = GetTabDataForPanel( menu )
+	ActivateTab( gamemodeTabData, Tab_GetTabIndexByBodyName( gamemodeTabData, "RTKGamemodeSelectApexCups" ) )
 }

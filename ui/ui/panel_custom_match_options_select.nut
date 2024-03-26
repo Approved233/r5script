@@ -1,5 +1,6 @@
 global function InitCustomMatchOptionsSelectPanel
 global function ToggleRenameButtonVisibility
+global function CustomMatch_HasPlaylistAccess
 
 struct
 {
@@ -146,7 +147,7 @@ void function Callback_OnPlaylistChanged( var button, string setting, string val
 	Hud_DialogList_ClearList( button )
 	foreach ( string key, CustomMatchPlaylist entry in map.playlists )
 	{
-		if ( HasPlaylistAccess( entry.playlistName ) )
+		if ( CustomMatch_HasPlaylistAccess( entry.playlistName ) )
 		{
 			Hud_DialogList_AddListItem( button, GAME_MODE_VARIANT_MAP[ key ], entry.playlistName )
 			toolTipData.descText += "\n" + Localize( GAME_MODE_VARIANT_DESC_MAP[ key ] )
@@ -159,7 +160,7 @@ void function Callback_OnPlaylistChanged( var button, string setting, string val
 }
 
 const string REQUIRES_SPECIAL_ACCESS_VAR = "requires_special_access"
-bool function HasPlaylistAccess( string playlist )
+bool function CustomMatch_HasPlaylistAccess( string playlist )
 {
 	if ( CustomMatch_HasSpecialAccess() )
 		return true

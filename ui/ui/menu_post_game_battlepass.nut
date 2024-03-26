@@ -1,5 +1,6 @@
 global function InitPostGameBattlePassMenu
 global function OpenPostGameBattlePassMenu
+global function ClosePostGameBattlePassMenu
 
 struct
 {
@@ -763,6 +764,11 @@ void function OnPostGameBattlePassMenu_Hide()
 
 
 void function OnContinue_Activate( var button )
+{
+	ClosePostGameBattlePassMenu()
+}
+
+void function ClosePostGameBattlePassMenu()
 {
 	if ( GetActiveMenu() == file.menu )
 		CloseActiveMenu()

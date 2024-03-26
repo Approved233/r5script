@@ -152,6 +152,9 @@ void function InitAdvancedLookControlsPanel( var panel )
 void function OnAdvancedLookControlsPanel_Show( var panel )
 {
 	ScrollPanel_SetActive( panel, true )
+
+	SettingsPanel_SetContentPanelHeight( Hud_GetChild( panel, "ContentPanel" ) )
+	ScrollPanel_Refresh( panel )
 }
 
 
@@ -214,7 +217,7 @@ void function Button_Toggle_AimAssistEnabled( var button )
 	foreach ( var item in file.aimAssistHeaders )
 		Hud_SetVisible( item, isMenuEnabled )
 
-	bool isAimAssistSniperScopesEnabled = GetPlaylistVarBool( Lobby_GetSelectedPlaylist(), "aimassist_enabled_sniper_scopes", false )
+	bool isAimAssistSniperScopesEnabled = GetPlaylistVarBool( LobbyPlaylist_GetSelectedPlaylist(), "aimassist_enabled_sniper_scopes", false )
 
 	if ( !isAimAssistSniperScopesEnabled )
 	{

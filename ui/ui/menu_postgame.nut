@@ -61,13 +61,10 @@ void function InitPostGameMenu( var newMenuArg )
 	}
 
 
-
-
-
-
-
-
-
+	{
+		TabDef tabDef = AddTab( file.menu, Hud_GetChild( file.menu, "PostGameCups" ), "#GAMEMODE_APEX_CUPS_TAB" )
+		SetTabBaseWidth( tabDef, 250 )
+	}
 
 	TabData tabData = GetTabDataForPanel( file.menu )
 
@@ -91,11 +88,24 @@ void function OnOpenPostGameMenu()
 	TabData tabData = GetTabDataForPanel( file.menu )
 
 
-		bool enableWeaponMastery =  Mastery_IsEnabled()
-		TabDef seasonTabDef = Tab_GetTabDefByBodyName( tabData, "PostGameWeapons" )
+	{
+		bool enableWeaponMastery = Mastery_IsEnabled()
+		TabDef seasonTabDef      = Tab_GetTabDefByBodyName( tabData, "PostGameWeapons" )
 
 		seasonTabDef.visible = enableWeaponMastery
 		seasonTabDef.enabled = enableWeaponMastery
+	}
+
+
+	{
+		bool enableCupsSummary 	= CupsEnabled() && GetConVarBool( "cups_has_post_match" )
+		
+		enableCupsSummary 		= enableCupsSummary && ( Cups_GetLatestMatchSummaryData( GetLocalClientPlayer() ) != null )
+		TabDef seasonTabDef 	= Tab_GetTabDefByBodyName( tabData, "PostGameCups" )
+
+		seasonTabDef.visible = enableCupsSummary
+		seasonTabDef.enabled = enableCupsSummary
+	}
 
 
 	if ( GetLastMenuNavDirection() == MENU_NAV_FORWARD )

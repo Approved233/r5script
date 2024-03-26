@@ -727,10 +727,28 @@ bool function IsElementFullyInside( var element, UIPos pos, UISize size )
 	return true
 }
 
-
 bool function MeetsAgeRequirements()
 {
 	return !GetConVarBool( "cl_isUnderAge" )
+}
+
+bool function CanInvite()
+{
+	if ( GetParty().amIInThis == false )
+		return false
+
+	if ( GetParty().numFreeSlots == 0 )
+		return false
+
+
+
+
+
+
+		return (GetMenuVarBool( "isFullyConnected" ) && GetMenuVarBool( "ORIGIN_isEnabled" ) && GetMenuVarBool( "ORIGIN_isJoinable" ))
+
+
+
 }
 
 int function GetPCReportKey()
@@ -738,8 +756,27 @@ int function GetPCReportKey()
 	return KEY_R
 }
 
-
 int function GetPCBlockKey()
 {
 	return KEY_B
+}
+
+string function GetDebugTimeString()
+{
+	Assert( GetDeveloperLevel() != 0 )
+	if ( GetDeveloperLevel() == 0 )
+		return ""
+
+	bool dst 		  = GetIsDSTActive()
+	int utTime        = dst ? GetUnixTimePDT() : GetUnixTimePST()
+	string timeString = GetDateTimeString( utTime, 0 )
+	string dayName    = GetDayOfWeekName( GetDayOfWeek( utTime ) )
+	return format( "%s, %s %s", Localize( dayName ), timeString, dst ? "PDT" : "PST" )
+}
+
+bool function IsPreloadingMap()
+{
+	string compareSting = "#MATCHMAKING_LOADING"
+	string mmStatus     = GetMyMatchmakingStatus()
+	return ( mmStatus.len() >= compareSting.len() && mmStatus.slice( 0, compareSting.len() ) == compareSting )
 }

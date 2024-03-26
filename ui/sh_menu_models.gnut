@@ -207,11 +207,16 @@
 
 
 
-
 struct
 {
 
 		int  activePresentationType = ePresentationType.INACTIVE
+
+
+
+
+
+
 
 
 
@@ -443,6 +448,109 @@ void function ShMenuModels_UIInit()
 	RegisterButtonPressedCallback( MOUSE_WHEEL_DOWN, OnMouseWheelDown )
 	RegisterButtonPressedCallback( MOUSE_WHEEL_UP, OnMouseWheelUp )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

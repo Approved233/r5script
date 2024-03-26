@@ -656,9 +656,13 @@ void function BattlePass_PopulateRewardButton( BattlePassReward bpReward, var re
 	if ( GRX_IsInventoryReady() )
 	{
 		ItemFlavor ornull activeBattlePass = GetActiveBattlePass()
-		expect ItemFlavor( activeBattlePass )
-		bool hasPremiumPass = DoesPlayerOwnBattlePass( GetLocalClientPlayer(), activeBattlePass )
-		RuiSetBool( btnRui, "isPremiumBPOwned", hasPremiumPass )
+
+		if( activeBattlePass != null  )
+		{
+			expect ItemFlavor( activeBattlePass )
+			bool hasPremiumPass = DoesPlayerOwnBattlePass( GetLocalClientPlayer(), activeBattlePass )
+			RuiSetBool( btnRui, "isPremiumBPOwned", hasPremiumPass )
+		}
 	}
 
 	BattlePass_SetRewardButtonIconSettings( bpReward.flav, btnRui, rewardButton, canUseTallButton )
@@ -2945,6 +2949,67 @@ int function SortByAwardLevel( BattlePassReward a, BattlePassReward b )
 
 	return 0
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

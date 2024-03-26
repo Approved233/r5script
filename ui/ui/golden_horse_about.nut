@@ -5,7 +5,7 @@ global function GoldenHorse_PopulateAboutText
 string function GetPlaylist() 
 {
 	if ( IsLobby() )
-		return Lobby_GetSelectedPlaylist()
+		return LobbyPlaylist_GetSelectedPlaylist()
 	else
 		return GetCurrentPlaylistName()
 

@@ -93,6 +93,8 @@ global function CharSelect_GetOutroTransitionDuration
 
 
 
+
+
 global function GamemodeSurvivalShared_UI_Init
 
 
@@ -1487,6 +1489,21 @@ bool function IsSquadDataPersistenceEmpty( entity player )
 	}
 	return true
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

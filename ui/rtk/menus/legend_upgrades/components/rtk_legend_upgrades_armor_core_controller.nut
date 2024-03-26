@@ -20,7 +20,7 @@ void function RTKLegendUpgradesArmorCore_OnInitialize( rtk_behavior self )
 	if ( !UpgradeCore_IsEnabled() )
 		return
 
-	rtk_struct legendUpgradeArmorCore = RTKDataModel_GetOrCreateScriptStruct( RTK_MODELTYPE_COMMON, LEGEND_UPGRADES_ARMOR_CORE_DATA_MODEL_NAME, "RTKUpgradeArmorCoreModel" )
+	rtk_struct legendUpgradeArmorCore = RTKDataModelType_GetOrCreateStruct( RTK_MODELTYPE_COMMON, LEGEND_UPGRADES_ARMOR_CORE_DATA_MODEL_NAME, "RTKUpgradeArmorCoreModel" )
 	self.GetPanel().SetBindingRootPath( RTKDataModelType_GetDataPath( RTK_MODELTYPE_COMMON, LEGEND_UPGRADES_ARMOR_CORE_DATA_MODEL_NAME, true ) )
 
 	RTKLegendUpgradesArmorCore_UpdateArmorCoreDataModel()
@@ -44,7 +44,7 @@ void function RTKLegendUpgradesArmorCore_OnUpdate( rtk_behavior self, float dt )
 			return
 
 		file.updateArmorCore = false
-		rtk_struct legendUpgradeArmorCore = RTKDataModel_GetOrCreateScriptStruct( RTK_MODELTYPE_COMMON, LEGEND_UPGRADES_ARMOR_CORE_DATA_MODEL_NAME, "RTKUpgradeArmorCoreModel" )
+		rtk_struct legendUpgradeArmorCore = RTKDataModelType_GetOrCreateStruct( RTK_MODELTYPE_COMMON, LEGEND_UPGRADES_ARMOR_CORE_DATA_MODEL_NAME, "RTKUpgradeArmorCoreModel" )
 		int armorTier = UpgradeCore_GetPlayerArmorTier( GetLocalClientPlayer() )
 		RTKStruct_SetInt( legendUpgradeArmorCore, "upgradeTier", armorTier )
 	}

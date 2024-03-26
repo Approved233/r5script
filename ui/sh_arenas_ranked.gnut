@@ -1423,7 +1423,7 @@ void function ArenasRanked_SetupMenuGladCardFromCommunityUserInfo( CommunityUser
 
 void function ArenasRanked_SetupMenuGladCard_internal( int ladderPos, int rankScore )
 {
-	int rankShouldShow = IsArenasRankedPlaylist( Lobby_GetSelectedPlaylist() ) ? 1 : 0
+	int rankShouldShow = IsArenasRankedPlaylist( LobbyPlaylist_GetSelectedPlaylist() ) ? 1 : 0
 	SendMenuGladCardPreviewCommand( eGladCardPreviewCommandType.ARENAS_RANKED_SHOULD_SHOW, rankShouldShow, null )
 	SendMenuGladCardPreviewCommand( eGladCardPreviewCommandType.ARENAS_RANKED_DATA, ladderPos, null, rankScore )
 }

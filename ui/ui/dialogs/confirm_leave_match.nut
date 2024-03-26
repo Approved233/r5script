@@ -132,7 +132,7 @@ void function ConfirmLeaveMatchDialog_Open()
 		data.contextImage = $"rui/hud/gametype_icons/survival/dna_station"
 	}
 
-	else if( IsStrikeoutGamemode() && !Strikeout_UI_GetIsRespawnDisabled() && Strikeout_GetSquadStrikes() < Strikeout_GetMaxSquadStrikes() && ( gamestate > eGameState.Prematch && gamestate < eGameState.WinnerDetermined ) )
+	else if( IsStrikeoutGamemode() && !Strikeout_UI_GetIsRespawnDisabled() && Strikeout_UI_GetLocalClientPlayerSquadStrikes() < Strikeout_GetMaxSquadStrikes() && ( gamestate > eGameState.Prematch && gamestate < eGameState.WinnerDetermined ) )
 	{
 		data.messageText = "#SURVIVAL_STRIKEOUT_ARE_YOU_SURE_YOU_WANT_TO_LEAVE"
 		data.extendedUseYes = true

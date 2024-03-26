@@ -1,4 +1,5 @@
 global function OpenPurchaseRerollDialog
+global function OpenApexCupPurchaseRerollDialog
 
 const string CHALLENGE_REROLL_SOUND = "UI_Menu_Challenge_ReRoll"
 
@@ -123,6 +124,29 @@ void function OpenPurchaseRerollDialog( ItemFlavor challenge, var sourceButton, 
 	file.sourceChallengeButton = sourceButton
 	file.sourceChallengeMenu = sourceMenu
 
-
 	RerollDialog_OnClickRerollButton( eChallengeGameMode.ANY )
+}
+
+void function OpenApexCupPurchaseRerollDialog( ItemFlavor reRoll, string cupName, CupEntry entry )
+{
+	if ( !GRX_IsInventoryReady() || !GRX_AreOffersReady() )
+		return
+
+	int numTokens = maxint( GRX_GetConsumableCount( ItemFlavor_GetGRXIndex( reRoll ) ), 0 )
+
+	if ( numTokens > entry.reRollCount )
+	{
+		Remote_ServerCallFunction( "ClientCallback_ReRollCup", entry.cupID )
+		return
+	}
+
+	PurchaseDialogConfig pdc
+	pdc.flav = reRoll
+	pdc.messageOverride = cupName
+	pdc.quantity = 1
+	pdc.markAsNew = false
+	pdc.isCupsReRoll = true
+	pdc.entry = entry
+
+	PurchaseDialog( pdc )
 }

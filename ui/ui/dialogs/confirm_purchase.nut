@@ -573,7 +573,7 @@ void function AddMultiPackDisclosureCollectionEventPackTab( ItemFlavor pack )
 	RuiSetString( rui, "probabilityDescText", Localize( "#COLLECTION_EVENT_PACK_SUBHEADER", currentEventName ) )
 	RuiSetString( rui, "itemDetailsText3", Localize( "#COLLECTION_EVENT_DISCLAIMER_1", currentEventName ) )
 	RuiSetString( rui, "itemDetailsText4", Localize( "#COLLECTION_EVENT_DISCLAIMER_2", currentEventName ) )
-	RuiSetString( rui, "itemDetailsText5", Localize( "#COLLECTION_EVENT_DISCLAIMER_3", currentEventName, nameText ) )
+	RuiSetString( rui, "itemDetailsText5", Localize( "#S20CE04_ABOUT_LINE_4", currentEventName, nameText ) )
 	RuiSetString( rui, "eventItemDetails", Localize( "#COLLECTION_EVENT_PACK_EVENT_ITEM", currentEventName ) )
 }
 
@@ -814,11 +814,16 @@ void function PurchaseDialog( PurchaseDialogConfig cfg )
 			RuiSetString( rui, "probabilityDescText", Localize( "#COLLECTION_EVENT_PACK_SUBHEADER", currentEventName ) )
 			RuiSetString( rui, "itemDetailsText3", Localize( "#COLLECTION_EVENT_DISCLAIMER_1", currentEventName ) )
 			RuiSetString( rui, "itemDetailsText4", Localize( "#COLLECTION_EVENT_DISCLAIMER_2", currentEventName ) )
-			RuiSetString( rui, "itemDetailsText5", Localize( "#COLLECTION_EVENT_DISCLAIMER_3", currentEventName, nameText ) )
+			RuiSetString( rui, "itemDetailsText5", Localize( "#S20CE04_ABOUT_LINE_4", currentEventName, nameText ) )
 			RuiSetString( rui, "eventItemDetails", Localize( "#COLLECTION_EVENT_PACK_EVENT_ITEM", currentEventName ) )
 		}
 	}
-	EmitUISound( "UI_Menu_Cosmetic_Unlock" )
+
+	if ( file.state.cfg.isCupsReRoll )
+		EmitUISound( "RumbleCup_UI_ReRoll_1p" )
+	else
+		EmitUISound( "UI_Menu_Cosmetic_Unlock" )
+
 	AdvanceMenu( file.activeDialog )
 }
 
@@ -1089,6 +1094,15 @@ void function OnPurchaseOperationFinished( int status, GRXScriptOffer offer, Ite
 		}
 		if ( purchaseSound != "" )
 			EmitUISound( purchaseSound )
+
+
+			if ( file.state.cfg.isCupsReRoll )
+			{
+				SettingsAssetGUID cupId = RTKApexCupsOverview_GetCupID()
+				Remote_ServerCallFunction( "ClientCallback_ReRollCup", cupId )
+				RTKApexCupsOverview_HideButton()
+			}
+
 	}
 	else
 	{
@@ -1283,6 +1297,31 @@ void function UpdatePurchaseDialog()
 	}
 
 	HudElem_SetRuiArg( file.dialogContent, "reqsText", prereqText )
+
+
+		if ( file.state.cfg.isCupsReRoll )
+		{
+			SettingsAssetGUID cupId = RTKApexCupsOverview_GetCupID()
+			CupBakeryAssetData cupData = Cups_GetCupBakeryAssetDataFromGUID( cupId )
+
+			CupEntry entry = expect CupEntry ( file.state.cfg.entry )
+
+			if ( cupData.maximumNumberOfReRolls > entry.reRollCount  )
+			{
+				HudElem_SetRuiArg( file.dialogContent, "quality", 3 )
+				HudElem_SetRuiArg( file.dialogContent, "headerText", Localize( "#CUPS_REROLL_DIALOG_HEADER" ) )
+
+				CupBakeryAssetData assetData = Cups_GetCupBakeryAssetDataFromGUID( cupId )
+
+				int endTime       = CalEvent_GetFinishUnixTime( assetData.containerItemFlavor )
+				int remainingTime = endTime - GetUnixTimestamp()
+
+				HudElem_SetRuiArg( file.dialogContent, "qualityText", Localize("#TIME_REMAINING", RTKMutator_FormatTimeLong( remainingTime.tofloat() ) ) )
+				HudElem_SetRuiArg( file.dialogContent, "reRollsAmount", Localize( "#CUPS_REROLL_DIALOG_AMOUNT", assetData.maximumNumberOfReRolls - entry.reRollCount ) )
+
+			}
+		}
+
 
 	UpdateProcessingElements()
 
@@ -1506,6 +1545,9 @@ void function UpdateButtonPositions( int state, int usedButtons = 0 )
 
 	RuiSetBool( rui, "giftOnly", file.isGiftableOnly )
 
+	if ( file.state.cfg.isCupsReRoll )
+		RuiSetBool( rui, "giftOnly", true ) 
+
 	if ( file.isGiftableOnly )
 	{
 		giftYOffset = giftingButtonOffset * yScale
@@ -1621,7 +1663,8 @@ void function SetPurchaseButtonAndTooltip( ItemFlavorBag price, var button, GRXS
 
 	
 	
-	bool buttonShouldBeLocked = offer.isAvailable && !canAfford && (!isPremiumWithPack || IsVerticalPurchaseLayout())
+	
+	bool buttonShouldBeLocked = ( offer.isAvailable && !canAfford || ( GRXOffer_IsFullyClaimed( offer ) || GRXOffer_IsPurchaseLimitReached( offer ) ) ) && ( !isPremiumWithPack || IsVerticalPurchaseLayout() )
 	Hud_SetLocked( button, buttonShouldBeLocked )
 
 	Hud_SetEnabled( button, true )
@@ -1641,7 +1684,7 @@ void function SetPurchaseButtonAndTooltip( ItemFlavorBag price, var button, GRXS
 	}
 
 	Hud_ClearToolTipData( file.giftButton )
-	bool canGift = CanLocalPlayerGift()
+	bool canGift = CanLocalPlayerGift( offer )
 	int giftsLeft = Gifting_GetRemainingDailyGifts()
 	HudElem_SetRuiArg( file.giftButton, "descText", Localize( "#GIFTS_LEFT_FRACTION", giftsLeft ) )
 	HudElem_SetRuiArg( file.giftButton, "buttonText", Localize( "#BUY_GIFT_STAR" ) )

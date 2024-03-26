@@ -2134,7 +2134,7 @@ void function PopulateRewardButtonWithLore( var rewardButton, ItemFlavor quest, 
 
 bool function IsSelectedPlaylistQuestMission()
 {
-	string playlist = Lobby_GetSelectedPlaylist()
+	string playlist = LobbyPlaylist_GetSelectedPlaylist()
 	return GetPlaylistVarBool( playlist, "freelance_mode", false )
 }
 

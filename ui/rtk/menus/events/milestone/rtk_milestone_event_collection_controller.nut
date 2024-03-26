@@ -8,6 +8,7 @@ global struct RTKMilestoneEventCollectionPanel_Properties
 	rtk_behavior chaseButton
 	rtk_behavior gridPagination
 	rtk_behavior contentArea
+	rtk_behavior viewMilestoneProgressButton
 }
 
 global struct RTKMilestoneEventCollectionPanelModel
@@ -16,6 +17,7 @@ global struct RTKMilestoneEventCollectionPanelModel
 	vector titleBgColor
 	int totalItems
 	int collectedItems
+	asset collectionBoxBGImage
 }
 global struct RTKMilestoneCollectedCategoryInfo
 {
@@ -87,6 +89,19 @@ void function RTKMilestoneEventCollectionPanel_OnInitialize( rtk_behavior self )
 
 	SetUpGridButtons( self, milestoneEvent )
 	SetUpChaseButton( self, milestoneEvent )
+
+	rtk_behavior ornull viewMilestoneProgressButton = self.PropGetBehavior( "viewMilestoneProgressButton" )
+	if ( viewMilestoneProgressButton != null )
+	{
+		expect rtk_behavior( viewMilestoneProgressButton )
+	}
+	if ( viewMilestoneProgressButton )
+	{
+		self.AutoSubscribe( viewMilestoneProgressButton, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( self ) {
+			EventsPanel_GoToPage( eEventsPanelPage.MILESTONES ) 
+		} )
+	}
+
 	ResetCarouselVars()
 	thread AutoAdvanceFeaturedItems_Collection()
 	SetInitialGridPaginationPage( self )
@@ -98,7 +113,7 @@ void function RTKMilestoneEventCollectionPanel_OnInitialize( rtk_behavior self )
 		RTKCursorInteract_AutoSubscribeOnHoverLeaveListener( self, contentArea,
 			void function() : ( self, contentArea )
 			{
-				if ( EventsPanel_GetCurrentPageIndex() != eEventsPanelPage.EVENT_SHOP )
+				if ( EventsPanel_CanStartCarouselThreads() )
 				{
 					thread AutoAdvanceFeaturedItems_Collection()
 					thread AutoAdvanceFeaturedItems_Tracking()
@@ -139,7 +154,8 @@ void function BuildMilestoneGeneralPanelInfo( rtk_behavior self, rtk_struct mile
 		file.chaseItems = MilestoneEvent_GetMythicEventItems( event, file.isRestricted )
 		file.featuredItems = MilestoneEvent_GetFeaturedItems( event )
 		generalModel.totalItems = file.isRestricted ? file.items.len() : file.items.len() + file.chaseItems.len()
-		generalModel.collectedItems = GRX_GetNumberOfOwnedItemsByPlayer( file.items ) + GRX_GetNumberOfOwnedItemsByPlayer( file.chaseItems )
+		generalModel.collectedItems = file.isRestricted ? GRX_GetNumberOfOwnedItemsByPlayer( file.items ) : GRX_GetNumberOfOwnedItemsByPlayer( file.items ) + GRX_GetNumberOfOwnedItemsByPlayer( file.chaseItems )
+		generalModel.collectionBoxBGImage = MilestoneEvent_GetCollectionBoxBGImage( event )
 		RTKStruct_SetValue( milestoneEventModel, generalModel )
 	}
 }
@@ -258,13 +274,20 @@ void function SetUpGridButtons( rtk_behavior self, rtk_struct milestoneEventMode
 				array<GRXScriptOffer> offers = GRX_GetItemDedicatedStoreOffers( file.items[newChildIndex], MilestoneEvent_GetFrontPageGRXOfferLocation( event, file.isRestricted ) )
 
 				self.AutoSubscribe( button, "onHighlighted", function( rtk_behavior button, int prevState ) : ( self, newChildIndex, milestoneEventModel ) {
-					if ( EventsPanel_GetCurrentPageIndex() != eEventsPanelPage.EVENT_SHOP )
+					if ( EventsPanel_CanStartCarouselThreads() )
 					{
 						Signal( uiGlobal.signalDummy, "EndAutoAdvanceFeaturedItems" )
 						BuildMilestoneCarouselInfo( milestoneEventModel, file.items[newChildIndex] )
 					}
 				} )
 
+				self.AutoSubscribe( button, "onIdle", function( rtk_behavior button, int prevState ) : ( self, newChildIndex, milestoneEventModel ) {
+					if ( EventsPanel_CanStartCarouselThreads() )
+					{
+						thread AutoAdvanceFeaturedItems_Tracking()
+						thread AutoAdvanceFeaturedItems_Collection()
+					}
+				} )
 
 				if( offers.len() > 0 )
 				{
@@ -305,10 +328,18 @@ void function SetUpChaseButton( rtk_behavior self, rtk_struct milestoneEventMode
 		array<GRXScriptOffer> offers = GRX_GetItemDedicatedStoreOffers( file.chaseItems[0], MilestoneEvent_GetFrontPageGRXOfferLocation( event, file.isRestricted ) )
 
 		self.AutoSubscribe( button, "onHighlighted", function( rtk_behavior button, int prevState ) : ( self, milestoneEventModel ) {
-			if ( EventsPanel_GetCurrentPageIndex() != eEventsPanelPage.EVENT_SHOP )
+			if ( EventsPanel_CanStartCarouselThreads() )
 			{
 				Signal( uiGlobal.signalDummy, "EndAutoAdvanceFeaturedItems" )
 				BuildMilestoneCarouselInfo( milestoneEventModel, file.chaseItems[0] )
+			}
+		} )
+
+		self.AutoSubscribe( button, "onIdle", function( rtk_behavior button, int prevState ) : ( self , milestoneEventModel ) {
+			if ( EventsPanel_CanStartCarouselThreads() )
+			{
+				thread AutoAdvanceFeaturedItems_Tracking()
+				thread AutoAdvanceFeaturedItems_Collection()
 			}
 		} )
 

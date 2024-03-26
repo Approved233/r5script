@@ -2897,6 +2897,8 @@ void function OnItemFlavorRegistered_Character( ItemFlavor characterClass )
 
 
 
+
+
 int function GetPlayerBadgeDataInteger( EHI playerEHI, ItemFlavor badge, int badgeIndex, ItemFlavor ornull character, bool showOneTierHigherThanIsUnlocked = false )
 {
 
@@ -3282,6 +3284,11 @@ ItemFlavor function GladiatorCardStance_GetCharacterFlavor( ItemFlavor flavor )
 
 	return GetItemFlavorByAsset( GetGlobalSettingsAsset( ItemFlavor_GetAsset( flavor ), "parentItemFlavor" ) )
 }
+
+
+
+
+
 
 
 

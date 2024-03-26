@@ -9,7 +9,9 @@ global function RTKStoreGridItem_SetItemSize
 global function RTKStore_RegisterOffer
 global function RTKStore_GetOfferFromIndex
 global function RTKStore_RevealPersonalizedOffer
+global function RTKStore_SetOverrideStartingSection
 global function RTKStore_SetStartingSection
+global function RTKStore_InspectOffer
 global function RTKStore_InspectOffer_SaveTelemetryData
 
 global function StoreTelemetry_SendOferPageViewEvent
@@ -38,6 +40,7 @@ global enum eStoreGridItemType
 
 const table<string, asset> STORE_SECTION_BG_MAP =
 {
+	
 	[ "#STORE_V2_SECTION_FEATURED" ] 			= $"ui_image/rui/menu/store/backgrounds/store_background_default.rpak",
 	[ "#FIFTH_ANNIVERSARY_COLLECTION_EVENT" ] 	= $"ui_image/rui/menu/store/backgrounds/store_background_fifth_anni.rpak",
 	[ "#INNER_BEAST_COLLECTION_EVENT" ] 		= $"ui_image/rui/menu/store/backgrounds/store_background_inner_beast.rpak",
@@ -46,17 +49,32 @@ const table<string, asset> STORE_SECTION_BG_MAP =
 	[ "#MOLTEN_MAYHEM_PACK_SALE" ] 				= $"ui_image/rui/menu/store/backgrounds/store_background_molten_mayhem.rpak",
 	[ "#MOLTEN_MAYHEM_STORE" ] 					= $"ui_image/rui/menu/store/backgrounds/store_background_molten_mayhem.rpak",
 
+	
+	[ "#NOIR_MOBSTERS_MILESTONE_EVENT" ] 		= $"ui_image/rui/menu/store/backgrounds/store_background_noir_mobsters.rpak",
+	[ "#URBAN_ASSAULT_COLLECTION_EVENT" ] 		= $"ui_image/rui/menu/store/backgrounds/store_background_urban_assault.rpak",
+	[ "#SUN_WARRIOR_STORE" ] 					= $"ui_image/rui/menu/store/backgrounds/store_background_sun_warrior.rpak",
+	[ "#VIVID_NIGHTS_STORE" ] 					= $"ui_image/rui/menu/store/backgrounds/store_background_vivid_nights.rpak",
+	[ "#POLY_PROWLER_STORE" ] 					= $"ui_image/rui/menu/store/backgrounds/store_background_poly_prowlers.rpak",
+	[ "#GOLDEN_WEEK_SALE" ] 					= $"ui_image/rui/menu/store/backgrounds/store_background_golden_week.rpak",
+	[ "#GOLDEN_WEEK_ORIGINALS" ] 				= $"ui_image/rui/menu/store/backgrounds/store_background_golden_week.rpak",
+
 }
 
 const table<string, vector> STORE_SECTION_BG_TINT_MAP =
 {
-	[ "#THIRD_ANNIVERSARY_SQUADS" ] 	= <206, 163, 54>,
-	[ "#FOURTH_ANNIVERSARY_SQUADS" ] 	= <206, 163, 54>,
-	[ "#STORE_V2_SECTION_FEATURED" ] 	= <510, 255, 127>,
-	[ "#STORE_V2_SECTION_MONTHLY" ] 	= <280, 268, 247>,
-	[ "#STORE_V2_SECTION_RECOLORS" ] 	= <204, 204, 204>,
-	[ "#STORE_V2_SECTION_BATTLEPASS" ] 	= <0,0,230>,
+	[ "#THIRD_ANNIVERSARY_SQUADS" ] 		= <206, 163, 54>,
+	[ "#FOURTH_ANNIVERSARY_SQUADS" ] 		= <206, 163, 54>,
+	[ "#STORE_V2_SECTION_PERSONALIZED" ]	= <511, 0, 0>,
+	[ "#STORE_V2_SECTION_MONTHLY" ] 		= <280, 268, 247>,
+	[ "#STORE_V2_SECTION_RECOLORS" ] 		= <204, 204, 204>,
+	[ "#STORE_V2_SECTION_BATTLEPASS" ] 		= <0,0,230>,
 }
+
+const array<string> STORE_SECTION_KEY_ART_LIST =
+[
+	"#STEELED_DEMON_STORE",
+	"#SUN_WARRIOR_STORE",
+]
 
 global struct RTKStoreGridItem_Properties
 {
@@ -108,6 +126,7 @@ global struct RTKStoreGridItemModel
 global struct RTKStoreSectionModel
 {
 	int								sectionEnum = -1
+	int                             sectionId = 0
 	string                          sectionName
 	int                             endTime
 	int								startPageIndex
@@ -137,8 +156,9 @@ struct
 	int personalizedSectionIndex
 	array<GRXScriptOffer> allCurrentOffers
 
-	string lastViewedSectionName
-	int lastViewedSectionPage
+	bool overrideStartingSection = false
+	string startingSectionOverride = ""
+	int startingPageOverride = 0
 } file
 
 struct
@@ -171,14 +191,13 @@ void function RTKStoreItemShop_OnDestroy( rtk_behavior self )
 		return
 
 	
-	rtk_array storeSectionsArray = RTKStruct_GetArray( p.storeItemShopModel, SECTIONS )
-	int sectionIndex             = RTKPagination_GetCurrentPage( self.PropGetBehavior( "paginationBehavior" ) )
-	file.lastViewedSectionName 	 = RTKStruct_GetString( RTKArray_GetStruct( storeSectionsArray, sectionIndex ), "sectionName" )
-
-	
+	int sectionIndex = RTKPagination_GetCurrentPage( self.PropGetBehavior( "paginationBehavior" ) )
 	rtk_panel contentPanel = self.PropGetPanel( "contentPanel" )
 	rtk_behavior sectionBehavior = contentPanel.GetChildren()[sectionIndex].FindBehaviorByTypeName( "StoreGridSection" )
-	file.lastViewedSectionPage = RTKStoreGridSection_GetCurrentPage( sectionBehavior )
+	string lastViewedSectionName = file.fullStoreModel.sections[sectionIndex].sectionName
+	int lastViewedSectionPage = RTKStoreGridSection_GetCurrentPage( sectionBehavior )
+	RTKStore_SetStartingSection( lastViewedSectionName, lastViewedSectionPage )
+	UpdateSmartMerchandisingData()
 
 	
 	RTKDataModelType_DestroyStruct( RTK_MODELTYPE_MENUS, "storeItemShop" )
@@ -220,10 +239,10 @@ void function RTKStoreItemShop_OnInitialize( rtk_behavior self )
 
 	
 	rtk_behavior pagination = self.PropGetBehavior( "paginationBehavior" )
-	self.AutoSubscribe( pagination , "onScrollStarted", function () : ( self ) {
+	self.AutoSubscribe( pagination, "onScrollStarted", function () : ( self ) {
 		RTKStoreItemShop_OnScrollStarted( self )
 	} )
-	self.AutoSubscribe( pagination , "onScrollFinished", function () : ( self ) {
+	self.AutoSubscribe( pagination, "onScrollFinished", function () : ( self ) {
 		RTKStoreItemShop_OnScrollFinished( self )
 	} )
 
@@ -248,6 +267,9 @@ void function RTKStoreItemShop_GetStoreData( rtk_behavior self )
 	for ( int sectionEnum = 0; sectionEnum < eStoreSections._COUNT; sectionEnum++ )
 	{
 		RTKStoreSectionModel section
+		StoreSectionInfo sectionInfo
+		if ( sectionEnum in storeData )
+			sectionInfo = storeData[sectionEnum]
 
 		switch( sectionEnum )
 		{
@@ -257,29 +279,34 @@ void function RTKStoreItemShop_GetStoreData( rtk_behavior self )
 
 			case eStoreSections.Event:
 				if ( sectionEnum in storeData )
-					section = GetEventSection( storeData[sectionEnum].offers, storeData[sectionEnum].sectionName )
+					section = GetEventSection( sectionInfo.offers )
+				else if ( GetActiveMilestoneEvent( GetUnixTimestamp() ) != null )
+				{
+					array<GRXScriptOffer> offers
+					section = GetEventSection( offers )
+				}
 				break
 
 			case eStoreSections.Flex1:
 			case eStoreSections.Flex2:
 			case eStoreSections.Flex3:
 				if ( sectionEnum in storeData )
-					section = GetFlexSection( storeData[sectionEnum].offers, storeData[sectionEnum].sectionName )
+					section = GetFlexSection( sectionInfo.offers, sectionInfo.sectionName )
 				break
 
 			case eStoreSections.BattlepasShop:
 				if ( sectionEnum in storeData )
-					section = GetBattlePassSection( storeData[sectionEnum].offers )
+					section = GetBattlePassSection( sectionInfo.offers )
 				break
 
 			case eStoreSections.Recolor:
 				if ( sectionEnum in storeData )
-					section = GetRecolorSection( storeData[sectionEnum].offers )
+					section = GetRecolorSection( sectionInfo.offers )
 				break
 
 			default:
 				if ( sectionEnum in storeData )
-					section = GetSectionFromOffers( storeData[sectionEnum].offers )
+					section = GetSectionFromOffers( sectionInfo.offers )
 				break
 		}
 
@@ -289,7 +316,10 @@ void function RTKStoreItemShop_GetStoreData( rtk_behavior self )
 		section.sectionEnum = sectionEnum
 		if ( sectionEnum in storeData )
 		{
-			section.sectionName = storeData[sectionEnum].sectionName
+			section.sectionId   = sectionInfo.sectionId
+			section.sectionName = sectionInfo.sectionName
+			if ( SectionShouldBeMarkedAsNew( sectionInfo ) )
+				ClearHighestPageSeenForSection( sectionInfo.sectionId )
 		}
 		if ( section.sectionName in STORE_SECTION_BG_MAP )
 		{
@@ -310,10 +340,31 @@ void function RTKStoreItemShop_GetStoreData( rtk_behavior self )
 	file.fullStoreModel = storeModel
 }
 
-void function RTKStore_SetStartingSection( string sectionName )
+void function RTKStore_SetOverrideStartingSection( bool override = true )
 {
-	file.lastViewedSectionName = sectionName
-	file.lastViewedSectionPage = 0
+	file.overrideStartingSection = override
+}
+
+void function RTKStore_SetStartingSection( string sectionName, int startingPage = 0 )
+{
+	file.startingSectionOverride = sectionName
+	file.startingPageOverride = startingPage
+}
+
+void function RTKStore_InspectOffer( int offerIndex, int slotIndex )
+{
+	EmitUISound( "UI_Menu_Accept" )
+	GRXScriptOffer offer = RTKStore_GetOfferFromIndex( offerIndex )
+	if ( offer.output.flavors.len() <= 0 )
+		return
+
+	
+	StoreInspectMenu_AttemptOpenWithOffer( offer )
+	RTKStore_SetOverrideStartingSection()
+
+	
+	RTKStore_InspectOffer_SaveTelemetryData( offer, slotIndex )
+	StoreTelemetry_SendOferPageViewEvent()
 }
 
 void function RTKStore_InspectOffer_SaveTelemetryData( GRXScriptOffer offer, int slotIndex )
@@ -329,33 +380,23 @@ void function GoToStartingSection( rtk_behavior self )
 	PrivateData p
 	self.Private( p )
 
+	int startingSectionIndex = RTKStoreItemShop_GetStartingSectionIndex( self )
 	rtk_array storeSectionsArray = RTKStruct_GetArray( p.storeItemShopModel, SECTIONS )
-	rtk_struct storeSection
+	rtk_struct storeSection = RTKArray_GetStruct( storeSectionsArray, startingSectionIndex )
+	int startingSectionPage = file.startingPageOverride 
 
-	int arrayLength = RTKArray_GetCount( storeSectionsArray )
-	int lastViewedSection = 0
-
-	for ( int i = 0; i < arrayLength; i++ )
-	{
-		storeSection = RTKArray_GetStruct( storeSectionsArray, i )
-		string sectionName = RTKStruct_GetString( storeSection, "sectionName" )
-
-		if ( sectionName == file.lastViewedSectionName && sectionName != "" )
-		{
-			lastViewedSection = i
-			break
-		}
-	}
-
-	RTKStruct_SetInt( p.storeItemShopModel, "startPageIndex", lastViewedSection )
-	RTKStruct_SetInt( storeSection, "startPageIndex", file.lastViewedSectionPage )
-	RTKStoreItemShop_SetCurrentSectionsInfo( self, lastViewedSection )
-	SetOnlySectionVisible( self, lastViewedSection )
+	RTKStruct_SetInt( p.storeItemShopModel, "startPageIndex", startingSectionIndex )
+	RTKStruct_SetInt( storeSection, "startPageIndex", startingSectionPage )
+	RTKStoreItemShop_SetCurrentSectionsInfo( self, startingSectionIndex )
+	SetOnlySectionVisible( self, startingSectionIndex )
 
 	
-	fileTelemetry.sectionNum = lastViewedSection
-	int pageNum = file.lastViewedSectionPage
-	string pageName = file.lastViewedSectionName
+	RTKStoreItemShop_UpdateSmartMerchandisingData( self, startingSectionIndex, startingSectionPage + 1 )
+
+	
+	fileTelemetry.sectionNum = startingSectionIndex
+	int pageNum = startingSectionPage
+	string pageName = file.fullStoreModel.sections[startingSectionIndex].sectionName
 
 	fileTelemetry.prevPage = fileTelemetry.pageName
 	fileTelemetry.pageName = pageName + "_" + string( pageNum )
@@ -367,6 +408,59 @@ void function GoToStartingSection( rtk_behavior self )
 		fileTelemetry.clickType = "deeplink"
 	StoreTelemetry_SendStorePageViewEvent()
 	fileTelemetry.linkName = ""
+}
+
+int function RTKStoreItemShop_GetStartingSectionIndex( rtk_behavior self )
+{
+	int startingSectionIndex = 0
+
+	
+	if ( file.overrideStartingSection )
+	{
+		foreach ( int index, section in file.fullStoreModel.sections )
+		{
+			if ( section.sectionName == file.startingSectionOverride )
+				startingSectionIndex = index
+		}
+
+		file.overrideStartingSection = false
+		return startingSectionIndex
+	}
+
+	
+	array<int> unseenSections
+	foreach ( int index, section in file.fullStoreModel.sections )
+	{
+		if ( !HasSectionBeenSeen( section.sectionId ) )
+			unseenSections.append( index )
+	}
+
+	
+	if ( unseenSections.len() >= file.fullStoreModel.sections.len() )
+		return startingSectionIndex
+
+
+	
+	if ( unseenSections.len() > 0 )
+	{
+		int randResult = RandomIntRange( 0, unseenSections.len() )
+		startingSectionIndex = unseenSections[randResult]
+		file.startingPageOverride = 0
+	}
+	else
+	{
+		int lastViewedSectionId  = GetMostRecentlySeenSection()
+		foreach ( int index, section in file.fullStoreModel.sections )
+		{
+			if ( section.sectionId == lastViewedSectionId )
+			{
+				startingSectionIndex = index
+				break
+			}
+		}
+	}
+
+	return startingSectionIndex
 }
 
 void function RTKStoreItemShop_OnScrollStarted( rtk_behavior self )
@@ -389,14 +483,43 @@ void function RTKStoreItemShop_OnScrollStarted( rtk_behavior self )
 
 void function RTKStoreItemShop_OnScrollFinished( rtk_behavior self )
 {
-	int pageIndex = RTKPagination_GetCurrentPage( self.PropGetBehavior( "paginationBehavior" ) )
+	rtk_behavior pagination = self.PropGetBehavior( "paginationBehavior" )
+	int pageIndex = RTKPagination_GetCurrentPage( pagination )
 	SetOnlySectionVisible( self, pageIndex )
 
-	rtk_behavior pagination = self.PropGetBehavior( "paginationBehavior" )
+	
+	RTKStoreItemShop_UpdateSmartMerchandisingData( self )
+
+	
 	fileTelemetry.clickType = RTKPagination_GetLastNavType( pagination )
 	fileTelemetry.linkName = ""
 	RTKStoreItemShop_SaveTelemetryData( self )
 	StoreTelemetry_SendStorePageViewEvent()
+}
+
+void function RTKStoreItemShop_UpdateSmartMerchandisingData( rtk_behavior self, int currentSectionIndex = -1, int currentSectionPage = -1 )
+{
+	rtk_behavior pagination = self.PropGetBehavior( "paginationBehavior" )
+
+	if ( currentSectionIndex == -1 )
+	{
+		currentSectionIndex = RTKPagination_GetCurrentPage( pagination )
+	}
+
+	if ( currentSectionPage == -1 )
+	{
+		rtk_behavior sectionBehavior = self.PropGetPanel( "contentPanel" ).GetChildByIndex( currentSectionIndex ).FindBehaviorByTypeName( "StoreGridSection" )
+		currentSectionPage = RTKPagination_GetCurrentPage( sectionBehavior.PropGetBehavior( "paginationBehavior" ) ) + 1
+	}
+
+	int sectionId = file.fullStoreModel.sections[currentSectionIndex].sectionId
+	SetLastSectionVisited( sectionId )
+
+	if ( currentSectionPage > GetHighestPageForSection( sectionId ) )
+	{
+		SetHighestPageSeenForSection( sectionId, currentSectionPage )
+	}
+	RTKArray_SetValue( pagination.PropGetArray( "pipMiscBools" ), RTKStoreItemShop_GetSectionNewness( self ) )
 }
 
 void function RTKStoreItemShop_SaveTelemetryData( rtk_behavior self )
@@ -421,6 +544,18 @@ void function RTKStoreItemShop_SetCurrentSectionsInfo( rtk_behavior self, int pa
 	RTKStruct_SetString( p.storeItemShopModel, NEXT_SECTION, file.fullStoreModel.sections[nextSectionIndex].sectionName )
 }
 
+array<bool> function RTKStoreItemShop_GetSectionNewness( rtk_behavior self )
+{
+	array<bool> sectionNewness
+
+	foreach ( section in file.fullStoreModel.sections )
+	{
+		sectionNewness.append( !HasSectionBeenSeen( section.sectionId ) )
+	}
+
+	return sectionNewness
+}
+
 asset function GetBackgroundAssetFromSectionIndex( int index )
 {
 	if ( index < 0 || index >= file.fullStoreModel.sections.len() )
@@ -440,7 +575,7 @@ vector function GetBackgroundTintFromSectionIndex( int index )
 void function RTKStoreGridSection_OnInitialize( rtk_behavior self )
 {
 	rtk_behavior pagination = self.PropGetBehavior( "paginationBehavior" )
-	self.AutoSubscribe( pagination, "onScrollFinished", function ( rtk_behavior animator, string animName ) : ( self ) {
+	self.AutoSubscribe( pagination, "onScrollFinished", function () : ( self ) {
 		RTKStoreGridSection_OnScrollFinished( self )
 	} )
 }
@@ -448,6 +583,14 @@ void function RTKStoreGridSection_OnInitialize( rtk_behavior self )
 void function RTKStoreGridSection_OnScrollFinished( rtk_behavior self )
 {
 	rtk_behavior pagination = self.PropGetBehavior( "paginationBehavior" )
+
+	int sectionId = GetMostRecentlySeenSection()
+	int currentPage = RTKPagination_GetCurrentPage( pagination ) + 1
+	if ( GetHighestPageForSection( sectionId ) > currentPage )
+	{
+		SetHighestPageSeenForSection( sectionId, currentPage )
+	}
+
 	fileTelemetry.clickType = RTKPagination_GetLastNavType( pagination )
 	fileTelemetry.linkName = ""
 	RTKStoreGridSection_SaveTelemetryData( self )
@@ -531,13 +674,16 @@ void function RTKStore_RevealPersonalizedOffer( int offerIndex )
 
 	foreach ( section in file.fullStoreModel.sections )
 	{
-		if ( section.sectionName == "PERSONALIZED" ) 
+		if ( section.sectionName == "#STORE_V2_SECTION_PERSONALIZED" )
 		{
 			personalizedSection = section
 		}
 	}
+
 	if ( personalizedSection.sectionEnum == -1 )
+	{
 		return
+	}
 
 	array<bool> slotsRevealStatus
 	foreach ( int slotIndex, offer in personalizedSection.itemsArray )
@@ -607,31 +753,47 @@ RTKStoreSectionModel function GetSectionFromOffers( array<GRXScriptOffer> offers
 	return section
 }
 
-RTKStoreSectionModel function GetEventSection( array<GRXScriptOffer> offers, string sectionName )
+RTKStoreSectionModel function GetEventSection( array<GRXScriptOffer> offers )
 {
 	RTKStoreSectionModel section = GetSectionFromOffers( offers )
 
-	RTKStoreGridItemModel gridItem
-	gridItem.gridItemType = eStoreGridItemType.INFO_BUTTON
-	gridItem.miscText1    = "collectionevent"
-	if ( sectionName == "#FIFTH_ANNIVERSARY_COLLECTION_EVENT" )
+	ItemFlavor ornull activeCollectionEvent = GetActiveCollectionEvent( GetUnixTimestamp() )
+	if ( activeCollectionEvent != null )
 	{
-		gridItem.mainImage = $"ui_image/rui/menu/store/grid_item_art/store_grid_image_fifth_anni.rpak"
-		gridItem.mainText = "#FIFTH_ANNIVERSARY_INFO_TITLE"
-		gridItem.subText = "#FIFTH_ANNIVERSARY_INFO_TEXT"
-		gridItem.priceColor = <1.0, 1.0, 1.0>
+		expect ItemFlavor( activeCollectionEvent )
+
+		RTKStoreGridItemModel gridItem
+		gridItem.gridItemType = eStoreGridItemType.INFO_BUTTON
+		gridItem.mainImage     = CollectionEvent_GetStoreEventSectionMainImage( activeCollectionEvent )
+		gridItem.mainText      = CollectionEvent_GetStoreEventSectionMainText( activeCollectionEvent )
+		gridItem.subText       = CollectionEvent_GetStoreEventSectionSubText( activeCollectionEvent )
+		gridItem.priceColor    = <1.0, 1.0, 1.0>
 		gridItem.newPriceColor = <1.0, 1.0, 1.0>
-	}
-	else if ( sectionName == "#INNER_BEAST_COLLECTION_EVENT" )
-	{
-		gridItem.mainImage = $"ui_image/rui/menu/store/grid_item_art/store_grid_image_inner_beast.rpak"
-		gridItem.mainText = "#INNER_BEST_INFO_TITLE"
-		gridItem.subText = "#INNER_BEST_INFO_TEXT"
-		gridItem.priceColor = <1.0, 1.0, 1.0>
-		gridItem.newPriceColor = <1.0, 1.0, 1.0>
+
+		gridItem.miscText1    = "collectionevent"
+		section.itemsArray.insert( 0, gridItem )
 	}
 
-	section.itemsArray.insert( 0, gridItem )
+	ItemFlavor ornull activeMilestoneEvent = GetActiveMilestoneEvent( GetUnixTimestamp() )
+	if ( activeMilestoneEvent != null )
+	{
+		expect ItemFlavor( activeMilestoneEvent )
+
+		section.sectionId = 0
+		section.sectionName = "#NOIR_MOBSTERS_MILESTONE_EVENT"
+		section.endTime = CalEvent_GetFinishUnixTime( activeMilestoneEvent )
+
+		RTKStoreGridItemModel gridItem
+		gridItem.gridItemType = eStoreGridItemType.TAKEOVER
+		gridItem.mainImage     = MilestoneEvent_GetStoreEventSectionMainImage( activeMilestoneEvent )
+		gridItem.mainText      = MilestoneEvent_GetStoreEventSectionMainText( activeMilestoneEvent )
+		gridItem.subText       = MilestoneEvent_GetStoreEventSectionSubText( activeMilestoneEvent )
+		gridItem.priceColor    = <1.0, 1.0, 1.0>
+		gridItem.newPriceColor = <1.0, 1.0, 1.0>
+
+		gridItem.miscText1    = "milestoneevent"
+		section.itemsArray.insert( 0, gridItem )
+	}
 
 	return section
 }
@@ -640,7 +802,7 @@ RTKStoreSectionModel function GetFlexSection( array<GRXScriptOffer> offers, stri
 {
 	RTKStoreSectionModel section = GetSectionFromOffers( offers )
 
-	if ( sectionName == "#STEELED_DEMON_STORE" )
+	if ( STORE_SECTION_KEY_ART_LIST.contains( sectionName ) )
 	{
 		RTKStoreGridItemModel gridItem
 		gridItem.gridItemType = eStoreGridItemType.BLANK
@@ -711,8 +873,8 @@ RTKStoreSectionModel function GetPersonalizedSection()
 		section.itemsArray.append( itemModel )
 	}
 
-	ItemFlavor season = GetLatestSeason( GetUnixTimestamp() )
-	section.endTime = CalEvent_GetFinishUnixTime( season )
+	
+	section.endTime = 1713891600
 	section.sectionName = "#STORE_V2_SECTION_PERSONALIZED"
 
 	return section

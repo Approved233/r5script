@@ -1,0 +1,251 @@
+global function RTKApexCupLeaderboard_OnInitialize
+global function RTKApexCupLeaderboard_OnDestroy
+global function InitRTKApexCupLeaderboard
+global function RTKApexCupLeaderboard_UpdateLeaderboard
+
+global struct RTKApexCupLeaderboardRow
+{
+	string playerUID = ""
+	string hardware = ""
+	string name = "#CUPS_LEADERBOARD_EMPTY_DATA"
+	string points = "#CUPS_LEADERBOARD_EMPTY_DATA"
+	int placement = -1
+	int index = -1
+
+	array <RTKSummaryBreakdownRowModel> SquadStats
+}
+
+const int NUM_LEADERBOARDROWS = 10
+
+global struct RTKApexCupLeaderboardModel
+{
+	int cupCalEvent = ASSET_SETTINGS_UNIQUE_ID_INVALID
+	SettingsAssetGUID apexCup
+
+	array < RTKApexCupLeaderboardRow > rows
+	int selectedIdx = 0
+
+	RTKApexCupTierInfo& tierInfo
+}
+
+global struct RTKApexCupLeaderboard_Properties
+{
+	rtk_panel LeaderBoardRowsList
+	rtk_behavior infoButton
+}
+
+void function RTKApexCupLeaderboard_OnInitialize( rtk_behavior self )
+{
+	SettingsAssetGUID cupId = RTKApexCupsOverview_GetCupID()
+	rtk_struct apexCupsDataModel = RTKDataModelType_CreateStruct( RTK_MODELTYPE_MENUS, "apexCups", "RTKApexCupLeaderboardModel" )
+
+	if ( Cups_IsValidCupID(cupId ))
+	{
+		Cups_RegisterOnLeaderboardChangedCallback(  RTKApexCupLeaderboard_UpdateLeaderboard )
+		Remote_ServerCallFunction( "ClientCallback_GetLeaderboardData", cupId,  1  , NUM_LEADERBOARDROWS )
+		RTKApexCupLeaderboard_OnInitRows( self )
+
+		CupBakeryAssetData cupBakeryData = Cups_GetCupBakeryAssetDataFromGUID( cupId )
+		bool cupStarted = CalEvent_HasStarted( cupBakeryData.containerItemFlavor, GetUnixTimestamp() )
+		bool cupFinished = CalEvent_HasFinished( cupBakeryData.containerItemFlavor, GetUnixTimestamp() )
+
+		RTKStruct_SetInt( apexCupsDataModel, "cupCalEvent", cupBakeryData.containerItemFlavor.guid )
+		RTKStruct_SetInt( apexCupsDataModel, "apexCup", cupId )
+
+		if ( cupStarted )
+		{
+			self.Message( "RTKApexCupLeaderboard OnInitialize - Cup Started" )
+		}
+		else
+		{
+			self.Message( "RTKApexCupLeaderboard OnInitialize - Cup Not Started" )
+		}
+
+		if ( cupStarted && ( Cups_GetPlayersPDataIndexForCupID(  GetLocalClientPlayer() , cupId) != -1 ))
+		{
+			self.Warn( "RTKApexCupLeaderboard OnInitialize - set up leaderboard" )
+			thread RTKApexCupLeaderboard_GetPlayerTierData( self )
+		}
+		else if ( cupStarted == false)
+		{
+			self.Message( "RTKApexCupLeaderboard OnInitialize - Cup Not Started" )
+		}
+		else
+		{
+			self.Message( "RTKApexCupLeaderboard OnInitialize - Player Not Registered To Cup" )
+		}
+
+		rtk_behavior ornull infoButton = self.PropGetBehavior( "infoButton" )
+		if ( infoButton != null )
+		{
+			self.AutoSubscribe( infoButton, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( self ) {
+				UI_OpenCupInfoDialog()
+			} )
+		}
+	}
+	else
+	{
+		self.Warn( "RTKApexCupLeaderboard OnInitialize - Cup ID is invalid" )
+	}
+}
+
+void function RTKApexCupLeaderboard_OnInitRows( rtk_behavior self )
+{
+	rtk_panel ornull LeaderBoardRowsList = self.PropGetPanel( "LeaderBoardRowsList" )
+	if ( LeaderBoardRowsList != null )
+	{
+		expect rtk_panel( LeaderBoardRowsList )
+		self.AutoSubscribe( LeaderBoardRowsList, "onChildAdded", function ( rtk_panel newChild, int newChildIndex ) : ( self ) {
+
+			array< rtk_behavior > LeaderBoardRows = newChild.FindBehaviorsByTypeName( "Button" )
+
+			foreach ( row in LeaderBoardRows )
+			{
+				self.AutoSubscribe( row, "onHighlighted", function( rtk_behavior button, int prevState ) : ( self, newChildIndex )
+				{
+					rtk_struct rtkModel = expect rtk_struct( RTKDataModelType_GetStruct( RTK_MODELTYPE_MENUS, "apexCups", true ) )
+					RTKStruct_SetInt( rtkModel, "selectedIdx", newChildIndex )
+				})
+			}
+		})
+	}
+}
+
+table< string, int > function RTKApexCupLeaderBoard_GetSquadBreakdown( SettingsAssetGUID cupId, CupLeaderboardEntry entry )
+{
+	CupBakeryAssetData cupBakeryData = Cups_GetCupBakeryAssetDataFromGUID( cupId )
+
+	table< string, int > result
+	foreach ( CupMatchSummary summary in entry.matchHistoryData )
+	{
+		foreach ( CupsPlayerMatchSummary player in summary.playerSummaries )
+		{
+			if ( !( "#CUPS_POINTS_PLACEMENT" in result ) )
+				result["#CUPS_POINTS_PLACEMENT"] <- Cups_GetPointsForPlacement( cupBakeryData, player.playerPlacement )
+			else
+				result["#CUPS_POINTS_PLACEMENT"] += Cups_GetPointsForPlacement( cupBakeryData, player.playerPlacement )
+
+			foreach ( CupsMatchStatInformation stat in player.statInformation )
+			{
+				string statName = ShStats_GenerateStatLocStringFromStatRef( stat.statRef )
+				if ( !( statName in result ) )
+					result[statName] <- stat.pointsGained
+				else
+					result[statName] += stat.pointsGained
+			}
+		}
+	}
+	return result
+}
+
+RTKSummaryBreakdownRowModel function CreateBreakdownRow( int index )
+{
+	RTKSummaryBreakdownRowModel row
+	row.index 		= index
+	row.rowBGAlpha 	= 0.7
+	row.rowSize 	= 450
+	row.textSize 	= 28
+	row.textColor 	= <1.0,1.0,1.0>
+	row.rightText = "#CUPS_LEADERBOARD_EMPTY_DATA"
+	return row
+}
+
+void function RTKApexCupLeaderboard_UpdateLeaderboard( SettingsAssetGUID cupID, int start, array<CupLeaderboardEntry> entries )
+{
+	rtk_struct apexCupsDataModel = expect rtk_struct( RTKDataModelType_GetStruct( RTK_MODELTYPE_MENUS, "apexCups", true ) )
+
+	RTKApexCupLeaderboardModel apexCupLeaderBoardModel
+	RTKStruct_GetValue( apexCupsDataModel, apexCupLeaderBoardModel )
+
+	int count = minint( entries.len(), NUM_LEADERBOARDROWS )
+
+	
+	for ( int i = 0 ; i < count ; i++ )
+	{
+		RTKApexCupLeaderboardRow newRow
+
+		
+		CupLeaderboardEntry entry = entries[i]
+		newRow.playerUID	= entry.squadInfo[0].playerUID
+		newRow.hardware		= entry.squadInfo[0].hardware
+		newRow.name   		= entry.squadInfo[0].name
+		newRow.points 		= entry.squadScore == -1 ? Localize( "#CUPS_LEADERBOARD_EMPTY_DATA" ) : FormatAndLocalizeNumber( "1" , float(entry.squadScore), true )
+		newRow.placement 	= start + ( i + 1 )
+		newRow.index 		= i
+
+		
+		int idx = 0
+		foreach ( key, value in RTKApexCupLeaderBoard_GetSquadBreakdown( cupID, entry ) )
+		{
+			RTKSummaryBreakdownRowModel statRow = CreateBreakdownRow( idx )
+			statRow.leftText = key
+			if ( value > 0 )
+				statRow.rightText = FormatAndLocalizeNumber( "1" , float(value), true )
+			newRow.SquadStats.append( statRow )
+			idx++
+		}
+		apexCupLeaderBoardModel.rows.append( newRow )
+	}
+
+	
+	for ( int i = count; i < NUM_LEADERBOARDROWS; ++i )
+	{
+		RTKApexCupLeaderboardRow row
+		row.playerUID 	= ""
+		row.hardware 	= ""
+		row.name  		= ""
+		row.points 		= "#CUPS_LEADERBOARD_EMPTY_DATA"
+		row.placement 	= start + ( i + 1 )
+		row.index 		= i
+
+		apexCupLeaderBoardModel.rows.append( row )
+	}
+
+	RTKStruct_SetValue( apexCupsDataModel, apexCupLeaderBoardModel )
+}
+
+void function RTKApexCupLeaderboard_GetPlayerTierData( rtk_behavior self )
+{
+	SettingsAssetGUID cupId = RTKApexCupsOverview_GetCupID()
+	EndSignal( self, RTK_ON_DESTROY_SIGNAL )
+
+	while ( Cups_GetSquadCupData( cupId ) == null )
+	{
+		WaitFrame()
+	}
+
+	RTKApexCupTierInfo tierInfo
+	tierInfo.apexCup = cupId
+
+	if (  Cups_GetSquadCupData( cupId ) )
+	{
+		CupEntry cupEntryData  = expect CupEntry ( Cups_GetSquadCupData( cupId ))
+		tierInfo.currentPoints = cupEntryData.currSquadScore
+		tierInfo.tierIndex     = Cups_GetPlayerTierIndexForCup( cupId )
+		tierInfo.targetPoints  = cupEntryData.tierScoreBounds[ maxint( 0, tierInfo.tierIndex - 1 ) ]
+		tierInfo.lowerBounds   = tierInfo.tierIndex <  cupEntryData.tierScoreBounds.len() ? cupEntryData.tierScoreBounds[tierInfo.tierIndex] : 0
+
+		
+		float percent = cupEntryData.positionPercentage
+		if ( percent > 0.1 )
+			tierInfo.positionPercentage = int( ceil( percent * 10 ) ) * 10
+		else
+			tierInfo.positionPercentage = int( ceil( percent * 100 ) )
+	}
+
+	rtk_struct tierModel = expect rtk_struct( RTKDataModelType_GetStruct( RTK_MODELTYPE_MENUS, "tierInfo", true, [ "apexCups" ] ) )
+	RTKStruct_SetValue( tierModel, tierInfo )
+}
+
+void function RTKApexCupLeaderboard_OnDestroy( rtk_behavior self )
+{
+	Signal( self, RTK_ON_DESTROY_SIGNAL )
+	RTKDataModelType_DestroyStruct( RTK_MODELTYPE_MENUS, "apexCups" )
+	Cups_UnRegisterOnLeaderboardChangedCallback(RTKApexCupLeaderboard_UpdateLeaderboard )
+}
+
+void function InitRTKApexCupLeaderboard( var panel )
+{
+	AddPanelFooterOption( panel, LEFT, BUTTON_B, true, "#B_BUTTON_BACK", "#B_BUTTON_BACK", GamemodeSelect_JumpToCups )
+}
+

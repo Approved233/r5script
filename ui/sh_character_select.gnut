@@ -179,6 +179,8 @@ global const int NUM_CHARACTER_SELECT_BUTTONS = 50
 
 
 
+
+
 struct FileForeverStruct
 {
 	var menu
@@ -195,6 +197,9 @@ struct FileLevelStruct
 		bool isBrowseMode = false
 		bool browseModeShowLockedCharacters = false
 		float isBrowseModeStartTime
+
+
+
 
 
 
@@ -448,6 +453,8 @@ void function ClientToUI_UpdateHighlightedCharacter( string charGuid )
 	RTKLegendUpgradeTree_SetTitleVisibility( false )
 	RTKLegendUpgradeTree_SetDescriptionVisibility( false )
 }
+
+
 
 
 
@@ -2201,6 +2208,50 @@ void function UI_CloseCharacterSelect()
 		MenuStack_Remove( fileForever.specialCharacterSelect )
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

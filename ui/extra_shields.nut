@@ -9,8 +9,6 @@ global function ExtraShields_Init
 
 
 
-global const string EXTRA_SHIELDS_NETINT = "extra_shields"
-global const string EXTRA_SHIELDS_TIER_NETINT = "extra_shields_tier"
 global const string EXTRA_SHIELDS_DURATION_NETFLOAT = "extra_shields_duration"
 global const float EXTRA_SHIELDS_TOTAL_DURATION = 28.0
 global const int EXTRA_SHIELD_DECAY_RATE = 2
@@ -37,8 +35,6 @@ void function ExtraShields_Init()
 {
 	file.totalShieldDuration = GetCurrentPlaylistVarFloat( "extra_shield_total_shield_duration", EXTRA_SHIELDS_TOTAL_DURATION )
 
-	RegisterNetworkedVariable( EXTRA_SHIELDS_NETINT, SNDC_PLAYER_GLOBAL, SNVT_INT , 0 )
-	RegisterNetworkedVariable( EXTRA_SHIELDS_TIER_NETINT, SNDC_PLAYER_GLOBAL, SNVT_INT , 0 )
 	RegisterNetworkedVariable( EXTRA_SHIELDS_DURATION_NETFLOAT, SNDC_PLAYER_EXCLUSIVE, SNVT_FLOAT_RANGE , file.totalShieldDuration, 0.0, file.totalShieldDuration )
 
 
@@ -52,9 +48,7 @@ void function ExtraShields_Init()
 
 
 
-
 }
-
 
 
 

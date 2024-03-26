@@ -58,7 +58,7 @@ void function RTKSweepstakesFlowPanel_OnInitialize( rtk_behavior self )
 		sweepstakesFlowModel.availablePurchases = offer.purchaseLimit - offer.purchaseCount
 		sweepstakesFlowModel.price = EventShop_GetItemPrice( offer )
 		sweepstakesFlowModel.tokenCount = RTKSweepstakesFlow_CanPurchaseTokens( offer, 1 ) ? 1 : 0
-		sweepstakesFlowModel.totalEntries = AcidWraith_GetCurrentSweepstakesEntryCount( player )
+		sweepstakesFlowModel.totalEntries = 0
 		sweepstakesFlowModel.prizeImage = EventShop_GetSweepstakesPrizeImage(expect ItemFlavor( EventShop_GetCurrentActiveEventShop() ) )
 		sweepstakesFlowModel.canPurchaseTokens = RTKSweepstakesFlow_CanPurchaseTokens( offer, 1 )
 
@@ -174,7 +174,7 @@ void function RTKSweepstakesFlowPanel_OnPurchaseSuccessful( bool wasSuccessful )
 			{
 				rtk_struct sweepstakesFlow = RTKDataModel_GetStruct( sweepstakesFlowPath )
 				RTKStruct_SetInt( sweepstakesFlow, "flow", eSweepstakesFlow.DONE )
-				RTKStruct_SetInt( sweepstakesFlow, "totalEntries", AcidWraith_GetCurrentSweepstakesEntryCount( GetLocalClientPlayer() ) )
+				RTKStruct_SetInt( sweepstakesFlow, "totalEntries", 0 )
 			}
 		}()
 	}

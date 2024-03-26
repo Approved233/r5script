@@ -55,6 +55,7 @@ void function InitADSControlsPanelConsole( var panel )
 	file.customItems.append( SetupSettingsButton( Hud_GetChild( contentPanel, "SwchLookSensitivityADS6" ), "#PEROPTICADS_6", "#GAMEPAD_MENU_SENSITIVITY_ZOOM_DESC", $"" ) )
 	file.customItems.append( SetupSettingsButton( Hud_GetChild( contentPanel, "SwchLookSensitivityADS7" ), "#PEROPTICADS_7", "#GAMEPAD_MENU_SENSITIVITY_ZOOM_DESC_SEER", $"" ) )
 
+	SettingsPanel_SetContentPanelHeight( contentPanel )
 	ScrollPanel_InitPanel( panel )
 	ScrollPanel_InitScrollBar( panel, Hud_GetChild( panel, "ScrollBar" ) )
 
@@ -67,6 +68,8 @@ void function InitADSControlsPanelConsole( var panel )
 void function OnADSControlsPanel_Show( var panel )
 {
 	ScrollPanel_SetActive( panel, true )
+	SettingsPanel_SetContentPanelHeight( Hud_GetChild( panel, "ContentPanel" ) )
+	ScrollPanel_Refresh( panel )
 }
 
 

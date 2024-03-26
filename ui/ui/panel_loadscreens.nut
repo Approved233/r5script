@@ -99,7 +99,7 @@ void function FocusDescriptionForScrolling(  ... )
 
 void function OnLoadscreenEquipChanged( EHI playerEHI, ItemFlavor flavor )
 {
-	if ( GetPlaylistVarBool( Lobby_GetSelectedPlaylist(), "force_level_loadscreen", false ) )
+	if ( GetPlaylistVarBool( LobbyPlaylist_GetSelectedPlaylist(), "force_level_loadscreen", false ) )
 		Lobby_UpdateLoadscreenFromPlaylist()
 	else
 		thread Loadscreen_SetCustomLoadscreen( flavor )

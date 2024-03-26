@@ -337,7 +337,7 @@ void function HandleViewProfileSquadPlayer( var button )
 			}
 
 
-			ShowPlayerProfileCardForUID( playerData.uid )
+			ShowPlayerProfileCardForUID( playerData.unspoofedUid )
 		}
 	}
 

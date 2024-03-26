@@ -630,7 +630,7 @@ void function Lobby_UpdateSelectedPlaylistUsingUISlot( string previousPlaylist )
 		PlayLobbyCharacterDialogue( mapChangeAlias )
 	}
 
-	Lobby_SetSelectedPlaylist( newPlaylist )
+	LobbyPlaylist_SetSelectedPlaylist( newPlaylist )
 	printf("Changed selected playlist from '%s' to '%s'", previousPlaylist, newPlaylist)
 }
 
@@ -662,7 +662,7 @@ void function TrackPlaylistRotation()
 				UpdateOpenModeSelectDialog()
 		}
 
-		string selectedPlaylist = Lobby_GetSelectedPlaylist()
+		string selectedPlaylist = LobbyPlaylist_GetSelectedPlaylist()
 		if ( !Lobby_IsPlaylistAvailable( selectedPlaylist ) && !AreWeMatchmaking() && !uiGlobal.isLevelShuttingDown )
 		{
 			Lobby_UpdateSelectedPlaylistUsingUISlot( selectedPlaylist )

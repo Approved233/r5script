@@ -219,7 +219,7 @@ void function GamemodeButton_Activate( var button )
 	if ( IsPrivateMatchLobby() )
 		PrivateMatch_SetSelectedPlaylist( playlistName )
 	else
-		Lobby_SetSelectedPlaylist( playlistName )
+		LobbyPlaylist_SetSelectedPlaylist( playlistName )
 
 	DismissGamemodeSelectorAndRefresh()
 
@@ -625,9 +625,10 @@ void function CrossFadeCraftingMapPreview(var button, bool showMixtape = false, 
 		
 		bool isMixtape = slotButton == button && ( slotKey == "mixtape" )
 		bool isRanked  = slotButton == button && ( slotKey == "ranked" )
+		bool isLtm = slotButton == button && ( slotKey == "ltm" )
 		bool isPub = slotButton == button && ( slotKey == "regular_1" || slotKey == "regular_2")
 
-		if( isMixtape || isRanked || isPub )
+		if( isMixtape || isRanked || isPub || isLtm )
 		{
 			
 			var craftingRui = Hud_GetRui( file.craftingPreview )
@@ -757,8 +758,8 @@ void function GamemodeSelect_UpdateSelectButton( var button, string playlistName
 
 	bool isPlaylistAvailable = Lobby_IsPlaylistAvailable( playlistName )
 	Hud_SetLocked( button, !isPlaylistAvailable )
-	int playlistState = Lobby_GetPlaylistState( playlistName )
-	string playlistStateString = Lobby_GetPlaylistStateString( playlistState )
+	int playlistState = LobbyPlaylist_GetPlaylistState( playlistName )
+	string playlistStateString = LobbyPlaylist_GetPlaylistStateString( playlistState )
 
 	if ( playlistState == ePlaylistState.ACCOUNT_LEVEL_REQUIRED )
 	{

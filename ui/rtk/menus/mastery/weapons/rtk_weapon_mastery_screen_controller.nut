@@ -84,8 +84,6 @@ void function RTKWeaponMasteryScreen_OnInitialize( rtk_behavior self )
 	PrivateData p
 	self.Private( p )
 
-	UI_SetPresentationType( ePresentationType.WEAPON_OVERVIEW )
-
 	rtk_behavior ornull trialButton = self.PropGetBehavior( "trialButton" )
 
 	if ( trialButton != null )
@@ -126,6 +124,7 @@ void function RTKWeaponMasteryScreen_OnInitialize( rtk_behavior self )
 	}
 
 	int menuGUID = AssignMenuGUID()
+	UI_SetPresentationType( ePresentationType.WEAPON_OVERVIEW )  
 
 	UpdateFooterOptions()
 }

@@ -16,12 +16,19 @@ const string SFX_MENU_OPENED = "UI_Menu_Focus_Large"
 
 const int MAX_ARG_COUNT 	 = 6
 
+global struct featureTutorialTableData
+{
+	string leftString
+	string rightString
+}
+
 global struct featureTutorialData
 {
 	string          title
 	string		 	description
 	asset			image
 	array< string >	descArgs
+	array< featureTutorialTableData > tableData
 
 	
 	bool 			hasImage
@@ -206,7 +213,7 @@ void function FeatureTutorialDialog_Cancel( var button )
 string function GetPlaylist()
 {
 	if ( IsLobby() )
-		return Lobby_GetSelectedPlaylist()
+		return LobbyPlaylist_GetSelectedPlaylist()
 	else
 		return GetCurrentPlaylistName()
 
@@ -243,7 +250,7 @@ array< featureTutorialTab > function GetFeatureTutorial()
 	return tabs
 }
 
-featureTutorialData function UI_FeatureTutorialDialog_BuildDetailsData( string title = "", string description = "", asset image = $"", array< string > descArgs = ["", "", "", "", "", ""] )
+featureTutorialData function UI_FeatureTutorialDialog_BuildDetailsData( string title = "", string description = "", asset image = $"", array< string > descArgs = ["", "", "", "", "", ""], table< string, string > tableData = {} )
 {
 	featureTutorialData data
 	data.title = title
@@ -251,6 +258,14 @@ featureTutorialData function UI_FeatureTutorialDialog_BuildDetailsData( string t
 	data.image = image
 	for ( int i = 0; i < MAX_ARG_COUNT; i++ )
 		data.descArgs.append( ( descArgs.len() > i ) ? descArgs[i] : "" )
+
+	foreach ( string leftString, string rightString in tableData )
+	{
+		featureTutorialTableData td
+		td.leftString = leftString
+		td.rightString = tableData[leftString]
+		data.tableData.append( td )
+	}
 
 	
 	data.hasImage = image != $""

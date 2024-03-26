@@ -81,7 +81,7 @@ void function OpenPromoLink( string linkType, string link )
 			if ( IsValidItemFlavorCharacterRef( link ) )
 			{
 				ItemFlavor character = GetItemFlavorByCharacterRef( link )
-				if ( GRX_IsItemOwnedByPlayer( character ) )
+				if ( GRX_IsInventoryReady( GetLocalClientPlayer() ) && GRX_IsItemOwnedByPlayer( character )  )
 					JumpToCharactersTab()
 				else
 					JumpToCharacterCustomize( character )
@@ -89,7 +89,7 @@ void function OpenPromoLink( string linkType, string link )
 			else if ( IsValidItemFlavorGUID( ConvertItemFlavorGUIDStringToGUID( link ) ) )
 			{
 				ItemFlavor character = GetItemFlavorByGUID( ConvertItemFlavorGUIDStringToGUID( link ) )
-				if ( GRX_IsItemOwnedByPlayer( character ) )
+				if ( GRX_IsInventoryReady( GetLocalClientPlayer() ) && GRX_IsItemOwnedByPlayer( character ) )
 					JumpToCharactersTab()
 				else
 					JumpToCharacterCustomize( character )
@@ -194,6 +194,11 @@ void function OpenPromoLink( string linkType, string link )
 		case "storeOfferShop":
 			EmitUISound( "UI_Menu_Accept" )
 			JumpToStoreSection( link )
+			break
+
+		case "rumble":
+			EmitUISound( "UI_Menu_Accept" )
+			GamemodeSelect_JumpToCups( null )
 			break
 	}
 }

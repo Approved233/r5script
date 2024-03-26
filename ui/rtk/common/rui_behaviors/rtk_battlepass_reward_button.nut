@@ -148,6 +148,7 @@ void function RTKBattlePassRewardButton_OnDrawBegin( rtk_behavior self )
 		panel.SetRuiArgInt( "panelPos", 0 )
 		panel.SetRuiArgInt( "bpLevel", -1 )
 
+
 		panel.SetRuiArgImage( "buttonImageSecondLayer", $"" )
 		panel.SetRuiArgImage( "characterIcon", $"" )
 		panel.SetRuiArgString( "itemCountString", "" )
@@ -170,7 +171,7 @@ void function RTKBattlePassRewardButton_OnDrawBegin( rtk_behavior self )
 		panel.SetRuiArgBool( "isOwned", item.isOwned )
 
 		asset rewardImage = CustomizeMenu_GetRewardButtonImage( item.flav )
-		if ( ShouldDisplayTallButton( item.flav ) && item.isTall ) 
+		if ( item.isTall ) 
 		{
 			panel.SetHeight( panel.GetWidth() * 1.5 )
 

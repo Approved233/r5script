@@ -41,6 +41,8 @@ global function PIN_BattlepassMilestonePageView
 global function PIN_UIInteraction_PersonalisedStoreInteraction
 global function PIN_UIInteraction_PersonalisedStoreReveal
 
+global function PIN_PageView_EventsTab
+
 global function SetCurrentHubForPIN
 global function SetCurrentTabForPIN
 global function SetCachedOfferAlias
@@ -1115,6 +1117,36 @@ void function PIN_PageView_Offer( string pageName, string prevPage, int openDura
 			offer_name 		= offerName
 			offer_priority 	= offerPriority
 			slot_type 		= slotType
+		}
+	)
+}
+
+
+
+void function PIN_PageView_EventsTab( string menuName, int openDuration, string fromId, int sectionNum, int pageNum, string linkName, string clickType, string eventName )
+{
+	if ( openDuration < 1.0 )
+		return
+
+	table<string, string> metaData
+	metaData["hub_name"] <- "seasonal"
+	metaData["tab_name"] <- "event"
+
+	AddPINTelemetryEvent( "page_view",
+		PIN_StandardHeader(),
+		{
+			ldur = 0
+			pgdur = openDuration
+			pgid = menuName.tolower()
+			fromid = fromId.tolower()
+			type = "menu"
+			meta = metaData
+			v_tab			= sectionNum
+			h_tab			= pageNum
+			link_name		= linkName
+			click_type		= clickType
+
+			event			= eventName
 		}
 	)
 }

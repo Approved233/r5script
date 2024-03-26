@@ -268,7 +268,7 @@ void function ReadyUpWithQuestPlaylist( string playlistName )
 	TabData lobbyTabData = GetTabDataForPanel( GetMenu( "LobbyMenu" ) )
 	ActivateTab( lobbyTabData, Tab_GetTabIndexByBodyName( lobbyTabData, "PlayPanel" ) )
 
-	Lobby_SetSelectedPlaylist( playlistName )
+	LobbyPlaylist_SetSelectedPlaylist( playlistName )
 	ReadyShortcut_OnActivate( null )
 }
 

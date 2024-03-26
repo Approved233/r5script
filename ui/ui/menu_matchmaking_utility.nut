@@ -37,6 +37,7 @@ void function LeaveMatch()
 
 	CancelMatchmaking()
 	Remote_ServerCallFunction( "ClientCallback_LeaveMatch" )
+	RunClientScript( "UICallback_LeaveMatchInitiated" )
 
 	file.leaveMatchInitiated = true
 }

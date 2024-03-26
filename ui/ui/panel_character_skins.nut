@@ -1,10 +1,5 @@
 global function InitCharacterSkinsPanel
 
-
-global function MeleeSkinButton_ToggleDeathboxState
-global function MeleeSkinButton_ClientToUI_UpdateDeathboxEquipState
-
-
 struct
 {
 	var               panel
@@ -29,21 +24,6 @@ struct
 
 	int activeMythicSkinTier = 1
 } file
-
-struct
-{
-	ItemFlavor&       character
-	LoadoutEntry&     loadoutSlot
-	var               button
-	array<ItemFlavor> selectableMeleeSkins
-	int               selectedIndex = -1
-
-	bool  onShowCallbacksRegistered = false
-	bool  onFocusCallbacksRegistered = false
-	float stickDeflection = 0
-	int   lastStickState = eStickState.NEUTRAL
-
-} meleeSkinData
 
 void function InitCharacterSkinsPanel( var panel )
 {
@@ -91,8 +71,6 @@ void function InitCharacterSkinsPanel( var panel )
 	
 	
 	
-
-	meleeSkinData.button = Hud_GetChild( panel, "EquipMeleeSkinButton" )
 
 	file.mythicEquipButton =  Hud_GetChild( panel, "EquipMythicButton" )
 	HudElem_SetRuiArg( file.mythicEquipButton, "centerText", "EQUIP" )
@@ -142,22 +120,16 @@ void function CharacterSkinsPanel_OnShow( var panel )
 	thread TrackIsOverScrollBar( file.listPanel )
 	CharacterSkinsPanel_Update( panel )
 
-	MeleeSkinButton_Init()
-	MeleeSkinButton_Update()
-	AddCallback_ItemFlavorLoadoutSlotDidChange_SpecificPlayer( LocalClientEHI(), Loadout_MeleeSkin( GetTopLevelCustomizeContext() ), OnMeleeSkinChanged )
-
 	UpdateMythicTrackingButton()
 	FocusOnMythicSkinIfAnyTierEquiped()
 }
 void function CharacterSkinsPanel_OnHide( var panel )
 {
-	MeleeSkinButton_UnregisterOnFocusCallbacks()
 	RemoveCallback_OnTopLevelCustomizeContextChanged( panel, CharacterSkinsPanel_Update )
 	Signal( uiGlobal.signalDummy, "TrackIsOverScrollBar" )
 	RunClientScript( "EnableModelTurn" )
 	CharacterSkinsPanel_Update( panel )
 
-	RemoveCallback_ItemFlavorLoadoutSlotDidChange_SpecificPlayer( LocalClientEHI(), Loadout_MeleeSkin( GetTopLevelCustomizeContext() ), OnMeleeSkinChanged )
 	UI_SetPresentationType( ePresentationType.INACTIVE )
 }
 void function CharacterSkinsPanel_Update( var panel )
@@ -393,337 +365,6 @@ void function UpdateMythicSkinInfo()
 
 		var ruisel = Hud_GetRui( file.mythicSelection )
 		RuiSetInt( ruisel, "selectionID", file.activeMythicSkinTier - 1)
-}
-
-
-void function MeleeSkinButton_ToggleDeathbox( var button )
-{
-	Assert( meleeSkinData.selectableMeleeSkins.len() > 0 )
-	Assert( meleeSkinData.selectedIndex >= 0 )
-	Assert( meleeSkinData.selectedIndex < meleeSkinData.selectableMeleeSkins.len() )
-
-	ItemFlavor selectedMeleeSkin = meleeSkinData.selectableMeleeSkins[meleeSkinData.selectedIndex]
-
-
-
-
-
-
-	PIN_Customization( meleeSkinData.character, selectedMeleeSkin, "deathbox_equip" )
-	RequestToggleGoldenHorseDeathboxEquipForMeleeSkin( LocalClientEHI(), meleeSkinData.loadoutSlot, selectedMeleeSkin )
-}
-
-
-
-bool function MeleeSkinButton_SkinHasGoldenHorseBoxEquipped( ItemFlavor meleeSkin )
-{
-	EHI playerEHI = LocalClientEHI()
-	LoadoutEntry skinSlot = Loadout_MeleeSkin( GetTopLevelCustomizeContext() )
-	LoadoutEntry boxSlot  = Loadout_Deathbox( GetTopLevelCustomizeContext() )
-
-	array<ItemFlavor> skinBackups = LoadoutSlot_GetBackups( playerEHI, skinSlot )
-	array<ItemFlavor> boxBackups  = LoadoutSlot_GetBackups( playerEHI, boxSlot )
-	bool hasBox = false
-	for ( int i = 0; i < skinBackups.len(); i++ )
-	{
-		if ( skinBackups[i] == meleeSkin )
-		{
-			if ( boxBackups.isvalidindex( i ) )
-				hasBox = ( boxBackups[i] == Deathbox_GetGoldenHorseDeathbox() )
-			break
-		}
-	}
-	return hasBox
-}
-
-
-
-void function MeleeSkinButton_ClientToUI_UpdateDeathboxEquipState( int characterGUID, int meleeSkinGUID )
-{
-	ItemFlavor character = GetItemFlavorByGUID( characterGUID )
-	ItemFlavor meleeSkin = GetItemFlavorByGUID( meleeSkinGUID )
-
-	if ( GetTopLevelCustomizeContext() != character )
-		return
-
-	EHI playerEHI 	      = LocalClientEHI()
-	LoadoutEntry skinSlot = Loadout_MeleeSkin( character )
-	LoadoutEntry boxSlot  = Loadout_Deathbox( character )
-
-	array<ItemFlavor> skinBackups = LoadoutSlot_GetBackups( playerEHI, skinSlot )
-	array<ItemFlavor> boxBackups  = LoadoutSlot_GetBackups( playerEHI, boxSlot )
-	for ( int i = 0; i < skinBackups.len(); i++ )
-	{
-		if ( skinBackups[i] == meleeSkin )
-		{
-			bool hasBox = boxBackups.isvalidindex( i ) ? boxBackups[i] == Deathbox_GetGoldenHorseDeathbox() : false
-			MeleeSkinButton_ToggleDeathboxState( hasBox )
-			break
-		}
-	}
-}
-
-
-
-void function MeleeSkinButton_ToggleDeathboxState( bool hasDeathbox )
-{
-	HudElem_SetRuiArg( meleeSkinData.button, "hasDeathbox", hasDeathbox, eRuiArgType.BOOL )
-}
-
-
-void function OnMeleeSkinChanged( EHI playerEHI, ItemFlavor flavor )
-{
-	MeleeSkinButton_Update()
-}
-
-ItemFlavor ornull function GetMeleeHeirloom( ItemFlavor character )
-{
-	LoadoutEntry entry = Loadout_MeleeSkin( GetTopLevelCustomizeContext() )
-	array<ItemFlavor> melees = GetValidItemFlavorsForLoadoutSlot( LocalClientEHI(), entry )
-
-	foreach ( meleeFlav in melees )
-	{
-		if ( ItemFlavor_GetQuality( meleeFlav ) == eRarityTier.MYTHIC )
-		{
-			return meleeFlav
-		}
-	}
-
-	return null
-}
-
-void function MeleeSkinButton_Init()
-{
-	meleeSkinData.character            = GetTopLevelCustomizeContext()
-	meleeSkinData.loadoutSlot          = Loadout_MeleeSkin( meleeSkinData.character )
-	meleeSkinData.selectableMeleeSkins = MeleeSkinButton_GetSelectableMeleeSkins()
-	meleeSkinData.selectedIndex        = MeleeSkinButton_GetSelectedIndex()
-}
-
-array<ItemFlavor> function MeleeSkinButton_GetSelectableMeleeSkins()
-{
-	EHI playerEHI = LocalClientEHI()
-	array<ItemFlavor> allMeleeSkins = clone GetValidItemFlavorsForLoadoutSlot( playerEHI, meleeSkinData.loadoutSlot )
-
-	array<ItemFlavor> selectableMeleeSkins
-	foreach ( ItemFlavor meleeSkin in allMeleeSkins )
-	{
-		if ( IsItemFlavorUnlockedForLoadoutSlot( playerEHI, meleeSkinData.loadoutSlot, meleeSkin ) )
-			selectableMeleeSkins.append( meleeSkin )
-	}
-
-	selectableMeleeSkins.removebyvalue( GetDefaultItemFlavorForLoadoutSlot( playerEHI, meleeSkinData.loadoutSlot ) ) 
-
-	return selectableMeleeSkins
-}
-
-int function MeleeSkinButton_GetSelectedIndex()
-{
-	ItemFlavor equippedMeleeSkin = LoadoutSlot_GetItemFlavor( LocalClientEHI(), meleeSkinData.loadoutSlot )
-	int selectedIndex            = 0
-
-	foreach ( int index, ItemFlavor meleeSkin in meleeSkinData.selectableMeleeSkins )
-	{
-		if ( meleeSkin == equippedMeleeSkin )
-		{
-			selectedIndex = index
-			break
-		}
-	}
-
-	return selectedIndex
-}
-
-void function MeleeSkinButton_Update()
-{
-	bool showButton = meleeSkinData.selectableMeleeSkins.len() > 0 && !GetCurrentPlaylistVarBool( "allow_legend_melee_tab", true )
-
-	if ( showButton )
-	{
-		if ( !Hud_IsVisible( meleeSkinData.button ) )
-			Hud_Show( meleeSkinData.button )
-
-		if ( !meleeSkinData.onShowCallbacksRegistered )
-		{
-			Hud_AddEventHandler( meleeSkinData.button, UIE_CLICK, MeleeSkinButton_OnActivate )
-
-			Hud_AddEventHandler( meleeSkinData.button, UIE_CLICKRIGHT, MeleeSkinButton_ToggleDeathbox)
-
-
-
-			Hud_AddEventHandler( meleeSkinData.button, UIE_GET_FOCUS, MeleeSkinButton_OnGetFocus )
-			Hud_AddEventHandler( meleeSkinData.button, UIE_LOSE_FOCUS, MeleeSkinButton_OnLoseFocus )
-			meleeSkinData.onShowCallbacksRegistered = true
-		}
-	}
-	else
-	{
-		if ( Hud_IsVisible( meleeSkinData.button ) )
-			Hud_Hide( meleeSkinData.button )
-
-		if ( meleeSkinData.onShowCallbacksRegistered )
-		{
-			Hud_RemoveEventHandler( meleeSkinData.button, UIE_CLICK, MeleeSkinButton_OnActivate )
-
-			Hud_RemoveEventHandler( meleeSkinData.button, UIE_CLICKRIGHT, MeleeSkinButton_ToggleDeathbox )
-
-
-
-			Hud_RemoveEventHandler( meleeSkinData.button, UIE_GET_FOCUS, MeleeSkinButton_OnGetFocus )
-			Hud_RemoveEventHandler( meleeSkinData.button, UIE_LOSE_FOCUS, MeleeSkinButton_OnLoseFocus )
-			meleeSkinData.onShowCallbacksRegistered = false
-		}
-
-		return
-	}
-
-	ItemFlavor selectedMeleeSkin = meleeSkinData.selectableMeleeSkins[meleeSkinData.selectedIndex]
-	ItemFlavor equippedMeleeSkin = LoadoutSlot_GetItemFlavor( LocalClientEHI(), meleeSkinData.loadoutSlot )
-
-	bool isEquipped = selectedMeleeSkin == equippedMeleeSkin
-
-	int equippedIndex = -1
-	foreach	( index, meleeSkin in meleeSkinData.selectableMeleeSkins )
-	{
-		if ( meleeSkin != equippedMeleeSkin )
-			continue
-
-		equippedIndex = index
-		break
-	}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	HudElem_SetRuiArg( meleeSkinData.button, "buttonImage", MeleeSkin_GetEquipImage( selectedMeleeSkin ), eRuiArgType.IMAGE )
-	HudElem_SetRuiArg( meleeSkinData.button, "itemName", Localize( ItemFlavor_GetLongName( selectedMeleeSkin ) ).toupper(), eRuiArgType.STRING )
-	HudElem_SetRuiArg( meleeSkinData.button, "isEquipped", isEquipped, eRuiArgType.BOOL )
-	HudElem_SetRuiArg( meleeSkinData.button, "pageCount", meleeSkinData.selectableMeleeSkins.len(), eRuiArgType.INT )
-	HudElem_SetRuiArg( meleeSkinData.button, "activePage", meleeSkinData.selectedIndex, eRuiArgType.INT )
-	HudElem_SetRuiArg( meleeSkinData.button, "equippedPage", equippedIndex, eRuiArgType.INT )
-
-
-	MeleeSkinButton_ToggleDeathboxState( MeleeSkinButton_SkinHasGoldenHorseBoxEquipped( selectedMeleeSkin ) )
-
-}
-
-void function MeleeSkinButton_OnActivate( var button )
-{
-	Assert( meleeSkinData.selectableMeleeSkins.len() > 0 )
-	Assert( meleeSkinData.selectedIndex >= 0 )
-	Assert( meleeSkinData.selectedIndex < meleeSkinData.selectableMeleeSkins.len() )
-
-	EHI playerEHI                = LocalClientEHI()
-	ItemFlavor selectedMeleeSkin = meleeSkinData.selectableMeleeSkins[meleeSkinData.selectedIndex]
-	ItemFlavor equippedMeleeSkin = LoadoutSlot_GetItemFlavor( playerEHI, meleeSkinData.loadoutSlot )
-	ItemFlavor defaultMeleeSkin  = GetDefaultItemFlavorForLoadoutSlot( playerEHI, meleeSkinData.loadoutSlot )
-	ItemFlavor meleeSkinToEquip  = selectedMeleeSkin == equippedMeleeSkin ? defaultMeleeSkin : selectedMeleeSkin
-
-	PIN_Customization( meleeSkinData.character, meleeSkinToEquip, "equip" )
-	RequestSetItemFlavorLoadoutSlot( playerEHI, meleeSkinData.loadoutSlot, meleeSkinToEquip )
-}
-
-void function MeleeSkinButton_OnGetFocus( var button )
-{
-	MeleeSkinButton_RegisterOnFocusCallbacks()
-	RunClientScript( "DisableModelTurn" )
-}
-
-void function MeleeSkinButton_OnLoseFocus( var button )
-{
-	MeleeSkinButton_UnregisterOnFocusCallbacks()
-	RunClientScript( "EnableModelTurn" )
-}
-
-void function MeleeSkinButton_RegisterOnFocusCallbacks()
-{
-	if ( meleeSkinData.onFocusCallbacksRegistered )
-		return
-
-	meleeSkinData.lastStickState = eStickState.NEUTRAL
-	RegisterStickMovedCallback( ANALOG_RIGHT_X, MeleeSkinButton_OnStickMoved )
-	AddCallback_OnMouseWheelUp( DecrementMeleeSkinSelection )
-	AddCallback_OnMouseWheelDown( IncrementMeleeSkinSelection )
-	meleeSkinData.onFocusCallbacksRegistered = true
-}
-
-void function MeleeSkinButton_UnregisterOnFocusCallbacks()
-{
-	if ( !meleeSkinData.onFocusCallbacksRegistered )
-		return
-
-	DeregisterStickMovedCallback( ANALOG_RIGHT_X, MeleeSkinButton_OnStickMoved )
-	RemoveCallback_OnMouseWheelUp( DecrementMeleeSkinSelection )
-	RemoveCallback_OnMouseWheelDown( IncrementMeleeSkinSelection )
-	meleeSkinData.onFocusCallbacksRegistered = false
-}
-
-void function MeleeSkinButton_OnStickMoved( ... )
-{
-	float stickDeflection = expect float( vargv[1] )
-	
-
-	int stickState = eStickState.NEUTRAL
-	if ( stickDeflection > 0.25 )
-		stickState = eStickState.RIGHT
-	else if ( stickDeflection < -0.25 )
-		stickState = eStickState.LEFT
-
-	if ( stickState != meleeSkinData.lastStickState )
-	{
-		if ( stickState == eStickState.RIGHT )
-			IncrementMeleeSkinSelection()
-		else if ( stickState == eStickState.LEFT )
-			DecrementMeleeSkinSelection()
-	}
-
-	meleeSkinData.lastStickState = stickState
-}
-
-void function DecrementMeleeSkinSelection()
-{
-	Assert( meleeSkinData.selectableMeleeSkins.len() > 0 )
-	Assert( meleeSkinData.selectedIndex >= 0 )
-	Assert( meleeSkinData.selectedIndex < meleeSkinData.selectableMeleeSkins.len() )
-
-	if ( meleeSkinData.selectedIndex > 0 )
-	{
-		meleeSkinData.selectedIndex--
-		MeleeSkinButton_Update()
-	}
-}
-
-void function IncrementMeleeSkinSelection()
-{
-	Assert( meleeSkinData.selectableMeleeSkins.len() > 0 )
-	Assert( meleeSkinData.selectedIndex >= 0 )
-	Assert( meleeSkinData.selectedIndex < meleeSkinData.selectableMeleeSkins.len() )
-
-	if ( meleeSkinData.selectedIndex < meleeSkinData.selectableMeleeSkins.len() - 1 )
-	{
-		meleeSkinData.selectedIndex++
-		MeleeSkinButton_Update()
-	}
 }
 
 void function MythicEquipButton_OnActivate( var button )

@@ -35,7 +35,7 @@ void function RTKCharacterSkillsInfo_OnInitialize( rtk_behavior self )
 	PrivateData p
 	self.Private( p )
 
-	rtk_struct characterSkillsInfoModel = RTKDataModel_GetOrCreateEmptyStruct( RTK_MODELTYPE_COMMON, "characterSkillsInfo" )
+	rtk_struct characterSkillsInfoModel = RTKDataModelType_GetOrCreateStruct( RTK_MODELTYPE_COMMON, "characterSkillsInfo" )
 	p.characterSkillsStruct = RTKStruct_GetOrCreateScriptStruct( characterSkillsInfoModel, string( self.GetInternalId() ), "RTKCharacterSkillsInfoModel" )
 
 	RTKCharacterSkillsInfo_SetDataModel( self )
@@ -49,7 +49,7 @@ void function RTKCharacterSkillsInfo_OnInitialize( rtk_behavior self )
 void function RTKCharacterSkillsInfo_OnDestroy( rtk_behavior self )
 {
 	
-	rtk_struct characterSkillsInfoModel = RTKDataModel_GetOrCreateEmptyStruct( RTK_MODELTYPE_COMMON, "characterSkillsInfo" )
+	rtk_struct characterSkillsInfoModel = RTKDataModelType_GetOrCreateStruct( RTK_MODELTYPE_COMMON, "characterSkillsInfo" )
 
 	if ( RTKStruct_HasProperty( characterSkillsInfoModel,string( self.GetInternalId() ) ) )
 	{
@@ -84,7 +84,7 @@ void function RTKCharacterSkillsInfo_SetDataModel( rtk_behavior self )
 
 void function RTKCharacterSkillsModel_SetCharacter( ItemFlavor character )
 {
-	rtk_struct characterSkillsInfoModel = RTKDataModel_GetOrCreateEmptyStruct( RTK_MODELTYPE_COMMON, "characterSkillsInfo" )
+	rtk_struct characterSkillsInfoModel = RTKDataModelType_GetOrCreateStruct( RTK_MODELTYPE_COMMON, "characterSkillsInfo" )
 
 	if ( !RTKStruct_HasProperty(characterSkillsInfoModel,"characterGUID" ) )
 	{

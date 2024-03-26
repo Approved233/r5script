@@ -425,7 +425,7 @@ void function BuildRankedMatchSummaryDataModel( rtk_behavior self )
 
 	BonusBreakdownInfo costOfEntry
 	costOfEntry.bonusName = "#RANKED_COST_OF_ENTRY"
-	costOfEntry.bonusStat = GetCurrentRankedDivisionFromScore( scoreBreakdown.startingLP ).divisionName
+	costOfEntry.bonusStat = GetCurrentRankedDivisionFromScoreAndLadderPosition( scoreBreakdown.startingLP, Ranked_GetLadderPosition( player ) ).divisionName
 	costOfEntry.bonusValue = extraInfo.entryCost
 	costOfEntry.tooltipTitle = "#RANKED_COST_OF_ENTRY"
 	costOfEntry.tooltipBody = Localize ( "#RANKED_COST_OF_ENTRY_DESC", extraInfo.entryCost )

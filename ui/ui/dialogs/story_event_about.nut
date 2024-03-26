@@ -856,7 +856,7 @@ void function PlaylistChangeButton_OnActivate( var btn )
 	string playlistName = file.chapters[chapterIndex].playlistName
 	if( playlistName != "" )
 	{
-		Lobby_SetSelectedPlaylist( file.chapters[chapterIndex].playlistName )
+		LobbyPlaylist_SetSelectedPlaylist( file.chapters[chapterIndex].playlistName )
 		CloseActiveMenu()
 	}
 }

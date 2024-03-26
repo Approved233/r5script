@@ -266,7 +266,7 @@ void function AddTabsToStoreMenu( var panel, bool reOpen = false )
 	bool showStoreV2 = !reOpen || ( reOpen && GRX_AreStoreSectionsEnabled() ) 
 
 
-	bool sortApexPacksFirst = ( UICodeCallback_IsKeplerInitialized() && Kepler_IsPlayerInVariant( eKeplerScenario.APEX_TAB_ORDERING, "treatment-a" ) )
+	bool sortApexPacksFirst = ( UICodeCallback_IsKeplerInitialized() && Kepler_IsPlayerInVariant( GetLocalClientPlayer(), eKeplerScenario.APEX_TAB_ORDERING, "treatment-a" ) )
 
 
 
@@ -2167,7 +2167,7 @@ void function OfferButton_SetDisplay( var button, GRXScriptOffer offerData, bool
 	}
 	else if ( GRXOffer_IsPurchaseLimitReached( offerData ) )
 	{
-		bool canGift = offerData.isGiftable && IsGiftingEnabled() && CanLocalPlayerGift()
+		bool canGift = offerData.isGiftable && IsGiftingEnabled() && CanLocalPlayerGift( offerData )
 
 		if ( !canGift )
 		{
@@ -2183,10 +2183,10 @@ void function OfferButton_SetDisplay( var button, GRXScriptOffer offerData, bool
 		
 		if ( offerData.prices.len() == 2 )
 		{
-			string firstPrice = GRX_GetFormattedPrice( offerData.prices[0] )
-			string secondPrice = GRX_GetFormattedPrice( offerData.prices[1] )
+			array<ItemFlavorBag> orderedPricesList = GRXOffer_GetPricesInPriorityOrder( offerData )
+			string firstPrice = GRX_GetFormattedPrice( orderedPricesList[0] )
+			string secondPrice = GRX_GetFormattedPrice( orderedPricesList[1] )
 			priceText = Localize( "#STORE_PRICE_N_N", firstPrice, secondPrice )
-
 		}
 		else
 		{
@@ -2318,6 +2318,7 @@ bool function JumpToStorePanel( string panelName )
 
 void function JumpToStoreSection( string sectionName )
 {
+	RTKStore_SetOverrideStartingSection()
 	RTKStore_SetStartingSection( sectionName )
 	StoreTelemetry_SaveDeepLink( sectionName )
 

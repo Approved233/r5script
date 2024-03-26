@@ -25,14 +25,13 @@ void function RTKPrefabInstantiator_Instantiate( rtk_behavior self )
 {
 	
 	int index = self.PropGetInt( "prefabIndex" )
-	int PrevIndex = self.PropGetInt( "prevIndex" )
+	int prevIndex = self.PropGetInt( "prevIndex" )
+
+	if ( index == prevIndex )
+		return
 
 	rtk_array prefabs = self.PropGetArray( "prefabArray" )
 	if ( index < 0 || index >= RTKArray_GetCount( prefabs ) )
-		return
-
-	asset prefab = RTKArray_GetAssetPath( prefabs, index )
-	if ( prefab == RTKArray_GetAssetPath( prefabs, PrevIndex ) )
 		return
 
 	
@@ -47,6 +46,7 @@ void function RTKPrefabInstantiator_Instantiate( rtk_behavior self )
 		RTKPanel_Destroy( expect rtk_panel( prevInstance ) )
 
 	
+	asset prefab = RTKArray_GetAssetPath( prefabs, index )
 	string instanceName = self.PropGetString( "instanceName" )
 	rtk_panel newInstance = RTKPanel_Instantiate( prefab, parentPanel, instanceName )
 	self.PropSetPanel( "prevInstance", newInstance )

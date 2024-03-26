@@ -79,7 +79,7 @@ RTKOfferButtonModel function RTKStore_CreateOfferButtonModel( GRXScriptOffer off
 	offerButtonModel.isOnlyGiftable = GRXOffer_IsOfferOnlyGiftable( offer )
 
 	string offerTypeName
-	if ( offer.output.flavors.len() > 1 )
+	if ( offer.output.flavors.len() > 1 || offer.output.quantities[0] > 1)
 	{
 		
 		int lastIndex = offer.items.len() - 1
@@ -91,7 +91,7 @@ RTKOfferButtonModel function RTKStore_CreateOfferButtonModel( GRXScriptOffer off
 		{
 			if ( ItemFlavor_IsThematic( itemFlav ) )
 			{
-				offerTypeName = Localize( "#THEMATIC_PACKS" )
+				offerTypeName = Localize( "#THEMATIC_PACK_BUNDLE" )
 			}
 			else if ( ItemFlavor_GetAccountPackType( itemFlav ) == eAccountPackType.EVENT )
 			{
@@ -148,11 +148,12 @@ RTKOfferButtonModel function RTKStore_CreateOfferButtonModel( GRXScriptOffer off
 	}
 	else if ( offer.prices.len() > 1 )
 	{
-		offerButtonModel.price = Localize( "#STORE_PRICE_N_N", GRX_GetFormattedPrice( offer.prices[1], 1 ), GRX_GetFormattedPrice( offer.prices[0], 1 ) )
+		array<ItemFlavorBag> orderedPricesList = GRXOffer_GetPricesInPriorityOrder( offer )
+		offerButtonModel.price = Localize( "#STORE_PRICE_N_N", GRX_GetFormattedPrice( orderedPricesList[0], 1 ), GRX_GetFormattedPrice( orderedPricesList[1], 1 ) )
 	}
 	else
 	{
-		if ( OriginalPrice != null  )
+		if ( OriginalPrice != null && offer.prices[0].quantities[0] < expect ItemFlavorBag( OriginalPrice ).quantities[0] )
 		{
 			offerButtonModel.price      = Localize( GRX_GetFormattedPrice( expect ItemFlavorBag( OriginalPrice ), 1  ) )
 			offerButtonModel.priceColor = < 0.3, 0.3, 0.3 >
@@ -253,16 +254,8 @@ void function RTKOfferButton_OnActivate( rtk_behavior self )
 {
 
 	int offerIndex = self.PropGetInt( "offerIndex" )
-	GRXScriptOffer offer = RTKStore_GetOfferFromIndex( offerIndex )
-
-	if ( offer.output.flavors.len() > 0 )
-		StoreInspectMenu_AttemptOpenWithOffer( offer )
-
-	EmitUISound( "UI_Menu_Accept" )
-
 	int slotIndex = self.PropGetInt( "slotIndex" )
-	RTKStore_InspectOffer_SaveTelemetryData( offer, slotIndex )
-	StoreTelemetry_SendOferPageViewEvent()
+	RTKStore_InspectOffer( offerIndex, slotIndex )
 
 }
 

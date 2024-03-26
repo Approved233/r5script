@@ -189,9 +189,9 @@ void function InitControlsGamepadPanel( var panel )
 
 void function OnControlsGamepadPanel_Show( var panel )
 {
-
-
-
+#if PC_PROG_NX_UI
+	ScrollPanel_Refresh( panel )
+#endif
 
 	ScrollPanel_SetActive( panel, true )
 	SetStatesForCustomEnable()
@@ -226,6 +226,9 @@ void function OnControlsGamepadPanel_Show( var panel )
 			Hud_SetPinSibling( file.swchTriggerDeadzoneBtn, "SwitchSurvivalSlotToWeaponInspect" )
 		}
 	}
+
+	SettingsPanel_SetContentPanelHeight( contentPanel )
+	ScrollPanel_Refresh( panel )
 }
 
 

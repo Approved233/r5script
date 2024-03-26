@@ -90,10 +90,14 @@ void function RTKLegendMeleeScreen_OnInitialize( rtk_behavior self )
 		}
 
 
+			if ( Artifacts_Loadouts_IsConfigPointerItemFlavor( itemFlav ) )
+			{
 
 
 
+					listItem.name = Localize( "#MELEE_SKIN_ARTIFACT_DAGGER_MOBSTER_NAME" )
 
+			}
 
 
 		RTKStruct_SetValue( listItemEntry, listItem )
@@ -270,7 +274,7 @@ bool function CanCustomizeFocused()
 	if ( !IsItemFlavorUnlockedForLoadoutSlot( LocalClientEHI(), Loadout_MeleeSkin( GetTopLevelCustomizeContext() ), file.meleeSkins[ file.focusedIndex ] ) )
 		return false
 
-	return file.meleeSkins[ file.focusedIndex ] != GetDefaultItemFlavorForLoadoutSlot(  LocalClientEHI(), Loadout_MeleeSkin( GetTopLevelCustomizeContext() ) )
+	return true
 }
 
 void function OnMeleeSkinChanged( EHI playerEHI, ItemFlavor flavor )
@@ -352,7 +356,12 @@ bool function IsRewardForActiveEvent( ItemFlavor item )
 	if ( activeEvent != null )
 	{
 		expect ItemFlavor( activeEvent )
-		return MilestoneEvent_IsMythicEventItem( activeEvent, ItemFlavor_GetGRXIndex( item ) )
+
+		if ( ItemFlavor_GetType( item ) == eItemType.melee_skin && Artifacts_Loadouts_IsConfigPointerItemFlavor( item ) )
+			return MilestoneEvent_EventAwardsArtifact( activeEvent )
+		else
+
+			return MilestoneEvent_IsMythicEventItem( activeEvent, ItemFlavor_GetGRXIndex( item ) )
 	}
 
 	activeEvent = GetActiveCollectionEvent( GetUnixTimestamp() )
@@ -434,7 +443,6 @@ void function PreviewItem( int index, bool playFX )
 	ItemFlavor equippedDeathbox = Deathbox_GetEquipped( GetTopLevelCustomizeContext(), file.meleeSkins[ index ] )
 	RTKStruct_SetAssetPath( rtkModel, "deathboxImage", ItemFlavor_GetIcon( equippedDeathbox ) )
 	RTKStruct_SetString( rtkModel, "deathboxName", ItemFlavor_GetLongName( equippedDeathbox ) )
-	RTKStruct_SetString( rtkModel, "deathboxDesc", ItemFlavor_GetLongDescription( equippedDeathbox ) )
 }
 
 bool function EquipItem( int index )
@@ -509,13 +517,6 @@ void function CustomizeItem( int index )
 		return
 	}
 
-	ItemFlavor defaultMeleeSkin = GetDefaultItemFlavorForLoadoutSlot(  LocalClientEHI(), Loadout_MeleeSkin( GetTopLevelCustomizeContext() ) )
-	if ( file.meleeSkins[ index ] == defaultMeleeSkin )
-	{
-		EmitUISound( "menu_deny" )
-		return
-	}
-
 	file.customizeIndex = index
 
 	var menu = GetMenu( "MeleeCustomizationMenu" )
@@ -532,7 +533,8 @@ void function CustomizeItem( int index )
 
 
 
-	ShowPanel( Hud_GetChild( menu, "MeleeCustomizationPanel" ) )
+
+		ShowPanel( Hud_GetChild( menu, "MeleeCustomizationPanel" ) )
 
 
 	EmitUISound( "ui_menu_accept" )
@@ -590,6 +592,5 @@ void function OnMeleeCustomizationClosed()
 		ItemFlavor equippedDeathbox = Deathbox_GetEquipped( GetTopLevelCustomizeContext(), file.meleeSkins[ file.previewIndex ] )
 		RTKStruct_SetAssetPath( rtkModel, "deathboxImage", ItemFlavor_GetIcon( equippedDeathbox ) )
 		RTKStruct_SetString( rtkModel, "deathboxName", ItemFlavor_GetLongName( equippedDeathbox ) )
-		RTKStruct_SetString( rtkModel, "deathboxDesc", ItemFlavor_GetLongDescription( equippedDeathbox ) )
 	}
 }

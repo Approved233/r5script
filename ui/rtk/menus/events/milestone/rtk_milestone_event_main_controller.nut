@@ -6,16 +6,20 @@ global function BuildMilestoneCarouselInfo
 global function SetIsAutoOpeningMilestonePacks
 global function MilestoneEvent_LootBoxMenuOnClose
 
+global function RTKMutator_GetGiftingButtonTitle
+global function RTKMutator_GetGiftingButtonDescription
+global function RTKMutator_IsGiftingButtonInteractable
+
 global struct RTKMilestoneEventMainPanel_Properties
 {
-	rtk_behavior singlePurchaseButton
-	rtk_behavior multiplePurchaseButton
+	rtk_behavior giftButton
+	rtk_behavior purchaseButton
 	array<rtk_behavior> viewAllItemsButtons = []
 	rtk_behavior informationButton
 	array<rtk_behavior> rewardButtons = []
 }
 
-global struct RTKMilestonePackButtonModel
+global struct RTKMilestonePackPricingModel
 {
 	int discount
 	string originalPrice
@@ -35,6 +39,10 @@ global struct RTKMilestoneEventPanelModel
 	int currentCollectedItems
 	int endtime
 	bool isRestricted
+	asset trackerBoxBGImage
+	vector trackerProgressBarColor
+	vector trackerProgressBarBGColor
+	bool eventShopHasMilestonePack
 }
 
 global struct RTKMilestoneCarouselPanelInfo
@@ -52,6 +60,25 @@ global struct RTKMilestoneCarouselPanelInfo
 	array<float> progress
 }
 
+global enum eGiftingButtonState
+{
+	AVAILABLE,
+	UNAVAILABLE,
+	GIFTING_EXCEEDED,
+	NOT_ENOUGH_LEVEL,
+	TWO_FACTOR_DISABLED
+}
+
+global struct RTKMilestoneGiftButtonData
+{
+	int state = 0
+}
+
+global enum eMilestonePackPurchaseButtonState
+{
+	AVAILABLE,
+	UNAVAILABLE
+}
 
 struct PrivateData
 {
@@ -96,6 +123,7 @@ void function RTKMilestoneEventMainPanel_OnInitialize( rtk_behavior self )
 	SetUpPurchaseButtons( self, trackingPanel )
 	SetUpButtons( self )
 	SetUpRewardButtons( self, trackingPanel )
+	BuildPackPricingDataModel( trackingPanel )
 	ResetCarouselVars()
 
 	thread AutoAdvanceFeaturedItems_Tracking()
@@ -105,6 +133,8 @@ void function RTKMilestoneEventMainPanel_OnInitialize( rtk_behavior self )
 	ItemFlavor ornull event = file.activeEvent
 	expect ItemFlavor(event)
 	self.GetPanel().SetBindingRootPath( RTKDataModelType_GetDataPath( RTK_MODELTYPE_MENUS, "trackingPage", true ) )
+
+	MilestoneEvent_TryDisplayMilestoneRewardCeremony()
 
 	thread TryOpenMilestoneRewardPack()
 	AddCallbackAndCallNow_OnGRXOffersRefreshed( OnGRXStateChanged )
@@ -151,6 +181,10 @@ void function BuildMilestoneGeneralPanelInfo( rtk_struct trackingPanelModel )
 		generalModel.totalItems = file.isRestricted ? items.len() : items.len() + chaseItems.len()
 		generalModel.currentCollectedItems = file.isRestricted ? GRX_GetNumberOfOwnedItemsByPlayer( items ) : GRX_GetNumberOfOwnedItemsByPlayer( items ) + GRX_GetNumberOfOwnedItemsByPlayer( chaseItems )
 		generalModel.isRestricted = file.isRestricted
+		generalModel.trackerBoxBGImage = MilestoneEvent_GetTrackerBoxBGImage( event )
+		generalModel.trackerProgressBarColor = MilestoneEvent_GetMilestoneTrackerProgressBarColor( event )
+		generalModel.trackerProgressBarBGColor = MilestoneEvent_GetMilestoneTrackerProgressBarBGColor( event )
+		generalModel.eventShopHasMilestonePack = EventShop_HasMilestoneEventPack()
 		RTKStruct_SetValue( trackingPanelModel, generalModel )
 	}
 }
@@ -175,7 +209,7 @@ void function SetUpButtons( rtk_behavior self )
 	{
 		rtk_behavior button = RTKArray_GetBehavior( viewAllItemsButtons, i )
 		self.AutoSubscribe( button, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( self, event ) {
-			EventsPanel_GoToPage( 2 ) 
+			EventsPanel_GoToPage( eEventsPanelPage.COLLECTION ) 
 		} )
 	}
 
@@ -196,50 +230,36 @@ void function SetUpPurchaseButtons( rtk_behavior self, rtk_struct trackingPanelM
 	ItemFlavor ornull event = file.activeEvent
 	expect ItemFlavor(event)
 
-	rtk_behavior ornull singlePurchaseButton = self.PropGetBehavior( "singlePurchaseButton" )
-	rtk_behavior ornull multiplePurchaseButton = self.PropGetBehavior( "multiplePurchaseButton" )
+	rtk_behavior ornull giftButton = self.PropGetBehavior( "giftButton" )
+	rtk_behavior ornull purchaseButton = self.PropGetBehavior( "purchaseButton" )
+	array<GRXScriptOffer> singlePurchaseOffers = MilestoneEvent_GetSinglePackOffers( event )
 
-	array<GRXScriptOffer> singlePurchaseOffers = GRX_GetItemDedicatedStoreOffers( MilestoneEvent_GetMainPackFlav( event ), MilestoneEvent_GetFrontPageGRXOfferLocation( event, file.isRestricted ) )
-	array<GRXScriptOffer> multiplePurchaseOffers = GRX_GetItemDedicatedStoreOffers( MilestoneEvent_GetGuaranteedPackFlav( event ), MilestoneEvent_GetFrontPageGRXOfferLocation( event, file.isRestricted ) )
-
-	if ( singlePurchaseButton != null && multiplePurchaseButton != null )
-	{
-		expect rtk_behavior( singlePurchaseButton )
-		expect rtk_behavior( multiplePurchaseButton )
-		singlePurchaseButton.PropSetBool( "interactive", singlePurchaseOffers.len() > 0 )
-		multiplePurchaseButton.PropSetBool( "interactive", multiplePurchaseOffers.len() > 0 )
-		singlePurchaseButton.GetPanel().SetVisible( singlePurchaseOffers.len() > 0 )
-		multiplePurchaseButton.GetPanel().SetVisible( multiplePurchaseOffers.len() > 0 )
-	}
-
-	self.AutoSubscribe( singlePurchaseButton, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( event, singlePurchaseOffers ) {
-		if ( file.isAutoOpeningMilestonePacks || file.willTriggerMilestonePackOpen )
+	self.AutoSubscribe( giftButton, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( singlePurchaseOffers ) {
+		int state = GetMilestoneGiftButtonState( singlePurchaseOffers )
+		switch ( state )
 		{
-			return
+			case eGiftingButtonState.AVAILABLE:
+				OpenPurchasePackSelectionDialog( true )
+				break
+			case eGiftingButtonState.TWO_FACTOR_DISABLED:
+				OpenTwoFactorInfoDialog( null )
+				break
+			case eGiftingButtonState.GIFTING_EXCEEDED:
+			case eGiftingButtonState.NOT_ENOUGH_LEVEL:
+			case eGiftingButtonState.UNAVAILABLE:
+				return
 		}
-		if ( singlePurchaseOffers.len() == 0 )
-		{
-			return
-		}
-		PurchaseDialogConfig pdc
-		pdc.quantity = 1
-		pdc.offer = singlePurchaseOffers[0]
-		PurchaseDialog( pdc )
 	} )
 
-	self.AutoSubscribe( multiplePurchaseButton, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( event, multiplePurchaseOffers ) {
-		if ( file.isAutoOpeningMilestonePacks || file.willTriggerMilestonePackOpen )
+	self.AutoSubscribe( purchaseButton, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( singlePurchaseOffers ) {
+		int state = GetMilestonePurchaseButtonState( singlePurchaseOffers )
+		switch ( state )
 		{
-			return
+			case eMilestonePackPurchaseButtonState.AVAILABLE:
+				OpenPurchasePackSelectionDialog( false )
+			default:
+				return
 		}
-		if ( multiplePurchaseOffers.len() == 0 )
-		{
-			return
-		}
-		PurchaseDialogConfig pdc
-		pdc.quantity = 1
-		pdc.offer = multiplePurchaseOffers[0]
-		PurchaseDialog( pdc )
 	} )
 
 	BuildPurchaseButtonDataModel( trackingPanelModel )
@@ -269,8 +289,11 @@ void function SetUpRewardButtons( rtk_behavior self, rtk_struct trackingPanelMod
 			} )
 
 			self.AutoSubscribe( button, "onIdle", function( rtk_behavior button, int prevState ) : ( self, index, trackingPanelModel ) {
-				thread AutoAdvanceFeaturedItems_Tracking()
-				thread AutoAdvanceFeaturedItems_Collection()
+				if ( EventsPanel_CanStartCarouselThreads() )
+				{
+					thread AutoAdvanceFeaturedItems_Tracking()
+					thread AutoAdvanceFeaturedItems_Collection()
+				}
 			} )
 
 			self.AutoSubscribe( button, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( self, index, event ) {
@@ -292,22 +315,37 @@ void function BuildPurchaseButtonDataModel( rtk_struct trackingPanelModel )
 	ItemFlavor ornull event = file.activeEvent
 	expect ItemFlavor(event)
 	array<GRXScriptOffer> singlePurchaseOffers = MilestoneEvent_GetSinglePackOffers( event )
-	array<GRXScriptOffer> multiplePurchaseOffers = MilestoneEvent_GetGuaranteedMultiPackOffers( event )
 
-	array<RTKMilestonePackButtonModel> buttonsDataModel
-	RTKMilestonePackButtonModel singlePurchaseDataModel = GetMilestonePackButtonDataModelFromOffers( singlePurchaseOffers, SINGLE_BUTTON_PACK_QUANTITY )
-	RTKMilestonePackButtonModel multiplePurchaseDataModel = GetMilestonePackButtonDataModelFromOffers( multiplePurchaseOffers, MULTIPLE_BUTTON_PACK_QUANTITY )
-
-	buttonsDataModel.append( singlePurchaseDataModel )
-	buttonsDataModel.append( multiplePurchaseDataModel )
-
-	rtk_array purchaseButtonData = RTKStruct_GetOrCreateScriptArrayOfStructs( trackingPanelModel, "purchaseButtonData", "RTKMilestonePackButtonModel" )
-	RTKArray_SetValue( purchaseButtonData, buttonsDataModel )
+	RTKMilestoneGiftButtonData giftButtonModel
+	giftButtonModel.state = GetMilestoneGiftButtonState( singlePurchaseOffers )
+	rtk_struct giftButtonData = RTKStruct_GetOrCreateScriptStruct( trackingPanelModel, "giftButtonData", "RTKMilestoneGiftButtonData" )
+	RTKStruct_SetValue( giftButtonData, giftButtonModel )
 }
 
-RTKMilestonePackButtonModel function GetMilestonePackButtonDataModelFromOffers( array<GRXScriptOffer> offers, int defaultQuantity )
+void function BuildPackPricingDataModel( rtk_struct trackingPanelModel )
 {
-	RTKMilestonePackButtonModel offerModel
+	if ( file.activeEvent == null )
+		return
+
+	ItemFlavor ornull event = file.activeEvent
+	expect ItemFlavor(event)
+	array<GRXScriptOffer> singlePurchaseOffers = MilestoneEvent_GetSinglePackOffers( event )
+	array<GRXScriptOffer> multiplePurchaseOffers = MilestoneEvent_GetGuaranteedMultiPackOffers( event )
+
+	array<RTKMilestonePackPricingModel> pricingDataModel
+	RTKMilestonePackPricingModel singlePurchaseDataModel = GetMilestonePricingDataModelFromOffers( singlePurchaseOffers, SINGLE_BUTTON_PACK_QUANTITY )
+	RTKMilestonePackPricingModel multiplePurchaseDataModel = GetMilestonePricingDataModelFromOffers( multiplePurchaseOffers, MULTIPLE_BUTTON_PACK_QUANTITY )
+
+	pricingDataModel.append( singlePurchaseDataModel )
+	pricingDataModel.append( multiplePurchaseDataModel )
+
+	rtk_array pricingDataData = RTKStruct_GetOrCreateScriptArrayOfStructs( trackingPanelModel, "packPricingData", "RTKMilestonePackPricingModel" )
+	RTKArray_SetValue( pricingDataData, pricingDataModel )
+}
+
+RTKMilestonePackPricingModel function GetMilestonePricingDataModelFromOffers( array<GRXScriptOffer> offers, int defaultQuantity )
+{
+	RTKMilestonePackPricingModel offerModel
 	if ( offers.len() > 0 )
 	{
 		GRXScriptOffer offer = offers[0]
@@ -484,6 +522,9 @@ void function MilestoneEvent_LootBoxMenuOnClose()
 {
 	SetIsAutoOpeningMilestonePacks( true )
 	file.willTriggerMilestonePackOpen = false
+
+	if ( !Remote_ServerCallFunctionAllowed() )
+		return
 	Remote_ServerCallFunction( "UICallback_AutoOpenMilestonePacks" )
 
 	MilestoneEvent_TryDisplayMilestoneRewardCeremony()
@@ -543,4 +584,80 @@ void function OnGRXStateChanged()
 	}
 
 	SetUpPurchaseButtons( file.self, file.trackingModel )
+}
+
+int function GetMilestonePurchaseButtonState( array<GRXScriptOffer> offers )
+{
+	return offers.len() == 0 ? eMilestonePackPurchaseButtonState.UNAVAILABLE : eMilestonePackPurchaseButtonState.AVAILABLE
+}
+
+int function GetMilestoneGiftButtonState( array<GRXScriptOffer> offers )
+{
+	if ( offers.len() < 1 )
+	{
+		return eGiftingButtonState.UNAVAILABLE
+	}
+
+	if ( !IsPlayerLeveledForGifting() )
+	{
+		return eGiftingButtonState.NOT_ENOUGH_LEVEL
+	}
+	else if ( !IsTwoFactorAuthenticationEnabled() )
+	{
+		return eGiftingButtonState.TWO_FACTOR_DISABLED
+	}
+	else if ( !IsPlayerWithinGiftingLimit() )
+	{
+		return eGiftingButtonState.GIFTING_EXCEEDED
+	}
+	return eGiftingButtonState.AVAILABLE
+}
+
+string function RTKMutator_GetGiftingButtonTitle( int state )
+{
+	switch ( state )
+	{
+		case eGiftingButtonState.UNAVAILABLE:
+			return Localize( "#UNAVAILABLE" )
+		case eGiftingButtonState.NOT_ENOUGH_LEVEL:
+		case eGiftingButtonState.TWO_FACTOR_DISABLED:
+		case eGiftingButtonState.GIFTING_EXCEEDED:
+			return Localize( "#LOCKED_GIFT" )
+		case eGiftingButtonState.AVAILABLE:
+			return Localize( "#BUY_GIFT" )
+	}
+	return Localize( "#UNAVAILABLE" )
+}
+
+string function RTKMutator_GetGiftingButtonDescription( int state )
+{
+	switch ( state )
+	{
+		case eGiftingButtonState.UNAVAILABLE:
+			return ""
+		case eGiftingButtonState.NOT_ENOUGH_LEVEL:
+			return Localize( "#LEVEL_REQUIRED", GetConVarInt( "mtx_giftingMinAccountLevel" ) )
+		case eGiftingButtonState.TWO_FACTOR_DISABLED:
+			return  Localize( "#TWO_FACTOR_NEEDED" )
+		case eGiftingButtonState.GIFTING_EXCEEDED:
+		case eGiftingButtonState.AVAILABLE:
+		int giftsLeft = Gifting_GetRemainingDailyGifts()
+			return Localize( "#GIFTS_LEFT_FRACTION", giftsLeft )
+	}
+	return ""
+}
+
+bool function RTKMutator_IsGiftingButtonInteractable( int state )
+{
+	switch ( state )
+	{
+		case eGiftingButtonState.UNAVAILABLE:
+		case eGiftingButtonState.NOT_ENOUGH_LEVEL:
+		case eGiftingButtonState.GIFTING_EXCEEDED:
+			return false
+		case eGiftingButtonState.TWO_FACTOR_DISABLED:
+		case eGiftingButtonState.AVAILABLE:
+			return true
+	}
+	return false
 }

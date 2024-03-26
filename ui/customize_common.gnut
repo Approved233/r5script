@@ -1147,6 +1147,15 @@ void function UpdateCustomizeItemButton( CustomizeButtonContext cbc, bool justAd
 	RuiSetImage( rui, "sourceIcon", ItemFlavor_GetSourceIcon( cbc.itemFlavor ) )
 
 
+	if( ItemFlavor_GetType( cbc.itemFlavor ) == eItemType.weapon_skin )
+	{
+		RuiSetBool( rui, "displayShimmer", WeaponSkin_DoesReactToKills( cbc.itemFlavor ) )
+	}
+	else
+	{
+		RuiSetBool( rui, "displayShimmer", false )
+	}
+
 	
 	
 	
@@ -1525,33 +1534,21 @@ void function EquipItemFlavorInAppropriateLoadoutSlot( ItemFlavor itemFlav )
 string function GetLocalizedItemFlavorDescriptionForOfferButton( ItemFlavor itemFlav, bool withQuality )
 {
 	ItemFlavor ornull associatedFlav = GetItemFlavorAssociatedCharacterOrWeapon( itemFlav )
-
 	string qualityName       = (withQuality && ItemFlavor_HasQuality( itemFlav )) ? ItemFlavor_GetQualityName( itemFlav ) : ""
 	string assocatedFlavName = associatedFlav != null ? ItemFlavor_GetShortName( expect ItemFlavor( associatedFlav ) ) : ""
 	string typeName          = ItemFlavor_GetTypeName( itemFlav )
 
-	if ( GetCurrentPlaylistVarBool( "item_flavor_loc_desc_nostrip", true  ) ) 
+	if ( qualityName == "" && assocatedFlavName == "" )
 	{
-		if ( qualityName == "" && assocatedFlavName == "" )
-		{
-			return Localize( "#OFFER_ITEM_DESC_N_1", Localize( typeName ) )
-		}
-		else if ( qualityName == "" )
-		{
-			return Localize( "#OFFER_ITEM_DESC_N_2", Localize( assocatedFlavName ), Localize( typeName ) )
-		}
-		else
-		{
-			return Localize( "#OFFER_ITEM_DESC", Localize( qualityName ), Localize( assocatedFlavName ), Localize( typeName ) )
-		}
+		return Localize( "#OFFER_ITEM_DESC_N_1", Localize( typeName ) )
+	}
+	else if ( qualityName == "" )
+	{
+		return Localize( "#OFFER_ITEM_DESC_N_2", Localize( assocatedFlavName ), Localize( typeName ) )
 	}
 	else
 	{
-		return strip( Localize( "#OFFER_ITEM_DESC",
-			Localize( qualityName ),
-			Localize( assocatedFlavName ),
-			Localize( typeName )
-		) )
+		return Localize( "#OFFER_ITEM_DESC", Localize( qualityName ), Localize( assocatedFlavName ), Localize( typeName ) )
 	}
 	unreachable
 }

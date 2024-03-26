@@ -125,6 +125,8 @@ void function InitDeathScreenPanelFooter( var panel, int panelID )
 
 			break
 
+		case eDeathScreenPanel.KILLREPLAY:
+			AddPanelFooterOption( panel, LEFT, BUTTON_A, true, "#BUTTON_SKIP", "#BUTTON_SKIP", DeathScreenSkipDeathCam, CanSkipDeathCam )
 		case eDeathScreenPanel.SPECTATE:
 			AddPanelFooterOption( panel, RIGHT, BUTTON_STICK_RIGHT, true, "#BUTTON_REPORT_PLAYER", "#BUTTON_REPORT_PLAYER", DeathScreenOnReportButtonClick, CanReportPlayer )
 			
@@ -138,8 +140,6 @@ void function InitDeathScreenPanelFooter( var panel, int panelID )
 				gladCardMessageString = "#SPECTATE_SHOW_BANNER"
 
 			file.gladCardToggleInputData = AddPanelFooterOption( panel, LEFT, BUTTON_Y, true, gladCardMessageString, gladCardMessageString, DeathScreenTryToggleGladCard, AllowGladCard )
-
-			AddPanelFooterOption( panel, LEFT, BUTTON_A, true, "#BUTTON_SKIP", "#BUTTON_SKIP", DeathScreenSkipDeathCam, CanSkipDeathCam )
 
 			AddPanelFooterOption( panel, LEFT, BUTTON_A, true, "#HINT_PING_GLADIATOR_CARD", "#HINT_PING_GLADIATOR_CARD", DeathScreenPingRespawn, DeathScreenRespawnWaitingForPickup )
 			AddPanelFooterOption( panel, LEFT, BUTTON_A, true, "#HINT_PING_RESPAWN_BEACON", "#HINT_PING_RESPAWN_BEACON", DeathScreenPingRespawn, DeathScreenRespawnWaitingForDelivery )
@@ -190,6 +190,7 @@ void function DeathScreenMenuOnOpen()
 	TabDef scoreboardTab
 	TabDef squadSummaryTab
 	TabDef squadTab
+	TabDef killreplayTab
 
 	if ( !file.tabsInitialized )
 	{
@@ -201,35 +202,41 @@ void function DeathScreenMenuOnOpen()
 		scoreboardTab = AddTab( file.menu, Hud_GetChild( file.menu, "DeathScreenGenericScoreboardPanel" ), "#TAB_SCOREBOARD" )
 		squadSummaryTab = AddTab( file.menu, Hud_GetChild( file.menu, "DeathScreenSquadSummary" ), "#DEATH_SCREEN_SUMMARY" )	
 		squadTab = AddTab( file.menu, Hud_GetChild( file.menu, "DeathScreenSquadPanel" ), "#SQUAD" )	
+		killreplayTab = AddTab( file.menu, Hud_GetChild( file.menu, "DeathScreenKillreplay" ), "#DEATH_KILL_REPLAY" )
 
-		SetTabBaseWidth( recapTab, 235 )
 		SetTabBaseWidth( spectateTab, 200 )
+		SetTabBaseWidth( recapTab, 235 )
 		SetTabBaseWidth( scoreboardTab, 240 )
 		SetTabBaseWidth( squadSummaryTab, 230 )
 		SetTabBaseWidth( squadTab, 150 )
+		SetTabBaseWidth( killreplayTab, 230 )
 
 		file.tabsInitialized = true
 	}
 
 	TabData tabData        = GetTabDataForPanel( file.menu )
-	recapTab        = Tab_GetTabDefByBodyName( tabData, "DeathScreenRecap" )
 	spectateTab     = Tab_GetTabDefByBodyName( tabData, "DeathScreenSpectate" )
+	recapTab        = Tab_GetTabDefByBodyName( tabData, "DeathScreenRecap" )
 	scoreboardTab   = Tab_GetTabDefByBodyName( tabData, "DeathScreenGenericScoreboardPanel" )
 	squadSummaryTab = Tab_GetTabDefByBodyName( tabData, "DeathScreenSquadSummary" )
 	squadTab = Tab_GetTabDefByBodyName( tabData, "DeathScreenSquadPanel" )
+	killreplayTab = Tab_GetTabDefByBodyName( tabData, "DeathScreenKillreplay" )
+
 	SetTabDefsToSeasonal(tabData)
 	SetTabBackground( tabData, Hud_GetChild( file.menu, "TabsBackground" ), eTabBackground.DEATH )
 
 	spectateTab.title = "#DEATH_SCREEN_SPECTATE"
 
-	SetTabDefEnabled( recapTab, false )
 	SetTabDefEnabled( spectateTab, false )
+	SetTabDefEnabled( killreplayTab, false )
+	SetTabDefEnabled( recapTab, false )
 	SetTabDefEnabled( scoreboardTab, false )
 	SetTabDefEnabled( squadSummaryTab, false )
 	SetTabDefEnabled( squadTab, false )
 
-	SetTabDefVisible( recapTab, false )
 	SetTabDefVisible( spectateTab, false )
+	SetTabDefVisible( killreplayTab, false )
+	SetTabDefVisible( recapTab, false )
 	SetTabDefVisible( scoreboardTab, false )
 	SetTabDefVisible( squadSummaryTab, false )
 	SetTabDefVisible( squadTab, false )
@@ -387,6 +394,10 @@ void function EnableDeathScreenTab_Internal( int tabIndex, bool enable )
 		case eDeathScreenPanel.SPECTATE:
 			panelName = "DeathScreenSpectate"
 			break
+
+		case eDeathScreenPanel.KILLREPLAY:
+			
+			return
 
 		case eDeathScreenPanel.SCOREBOARD:
 			panelName = "DeathScreenGenericScoreboardPanel"
@@ -865,20 +876,23 @@ bool function CanSkipDeathCam()
 	if ( GetGameState() > eGameState.Playing )
 		return false
 
+	if (!IsFullyConnected())
+		return false
+
 	bool playlistEnabled = GamemodeUtility_GetKillReplayActive()
 
 
-	if ( IsFullyConnected() && Control_IsModeEnabled() && !playlistEnabled)
+	if ( Control_IsModeEnabled() && !playlistEnabled )
 		return false
 
 
 
-	if ( IsFullyConnected() && TDM_IsModeEnabled() && !playlistEnabled)
+	if ( TDM_IsModeEnabled() && !playlistEnabled )
 		return false
 
 
 
-	if ( IsFullyConnected() && GunGame_IsModeEnabled() && !playlistEnabled)
+	if ( GunGame_IsModeEnabled() && !playlistEnabled )
 		return false
 
 	

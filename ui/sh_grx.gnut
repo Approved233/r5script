@@ -20,6 +20,8 @@ global function ItemFlavor_GetGRXIndex
 global function ItemFlavor_GetGRXAlias
 global function ItemFlavor_GetGRXOwnershipTarget
 global function ItemFlavor_GetGRXOwnershipTargettedBy
+global function ItemFlavor_GetGRXMultipleOwnershipRequirementsList
+global function ItemFlavor_GetGRXMultipleOwnershipTarget
 global function GRXCurrency_RegisterNewCurrencyAssetInEventSlot
 global function GRXCurrency_GetCurrencyIndex
 global function GRXCurrency_GetPurchaseSound
@@ -66,6 +68,7 @@ global function GRXOffer_GetActiveBPPLevelCount
 global function GRXOffer_ContainsBattlePassLevel
 global function GRXOffer_ContainsStackablesOnly
 global function GRXOffer_ContainsPack
+global function GRXOffer_ContainsOnlyPacks
 global function GRXOffer_ContainsOnlySinglePack
 global function GRXOffer_ContainsApexPack
 global function GRXOffer_ContainsSirngePack
@@ -82,6 +85,7 @@ global function GRXOffer_IsHeirloomPack
 global function GRXOffer_ContainsBattlePass
 global function GRXOffer_ContainsBattlePassPack
 global function GRXOffer_ContainsPresaleBattlePass
+global function GRXOffer_GetPricesInPriorityOrder
 global function GRXOffer_GetPremiumPriceQuantity
 global function GRXOffer_GetCraftingPriceQuantity
 global function GRXOffer_GetOriginalPremiumPriceQuantity
@@ -89,6 +93,7 @@ global function GRX_PurchaseOffer
 global function GRX_MakeItemFlavorBagFromPriceArray
 global function GRXOffer_GetEventThematicPackCollectionInfo
 global function GRXOffer_GetEventThematicPackCollectionInfoFromScriptOffer
+global function GRXOffer_ContainsMilestoneEventPack
 global function GRXOffer_IsPurchaseWithinThematicPackLimit
 global function GRX_IsLocationActive
 global function GRX_ScriptOfferFromCraftingOffer
@@ -98,9 +103,20 @@ global function GRX_IsLegendOffer
 
 #if DEV
 global function PrintSortedStoreSectionData
+global function DEV_TestUpdateSmartMerchandisingData
+global function DEV_PrintSmartMerchandisingData
 #endif
 global function SortStoreSectionData
 global function GetSortedStoreSectionData
+global function GetMostRecentlySeenSection
+global function HasSectionBeenSeen
+global function GetHighestPageForSection
+global function SectionShouldBeMarkedAsNew
+global function ServerCallback_UpdatePlayerLastLoggedInTimestamp
+global function SetHighestPageSeenForSection
+global function SetLastSectionVisited
+global function ClearHighestPageSeenForSection
+global function UpdateSmartMerchandisingData
 
 
 
@@ -111,6 +127,7 @@ global function IsGRXOperationDone
 global function ItemFlavorIsStackable
 global function GRX_IsOfferRestrictedByOfferAttributes
 global function GRX_GetPackFlavOfType
+
 
 
 
@@ -166,6 +183,9 @@ global function RemoveCallback_OnGRXInventoryStateChanged
 global function AddCallbackAndCallNow_OnGRXOffersRefreshed
 global function AddCallback_OnGRXOffersRefreshed
 global function RemoveCallback_OnGRXOffersRefreshed
+global function AddCallbackAndCallNow_OnGRXAccountAttributesUpdated
+global function AddCallback_OnGRXAccountAttributesUpdated
+global function RemoveCallback_OnGRXAccountAttributesUpdated
 global function SortStoreOfferItems
 global function ShowGRXErrorDialogue
 global function DEV_GRX_DescribeOffer
@@ -174,6 +194,9 @@ global function GRXPack_GetOpenButtonIcon
 global function GRX_InitScriptOfferFromStoreOffer
 global function GRX_AreStoreSectionsEnabled
 global function GRX_SetOfferRefreshSuppressed
+
+global function UICodeCallback_GRXSmartMerchandisingDataUpdated
+
 
 
 
@@ -227,6 +250,7 @@ global function DisplayQueuedRewardsGiven
 global function UICodeCallback_GRXOffersRefreshed
 global function UICodeCallback_GRXOffersRefreshedIncremental
 global function UICodeCallback_GRXUserInfoUpdated
+global function UICodeCallback_GRXAccountAttributesUpdated
 global function UICodeCallback_GRXQueryCompleted
 global function UICodeCallback_GRXGetOfferCompleted
 global function UICodeCallback_GRXCheckForGiftsCompleted
@@ -274,6 +298,7 @@ global enum eItemFlavorGRXMode
 	CONSUMABLE = GRX_ITEMFLAVORMODE_CONSUMABLE,
 	CURRENCY = GRX_ITEMFLAVORMODE_CURRENCY,
 	OWNERSHIP_TARGET = -1337,
+	MULTIPLE_OWNERSHIP_TARGET = -9001,
 }
 
 
@@ -318,26 +343,34 @@ global enum eStoreSections
 }
 
 
-const int MAX_NUM_STORE_SECTIONS = 15
+
+const int S20_1_START_DATE_UNIX_TIMESTAMP = 1711472400
 
 const table< string, array<string> > EventSectionNameToDateMap = {
 	[ "#FIFTH_ANNIVERSARY_COLLECTION_EVENT" ] = ["2024-02-13 10:00:00 -08:00", "2024-02-27 10:00:00 -08:00"],
-	[ "#INNER_BEAST_COLLECTION_EVENT" ] = ["2024-03-05 10:00:00 -08:00", "2024-03-19 10:00:00 -08:00"],
+	[ "#INNER_BEAST_COLLECTION_EVENT" ] = ["2024-03-05 10:00:00 -08:00", "2024-03-19 10:00:00 -07:00"],
+	[ "#NOIR_MOBSTERS_MILESTONE_EVENT" ] = ["2024-03-26 10:00:00 -07:00", "2024-04-16 10:00:00 -07:00"],
+	[ "#URBAN_ASSAULT_COLLECTION_EVENT" ] = ["2024-04-23 10:00:00 -07:00", "2024-05-07 10:00:00 -07:00"],
 }
 
 const table< string, array<string> > Flex1SectionNameToDateMap = {
 	[ "#VALENTINES_DAY" ] = ["2024-02-13 10:00:00 -08:00", "2024-02-20 10:00:00 -08:00"],
+	[ "#SUN_WARRIOR_STORE" ] = ["2024-04-02 10:00:00 -07:00", "2024-04-09 10:00:00 -07:00"],
+	[ "#GOLDEN_WEEK_SALE" ] = ["2024-04-30 10:00:00 -07:00", "2024-05-07 10:00:00 -07:00"],
 }
 
 const table<string, array<string> > Flex2SectionNameToDateMap = {
 	[ "#FOURTH_ANNIVERSARY_SQUADS" ] = ["2024-02-13 10:00:00 -08:00", "2024-02-27 10:00:00 -08:00"],
 	[ "#STEELED_DEMON_STORE" ] = ["2024-02-27 10:00:00 -08:00", "2024-03-12 10:00:00 -07:00"],
 	[ "#MOLTEN_MAYHEM_PACK_SALE" ] = ["2024-03-19 10:00:00 -07:00", "2024-03-26 10:00:00 -07:00"],
+	[ "#POLY_PROWLER_STORE" ] = ["2024-04-09 10:00:00 -07:00", "2024-04-23 10:00:00 -07:00"],
+	[ "#GOLDEN_WEEK_ORIGINALS" ] = ["2024-04-30 10:00:00 -07:00", "2024-05-07 10:00:00 -07:00"],
 }
 
 const table<string, array<string> > Flex3SectionNameToDateMap = {
 	[ "#THIRD_ANNIVERSARY_SQUADS" ] = ["2024-02-13 10:00:00 -08:00", "2024-02-27 10:00:00 -08:00"],
 	[ "#MOLTEN_MAYHEM_STORE" ] = ["2024-03-19 10:00:00 -07:00", "2024-03-26 10:00:00 -07:00"],
+	[ "#VIVID_NIGHTS_STORE" ] = ["2024-04-02 10:00:00 -07:00", "2024-04-16 10:00:00 -07:00"],
 }
 
 
@@ -412,8 +445,6 @@ global struct GRXScriptOffer
 
 	
 	
-
-	ItemFlavor ornull WORKAROUND_claimedSentinel = null
 }
 
 global struct GRXScriptCraftingOffer
@@ -437,7 +468,7 @@ global struct StoreSectionInfo
 	
 	int sectionId
 	string sectionName = ""
-	int markedAsNewDate
+	int markedAsNewDate = 0
 	array<GRXScriptOffer> offers
 }
 
@@ -461,6 +492,9 @@ global struct PurchaseDialogConfig
 	GiftingFriend ornull friend = null
 	bool isGiftPack = false 
 	bool isEventShopDialog = false 
+	
+	CupEntry ornull entry = null
+	bool isCupsReRoll = false
 	
 	int           quantity = 1
 	bool          markAsNew = true
@@ -664,6 +698,14 @@ FileStruct_LifetimeVM& fileVM
 
 
 
+struct SmartMerchData
+{
+	array<int> highestPagesSeen
+	int lastSectionVisited
+}
+
+
+
 
 struct FileStruct_LifetimeLevel
 {
@@ -673,6 +715,7 @@ struct FileStruct_LifetimeLevel
 	table<string, int>     	grxRefToGRXIndexMap
 
 	array<ItemFlavor> stickerPacksWithRewards
+	table< int, int > multiOwnershipUnlockMap
 
 #if DEV
 		table<string, ItemFlavor> grxRefItemFlavorMap
@@ -694,6 +737,7 @@ struct FileStruct_LifetimeLevel
 
 			array<void functionref()> onGRXInventoryStateChangedCallbacks
 			array<void functionref()> onGRXOffersRefreshedCallbacks
+			array<void functionref()> onGRXAccountAttributesUpdatedCallbacks
 
 			table<ItemFlavor, ItemFlavorPurchasabilityInfo> itemFlavorPurchasabilityInfoMap
 
@@ -708,7 +752,9 @@ struct FileStruct_LifetimeLevel
 			array<array<array<GRXScriptOffer> > > seasonalStoreOfferColumns
 
 
+			int lastLoggedInTimestamp = 0
 			table<int, StoreSectionInfo > storeSectionInfoMap
+			SmartMerchData& smartMerchData
 
 
 
@@ -751,6 +797,10 @@ void function ShGRX_LevelInit()
 		newFileLevel.WORKAROUND_isInLifetime = true
 
 	fileLevel = newFileLevel
+
+
+		SetDefaultSmartMerchData()
+
 
 	AddCallback_RegisterRootItemFlavors( void function() {
 		Assert( GRX_CURRENCY_COUNT == 5 )
@@ -894,6 +944,25 @@ void function ShGRX_RegisterItemFlavor( ItemFlavor flavor )
 			targettedBy.append( flavor.guid )
 		}
 	}
+	else if ( flavor.grxMode == eItemFlavorGRXMode.MULTIPLE_OWNERSHIP_TARGET )
+	{
+		array< ItemFlavor > ownershipRequirementsList = ItemFlavor_GetGRXMultipleOwnershipRequirementsList( flavor )
+		if ( ownershipRequirementsList.len() == 0 )
+		{
+			Assert( false, "Item had GRX mode MULTIPLE_OWNERSHIP_TARGET but list was empty: " + string( ItemFlavor_GetAsset( flavor ) ) )
+			return
+		}
+
+		foreach ( reqFlav in ownershipRequirementsList )
+		{
+#if DEV
+				bool duplicateGRXRefFoundInMultiple = reqFlav.guid in fileLevel.multiOwnershipUnlockMap
+				Assert( !duplicateGRXRefFoundInMultiple, "Duplicate GRX ref in multiple unlock mapping found. Already used by " + string( ItemFlavor_GetAsset( GetItemFlavorByGUID( fileLevel.multiOwnershipUnlockMap[ reqFlav.guid ] ) ) ) )
+#endif
+
+			fileLevel.multiOwnershipUnlockMap[ reqFlav.guid ] <- flavor.guid
+		}
+	}
 
 
 		ItemFlavorPurchasabilityInfo ifpi
@@ -1011,10 +1080,42 @@ ItemFlavor ornull function ItemFlavor_GetGRXOwnershipTarget( ItemFlavor flavor )
 	asset ownershipTargetFlavAsset = GetGlobalSettingsAsset( ItemFlavor_GetAsset( flavor ), "ownershipTarget" )
 	if ( IsValidItemFlavorSettingsAsset( ownershipTargetFlavAsset ) )
 		return GetItemFlavorByAsset( ownershipTargetFlavAsset )
-
 	return null
 }
 
+
+
+array< ItemFlavor > function ItemFlavor_GetGRXMultipleOwnershipRequirementsList( ItemFlavor flavor )
+{
+	Assert( IsItemFlavorStructValid( flavor.guid, eValidation.ASSERT ) )
+	Assert( flavor.grxMode == eItemFlavorGRXMode.MULTIPLE_OWNERSHIP_TARGET, "attempted to check GRX multiple ownership mode for an item that does not have that mode set: " + string( ItemFlavor_GetAsset( flavor ) ) )
+
+	array< ItemFlavor > ownershipList = []
+	foreach ( int index, var ownershipBlock in IterateSettingsAssetArray( ItemFlavor_GetAsset( flavor ), "multipleOwnershipTargets" ) )
+	{
+		asset ownershipAsset = GetSettingsBlockAsset( ownershipBlock, "multipleOwnershipTarget" )
+		Assert( IsValidItemFlavorSettingsAsset( ownershipAsset ), format( "Bad ownership target in GRX configuration of %s: %s", string( ItemFlavor_GetAsset( flavor ) ), string( ownershipAsset ) ) )
+		ownershipList.append( GetItemFlavorByAsset( ownershipAsset ) )
+	}
+
+	Assert( ownershipList.len() > 0, "Mode was set to MULTIPLE_OWNERSHIP_TARGET, but no valid targets were found: " + string( ItemFlavor_GetAsset( flavor ) ) )
+	return ownershipList
+}
+
+
+
+ItemFlavor ornull function ItemFlavor_GetGRXMultipleOwnershipTarget( ItemFlavor flavor )
+{
+	Assert( IsItemFlavorStructValid( flavor.guid, eValidation.ASSERT ) )
+
+	if ( flavor.guid in fileLevel.multiOwnershipUnlockMap )
+	{
+		ItemFlavor target = GetItemFlavorByGUID( fileLevel.multiOwnershipUnlockMap[ flavor.guid ] )
+		return target
+	}
+
+	return null
+}
 
 
 
@@ -1232,6 +1333,26 @@ bool function IsItemOwnedByPlayerInternal( ItemFlavor flav, entity player = null
 		return false
 	}
 
+	if ( grxMode == eItemFlavorGRXMode.MULTIPLE_OWNERSHIP_TARGET )
+	{
+		array< ItemFlavor > ownershipTargetList = ItemFlavor_GetGRXMultipleOwnershipRequirementsList( flav )
+		if ( ownershipTargetList.len() == 0 )
+		{
+			Warning( "Item flavor %s is set to use GRX ownership of a set of items, but the set was empty: %s", string( ItemFlavor_GetAsset( flav ) ) )
+			return false
+		}
+
+		foreach ( ItemFlavor ownershipFlav in ownershipTargetList )
+		{
+			if ( !IsItemOwnedByPlayerInternal( ownershipFlav, player ) )
+			{
+				return false
+			}
+		}
+
+		return true
+	}
+
 	
 	
 	
@@ -1319,6 +1440,20 @@ bool function IsItemOwnedByPlayerInternal( ItemFlavor flav, entity player = null
 
 
 
+bool function GRXOffer_ContainsMilestoneEventPack( GRXScriptOffer offerData )
+{
+	if ( offerData.output.flavors.len() == 1 &&
+		ItemFlavor_GetType( offerData.output.flavors[0] ) == eItemType.account_pack &&
+		ItemFlavor_GetAccountPackType( offerData.output.flavors[0] ) == eAccountPackType.SIRNGE
+	)
+	{
+		return true
+	}
+	return false
+}
+
+
+
 bool function GRXOffer_IsPurchaseWithinThematicPackLimit( GRXScriptOffer offerData )
 {
 	bool withinLimit = true
@@ -1387,15 +1522,9 @@ bool function GRXOffer_IsActiveForStoreLocation( GRXScriptOffer offer )
 	return GRXOffer_IsValid( offer ) && offer.expireTime > GetUnixTimestamp()
 }
 
+
 bool function GRXOffer_IsFullyClaimed( GRXScriptOffer offer )
 {
-	if ( offer.WORKAROUND_claimedSentinel != null )
-	{
-		ItemFlavor sentinelFlav = expect ItemFlavor(offer.WORKAROUND_claimedSentinel)
-		if ( GRX_IsItemOwnedByPlayer( sentinelFlav ) )
-			return true
-	}
-
 	if( GRXOffer_GetBundleOfferRestrictions( offer ) != "" )
 		return true
 
@@ -1439,10 +1568,10 @@ bool function GRXOffer_IsEligibleForPurchase( GRXScriptOffer scriptOffer )
 	return scriptOffer.ineligibilityCode == 0
 }
 
+
+
 bool function GRXOffer_IsOfferOnlyGiftable( GRXScriptOffer scriptOffer )
 {
-	
-
 	foreach ( ItemFlavorBag price in scriptOffer.prices )
 	{
 		ItemFlavor flavor = price.flavors[0]
@@ -1594,6 +1723,53 @@ bool function GRXOffer_ContainsPresaleBattlePass( GRXScriptOffer offer  )
 	return false
 }
 
+array<ItemFlavorBag> function GRXOffer_GetPricesInPriorityOrder( GRXScriptOffer offer )
+{
+	array<ItemFlavorBag> priceList = clone offer.prices
+	priceList.sort( int function( ItemFlavorBag a, ItemFlavorBag b ) {
+		if ( GetCurrencyPriority( a.flavors[0] ) < GetCurrencyPriority( b.flavors[0] ) )
+			return -1
+		else if ( GetCurrencyPriority( a.flavors[0] ) > GetCurrencyPriority( b.flavors[0] ) )
+			return 1
+		return 0
+	} )
+
+	return priceList
+}
+
+int function GetCurrencyPriority(ItemFlavor itemFlavor)
+{
+	int currencyPriority = -1
+	switch ( itemFlavor )
+	{
+		case GRX_CURRENCIES[GRX_CURRENCY_PREMIUM]:
+			currencyPriority = GRX_CURRENCY_PREMIUM
+			break
+
+		case GRX_CURRENCIES[GRX_CURRENCY_CREDITS]:
+			currencyPriority = GRX_CURRENCY_CREDITS
+			break
+
+		case GRX_CURRENCIES[GRX_CURRENCY_CRAFTING]:
+			currencyPriority = GRX_CURRENCY_CRAFTING
+			break
+
+		case GRX_CURRENCIES[GRX_CURRENCY_EVENT]:
+			currencyPriority = GRX_CURRENCY_EVENT
+			break
+
+		case GRX_CURRENCIES[GRX_CURRENCY_HEIRLOOM]:
+			currencyPriority = GRX_CURRENCY_HEIRLOOM
+			break
+
+		default:
+			Assert( false, "itemFlavor guid: " + itemFlavor.guid + " does not have a currency")
+			break
+	}
+
+	return currencyPriority
+}
+
 int function GRXOffer_GetPremiumPriceQuantity( GRXScriptOffer offer )
 {
 	foreach ( ItemFlavorBag price in offer.prices )
@@ -1667,6 +1843,18 @@ bool function GRXOffer_ContainsPack( GRXScriptOffer offer )
 
 	return false
 }
+
+
+bool function GRXOffer_ContainsOnlyPacks( GRXScriptOffer offer )
+{
+	foreach ( ItemFlavor outputFlav in offer.output.flavors )
+	{
+		if ( ItemFlavor_GetGRXMode( outputFlav ) != eItemFlavorGRXMode.PACK )
+			return false
+	}
+	return true
+}
+
 
 bool function GRXOffer_ContainsOnlySinglePack( GRXScriptOffer offer )
 {
@@ -2781,6 +2969,29 @@ void function RemoveCallback_OnGRXOffersRefreshed( void functionref() cb )
 
 
 
+void function AddCallbackAndCallNow_OnGRXAccountAttributesUpdated( void functionref() callback )
+{
+	AddCallback_OnGRXAccountAttributesUpdated( callback )
+	callback()
+}
+
+
+
+void function AddCallback_OnGRXAccountAttributesUpdated( void functionref() callback )
+{
+	Assert( !fileLevel.onGRXAccountAttributesUpdatedCallbacks.contains( callback ), "Tried to add a callback that was already added" )
+	fileLevel.onGRXAccountAttributesUpdatedCallbacks.append( callback )
+}
+
+
+
+void function RemoveCallback_OnGRXAccountAttributesUpdated( void functionref() callback )
+{
+	Assert( fileLevel.onGRXAccountAttributesUpdatedCallbacks.contains( callback ), "Tried to remove a callback that was not added" )
+	fileLevel.onGRXAccountAttributesUpdatedCallbacks.fastremovebyvalue( callback )
+}
+
+
 
 
 
@@ -3328,6 +3539,16 @@ void function GRXDbg( entity player, string label, ... )
 
 
 
+
+
+
+
+
+
+
+
+
+
 PlayerGRXScriptState function GetPlayerGRXScriptState( entity player )
 {
 
@@ -3380,6 +3601,22 @@ void function UICodeCallback_GRXUserInfoUpdated( GRXUserInfo codeUserInfo )
 	}
 }
 
+
+
+void function UICodeCallback_GRXAccountAttributesUpdated()
+{
+#if GRX_DEBUG_PRINTS
+	if ( !fileLevel.GRX_DEBUG_PRINTS_disableTemporarily )
+	{
+		GRXDbg( null, "", "numCallbacks", fileLevel.onGRXAccountAttributesUpdatedCallbacks.len() )
+	}
+#endif
+
+	foreach ( void functionref() callback in fileLevel.onGRXAccountAttributesUpdatedCallbacks )
+	{
+		callback()
+	}
+}
 
 
 
@@ -3693,7 +3930,7 @@ bool function DisplayQueuedRewardsGiven()
 	{
 		Assert( QUEUED_REWARDS_MAX_ITEMS_COUNT == 1 )
 		SettingsAssetGUID ornull rewardItemFlavGUID = GetQueuedRewardOrNull( persistentArrayIdx )
-		if ( rewardItemFlavGUID == null)
+		if ( rewardItemFlavGUID == null )
 			continue
 
 		expect SettingsAssetGUID( rewardItemFlavGUID )
@@ -3711,6 +3948,12 @@ bool function DisplayQueuedRewardsGiven()
 				sourceItemFlav = GetItemFlavorByGUID( sourceItemFlavGUID )
 			else
 				Warning( "Found unregistered ItemFlavorGUID " + string(sourceItemFlavGUID) + ". This is probably because the source asset has been deleted from Bakery." )
+		}
+
+		if ( IsInvalidTypeForRewardCeremony( rewardItemFlav.typeIndex ) )
+		{
+			GRX_MarkRewardAcknowledged( rewardItemFlavGUID, persistentArrayIdx )
+			continue
 		}
 
 		string titleText = "#GENERIC_REWARD_RECEIVED"
@@ -4864,12 +5107,6 @@ void function GRX_InitScriptOfferFromStoreOffer( GRXStoreOffer codeOffer, GRXScr
 
 		ItemFlavor outputFlav = GetItemFlavorByGRXIndex( item.itemIdx )
 
-		if ( ItemFlavor_GetType( outputFlav ) == eItemType.grx_sentinel )
-		{
-			scriptOffer.WORKAROUND_claimedSentinel = outputFlav
-			continue
-		}
-
 		scriptOffer.items.append( item )
 
 		bool foundMatchingOutputBagEntry = false
@@ -5214,6 +5451,113 @@ void function UpdateScriptOfferPriority( GRXScriptOffer offer )
 
 
 
+void function ServerCallback_UpdatePlayerLastLoggedInTimestamp( int timestamp )
+{
+	if ( fileLevel.lastLoggedInTimestamp == 0 )
+	{
+		fileLevel.lastLoggedInTimestamp = timestamp
+	}
+}
+
+bool function SectionShouldBeMarkedAsNew( StoreSectionInfo sectionInfo )
+{
+	return sectionInfo.markedAsNewDate > fileLevel.lastLoggedInTimestamp
+}
+
+bool function SectionIdIsValid( int sectionId )
+{
+	return sectionId >= 0 && sectionId < GRX_MAX_STORE_SECTIONS
+}
+
+bool function HighestPagesSeenArrayIsValid()
+{
+	return fileLevel.smartMerchData.highestPagesSeen.len() == GRX_MAX_STORE_SECTIONS
+}
+
+void function SetDefaultSmartMerchData()
+{
+	fileLevel.smartMerchData.highestPagesSeen.clear()
+	for ( int i = 0; i < GRX_MAX_STORE_SECTIONS; ++i )
+	{
+		fileLevel.smartMerchData.highestPagesSeen.append( 0 )
+	}
+	fileLevel.smartMerchData.lastSectionVisited = 0
+}
+
+int function GetHighestPageForSection( int sectionId )
+{
+	if ( !SectionIdIsValid( sectionId ) )
+	{
+		Assert( false, format("Invalid section id %d. Expected a value value X where 0 <= X < %d.", sectionId, GRX_MAX_STORE_SECTIONS ) )
+		return 0
+	}
+	if ( !HighestPagesSeenArrayIsValid() )
+	{
+		Assert( false, format( "Tried to get highest page for section %d but page info is misconfigured.", sectionId ) )
+		return 0
+	}
+	return fileLevel.smartMerchData.highestPagesSeen[sectionId]
+}
+
+bool function HasSectionBeenSeen( int sectionId )
+{
+	return GetHighestPageForSection( sectionId ) > 0
+}
+
+int function GetMostRecentlySeenSection()
+{
+	return fileLevel.smartMerchData.lastSectionVisited
+}
+
+void function SetHighestPageSeenForSection( int sectionId, int highestPageSeen )
+{
+	if ( !SectionIdIsValid( sectionId ) )
+	{
+		Assert( false, format("Invalid section id %d. Expected a value X where 0 <= X < %d.", sectionId, GRX_MAX_STORE_SECTIONS ) )
+		return
+	}
+
+	fileLevel.smartMerchData.highestPagesSeen[sectionId] = highestPageSeen
+}
+
+void function SetLastSectionVisited( int sectionId )
+{
+	if ( !SectionIdIsValid( sectionId ) )
+	{
+		Assert( false, format("Invalid section id %d. Expected a value X where 0 <= X < %d.", sectionId, GRX_MAX_STORE_SECTIONS ) )
+		return
+	}
+
+	fileLevel.smartMerchData.lastSectionVisited = sectionId
+}
+
+void function ClearHighestPageSeenForSection( int sectionId )
+{
+	if ( !SectionIdIsValid( sectionId ) )
+	{
+		Assert( false, format("Invalid section id %d. Expected a value X where 0 <= X < %d.", sectionId, GRX_MAX_STORE_SECTIONS ) )
+		return
+	}
+
+	fileLevel.smartMerchData.highestPagesSeen[sectionId] = 0
+}
+
+
+
+void function UpdateSmartMerchandisingData()
+{
+	array<int> smartMerchInts
+
+	for ( int i = 0; i < GRX_MAX_STORE_SECTIONS; ++i )
+	{
+		smartMerchInts.append( fileLevel.smartMerchData.highestPagesSeen[i] )
+	}
+
+	smartMerchInts.append( fileLevel.smartMerchData.lastSectionVisited )
+
+	GRX_UpdateSmartMerchandisingData( smartMerchInts )
+}
+
 bool function GRX_IsStoreV1Location( string storeLocation )
 {
 	return storeLocation == "shop" || storeLocation == "specials" || storeLocation == "seasonal"
@@ -5256,6 +5600,9 @@ void function AddOfferToStoreSection( string storeLocation, GRXScriptOffer scrip
 	else
 	{
 		StoreSectionInfo sectionInfo
+		
+		
+		sectionInfo.sectionId = storeSectionEnum
 		sectionInfo.offers = [scriptOffer]
 		fileLevel.storeSectionInfoMap[storeSectionEnum] <- sectionInfo
 	}
@@ -5276,6 +5623,7 @@ void function SortStoreSectionData( table<int, StoreSectionInfo > storeSectionDa
 
 string function GetCurrentFlexSectionName( table< string, array<string> > sectionNameToDateMap )
 {
+	int currentTime = GetUnixTimestamp()
 	foreach( string sectionName, array<string> dateStringArray in sectionNameToDateMap )
 	{
 		Assert( dateStringArray.len() == 2,
@@ -5289,7 +5637,7 @@ string function GetCurrentFlexSectionName( table< string, array<string> > sectio
 		}
 		expect int( startDate )
 		expect int( endDate )
-		if ( GetUnixTimestamp() > startDate && GetUnixTimestamp() < endDate )
+		if ( currentTime > startDate && currentTime < endDate )
 		{
 			return sectionName
 		}
@@ -5355,10 +5703,76 @@ void function PopulateStoreSectionNames( table<int, StoreSectionInfo > storeSect
 	}
 }
 
+int function GetCurrentSectionMarkedAsNewDate( table< string, array<string> > sectionNameToDateMap )
+{
+	int currentTime = GetUnixTimestamp()
+	foreach( string sectionName, array<string> dateStringArray in sectionNameToDateMap )
+	{
+		Assert( dateStringArray.len() == 2,
+			"Store 2.0 flex section map has a misconfigured date array. Array must have exactly two elements: a start date string, and an end date string." )
+		int ornull startDate = DateTimeStringToUnixTimestamp( dateStringArray[0] )
+		int ornull endDate = DateTimeStringToUnixTimestamp( dateStringArray[1] )
+		if ( startDate == null || endDate == null )
+		{
+			Assert( false, "Store 2.0 flex section " + Localize( sectionName ) + " contained a malformed date string. Skipping this section." )
+			continue
+		}
+		expect int( startDate )
+		expect int( endDate )
+		if ( currentTime > startDate && currentTime < endDate )
+		{
+			return startDate
+		}
+	}
+	return S20_1_START_DATE_UNIX_TIMESTAMP
+}
+
+void function PopulateStoreSectionMarkedAsNewDates( table<int, StoreSectionInfo > storeSectionData )
+{
+	foreach ( int location, StoreSectionInfo sectionInfo in storeSectionData )
+	{
+		switch ( location )
+		{
+			case eStoreSections.Featured:
+			case eStoreSections.Monthly:
+			case eStoreSections.Recolor:
+			case eStoreSections.BattlepasShop:
+			{
+				sectionInfo.markedAsNewDate = S20_1_START_DATE_UNIX_TIMESTAMP
+				break
+			}
+			case eStoreSections.Event:
+			{
+				sectionInfo.markedAsNewDate = GetCurrentSectionMarkedAsNewDate( EventSectionNameToDateMap )
+				break
+			}
+			case eStoreSections.Flex1:
+			{
+				sectionInfo.markedAsNewDate = GetCurrentSectionMarkedAsNewDate( Flex1SectionNameToDateMap )
+				break
+			}
+			case eStoreSections.Flex2:
+			{
+				sectionInfo.markedAsNewDate = GetCurrentSectionMarkedAsNewDate( Flex2SectionNameToDateMap )
+				break
+			}
+			case eStoreSections.Flex3:
+			{
+				sectionInfo.markedAsNewDate = GetCurrentSectionMarkedAsNewDate( Flex3SectionNameToDateMap )
+				break
+			}
+			default:
+				printt( "Unknown store location ", location )
+				sectionInfo.markedAsNewDate = 0
+		}
+	}
+}
+
 table<int, StoreSectionInfo> function GetSortedStoreSectionData()
 {
 	SortStoreSectionData( fileLevel.storeSectionInfoMap )
 	PopulateStoreSectionNames( fileLevel.storeSectionInfoMap )
+	PopulateStoreSectionMarkedAsNewDates( fileLevel.storeSectionInfoMap )
 	return fileLevel.storeSectionInfoMap
 }
 
@@ -5369,6 +5783,8 @@ void function PrintSortedStoreSectionData()
 	foreach ( int location, StoreSectionInfo sectionInfo in sortedStoreSectionData )
 	{
 		printt( "Section name: ", sectionInfo.sectionName )
+		printt( "Section id: ", sectionInfo.sectionId )
+		printt( "Marked as new date: ", sectionInfo.markedAsNewDate )
 		printt( "Offers for location ", GetSectionLocationNameFromEnum( location ) )
 		foreach( GRXScriptOffer offer in sectionInfo.offers )
 		{
@@ -5385,6 +5801,28 @@ string function GetSectionLocationNameFromEnum( int location )
 			return key
 	}
 	return "INVALID LOCATION"
+}
+
+void function DEV_TestUpdateSmartMerchandisingData()
+{
+	array<int> smartMerchInts = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 10 ]
+	GRX_UpdateSmartMerchandisingData( smartMerchInts )
+}
+
+void function DEV_PrintSmartMerchandisingData()
+{
+	if ( !HighestPagesSeenArrayIsValid() )
+	{
+		printt( "Smart merch highest page seen array has " + fileLevel.smartMerchData.highestPagesSeen.len() + " elements but we were expecting " + GRX_MAX_STORE_SECTIONS )
+	}
+
+	printt("Now printing out smart merch data...")
+	for ( int i = 0; i < GRX_MAX_STORE_SECTIONS; ++i )
+	{
+		printt("\tsection id = " + i + ", highest page seen = " + fileLevel.smartMerchData.highestPagesSeen[i] )
+	}
+
+	printt( "\tlast section visited is " + fileLevel.smartMerchData.lastSectionVisited )
 }
 #endif
 
@@ -5481,9 +5919,7 @@ const table<int, int> ITEM_TYPE_PRIORITY_MAP = {
 	[eItemType.skydive_emote] = 50,
 	[eItemType.character_emote] = 45,
 	[eItemType.emote_icon] = 40,
-
-		[eItemType.reward_set_tracker] = 6,
-
+	[eItemType.reward_set_tracker] = 6,
 	[eItemType.sticker] = 5,
 	[eItemType.battlepass_purchased_xp] = 4,
 	[eItemType.voucher] = 3,
@@ -5502,8 +5938,11 @@ int function SortStoreOfferItems( GRXStoreOfferItem itemA, GRXStoreOfferItem ite
 
 	Assert( itemTypeA in ITEM_TYPE_PRIORITY_MAP && itemTypeB in ITEM_TYPE_PRIORITY_MAP, format("Found unsupported item type in store offer. Add it to itemTypePriorityMap if it should be supported. Type A is %d and Type B is %d.", itemTypeA, itemTypeB ) )
 
-	int itemTypePriorityA = ITEM_TYPE_PRIORITY_MAP[itemTypeA]
-	int itemTypePriorityB = ITEM_TYPE_PRIORITY_MAP[itemTypeB]
+	bool itemTypePrioExistsA = itemTypeA in ITEM_TYPE_PRIORITY_MAP
+	bool itemTypePrioExistsB = itemTypeB in ITEM_TYPE_PRIORITY_MAP
+
+	int itemTypePriorityA = itemTypePrioExistsA ? ITEM_TYPE_PRIORITY_MAP[itemTypeA] : 0
+	int itemTypePriorityB = itemTypePrioExistsB ? ITEM_TYPE_PRIORITY_MAP[itemTypeB] : 0
 
 	
 	bool hasHighestPriorityItemType = false
@@ -6458,4 +6897,22 @@ void function GRX_SetOfferRefreshSuppressed( bool isSuppressed )
 	printf( "Setting offer refresh suppressed state: " + isSuppressed )
 	Remote_ServerCallFunction( "ClientCallback_SetOfferRefreshSuppressed", isSuppressed )
 }
+
+
+
+
+void function UICodeCallback_GRXSmartMerchandisingDataUpdated( array<int> smartMerchandisingData )
+{
+	Assert( smartMerchandisingData.len() == ( GRX_SMART_MERCHANDISING_DATA_NUM_INTS ) )
+
+	
+	fileLevel.smartMerchData.highestPagesSeen.clear()
+	for ( int i = 0; i < GRX_MAX_STORE_SECTIONS; ++i )
+	{
+		fileLevel.smartMerchData.highestPagesSeen.append( smartMerchandisingData[i] )
+	}
+
+	fileLevel.smartMerchData.lastSectionVisited = smartMerchandisingData[GRX_SMART_MERCHANDISING_DATA_NUM_INTS - 1]
+}
+
 

@@ -174,7 +174,7 @@ global enum eLoadoutCategory
 		DEATHBOX,
 
 
-
+		ARTIFACT_CONFIGURATIONS,
 
 
 	OTHER,
@@ -203,7 +203,7 @@ global const table< int, string > LOADOUT_CATEGORIES_TO_NAMES_MAP = {
 	[eLoadoutCategory.DEATHBOX] = "deathbox",
 
 
-
+	[eLoadoutCategory.ARTIFACT_CONFIGURATIONS] = "artifact_weapons",
 
 
 	[eLoadoutCategory.OTHER] = "other",
@@ -1407,17 +1407,6 @@ bool function IsItemFlavorUnlockedForLoadoutSlot( EHI playerEHI, LoadoutEntry en
 
 
 
-
-
-
-
-
-
-
-
-
-
-
 	LoadoutEntry_IsItemFlavorUnlockedFuncType isItemFlavorUnlocked = entry.isItemFlavorUnlocked
 	if ( isItemFlavorUnlocked == null )
 		isItemFlavorUnlocked = IsItemFlavorGRXUnlockedForLoadoutSlot
@@ -1538,7 +1527,7 @@ ItemFlavor function GetFirstValidItemFlavor( EHI playerEHI, LoadoutEntry entry, 
 				return flav
 		}
 	}
-	Assert( false, "Could not find an unlocked item flavor for loadout slot: " + entry.id )
+	Assert( false, "Could not find an unlocked item flavor for loadout slot: " + entry.id + " , number of possible itemFlavors " + itemFlavors.len() )
 	unreachable
 }
 
@@ -1740,6 +1729,16 @@ void function ShLoadouts_OnPlayerEHICreated( EHI player, bool thisCallIsHappenin
 
 
 }
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2360,6 +2359,16 @@ int function GetLoadoutSlotContentsIndexFromCache( EHI playerEHI, LoadoutEntry e
 
 
 
+
+
+
+
+
+
+
+
+
+
 void function RefreshLoadoutSlotInternal( EHI playerEHI, LoadoutEntry entry, table<LoadoutEntry, bool> ornull refreshedSlotsSet, array<int> ornull queuedSlotsIndicesForRpc, bool isDependent )
 {
 #if LOADOUTS_DBG
@@ -2681,6 +2690,16 @@ array<ItemFlavor> function GetLoadoutItemsSortedForMenu( array<LoadoutEntry> loa
 			if ( ItemFlavor_IsTheRandom( a ) && !ItemFlavor_IsTheRandom( b ) )
 				return -1
 			else if ( !ItemFlavor_IsTheRandom( a ) && ItemFlavor_IsTheRandom( b ) )
+				return 1
+		}
+
+		if( ItemFlavor_GetType( a ) == eItemType.weapon_skin && ItemFlavor_GetType( b ) == eItemType.weapon_skin )
+		{
+			bool aIsReactive = WeaponSkin_DoesReactToKills( a )
+			bool bIsReactive = WeaponSkin_DoesReactToKills( b )
+			if ( aIsReactive && !bIsReactive )
+				return -1
+			else if ( bIsReactive && !aIsReactive )
 				return 1
 		}
 
@@ -3536,6 +3555,15 @@ void function DEV_LoadoutsDebug( LoadoutEntry entry )
 		printt("LoadoutsDebug: " + func1 + " called " + func0 + " for LoadoutEntry "+ entry.DEV_name)
 }
 #endif
+
+
+
+
+
+
+
+
+
 
 
 

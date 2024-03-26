@@ -100,8 +100,6 @@ InputDef function AddPanelFooterOption( var panel, int alignment, int input, boo
 			activateFunc = PCBackButton_Activate
 			
 		}
-
-		Assert( activateFunc == PCBackButton_Activate, "Footer input BUTTON_B can only use PCBackButton_Activate() for activateFunc!" )
 	}
 
 	array<InputDef> footerData = uiGlobal.panelData[ panel ].footerData

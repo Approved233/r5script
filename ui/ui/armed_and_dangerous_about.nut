@@ -4,7 +4,7 @@ global function Armed_And_Dangerous_PopulateAboutText
 string function GetPlaylist()
 {
 	if ( IsLobby() )
-		return Lobby_GetSelectedPlaylist()
+		return LobbyPlaylist_GetSelectedPlaylist()
 	else
 		return GetCurrentPlaylistName()
 

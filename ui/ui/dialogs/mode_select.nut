@@ -50,8 +50,8 @@ void function OnOpenModeSelectDialog()
 	UIPos ownerPos   = REPLACEHud_GetAbsPos( ownerButton )
 	UISize ownerSize = REPLACEHud_GetSize( ownerButton )
 
-	array<string> playlists = Lobby_GetPlaylists()
-	array<string> playlistMods = Lobby_GetPlaylistMods()
+	array<string> playlists = LobbyPlaylist_GetPlaylists()
+	array<string> playlistMods = LobbyPlaylist_GetPlaylistMods()
 
 	Hud_InitGridButtons( file.modeList, playlists.len() )
 	Hud_InitGridButtons( file.modeModList, playlistMods.len() )
@@ -70,7 +70,7 @@ void function OnOpenModeSelectDialog()
 	if ( playlists.len() == 0 )
 		return
 
-	string selectedPlaylist = Lobby_GetSelectedPlaylist()
+	string selectedPlaylist = LobbyPlaylist_GetSelectedPlaylist()
 	bool foundSelectedPlaylist = false
 	int buttonMaxHeight = 0
 	for ( int i = 0; i < playlists.len(); i++ )
@@ -153,7 +153,7 @@ void function ModeButton_Init( var button, string playlistName )
 	if ( !isPlaylistAvailable )
 	{
 		toolTipData.titleText = "#PLAYLIST_UNAVAILABLE"
-		toolTipData.descText = Lobby_GetPlaylistStateString( Lobby_GetPlaylistState( playlistName ) )
+		toolTipData.descText = LobbyPlaylist_GetPlaylistStateString( LobbyPlaylist_GetPlaylistState( playlistName ) )
 	}
 	else
 	{
@@ -163,12 +163,12 @@ void function ModeButton_Init( var button, string playlistName )
 	Hud_SetToolTipData( button, toolTipData )
 
 
+	if ( GetConVarBool( "cups_enabled" ) )
+		Hud_SetLocked( button, false )
+	else
+		Hud_SetLocked( button, !isPlaylistAvailable )
 
 
-
-
-
-	Hud_SetLocked( button, !isPlaylistAvailable )
 
 
 	Hud_AddEventHandler( button, UIE_CLICK, OnModeButton_Activate )
@@ -182,7 +182,7 @@ void function OnModeButton_Activate( var button )
 
 	string playlistString = file.buttonToMode[button]
 	printf( "Setting playlist %s\n", playlistString )
-	Lobby_SetSelectedPlaylist( playlistString )
+	LobbyPlaylist_SetSelectedPlaylist( playlistString )
 	CloseAllDialogs()
 }
 
@@ -224,14 +224,14 @@ void function OnModeModButton_Activate( var button )
 	{ 
 		string modString = ""
 		
-		array<string> playlistMods = Lobby_GetPlaylistMods()
+		array<string> playlistMods = LobbyPlaylist_GetPlaylistMods()
 		foreach( modeModName in playlistMods )
 		{
 			if ( file.modeModIsActive[modeModName] )
 				modString = modString + "+" + modeModName
 		}
 		printf( "Setting playlistmods %s\n", modString )
-		Lobby_SetSelectedPlaylistMods( modString )
+		LobbyPlaylist_SetSelectedPlaylistMods( modString )
 	}
 }
 

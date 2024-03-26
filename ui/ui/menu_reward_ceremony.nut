@@ -411,12 +411,12 @@ void function PassAwardsDialog_OnClose()
 	RemoveCallback_OnMouseWheelUp( Gift_NavLeftOnInput )
 	RemoveCallback_OnMouseWheelDown( Gift_NavRightOnInput )
 
-	if ( file.isGift )
+	if ( file.isGift)
 	{
 		PromoDialog_RemoveFromCache( file.highestIndex )
-		
-		RunClientScript( "ClearBattlePassItem" )
 	}
+
+	RunClientScript( "ClearBattlePassItem" )
 
 	file.giftChangeInputsRegistered  = false
 	file.highestIndex = 0
@@ -436,6 +436,10 @@ void function PassAwardsDialog_UpdateAwards()
 	}
 
 	file.buttonToItem.clear()
+
+	
+	RemoveBattlepassFromRewards()
+
 	int numAwards = file.displayAwards.len()
 
 	bool showButtons = file.isForBattlePass || file.isForQuest
@@ -541,6 +545,19 @@ void function CheckForCharacterOrBattlepass()
 		if ( ItemFlavor_GetType( bpr.flav ) == eItemType.image_2d )
 		{
 			file.isCurrentGiftBattlepass = true
+			break
+		}
+	}
+}
+
+
+void function RemoveBattlepassFromRewards()
+{
+	foreach ( index, BattlePassReward bpr in file.displayAwards )
+	{
+		if ( ItemFlavor_GetType( bpr.flav ) == eItemType.battlepass )
+		{
+			file.displayAwards.remove( index )
 			break
 		}
 	}

@@ -93,12 +93,6 @@ global function Control_RegisterNetworking
 
 
 
-
-
-
-
-
-
 global function Control_PopulateAboutText
 
 
@@ -107,9 +101,6 @@ global function Control_IsPointAnFOB
 global function Control_IsSpawnWaypointIndexAnObjective
 global function Control_IsSpawnWaypointFOBForAlliance
 global function Control_IsSpawnWaypointHomebaseForAlliance
-
-
-
 
 
 
@@ -201,11 +192,6 @@ const INT_ALLIANCE_B_PLAYERSONOBJ = 6
 const CONTROL_INT_OBJ_NEUTRAL_ALLIANCE_OWNER = 7
 
 const float CONTROL_INTRO_DELAY = 2.2
-
-const string CONTROL_OBJECTIVE_A_NAME = "A"
-const string CONTROL_OBJECTIVE_B_NAME = "B"
-const string CONTROL_OBJECTIVE_C_NAME = "C"
-const string CONTROL_OBJECTIVE_DEFAULT_NAME = "Default Objective Name"
 
 const INT_ALLIANCE_A_SCORE = 4
 const INT_ALLIANCE_B_SCORE = 5
@@ -465,18 +451,6 @@ enum eControlIconIndex
 }
 
 
-enum eControlObjectivePingValue
-{
-	NONE,
-	ATTACK_A,
-	DEFEND_A,
-	ATTACK_B,
-	DEFEND_B,
-	ATTACK_C,
-	DEFEND_C
-}
-
-
 enum eControlTimedEventType
 {
 	LOCKOUT,
@@ -634,14 +608,6 @@ struct {
 
 	vector cameraLocation
 	vector cameraAngles
-
-
-
-
-
-
-
-
 
 
 
@@ -1079,7 +1045,6 @@ void function Control_Init()
 
 
 
-
 }
 
 
@@ -1141,9 +1106,6 @@ void function Control_RegisterNetworking()
 	Remote_RegisterClientFunction( "ServerCallback_Control_BountyClaimedAlert", "entity", "int", INT_MIN, INT_MAX, "int",ALLIANCE_NONE, 2  )
 	Remote_RegisterClientFunction( "ServerCallback_Control_AirdropNotification", "bool" )
 	Remote_RegisterClientFunction( "ServerCallback_Control_UpdateExtraScoreBoardInfo", "int", 0, 2, "int", INT_MIN, INT_MAX, "int", INT_MIN, INT_MAX )
-	Remote_RegisterClientFunction( "ServerCallback_Control_UpdateObjectivePingText", "entity", "int", INT_MIN, INT_MAX, "int", INT_MIN, INT_MAX, "bool" )
-	Remote_RegisterClientFunction( "ServerCallback_Control_UpdateObjectivePingCounts", "entity", "int", ALLIANCE_A, ALLIANCE_B + 1, "int", 0, INT_MAX )
-	Remote_RegisterClientFunction( "ServerCallback_Control_UpdateLastPingedObjective", "entity", "entity", "entity", "int", INT_MIN, INT_MAX, "bool" )
 	Remote_RegisterClientFunction( "ServerCallback_Control_SetIsPlayerUsingLosingExpTiers", "bool" )
 	Remote_RegisterClientFunction( "ServerCallback_Control_DisplaySpawnAlertMessage", "int", 0, eControlSpawnAlertCode._count )
 	Remote_RegisterClientFunction( "ServerCallback_Control_DisplayWaveSpawnBarStatusMessage", "bool", "int", 0, eControlWaypointTypeIndex._count )
@@ -1533,7 +1495,15 @@ array< featureTutorialTab > function Control_PopulateAboutText()
 	tabs.append( tab1 )
 	tabs.append( tab2 )
 	tabs.append( tab3 )
-	tabs.append( tab4 )
+
+
+		if ( !AprilFools_S20_LTM_PopulateAboutText( tabs, "#APRILFOOLS_S20_ABOUT_TAB", "#APRILFOOLS_S20_ABOUT_CONTROL_HEADER", "#APRILFOOLS_S20_ABOUT_CONTROL_BODY" ) )
+		{
+			tabs.append( tab4 )
+		}
+
+
+
 
 	return tabs
 }
@@ -5985,533 +5955,6 @@ array< featureTutorialTab > function Control_PopulateAboutText()
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-string function Control_GetObjectiveNameFromObjectiveID( int objectiveID )
-{
-	string objectiveName = CONTROL_OBJECTIVE_DEFAULT_NAME
-	switch ( objectiveID )
-	{
-		case eControlWaypointTypeIndex.OBJECTIVE_A:
-			objectiveName = CONTROL_OBJECTIVE_A_NAME
-			break
-		case eControlWaypointTypeIndex.OBJECTIVE_B:
-			objectiveName = CONTROL_OBJECTIVE_B_NAME
-			break
-		case eControlWaypointTypeIndex.OBJECTIVE_C:
-			objectiveName = CONTROL_OBJECTIVE_C_NAME
-			break
-		default:
-			Warning("CONTROL: Running Control_GetObjectiveNameFromObjectiveID function with an invalid objectiveID: %i", objectiveID )
-			break
-	}
-
-	return objectiveName
-}
 
 
 

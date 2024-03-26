@@ -38,3 +38,15 @@ vector function RTKMutator_QualityTextColor( int input )
 {
 	return GetKeyColor( COLORID_MENU_TEXT_LOOT_TIER0, input + 1 ) / 255.0
 }
+
+bool function RTKMutator_IsLocalPlayer( string input )
+{
+	return input == GetPlayerUID()
+}
+
+string function RTKMutator_PlayerDisplayName( string input, string hardware )
+{
+	if ( hardware != "" )
+		return Localize( PlatformIDToIconString( GetHardwareFromName( hardware ) ) ) + " " + input
+	return input
+}

@@ -93,6 +93,10 @@ global function ClientToUI_RestrictedLootConfirmDialog_Open
 
 
 
+
+
+
+
 struct FileStruct_LifetimeLevel
 {
 	table signalDummy
@@ -267,6 +271,48 @@ void function OpenSurvivalGroundListMenu()
 	CloseAllMenus()
 	AdvanceMenu( fileVM.menu )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

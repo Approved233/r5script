@@ -141,7 +141,7 @@ void function RTKEventShopPanel_OnInitialize( rtk_behavior self )
 
 	RTKEventShopModel eventShopModel
 	eventShopModel.gridTitle =  Localize( EventShop_GetGridTitle( expect ItemFlavor( file.activeEventShop ) ), Localize( file.currencyLongName ) )
-	eventShopModel.rewardsTitle = Localize( EventShop_GetRewardsTitle( expect ItemFlavor( file.activeEventShop ) ), Localize( file.currencyShortName ) )
+	eventShopModel.rewardsTitle = Localize( EventShop_GetRewardsTitle( expect ItemFlavor( file.activeEventShop ) ), Localize( file.currencyShortName ), "" )
 	RTKStruct_SetValue( eventShop, eventShopModel )
 
 	
@@ -184,7 +184,7 @@ void function RTKEventShopPanel_OnInitialize( rtk_behavior self )
 		offerModel.isGenericIcon = false
 		offerModel.quality = ItemFlavor_GetQuality( coreItemFlav, 0 ) + 1
 		offerModel.isRecurring = offerData.isLockedOffer
-		offerModel.isOwned = GRXOffer_IsFullyClaimed( offer ) || ( offer.purchaseLimit > 0  && offer.purchaseCount >= offer.purchaseLimit )
+		offerModel.isOwned = GRXOffer_IsFullyClaimed( offer ) || GRXOffer_IsPurchaseLimitReached( offer )
 		offerModel.isAvailable = offer.isAvailable
 		offerModel.canAfford = GRX_CanAfford( offer.prices[0], 1 )
 		offerModel.state = ItemShopState( offer, false )
@@ -195,7 +195,7 @@ void function RTKEventShopPanel_OnInitialize( rtk_behavior self )
 			offerModel.state = ItemShopState( offer, true )
 		}
 
-		file.ownedOffers += GRXOffer_IsFullyClaimed( offer ) ? 1 : 0
+		file.ownedOffers += GRXOffer_IsFullyClaimed( offer ) || GRXOffer_IsPurchaseLimitReached( offer ) ? 1 : 0
 
 		
 		RTKStruct_SetValue( offerStruct, offerModel )
@@ -216,7 +216,7 @@ void function RTKEventShopPanel_OnInitialize( rtk_behavior self )
 
 		string formattedUnlockValue = FormatAndLocalizeNumber( "1", float( file.tiers[i].unlockValue ), true )
 		string formattedAccumulatedCurrency = FormatAndLocalizeNumber( "1", float( file.accumulatedCurrency ), true )
-		tierModel.progressText = Localize( "#VAL_SLASH_VAL", file.accumulatedCurrency > file.tiers[i].unlockValue ? formattedUnlockValue : formattedAccumulatedCurrency, formattedUnlockValue )
+		tierModel.progressText = Localize( "#VAL_SLASH_VAL_TWO_STYLE", file.accumulatedCurrency > file.tiers[i].unlockValue ? formattedUnlockValue : formattedAccumulatedCurrency, formattedUnlockValue )
 
 		tierModel.isLocked = TierProgress( file.accumulatedCurrency, file.tiers[i].unlockValue) < 1.0
 		tierModel.tier = i + 1
@@ -244,6 +244,11 @@ void function RTKEventShopPanel_OnInitialize( rtk_behavior self )
 			tierModel.radioPlayGUID = ItemFlavor_GetGUIDString( file.tiers[i].radioPlays[0] )
 		
 		RTKStruct_SetValue( tierStruct, tierModel )
+
+		if (i == file.tiers.len() - 1)
+		{
+			RTKStruct_SetString( eventShop, "rewardsTitle", Localize( EventShop_GetRewardsTitle( expect ItemFlavor( file.activeEventShop ) ), Localize( file.currencyShortName ), tierModel.progressText ) )
+		}
 	}
 
 	EventShop_UpdatePreviewedOffer()
@@ -353,7 +358,7 @@ int function ItemShopState( GRXScriptOffer offer, bool isLocked )
 	if ( offerAvailableToPurchase )
 	{
 		
-		if ( GRXOffer_IsFullyClaimed( offer ) || ( offer.purchaseLimit > 0 && offer.purchaseCount >= offer.purchaseLimit ) )
+		if ( GRXOffer_IsFullyClaimed( offer ) || GRXOffer_IsPurchaseLimitReached( offer ) )
 			return eShopItemState.OWNED
 
 		
@@ -392,21 +397,29 @@ void function UpdateGridTooltipInfo( int index = 0 )
 
 	RTKEventShopTooltipInfoModel tooltipInfoModel
 
-	bool offerClaimed = ( purchaseLimit > 0 && purchaseCount >= purchaseLimit ) || GRXOffer_IsFullyClaimed( file.offers[ index ] )
+	bool offerClaimed = GRXOffer_IsFullyClaimed( file.offers[ index ] ) || GRXOffer_IsPurchaseLimitReached( file.offers[ index ] )
 
 	
 	tooltipInfoModel.titleText = titleText
-	tooltipInfoModel.bodyText = Localize( "#EVENTS_EVENT_SHOP_GRID_BODY", titleText )
-	tooltipInfoModel.additionalText = Localize( "#EVENTS_EVENT_SHOP_GRID_COUNTER_AVAILABLE", (purchaseLimit - purchaseCount), purchaseLimit )
+	tooltipInfoModel.bodyText = Localize( EventShop_GetGridToolTipBodyText( expect ItemFlavor( file.activeEventShop ) ), titleText )
+	tooltipInfoModel.additionalText = Localize( EventShop_GetGridToolTipCounterAvailableText( expect ItemFlavor( file.activeEventShop ) ), (purchaseLimit - purchaseCount), purchaseLimit )
 	
 	tooltipInfoModel.isIconVisible = purchaseLimit > 1 || offerClaimed
 	tooltipInfoModel.isAdditionalTextVisible = purchaseLimit > 1
 	tooltipInfoModel.icon = offerClaimed ? $"ui_image/rui/menu/buttons/checked.rpak" : ( purchaseLimit > 1 ? $"ui_image/rui/menu/events/event_shop/repeatable.rpak" : $"" )
 
 	
-	if ( purchaseLimit > 1 && quantity > 1 )
+	bool isItemSet = purchaseLimit > 1 && quantity > 1
+	if ( isItemSet )
 	{
-		tooltipInfoModel.bodyText = Localize( "#EVENTS_EVENT_SHOP_GRID_BODY_SETS", purchaseLimit, titleText )
+		tooltipInfoModel.bodyText = Localize( EventShop_GetGridToolTipBodySetsText( expect ItemFlavor( file.activeEventShop ) ), purchaseLimit, titleText )
+	}
+
+	
+	if ( GRXOffer_ContainsMilestoneEventPack( file.offers[ index ] ) )
+	{
+		tooltipInfoModel.bodyText = !isItemSet ? Localize( "#EVENTS_EVENT_SHOP_GRID_BODY_MILESTONE", titleText )
+		: Localize( "#EVENTS_EVENT_SHOP_GRID_BODY_SETS_MILESTONE", purchaseLimit, titleText )
 	}
 
 	
@@ -418,16 +431,16 @@ void function UpdateGridTooltipInfo( int index = 0 )
 
 		if ( offerData.isSweepstakesOffer )
 		{
-			tooltipInfoModel.subtitleText = Localize( "#EVENTS_EVENT_SHOP_GRID_SUBTITLE_DAILY_LIMIT" )
-			tooltipInfoModel.bodyText = Localize( "#EVENTS_EVENT_SHOP_GRID_BODY_SWEEPSTAKES", purchaseLimit )
-			tooltipInfoModel.additionalText = Localize( "#EVENTS_EVENT_SHOP_GRID_COUNTER_DAILY_LIMIT", (purchaseLimit - purchaseCount), purchaseLimit )
+			tooltipInfoModel.subtitleText = Localize( EventShop_GetGridToolTipSubtitleDailyLimitText( expect ItemFlavor( file.activeEventShop ) ) )
+			tooltipInfoModel.bodyText = Localize( EventShop_GetGridToolTipBodySweepstakesText( expect ItemFlavor( file.activeEventShop ) ), purchaseLimit )
+			tooltipInfoModel.additionalText = Localize( EventShop_GetGridToolTipCounterDailyLimitText( expect ItemFlavor( file.activeEventShop ) ), (purchaseLimit - purchaseCount), purchaseLimit )
 		}
 	}
 
 	
-	if ( !GRX_CanAfford( file.offers[ index ].prices[0], 1 ) && !GRXOffer_IsFullyClaimed( file.offers[ index ] ) )
+	if ( !GRX_CanAfford( file.offers[ index ].prices[0], 1 ) && ( !GRXOffer_IsFullyClaimed( file.offers[ index ] ) && !GRXOffer_IsPurchaseLimitReached( file.offers[ index ] ) ) )
 	{
-		tooltipInfoModel.bodyText = Localize( "#EVENTS_EVENT_SHOP_GRID_BODY_INSUFFICIENT", Localize ( file.currencyLongName ), titleText )
+		tooltipInfoModel.bodyText = Localize( EventShop_GetGridToolTipBodyInsufficientText( expect ItemFlavor( file.activeEventShop ) ), Localize ( file.currencyLongName ), titleText )
 	}
 
 	RTKStruct_SetValue( tooltipInfo, tooltipInfoModel )
@@ -440,7 +453,7 @@ void function UpdateTierTooltipInfo( int index = 0 )
 	RTKEventShopTooltipInfoModel tooltipInfoModel
 
 	tooltipInfoModel.titleText = ItemFlavor_GetLongName( file.tiers[ index ].badges[0] )
-	tooltipInfoModel.bodyText = Localize( "#EVENTS_EVENT_SHOP_MILESTONE_BODY_2", Localize( file.currencyLongName ) )
+	tooltipInfoModel.bodyText = Localize( EventShop_GetGridToolTipBody2Text( expect ItemFlavor( file.activeEventShop ) ), Localize( file.currencyLongName ) )
 
 	RTKStruct_SetValue( tooltipInfo, tooltipInfoModel )
 }
@@ -451,7 +464,7 @@ void function UpdateItemPresentation( GRXScriptOffer offer )
 	if ( offerCoreItem != null )
 	{
 		expect ItemFlavor( offerCoreItem )
-		RunClientScript( "UIToClient_ItemPresentation", ItemFlavor_GetGUID( offerCoreItem ), -1, 1.19, false, null, false, "collection_event_ref", false, false, false, false )
+		RunClientScript( "UIToClient_ItemPresentation", ItemFlavor_GetGUID( offerCoreItem ), -1, 1.19, Battlepass_ShouldShowLow( offerCoreItem ), null, false, "collection_event_ref", false, false, false, false )
 	}
 }
 
@@ -488,7 +501,7 @@ bool function IsRecurringOfferAvailableToPurchase()
 		if (ItemFlavor_GetTypeName( expect ItemFlavor( EventShop_GetCoreItemFlav(offer ) ) ) == "#itemtype_battlepass_purchased_xp_NAME")
 			continue
 
-		if (!GRXOffer_IsFullyClaimed( offer ) )
+		if (!GRXOffer_IsFullyClaimed( offer ) || GRXOffer_IsPurchaseLimitReached( offer ) )
 		{
 			file.isRecurringRewardAvailable = false
 			return false

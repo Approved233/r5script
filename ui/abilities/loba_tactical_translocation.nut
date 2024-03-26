@@ -63,15 +63,6 @@ global function LobaTacticalTranslocation_LevelInit
 
 
 
-
-
-
-
-
-
-
-
-
 struct
 {
 	array<entity> canceledTeleports

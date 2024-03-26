@@ -354,7 +354,7 @@ void function RefreshTabsGRXData( TabData tabData )
 	{
 		TabDef eventTabDef = Tab_GetTabDefByBodyName( tabData, "EventPanel" )
 
-		if ( ShouldShowPremiumCurrencyDialog() )
+		if ( ShouldShowPremiumCurrencyDialog( false, true ) )
 			ShowPremiumCurrencyDialog( false )
 
 		ItemFlavor ornull activeCollectionEvent = GetActiveCollectionEvent( GetUnixTimestamp() )

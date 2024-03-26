@@ -2,8 +2,6 @@ global function IsStrikeoutGamemode
 
 
 global function Strikeout_GetMaxSquadStrikes
-global function Strikeout_GetSquadStrikes
-global function Strikeout_UI_SetSquadStrikes
 
 
 
@@ -13,6 +11,13 @@ global function Strikeout_UI_SetSquadStrikes
 
 
 
+
+
+
+
+
+global function Strikeout_UI_GetLocalClientPlayerSquadStrikes
+global function Strikeout_UI_SetLocalClientPlayerSquadStrikes
 global function Strikeout_UI_GetIsRespawnDisabled
 global function Strikeout_UI_SetIsRespawnDisabled
 
@@ -47,13 +52,15 @@ struct
 
 
 
-	int squadStrikes = 0
-	int lastSquadStrikesAnnoucment = 0
+	int	localClientPlayerSquadStrikes									= 0
+	int localViewPlayerSquadStrikes										= 0
+	int	lastSquadStrikesAnnouncement									= 0
 
 
 	bool respawnDisabled = false
 
 } file
+
 
 
 
@@ -438,9 +445,44 @@ bool function Strikeout_UI_GetIsRespawnDisabled()
 
 
 
-void function Strikeout_UI_SetSquadStrikes( int strikes )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+void function Strikeout_UI_SetLocalClientPlayerSquadStrikes( int strikes )
 {
-	file.squadStrikes = strikes
+	file.localClientPlayerSquadStrikes = strikes
+}
+
+
+
+int function Strikeout_UI_GetLocalClientPlayerSquadStrikes()
+{
+	return file.localClientPlayerSquadStrikes
 }
 
 
@@ -553,10 +595,42 @@ void function Strikeout_UI_SetSquadStrikes( int strikes )
 
 
 
-int function Strikeout_GetSquadStrikes()
-{
-	return file.squadStrikes
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -564,6 +638,7 @@ int function Strikeout_GetMaxSquadStrikes()
 {
 	return GetCurrentPlaylistVarInt( "respawns", 2 ) + 1
 }
+
 
 
 bool function GetPlaylistVar_AmmoOnKillEnabled()

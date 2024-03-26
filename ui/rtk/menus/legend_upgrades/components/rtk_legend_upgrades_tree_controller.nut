@@ -86,7 +86,7 @@ void function RTKLegendUpgradeTree_OnInitialize( rtk_behavior self )
 	PrivateData p
 	self.Private( p )
 
-	rtk_struct legendUpgradeTree = RTKDataModel_GetOrCreateEmptyStruct( RTK_MODELTYPE_COMMON, LEGEND_UPGRADES_TREE_DATA_MODEL_NAME )
+	rtk_struct legendUpgradeTree = RTKDataModelType_GetOrCreateStruct( RTK_MODELTYPE_COMMON, LEGEND_UPGRADES_TREE_DATA_MODEL_NAME )
 	if ( !RTKStruct_HasProperty(legendUpgradeTree,"isVisible" ) )
 	{
 		RTKStruct_AddProperty( legendUpgradeTree, "isVisible", RTKPROP_BOOL )
@@ -110,7 +110,7 @@ void function RTKLegendUpgradeTree_OnDestroy( rtk_behavior self )
 		return
 
 	
-	rtk_struct legendUpgradeTree = RTKDataModel_GetOrCreateEmptyStruct( RTK_MODELTYPE_COMMON, LEGEND_UPGRADES_TREE_DATA_MODEL_NAME )
+	rtk_struct legendUpgradeTree = RTKDataModelType_GetOrCreateStruct( RTK_MODELTYPE_COMMON, LEGEND_UPGRADES_TREE_DATA_MODEL_NAME )
 
 	if ( RTKStruct_HasProperty( legendUpgradeTree, string( self.GetInternalId() ) ) )
 	{
@@ -284,7 +284,7 @@ void function RTKLegendUpgradeTree_HoldToSelectUpgrade( rtk_behavior self, rtk_b
 	while( ClientTime() < endTime )
 	{
 		button.GetPanel().FindBehaviorByName( "Hold" ).SetActive( file.isSelectingUpgrade )
-		if ( !InputIsButtonDown(keycode ) )
+		if ( !InputIsButtonDown( keycode ) || !button.PropGetBool( "isPressed" ) )
 		{
 			file.isSelectingUpgrade = false
 			break
@@ -315,7 +315,7 @@ void function RTKLegendUpgradeTree_SetCharacter( ItemFlavor character, bool forc
 	if ( forceUpdate )
 		file.forceUpdate = true
 
-	rtk_struct legendUpgradeTree = RTKDataModel_GetOrCreateEmptyStruct( RTK_MODELTYPE_COMMON, LEGEND_UPGRADES_TREE_DATA_MODEL_NAME )
+	rtk_struct legendUpgradeTree = RTKDataModelType_GetOrCreateStruct( RTK_MODELTYPE_COMMON, LEGEND_UPGRADES_TREE_DATA_MODEL_NAME )
 
 	if ( !RTKStruct_HasProperty(legendUpgradeTree,"characterGUID" ) )
 	{

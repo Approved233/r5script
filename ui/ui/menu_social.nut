@@ -1601,6 +1601,7 @@ bool function MyFriendButton_OnKeyPress( var button, int keyId, bool isDown )
 		friend.hardware = GetPlayerHardware()
 		friend.ingame   = true
 		friend.id       = GetPlayerUID()
+		friend.unspoofedid = GetPlayerUnSpoofedUID()
 
 		Party party = GetParty()
 		friend.presence = Localize( "#PARTY_N_N", party.numClaimedSlots, party.numSlots )

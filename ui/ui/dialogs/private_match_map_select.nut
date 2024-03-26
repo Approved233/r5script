@@ -59,7 +59,7 @@ void function PrivateMatchMapSelect_UpdateSelectButton( var button, string playl
 
 	bool isPlaylistAvailable = Lobby_IsPlaylistAvailable( playlistName )
 	Hud_SetLocked( button, !isPlaylistAvailable )
-	RuiSetString( rui, "modeLockedReason", Lobby_GetPlaylistStateString( Lobby_GetPlaylistState( playlistName ) ) )
+	RuiSetString( rui, "modeLockedReason", LobbyPlaylist_GetPlaylistStateString( LobbyPlaylist_GetPlaylistState( playlistName ) ) )
 
 	int emblemMode = DRAW_NONE
 	if ( IsRankedPlaylist( playlistName ) )
@@ -279,7 +279,7 @@ void function GamemodeButton_Activate( var button )
 	if ( IsPrivateMatchLobby() )
 		PrivateMatch_SetSelectedPlaylist( playlistName )
 	else
-		Lobby_SetSelectedPlaylist( playlistName )
+		LobbyPlaylist_SetSelectedPlaylist( playlistName )
 
 	CloseAllDialogs()
 }

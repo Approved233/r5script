@@ -69,9 +69,6 @@ void function InitGiftingDialog( var newMenuArg )
 	file.friendNameFieldFrame = Hud_GetChild( file.menu, "FriendNameTextEntryFrame" )
 	file.friendNameFieldSearchButton = Hud_GetChild( file.menu, "FriendNameTextEntrySearchButton" )
 	file.searchIcon =  Hud_GetChild( file.menu, "SearchIcon" )
-
-	HudElem_SetRuiArg( file.purchaseButton, "buttonText", Localize( "#BUY_GIFT" ) )
-
 	SetDialog( newMenuArg, true )
 	file.backFooterDef = AddMenuFooterOption( newMenuArg, LEFT, BUTTON_B, true, "#B_BUTTON_CLOSE", "#B_BUTTON_CLOSE", CloseGiftingDialog )
 	file.giftingInfoFooterDef = AddMenuFooterOption( newMenuArg, LEFT, BUTTON_X, true, "#X_GIFT_INFO_TITLE", "#GIFT_INFO_TITLE", OpenGiftInfoPopUpWithInputBlock )
@@ -103,6 +100,7 @@ void function OpenGiftingDialog( GRXScriptOffer offer )
 	HudElem_SetRuiArg( file.dialogContent, "quality", GetQualityDisplayFromOffer( offer ) )
 	HudElem_SetRuiArg( file.dialogContent, "qualityText", GetFormatedQualityStringFromOffer( offer ) )
 	HudElem_SetRuiArg( file.dialogContent, "isBattlePass",  ItemFlavor_IsBattlepass( offer.output.flavors[0] ) )
+	HudElem_SetRuiArg( file.purchaseButton, "buttonText", Localize( "#BUY_GIFT" ) )
 
 	string offerTitle = Localize( offer.titleText )
 
@@ -135,7 +133,7 @@ void function OpenGiftingDialog( GRXScriptOffer offer )
 	file.originalPriceStr = GRX_GetFormattedPrice( originalPriceFlavBag, 1 )
 
 	string displayDiscountStr = file.originalPriceStr
-	if ( offer.items.len() == 1 )
+	if ( offer.items.len() == 1 && !GRXOffer_ContainsOnlyPacks( offer ) )
 	{
 		displayDiscountStr = price
 		HudElem_SetRuiArg( file.discountInfo, "discountPct", GetOfferDiscountPct( offer ) )
@@ -159,6 +157,7 @@ void function OpenGiftingDialog( GRXScriptOffer offer )
 #if PC_PROG_NX_UI
 	AddUICallback_NXOperationModeChanged( OnNxOperationModeChanged )
 #endif
+	AddCallback_OnGRXInventoryStateChanged( UpdatePurchaseButton )
 }
 
 void function FriendButton_Init( var button, GiftingFriend friend )
@@ -295,18 +294,33 @@ void function GiftPurchase_OnActive( var button )
 		return
 	}
 
-	if ( !CanLocalPlayerGift() )
+	GRXScriptOffer offer = file.elegibleFriendOffer
+
+	if ( !CanLocalPlayerGift( offer ) )
 	{
 		EmitUISound( "menu_deny" )
 		CloseActiveMenu()
 		return
 	}
 
-	GRXScriptOffer offer = file.elegibleFriendOffer
-	if ( GRXOffer_ContainsPack( offer ) && !IsUserAwaitingForConfirmation() )
-		OpenPurchaseConfirmationDialog()
-	else
+	if ( GRX_IsInventoryReady() && !GRX_CanAfford( offer.prices[0], 1 ) )
+	{
+		OpenVCPopUp( null )
+		return
+	}
+
+	if ( GRXOffer_ContainsSirngePack( offer ) )
+	{
 		HandleGiftPurchaseOperation( offer )
+	}
+	else if ( GRXOffer_ContainsPack( offer ) && !IsUserAwaitingForConfirmation() )
+	{
+		OpenPurchaseConfirmationDialog()
+	}
+	else
+	{
+		HandleGiftPurchaseOperation( offer )
+	}
 }
 
 void function FriendButton_OnActivate( var button )
@@ -397,6 +411,7 @@ void function ToggleButton_OnActive( var button )
 
 	file.sortOnline = !file.sortOnline
 	FriendDataReferenceReset()
+	HudElem_SetRuiArg( file.purchaseButton, "buttonText", Localize( "#BUY_GIFT" ) )
 
 	Gifting_MenuUpdate()
 }
@@ -415,6 +430,7 @@ void function GiftingDialog_UpdateEligibilityInformation( GRXGetOfferInfo offerI
 
 	Gifting_MenuUpdate()
 	UpdateEligibilityDisplay( offerInfo )
+	UpdatePurchaseButton()
 }
 
 void function UpdateEligibilityDisplay( GRXGetOfferInfo selectedOfferInfo )
@@ -638,6 +654,7 @@ void function GiftingMenu_OnClose()
 #if PC_PROG_NX_UI
 	RemoveUICallback_NXOperationModeChanged( OnNxOperationModeChanged )
 #endif
+	RemoveCallback_OnGRXInventoryStateChanged( UpdatePurchaseButton )
 }
 
 void function FriendDataReferenceReset()
@@ -671,14 +688,17 @@ void function FriendDataReferenceReset()
 
 		string displayDiscountStr = file.originalPriceStr
 		string price = GetPremiumPriceString( file.originalOffer )
-		if ( file.originalOffer.items.len() == 1 )
+		if ( file.originalOffer.items.len() == 1 && !GRXOffer_ContainsOnlyPacks( file.originalOffer ) )
 		{
 			displayDiscountStr = price
 			HudElem_SetRuiArg( file.discountInfo, "discountPct", GetOfferDiscountPct( file.originalOffer ) )
 		}
 		HudElem_SetRuiArg( file.discountInfo, "discountedPrice", Localize( displayDiscountStr ) )
 	}
-
+	else
+	{
+		HudElem_SetRuiArg( file.discountInfo, "discountPct", GetOfferDiscountPct( file.elegibleFriendOffer ) )
+	}
 	Hud_SetLocked( file.purchaseButton, true )
 
 	file.actionFriend = null
@@ -819,7 +839,7 @@ void function Delayed_CloseMenuAfterPurchase( float delay = 1.0, bool enableInpu
 	wait delay
 	if ( file.menu == GetActiveMenu() )
 		thread CloseActiveMenu()
-	if ( GetActiveMenu() == GetMenu( "ConfirmPackPurchaseDialog" ) )
+	if ( GetActiveMenu() == GetMenu( "ConfirmPackPurchaseDialog" ) || GetActiveMenu() == GetMenu( "PurchasePackSelectionDialog" ) )
 		thread CloseActiveMenu()
 
 	HudElem_SetRuiArg( file.purchaseButton, "isProcessing", false )
@@ -942,4 +962,19 @@ void function EnableFooterButtons( bool enable )
 	file.backFooterDef.clickable = enable
 	file.giftingInfoFooterDef.clickable = enable
 	UpdateFooterOptions()
+}
+
+void function UpdatePurchaseButton()
+{
+	if ( !GRX_IsInventoryReady() || Hud_IsLocked( file.purchaseButton ) )
+		return
+
+	if ( !GRX_CanAfford( file.elegibleFriendOffer.prices[0], 1 ) )
+	{
+		HudElem_SetRuiArg( file.purchaseButton, "buttonText", Localize( "#CONFIRM_GET_PREMIUM" ) )
+	}
+	else
+	{
+		HudElem_SetRuiArg( file.purchaseButton, "buttonText", Localize( "#BUY_GIFT" ) )
+	}
 }

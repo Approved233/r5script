@@ -100,13 +100,53 @@ void function RefreshTwoFactorAuthenticationStatus()
 
 
 
-bool function CanLocalPlayerGift()
-{
-	bool hasTfa = IsTwoFactorAuthenticationEnabled()
-	bool hasLevel = IsPlayerLeveledForGifting()
-	bool withinLimits = IsPlayerWithinGiftingLimit()
 
-	return hasTfa && hasLevel && withinLimits
+
+
+bool function IsGiftFree( GRXScriptOffer offer )
+{
+	foreach ( ItemFlavorBag price in offer.prices )
+	{
+		ItemFlavor flavor = price.flavors[0]
+		if ( flavor == GRX_CURRENCIES[GRX_CURRENCY_PREMIUM] )
+		{
+			return price.quantities[0] == 0
+		}
+	}
+	return false
+}
+
+bool function CanLocalPlayerGift( GRXScriptOffer ornull giftOffer = null )
+{
+	bool isGiftFree
+	if ( giftOffer == null )
+	{
+		isGiftFree = false
+	}
+	else
+	{
+		isGiftFree = IsGiftFree( expect GRXScriptOffer( giftOffer ) )
+	}
+	return PlayerAccountEligibleToGift( isGiftFree, GetLocalClientPlayer() )
+}
+
+
+
+bool function PlayerAccountEligibleToGift( bool isFreeOffer, entity player )
+{
+
+		
+		if ( !IsTwoFactorAuthenticationEnabled() )
+		{
+			return false
+		}
+
+	
+	if ( !isFreeOffer && !IsPlayerLeveledForGifting_Internal( player ) )
+	{
+		return false
+	}
+	return IsPlayerWithinGiftingLimit_Internal( player )
 }
 
 
@@ -396,7 +436,6 @@ string function GetFriendNameFromNucleusPId( string id, array<EadpPeopleData> fr
 
 	return name
 }
-
 
 
 

@@ -161,6 +161,9 @@ void function CustomMatch_RefreshPlaylists()
 			if ( !isVisible )
 				continue
 
+			if ( !CustomMatch_HasPlaylistAccess( playlistName ) )
+				continue
+
 			bool isHidden = GetPlaylistVarBool( playlistName, CM_HIDDEN_PLAYLIST_VAR, false )
 			if ( isHidden && !CustomMatch_HasHiddenPlaylistAccess() )
 				continue

@@ -59,6 +59,7 @@ void function InitADSMotionControlsPanelConsole( var panel )
 	file.customItems.append( Hud_GetChild( contentPanel, "TextEntryMotionSensitivityADS6" ) )
 	file.customItems.append( Hud_GetChild( contentPanel, "TextEntryMotionSensitivityADS7" ) )
 
+	SettingsPanel_SetContentPanelHeight( contentPanel )
 	ScrollPanel_InitPanel( panel )
 	ScrollPanel_InitScrollBar( panel, Hud_GetChild( panel, "ScrollBar" ) )
 
@@ -71,6 +72,8 @@ void function InitADSMotionControlsPanelConsole( var panel )
 void function OnADSMotionPanel_Show( var panel )
 {
 	ScrollPanel_SetActive( panel, true )
+	SettingsPanel_SetContentPanelHeight( Hud_GetChild( panel, "ContentPanel" ) )
+	ScrollPanel_Refresh( panel )
 }
 
 
@@ -96,10 +99,17 @@ void function Button_Toggle_ADSMotionEnabled( var button )
 	bool isEnabled = GetConVarBool( "motion_use_per_scope_sensitivity_scalars" )
 
 	foreach ( var item in file.customItems )
-		Hud_SetEnabled( item, isEnabled )
+		Hud_SetVisible( item, isEnabled )
 
 	foreach ( var item in file.defaultItems )
-		Hud_SetEnabled( item, !isEnabled )
+		Hud_SetVisible( item, !isEnabled )
+
+	var adsEnabledbutton = Hud_GetChild( file.contentPanel, "SwchCustomMotionADSEnabled" )
+
+	if ( isEnabled )
+		Hud_SetNavDown( adsEnabledbutton, Hud_GetChild( file.contentPanel, "SldMotionSensitivityADS0" ) )
+	else
+		Hud_SetNavDown( adsEnabledbutton, adsEnabledbutton )
 }
 
 

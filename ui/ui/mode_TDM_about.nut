@@ -4,7 +4,7 @@ global function SWAT_PopulateAboutText
 string function GetPlaylist()
 {
 	if ( IsLobby() )
-		return Lobby_GetSelectedPlaylist()
+		return LobbyPlaylist_GetSelectedPlaylist()
 	else
 		return GetCurrentPlaylistName()
 
@@ -26,6 +26,10 @@ array< featureTutorialTab > function TDM_PopulateAboutText()
 
 	tab1.rules = tab1Rules
 	tabs.append( tab1 )
+
+
+		AprilFools_S20_LTM_PopulateAboutText( tabs, "#APRILFOOLS_S20_ABOUT_TAB", "#APRILFOOLS_S20_ABOUT_TDM_HEADER", "#APRILFOOLS_S20_ABOUT_TDM_BODY" )
+
 
 	return tabs
 }

@@ -93,19 +93,25 @@ string function RTKMutator_FormatTimeLong( float input1 )
 
 	if ( inputAsInt < 60 ) 
 	{
-		timeRemaining = Localize( "#TIME_REMAINING_SECONDS_LONG" , inputAsInt)
+		timeRemaining = inputAsInt != 1 ? Localize( "#TIME_REMAINING_SECONDS_LONG" , inputAsInt) : Localize( "#TIME_REMAINING_SECOND_LONG" , inputAsInt)
 	}
 	else if ( inputAsInt < 3600 )  
 	{
-		timeRemaining = Localize( "#TIME_REMAINING_MINUTES_SECONDS_LONG", inputAsInt / 60, inputAsInt % 60 )
+		string secondKey = inputAsInt % 60  != 1 ? "SECONDS" : "SECOND"
+		string minuteKey = inputAsInt / 60 != 1 ? "MINUTES" : "MINUTE"
+		timeRemaining = Localize( "#TIME_REMAINING_" + minuteKey + "_" + secondKey + "_LONG", inputAsInt / 60, inputAsInt % 60 )
 	}
 	else if ( inputAsInt < 86400 ) 
 	{
-		timeRemaining = Localize( "#TIME_REMAINING_HOURS_MINUTES_SECONDS_LONG", inputAsInt / 3600, ( inputAsInt % 3600 ) / 60, inputAsInt % 60 )
+		string minuteKey = ( inputAsInt % 3600 ) / 60 != 1 ? "MINUTES" : "MINUTE"
+		string hoursKey = inputAsInt / 3600  != 1 ? "HOURS" : "HOUR"
+		timeRemaining = Localize( "#TIME_REMAINING_" + hoursKey + "_" + minuteKey + "_LONG", inputAsInt / 3600, ( inputAsInt % 3600 ) / 60, inputAsInt % 60 )
 	}
 	else 
 	{
-		timeRemaining = Localize( "#TIME_REMAINING_DAYS_HOURS_LONG", inputAsInt / 86400, ( inputAsInt % 86400 ) / 3600 )
+		string hoursKey = ( inputAsInt % 86400 ) / 3600  != 1 ? "HOURS" : "HOUR"
+		string daysKey = inputAsInt / 86400  != 1 ? "DAYS" : "DAY"
+		timeRemaining = Localize( "#TIME_REMAINING_" + daysKey + "_" + hoursKey + "_LONG", inputAsInt / 86400, ( inputAsInt % 86400 ) / 3600 )
 	}
 
 	return timeRemaining
@@ -119,4 +125,9 @@ string function RTKMutator_FormatAndLocalizeNumber( float input, string format, 
 bool function RTKMutator_IsEmpty( string input )
 {
 	return input == "" || input.len() == 0
+}
+
+string function RTKMutator_IfEmpty( string input, string p0 )
+{
+	return RTKMutator_IsEmpty( input ) ? p0 : input
 }

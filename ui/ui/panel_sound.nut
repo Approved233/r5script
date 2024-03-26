@@ -156,9 +156,12 @@ void function InitSoundPanel( var panel )
 	file.conVarDataList.append( CreateSettingsConVarData( "closecaption", eConVarType.INT ) )
 	file.conVarDataList.append( CreateSettingsConVarData( "speechtotext_enabled", eConVarType.INT ) )
 
-#if DEV
-		file.conVarDataList.append( CreateSettingsConVarData( "miles_spatial", eConVarType.INT ) )
-#endif
+
+		if ( HasConVar( "miles_spatial" ) )
+		{
+			file.conVarDataList.append( CreateSettingsConVarData( "miles_spatial", eConVarType.INT ) )
+		}
+
 
 
 		file.conVarDataList.append( CreateSettingsConVarData( "voice_input_device", eConVarType.STRING ) )
@@ -190,10 +193,8 @@ void function SoundPanel_UpdateDriverOptions()
 	
 	SoundPanelSetButtonVisible( file.contentPanel, "SwchOutputDevice", presentOutputOption )
 
-#if DEV
-	bool presentSpatialOption = GetConVarBool( "miles_spatial_menuoption") && !invalidDevice
+	bool presentSpatialOption = HasConVar( "miles_spatial_menuoption" ) && GetConVarBool( "miles_spatial_menuoption" ) && !invalidDevice
 	SoundPanelSetButtonVisible( file.contentPanel, "SwchSpatialAudio", presentSpatialOption )
-#endif
 
 	SoundPanel_UpdateChannelConfigOption()
 }

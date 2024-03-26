@@ -46,7 +46,7 @@ void function CollectionEventAboutPage_OnOpen()
 		expect ItemFlavor( milestoneEvent )
 
 		eventName = ItemFlavor_GetLongName( milestoneEvent )
-		headerIcon = MilestoneEvent_GetLandingPageImage( milestoneEvent )
+		headerIcon = MilestoneEvent_GetEventIcon( milestoneEvent )
 		specialTextCol = SrgbToLinear( MilestoneEvent_GetDisclaimerBoxColor( milestoneEvent ) )
 		aboutLines = MilestoneEvent_GetAboutText( milestoneEvent, GRX_IsOfferRestricted() )
 	}

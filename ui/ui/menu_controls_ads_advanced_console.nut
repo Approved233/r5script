@@ -59,6 +59,7 @@ void function InitADSAdvancedControlsPanelConsole( var panel )
 	file.adsSensitivityItems.append( Hud_GetChild( contentPanel, "TextEntryADSAdvancedSensitivityZoomed6" ) )
 	file.adsSensitivityItems.append( Hud_GetChild( contentPanel, "TextEntryADSAdvancedSensitivityZoomed7" ) )
 
+	SettingsPanel_SetContentPanelHeight( contentPanel )
 	ScrollPanel_InitPanel( panel )
 	ScrollPanel_InitScrollBar( panel, Hud_GetChild( panel, "ScrollBar" ) )
 
@@ -70,6 +71,8 @@ void function InitADSAdvancedControlsPanelConsole( var panel )
 void function OnADSAdvancedControlsPanel_Show( var panel )
 {
 	ScrollPanel_SetActive( panel, true )
+	SettingsPanel_SetContentPanelHeight( Hud_GetChild( panel, "ContentPanel" ) )
+	ScrollPanel_Refresh( panel )
 }
 
 void function OnADSAdvancedControlsPanel_Hide( var panel )

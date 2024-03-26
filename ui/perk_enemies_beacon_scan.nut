@@ -605,3 +605,6 @@ bool function EnemyBeaconScan_RevealScannerLocation()
 
 
 
+
+
+

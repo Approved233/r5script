@@ -1,5 +1,15 @@
 globalize_all_functions
 
+bool function RTKMutator_HasAny( rtk_array input )
+{
+	return RTKArray_GetCount( input ) > 0
+}
+
+int function RTKMutator_GetCount( rtk_array input )
+{
+	return RTKArray_GetCount( input )
+}
+
 int function RTKMutator_GetIntAt( rtk_array input, int p0 )
 {
 	return RTKArray_GetInt( input, p0 )

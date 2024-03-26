@@ -4,7 +4,7 @@ global function BeastWithIn_20_0_The_Hunt_PopulateAboutText
 string function GetPlaylist() 
 {
 	if ( IsLobby() )
-		return Lobby_GetSelectedPlaylist()
+		return LobbyPlaylist_GetSelectedPlaylist()
 	else
 		return GetCurrentPlaylistName()
 

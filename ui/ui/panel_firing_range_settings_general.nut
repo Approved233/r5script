@@ -123,6 +123,9 @@ void function SetupSettings()
 	file.generalSettingsToHud[ eFRSettingType.SHOWHITMARKS ] <- Hud_GetChild( file.contentPanel, "SwitchHitIndicators" )
 	file.generalSettingsToHud[ eFRSettingType.SHOW3RDPERSON ] <- Hud_GetChild( file.contentPanel, "Switch3rdPerson" )
 
+		file.generalSettingsToHud[ eFRSettingType.LEGENDUPGRADESENABLED ] <- Hud_GetChild( file.contentPanel, "SwitchLegendUpgradesEnabled" )
+
+
 	file.generalSettingsToHud[ eFRSettingType.FRIENDLYFIRE ] <- Hud_GetChild( file.contentPanel, "SwitchFriendlyFire" )
 	file.generalSettingsToHud[ eFRSettingType.TARGETSPEED ] <- Hud_GetChild( file.contentPanel, "SwitchTargetSpeed" )
 	file.generalSettingsToHud[ eFRSettingType.FRDUMMIESHIELDLVL ] <- Hud_GetChild( file.contentPanel, "SwitchDummieShield" )
@@ -135,6 +138,7 @@ void function SetupSettings()
 	file.generalSettingsToHud[ eFRSettingType.FRDUMMIESHOOTING ] <- Hud_GetChild( file.contentPanel, "SwitchDummieShooting" )
 	file.generalSettingsToHud[ eFRSettingType.FRDUMMIESPAWNDISTS ] <- Hud_GetChild( file.contentPanel, "SwitchDummieSpawnDists" )
 	file.generalSettingsToHud[ eFRSettingType.DYNAMICDUMMIESON ] <- Hud_GetChild( file.contentPanel, "SwitchDynDummieSpawn" )
+	file.generalSettingsToHud[ eFRSettingType.DUMMIEHIGHLIGHTSON ] <- Hud_GetChild( file.contentPanel, "SwitchDummieHighlights" )
 
 
 
@@ -145,8 +149,6 @@ void function SetupSettings()
 	SetupSettingsButton( file.generalSettingsToHud[ eFRSettingType.SHOWDYNTIMER ], "#FRSETTING_SHOWDYNTIMER", "#FRSETTING_SHOWDYNTIMER_DESC", $"", false, false )
 	AddButtonEventHandler( file.generalSettingsToHud[ eFRSettingType.SHOWDYNTIMER ], UIE_CHANGE, void function( var btn ){ Firing_Range_GeneralSettingChanged( eFRSettingType.SHOWDYNTIMER, btn ) } )
 
-
-
 	SetupSettingsButton( file.generalSettingsToHud[ eFRSettingType.INFINITEMAGS ], "#FRSETTING_INFINITEMAGS", "#FRSETTING_INFINITEMAGS_DESC", $"", false, false )
 	AddButtonEventHandler( file.generalSettingsToHud[ eFRSettingType.INFINITEMAGS ], UIE_CHANGE, void function( var btn ){ Firing_Range_GeneralSettingChanged( eFRSettingType.INFINITEMAGS, btn ) } )
 
@@ -155,6 +157,11 @@ void function SetupSettings()
 
 	SetupSettingsButton( file.generalSettingsToHud[ eFRSettingType.SHOW3RDPERSON ], "#FRSETTING_3RDPERSON", "#FRSETTING_3RDPERSON_DESC", $"", false, false )
 	AddButtonEventHandler( file.generalSettingsToHud[ eFRSettingType.SHOW3RDPERSON ], UIE_CHANGE, void function( var btn ){ Firing_Range_GeneralSettingChanged( eFRSettingType.SHOW3RDPERSON, btn ) } )
+
+
+		SetupSettingsButton( file.generalSettingsToHud[ eFRSettingType.LEGENDUPGRADESENABLED ], "#FRSETTING_LEGENDUPGRADES_ENABLED", "#FRSETTING_LEGENDUPGRADES_ENABLED_DESC", $"", false, false )
+		AddButtonEventHandler( file.generalSettingsToHud[ eFRSettingType.LEGENDUPGRADESENABLED ], UIE_CHANGE, void function( var btn ){ Firing_Range_GeneralSettingChanged( eFRSettingType.LEGENDUPGRADESENABLED, btn ) } )
+
 
 	
 	SetupSettingsButton( file.generalSettingsToHud[ eFRSettingType.FRIENDLYFIRE ], "#HUD_FRSETTING_FRIENDLYFIRE", "#HUD_FRSETTING_FRIENDLYFIRE_DESC", $"", false, true )
@@ -190,6 +197,9 @@ void function SetupSettings()
 
 	SetupSettingsButton( file.generalSettingsToHud[ eFRSettingType.DYNAMICDUMMIESON ], "#DYNDUMMIE_DYNSPAWN_LABEL", "#DYNDUMMIE_DYNSPAWN_DESC", $"", false, true  )
 	AddButtonEventHandler( file.generalSettingsToHud[ eFRSettingType.DYNAMICDUMMIESON ], UIE_CHANGE, void function( var btn ){ Firing_Range_GeneralSettingChanged( eFRSettingType.DYNAMICDUMMIESON, btn ) } )
+
+	SetupSettingsButton( file.generalSettingsToHud[ eFRSettingType.DUMMIEHIGHLIGHTSON ], "#FRDUMMIE_HIGHLIGHTSON_LABEL", "#FRDUMMIE_HIGHLIGHTSON_DESC", $"", false, true  )
+	AddButtonEventHandler( file.generalSettingsToHud[ eFRSettingType.DUMMIEHIGHLIGHTSON ], UIE_CHANGE, void function( var btn ){ Firing_Range_GeneralSettingChanged( eFRSettingType.DUMMIEHIGHLIGHTSON, btn ) } )
 
 	
 
@@ -295,12 +305,15 @@ void function UpdateDetails()
 	
 	Hud_SetEnabled( file.generalSettingsToHud[ eFRSettingType.SHOWDYNSTATS ], !file.setting_DebounceLocked[ eFRSettingType.SHOWDYNSTATS ] && file.rangeState == eFiringRangeChallengeState.FR_CHALLENGE_INACTIVE)
 
-		Hud_SetEnabled( Hud_GetChild( file.contentPanel, "SwitchLegendUpgradesReset" ), !file.resetButton_DebounceLocked[ "SwitchLegendUpgradesReset" ])
-
-
 	Hud_SetEnabled( file.generalSettingsToHud[ eFRSettingType.INFINITEMAGS ], !file.setting_DebounceLocked[ eFRSettingType.INFINITEMAGS ] )
 	Hud_SetEnabled( file.generalSettingsToHud[ eFRSettingType.SHOWHITMARKS ], !file.setting_DebounceLocked[ eFRSettingType.SHOWHITMARKS ] )
 	Hud_SetEnabled( file.generalSettingsToHud[ eFRSettingType.SHOW3RDPERSON ], !file.setting_DebounceLocked[ eFRSettingType.SHOW3RDPERSON ] )
+
+
+		Hud_SetEnabled( file.generalSettingsToHud[ eFRSettingType.LEGENDUPGRADESENABLED ], !file.setting_DebounceLocked[ eFRSettingType.LEGENDUPGRADESENABLED ] )
+		Hud_SetEnabled( Hud_GetChild( file.contentPanel, "SwitchLegendUpgradesReset" ), !file.resetButton_DebounceLocked[ "SwitchLegendUpgradesReset" ])
+
+
 
 	int partySize = GetTeamSize( GetTeam() )
 	bool isAlone = partySize < 2
@@ -331,9 +344,11 @@ void function UpdateDetails()
 
 	Hud_SetEnabled( file.generalSettingsToHud[ eFRSettingType.FRDUMMIESHOOTING ], 	file.isRangeMaster && !file.setting_DebounceLocked[ eFRSettingType.FRDUMMIESHOOTING ])
 	Hud_SetEnabled( file.generalSettingsToHud[ eFRSettingType.DYNAMICDUMMIESON ], 	file.isRangeMaster && !file.setting_DebounceLocked[ eFRSettingType.DYNAMICDUMMIESON ])
+	Hud_SetEnabled( file.generalSettingsToHud[ eFRSettingType.DUMMIEHIGHLIGHTSON ], 	file.isRangeMaster && !file.setting_DebounceLocked[ eFRSettingType.DUMMIEHIGHLIGHTSON ])
 
 	
 	bool dynamicSpawnsOn = int( Hud_GetDialogListSelectionValue( file.generalSettingsToHud[ eFRSettingType.DYNAMICDUMMIESON ] )) == 1
+	Hud_SetEnabled( file.generalSettingsToHud[ eFRSettingType.DUMMIEHIGHLIGHTSON ], file.isRangeMaster && dynamicSpawnsOn && !file.setting_DebounceLocked[ eFRSettingType.DUMMIEHIGHLIGHTSON ])
 	Hud_SetEnabled( file.generalSettingsToHud[ eFRSettingType.FRDUMMIESPAWNDISTS ], file.isRangeMaster && dynamicSpawnsOn && !file.setting_DebounceLocked[ eFRSettingType.FRDUMMIESPAWNDISTS ])
 
 	
@@ -544,6 +559,13 @@ void function Firing_Range_GeneralSettingChanged( int setting, var btn )
 			file.generalSettings[ setting ] <- float( boolValue )
 			Remote_ServerCallFunction( "UCB_SV_FRSetting_Show3rdPerson", boolValue )
 			break
+
+		case eFRSettingType.LEGENDUPGRADESENABLED:
+			file.generalSettings[ setting ] <- float( boolValue )
+			Remote_ServerCallFunction( "UCB_SV_FRSetting_LegendUpgradesEnabled", boolValue )
+			break
+
+
 		default:
 			break
 	}
@@ -603,6 +625,10 @@ void function Firing_Range_GeneralSettingChanged( int setting, var btn )
 		case eFRSettingType.DYNAMICDUMMIESON :
 			file.generalSettings[ setting ] <- float( boolValue )
 			Remote_ServerCallFunction( "UCB_SV_FRsetting_DynamicDummiesOn_Changed", boolValue, true )
+			break
+		case eFRSettingType.DUMMIEHIGHLIGHTSON :
+			file.generalSettings[ setting ] <- float( boolValue )
+			Remote_ServerCallFunction( "UCB_SV_FRsetting_DummieHighlightsOn_Changed", boolValue, true )
 			break
 
 		default:

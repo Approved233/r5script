@@ -117,6 +117,7 @@ global table<string, array< array< int > > > xpDisplayGroups = {
 			eXPType.SURVIVAL_DURATION,
 			eXPType.KILL,
 			eXPType.DAMAGE_DEALT,
+			eXPType.OBJECTIVE_CAPTURE_DURATION, 
 		],
 
 		[

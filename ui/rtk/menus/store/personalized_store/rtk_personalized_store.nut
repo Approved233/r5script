@@ -200,24 +200,15 @@ void function RTKPersonalizedOfferButton_GoToStorePage( rtk_behavior self)
 
 	rtk_behavior offerButton = self.GetPanel().FindBehaviorByTypeName( "OfferButton" )
 	int offerIndex = offerButton.PropGetInt( "offerIndex" )
-	GRXScriptOffer offer = RTKStore_GetOfferFromIndex( offerIndex )
-
-	if ( offer.output.flavors.len() > 0 )
-		StoreInspectMenu_AttemptOpenWithOffer( offer )
-
-	EmitUISound( "UI_Menu_Accept" )
+	int slotIndex = offerButton.PropGetInt( "slotIndex" )
+	RTKStore_InspectOffer( offerIndex, slotIndex )
 
 	
-	int slotIndex     = offerButton.PropGetInt( "slotIndex" )
 	GRXPersonalizedStoreSlotData slotData = GetPersonalizedStoreSlotData()[ slotIndex ]
 	string menuName   = "Your Shop"
 	string objectName = "personalizedstorebutton_" + string( slotIndex )
 	string offerSelectorAlias = GetOfferSelectorAliasFromIndex( slotData.offerSelectorAliasIndex )
 	PIN_UIInteraction_PersonalisedStoreInteraction( menuName, objectName, slotIndex, offerSelectorAlias, slotData.offer.offerAlias )
-
-	
-	RTKStore_InspectOffer_SaveTelemetryData( offer, slotIndex )
-	StoreTelemetry_SendOferPageViewEvent()
 }
 
 void function RTKPersonalizedOfferButton_RevealAnimation( rtk_behavior self )

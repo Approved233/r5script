@@ -504,8 +504,8 @@ void function SetupAlterLoadout()
 	foreach ( LoadoutEntry entry in GetAllLoadoutSlots() )
 	{
 
-
-
+		if ( entry.category == eLoadoutCategory.ARTIFACT_CONFIGURATIONS )
+			continue
 
 
 		if ( !categories.contains( LOADOUT_CATEGORIES_TO_NAMES_MAP[entry.category] ) )
@@ -539,8 +539,8 @@ void function SetupAlterLoadout_CategoryScreen( string category )
 	foreach ( LoadoutEntry entry in  entries )
 	{
 
-
-
+		if ( entry.category == eLoadoutCategory.ARTIFACT_CONFIGURATIONS )
+			continue
 
 
 		if ( LOADOUT_CATEGORIES_TO_NAMES_MAP[entry.category] != category )
@@ -589,8 +589,8 @@ void function SetupAlterLoadout_CategoryScreenForCharacter( string category, str
 	foreach ( LoadoutEntry entry in entries )
 	{
 
-
-
+		if ( entry.category == eLoadoutCategory.ARTIFACT_CONFIGURATIONS )
+			continue
 
 
 		if ( LOADOUT_CATEGORIES_TO_NAMES_MAP[entry.category] != category )
@@ -707,22 +707,25 @@ void function SetupAlterLoadout_SlotScreen( LoadoutEntry entry, int qualityFilte
 		}
 
 
+		{
+			if ( ItemFlavor_GetType( flav ) == eItemType.melee_skin && Artifacts_Loadouts_IsConfigPointerItemFlavor( flav ) )
+			{
+				if ( Artifacts_Loadouts_GetConfigIndex( flav ) > 0 )
+					continue 
 
+				foreach ( string setKey, int themeIndex in eArtifactSetIndex )
+				{
+					if ( themeIndex == eArtifactSetIndex._EMPTY || themeIndex == eArtifactSetIndex.COUNT )
+						continue
 
+					SetupDevFunc( "[" + Localize( ItemFlavor_GetTypeName( flav ) ) + "]  Artifact Dagger: " + setKey + " (Complete Set)", void function( var unused ) : ( entry, flav, themeIndex ) {
+						Artifacts_DEV_RequestEquipSetByIndex( entry, flav, themeIndex )
+					} )
+				}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+				continue
+			}
+		}
 
 
 		SetupDevFunc( "[" + Localize( ItemFlavor_GetTypeName( flav ) ) + "]  " + Localize( ItemFlavor_GetLongName( flav ) ), void function( var unused ) : ( entry, flav ) {

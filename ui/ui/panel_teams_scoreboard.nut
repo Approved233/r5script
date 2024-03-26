@@ -78,6 +78,7 @@ struct
 	int                                     actionBitmask = 0
 	var playerRowFocused = null
 	bool viewingProfile = false
+	bool isInputRegistered = false
 } file
 
 enum scoreboardHeaderTypes
@@ -194,6 +195,7 @@ void function OnShowScoreboardPanel( var panel )
 	{
 		RunClientScript( "ClientCallback_Teams_SetScoreboardData", panel )
 		RunClientScript( "ClientCallback_Teams_SetScoreboardTitle", panel )
+		RunClientScript( "ClientCallback_Teams_DoModeSpecificWork", panel )
 
 		if( DeathScreenIsOpen() )
 		{
@@ -202,8 +204,12 @@ void function OnShowScoreboardPanel( var panel )
 		}
 	}
 
-	RegisterButtonPressedCallback( KEY_F, HandleViewProfileScoreboardPlayer )
-	RegisterButtonPressedCallback( BUTTON_Y, HandleViewProfileScoreboardPlayer )
+	if( !file.isInputRegistered )
+	{
+		RegisterButtonPressedCallback( KEY_F, HandleViewProfileScoreboardPlayer )
+		RegisterButtonPressedCallback( BUTTON_Y, HandleViewProfileScoreboardPlayer )
+		file.isInputRegistered = true
+	}
 
 	UpdateFooterOptions()
 }
@@ -214,7 +220,7 @@ void function OnHideScoreboardPanel( var panel )
 
 	DeregisterEvents( panel )
 
-	foreach( var playerButton in file.panels[panel].playerButtons)
+	foreach ( var playerButton in file.panels[panel].playerButtons )
 	{
 		Hud_ClearToolTipData( playerButton )
 	}
@@ -227,9 +233,12 @@ void function OnHideScoreboardPanel( var panel )
 	{
 		RunClientScript( "ClientCallback_Teams_CloseScoreboard" )
 	}
-
-	DeregisterButtonPressedCallback( KEY_F, HandleViewProfileScoreboardPlayer )
-	DeregisterButtonPressedCallback( BUTTON_Y, HandleViewProfileScoreboardPlayer )
+	if ( file.isInputRegistered )
+	{
+		DeregisterButtonPressedCallback( KEY_F, HandleViewProfileScoreboardPlayer )
+		DeregisterButtonPressedCallback( BUTTON_Y, HandleViewProfileScoreboardPlayer )
+		file.isInputRegistered = false
+	}
 }
 
 void function RegisterEvents( var panel )
@@ -401,6 +410,12 @@ void function HideAll( var panel)
 		
 		items = GetPanelElementsByClassname( panel, scoreboardHeaderClasses[scoreboardHeaderTypes.TDM] )
 		foreach( var item in items)
+			Hud_SetVisible( item, false )
+
+
+
+		items = GetPanelElementsByClassname( panel, "LockdownScore" )
+		foreach( var item in items )
 			Hud_SetVisible( item, false )
 
 

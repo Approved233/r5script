@@ -2,6 +2,10 @@ global function InitBattlepassMilestoneMenu
 global function IsBattlepassMilestoneEnabled
 global function IsBattlepassMilestoneMenuOpened
 
+
+global function OpenBattlePassMilestoneDialog
+
+
 struct {
 	var menu
 
@@ -710,5 +714,64 @@ bool function IsBattlepassMilestoneEnabled()
 bool function IsBattlepassMilestoneMenuOpened()
 {
 	return file.isOpened
+}
+
+
+
+bool function OpenBattlePassMilestoneDialog( bool forceShow = false )
+{
+	if ( !IsBattlepassMilestoneEnabled() || !GRX_IsInventoryReady() || !GRX_AreOffersReady() )
+		return false
+
+	ItemFlavor ornull activeBattlePass = GetActiveBattlePass()
+	if ( activeBattlePass == null )
+		return false
+
+	expect ItemFlavor( activeBattlePass )
+
+	entity player = GetLocalClientPlayer()
+
+	string activeBattlePassGUID = ItemFlavor_GetGUIDString( activeBattlePass )
+
+	if ( DoesPlayerOwnBattlePass( player, activeBattlePass ) && forceShow == false )
+		return false
+
+	int currentXPProgress = GetPlayerBattlePassXPProgress( ToEHI( player ), activeBattlePass, false )
+	int currentBPLevel    = GetBattlePassLevelForXP( activeBattlePass, currentXPProgress )
+
+	var dataTable   = GetDataTable( $"datatable/battlepass_season_milestone.rpak" )
+	int numRows     = GetDataTableRowCount( dataTable )
+	int levelColumn = GetDataTableColumnByName( dataTable, "milestone_level" )
+
+	int lastSeenMilestone = expect int( player.GetPersistentVar( format( "battlePasses[%s].lastSeenMilestone", activeBattlePassGUID ) ) )
+	bool showMilestoneMenu = false
+
+	for ( int currentRow = numRows; currentRow > 0; currentRow-- )
+	{
+		int milestoneLevel = GetDataTableInt( dataTable, currentRow - 1, levelColumn )
+
+		if ( currentBPLevel >= milestoneLevel - 1 )
+		{
+			if ( currentRow > lastSeenMilestone )
+			{
+				showMilestoneMenu = true
+				Remote_ServerCallFunction( "ClientCallback_MarkBattlePassMilestoneAsSeen", currentRow )
+				break
+			}
+		}
+	}
+
+	if ( showMilestoneMenu )
+	{
+		thread function() : ( )
+		{
+			wait 0.2
+
+			if ( IsLobby() && IsBattlePassEnabled() && GRX_IsInventoryReady() && GRX_AreOffersReady() )
+				AdvanceMenu( GetMenu( "BattlePassMilestoneMenu" ) )
+		}()
+	}
+
+	return true
 }
 

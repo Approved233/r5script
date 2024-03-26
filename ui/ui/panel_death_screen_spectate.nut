@@ -21,8 +21,6 @@ void function InitDeathScreenSpectatePanel( var panel )
 
 void function SpectateOnOpenPanel( var panel )
 {
-	
-
 	var menu = GetParentMenu( panel )
 	var headerElement = Hud_GetChild( menu, "Header" )
 	RunClientScript( "UICallback_ShowSpectateTab", headerElement )
@@ -39,7 +37,6 @@ void function SpectateOnOpenPanel( var panel )
 	RegisterButtonPressedCallback( MOUSE_MIDDLE, DeathScreenSpectateNext )
 	RegisterButtonPressedCallback( MOUSE_WHEEL_UP, DeathScreenSpectateNext )
 	RegisterButtonPressedCallback( MOUSE_WHEEL_DOWN, DeathScreenSpectateNext )
-	RegisterButtonPressedCallback( KEY_TAB, DeathScreenSkipDeathCam )
 	UpdateFooterOptions()
 
 	DeathScreenUpdateCursor()
@@ -48,8 +45,6 @@ void function SpectateOnOpenPanel( var panel )
 
 void function UI_UpdateDeathScreenSpectatePanel()
 {
-	
-
 	var menu = GetParentMenu( file.panel )
 	var headerElement = Hud_GetChild( menu, "Header" )
 	RunClientScript( "UICallback_ShowSpectateTab", headerElement )
@@ -70,7 +65,4 @@ void function SpectateOnClosePanel( var panel )
 	DeregisterButtonPressedCallback( MOUSE_MIDDLE, DeathScreenSpectateNext )
 	DeregisterButtonPressedCallback( MOUSE_WHEEL_UP, DeathScreenSpectateNext )
 	DeregisterButtonPressedCallback( MOUSE_WHEEL_DOWN, DeathScreenSpectateNext )
-	DeregisterButtonPressedCallback( KEY_TAB, DeathScreenSkipDeathCam )
-
-	RunClientScript( "UICallback_HideSpectateTab")
 }

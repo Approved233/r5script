@@ -154,6 +154,7 @@ void function Perks_Init()
 		return
 
 	RegisterSignal( "UpdatePerkMinimapVisibility" )
+	RegisterSignal( "UpdatePerkMinimapReady" )
 	RegisterSignal( "HidePerkMinimapVisibility" )
 
 
@@ -348,6 +349,24 @@ void function Perks_RegisterClassPerk( PerkInfo perkToRegister )
 
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

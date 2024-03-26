@@ -32,6 +32,7 @@ global struct RTKPagination_Properties
 	float containerSizeOffset 
 
 	array< string > pageNames = []
+	array< bool > pipMiscBools
 
 	bool vertical
 	bool autoPagesByContainerContent
@@ -45,6 +46,7 @@ global struct RTKPagination_Properties
 	bool showNavButtonsOnMKB = true
 	bool showNavButtonsOnController = true
 	bool supportShoulderButtonNav = false
+	bool supportDpadButtonNav = true
 	bool globalInput = false
 	bool allowScrollInterupt = true
 
@@ -75,6 +77,7 @@ global struct RTKPaginationPip
 {
 	bool isActive = false
 	string name = ""
+	bool miscBool = false
 }
 
 void function RTKPagination_InitMetaData( string behaviorType, string structType )
@@ -475,16 +478,21 @@ void function RTKPagination_RefreshPaginationButtons( rtk_behavior self )
 		expect rtk_panel( paginationButtons )
 		paginationButtons.SetVisible( showNav )
 
-		rtk_struct screenPagination = RTKDataModel_GetOrCreateEmptyStruct( RTK_MODELTYPE_MENUS, "pagination" )
+		rtk_struct screenPagination = RTKDataModelType_GetOrCreateStruct( RTK_MODELTYPE_MENUS, "pagination" )
 		array< RTKPaginationPip > pips
 
 		for( int i = 0; i < pageCount; i++ )
 		{
 			RTKPaginationPip pip
 			pip.isActive = i == p.currentPageIndex
+
 			rtk_array pageNames = self.PropGetArray( "pageNames" )
 			if( RTKArray_GetCount( pageNames ) > i )
 				pip.name = RTKArray_GetString( pageNames, i )
+
+			rtk_array miscBools = self.PropGetArray( "pipMiscBools" )
+			if ( RTKArray_GetCount( miscBools ) > 1 )
+				pip.miscBool = RTKArray_GetBool( miscBools, i )
 
 			pips.push( pip )
 		}
@@ -810,10 +818,14 @@ bool function RTKPagination_GetShowNav( rtk_behavior self )
 
 void function RTKPagination_UpdateKeycodes( rtk_behavior self, rtk_behavior area )
 {
-	array< int > keycodes = [ KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, STICK2_LEFT, STICK2_RIGHT, STICK2_UP, STICK2_DOWN ]
+	array< int > keycodes = [ STICK2_LEFT, STICK2_RIGHT, STICK2_UP, STICK2_DOWN ]
 	if ( self.PropGetBool( "supportShoulderButtonNav" ) )
 	{
 		keycodes.extend( [ BUTTON_SHOULDER_LEFT, BUTTON_SHOULDER_RIGHT ] )
+	}
+	if ( self.PropGetBool( "supportDpadButtonNav" ) )
+	{
+		keycodes.extend( [ KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT ] )
 	}
 	rtk_array rtk_keycodes = area.PropGetArray( "keycodes" )
 
@@ -830,13 +842,25 @@ void function RTKPagination_RegisterGlobalInput( rtk_behavior self )
 
 	if ( self.PropGetBool( "vertical" ) )
 	{
-		keycodesPrev.extend( [ KEY_UP, STICK2_UP ] )
-		keycodesNext.extend( [ KEY_DOWN, STICK2_DOWN ] )
+		keycodesPrev.extend( [ STICK2_UP ] )
+		keycodesNext.extend( [ STICK2_DOWN ] )
+
+		if ( self.PropGetBool( "supportDpadButtonNav" ) )
+		{
+			keycodesPrev.extend( [ KEY_UP ] )
+			keycodesNext.extend( [ KEY_DOWN ] )
+		}
 	}
 	else
 	{
-		keycodesPrev.extend( [ KEY_LEFT, STICK2_LEFT ] )
-		keycodesNext.extend( [ KEY_RIGHT, STICK2_RIGHT ] )
+		keycodesPrev.extend( [ STICK2_LEFT ] )
+		keycodesNext.extend( [ STICK2_RIGHT ] )
+
+		if ( self.PropGetBool( "supportDpadButtonNav" ) )
+		{
+			keycodesPrev.extend( [ KEY_LEFT ] )
+			keycodesNext.extend( [ KEY_RIGHT ] )
+		}
 	}
 
 	if ( self.PropGetBool( "supportShoulderButtonNav" ) )

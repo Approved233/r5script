@@ -136,8 +136,9 @@ void function OnGRXEventUpdate()
 
 		ItemFlavor ornull activeEventShop 		= EventShop_GetCurrentActiveEventShop()
 		bool haveActiveEventShop          		= activeEventShop != null
-		ItemFlavor ornull milestoneEvent 		= GetActiveMilestoneEvent( GetUnixTimestamp() )
-		bool haveActiveMilestoneEvent        	= milestoneEvent != null
+		ItemFlavor ornull baseEvent 		    = GetActiveBaseEvent( GetUnixTimestamp() )
+		bool haveActiveBaseEvent      	        = baseEvent != null
+
 
 		bool haveActiveThemedShopEvent			= false
 		if ( hasThemedShopCalevent )
@@ -154,7 +155,7 @@ void function OnGRXEventUpdate()
 				if ( Hud_GetHudName( nestedPanel ) == "CollectionEventPanel" && !haveActiveCollectionEvent )
 					continue
 
-				if ( Hud_GetHudName( nestedPanel ) == "RTKEventsPanel" && (!haveActiveEventShop && !haveActiveMilestoneEvent) )
+				if ( Hud_GetHudName( nestedPanel ) == "RTKEventsPanel" && (!haveActiveEventShop && !haveActiveBaseEvent) )
 					continue
 
 				switch ( Hud_GetHudName( nestedPanel ) )
@@ -171,7 +172,6 @@ void function OnGRXEventUpdate()
 			file.wasCollectionEventActive = haveActiveCollectionEvent
 			file.wasThemedShopEventActive = haveActiveThemedShopEvent
 			file.wasEventShopActive = haveActiveEventShop
-			file.wasMilestoneEventActive = haveActiveMilestoneEvent
 
 		}
 		SetTabNavigationEnabled( file.panel, true )
@@ -186,14 +186,14 @@ void function OnGRXEventUpdate()
 		foreach ( TabDef tabDef in GetPanelTabs( file.panel ) )
 		{
 			bool showTab   = true
-			bool enableTab = true
+			bool enableTab = false
 
 			tabDef.title = GetPanelTabTitle( tabDef.panel )
 
 			if ( Hud_GetHudName( tabDef.panel ) == "CollectionEventPanel" )
 			{
 				showTab = haveActiveCollectionEvent
-				enableTab = true
+				enableTab = haveActiveCollectionEvent
 				if ( haveActiveCollectionEvent )
 				{
 					expect ItemFlavor(activeCollectionEvent)
@@ -204,6 +204,7 @@ void function OnGRXEventUpdate()
 			else if ( Hud_GetHudName( tabDef.panel ) == "ThemedShopPanel" )
 			{
 				showTab = haveActiveThemedShopEvent
+				enableTab = haveActiveThemedShopEvent
 				if ( haveActiveThemedShopEvent )
 				{
 					tabDef.title = "#EVENT_EXCLUSIVE_OFFERS"
@@ -211,14 +212,20 @@ void function OnGRXEventUpdate()
 			}
 			else if ( Hud_GetHudName( tabDef.panel ) == "RTKEventsPanel" )
 			{
-				showTab = haveActiveEventShop || haveActiveMilestoneEvent
-				enableTab = true
-				if ( haveActiveMilestoneEvent )
+				showTab = haveActiveEventShop || haveActiveBaseEvent
+
+				if ( haveActiveBaseEvent )
 				{
-					tabDef.title = "#MILESTONE_EVENT_TAB_TITLE"
+					enableTab = true
+					tabDef.title = "#EVENT_TAB_TITLE"
+					if ( !haveActiveThemedShopEvent && !haveActiveCollectionEvent )
+					{
+						SetTabBaseWidth( tabDef, 325 )
+					}
 				}
 				else if ( haveActiveEventShop )
 				{
+					enableTab = true
 					tabDef.title = "#EVENTS_EVENT_SHOP"
 				}
 

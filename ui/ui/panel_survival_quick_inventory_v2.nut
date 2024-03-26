@@ -305,6 +305,31 @@ void function OnSurvivalQuickInventoryPanel_Show( var panel )
 	RunClientScript( "UICallback_UpdateTeammateInfo", Hud_GetChild( file.mainInventoryPanel, "TeammateInfo0" ), false )
 	RunClientScript( "UICallback_UpdateTeammateInfo", Hud_GetChild( file.mainInventoryPanel, "TeammateInfo1" ), false )
 	RunClientScript( "UICallback_UpdateUltimateInfo", Hud_GetChild( file.mainInventoryPanel, "PlayerUltimate" ) )
+
+	UpdateMouseDropGroundSizes()
+}
+
+
+void function UpdateMouseDropGroundSizes()
+{
+
+		var mouseDropGroundLeft = Hud_GetChild( file.mainInventoryPanel, "MouseDropGroundLeft" )
+		var mouseDropGroundRight = Hud_GetChild( file.mainInventoryPanel, "MouseDropGroundRight" )
+
+		int mouseDropGroundLeftWidth = Hud_GetBaseWidth( mouseDropGroundLeft )
+		int mouseDropGroundRightWidth = Hud_GetBaseWidth( mouseDropGroundRight )
+
+		int targetLeftWidth = mouseDropGroundLeftWidth
+		int targetRightWidth = mouseDropGroundRightWidth
+		if( UpgradeCore_IsEnabled() )
+		{
+			UIScaleFactor scaleFactor = GetContentScaleFactor( file.mainInventoryPanel )
+			targetLeftWidth = int( 640.0 * scaleFactor.x )
+			targetRightWidth = int( 180.0 * scaleFactor.x )
+		}
+		Hud_SetWidth( mouseDropGroundLeft, targetLeftWidth )
+		Hud_SetWidth( mouseDropGroundRight, targetRightWidth )
+
 }
 
 
@@ -495,6 +520,7 @@ void function InitMainInventoryPanel( var panel )
 		Hud_AddEventHandler( button, UIE_GET_FOCUS, OnEquipmentItemGetFocus )
 		Hud_AddEventHandler( button, UIE_LOSE_FOCUS, OnEquipmentItemLoseFocus )
 		Hud_AddEventHandler( button, UIE_CLICKRIGHT, OnEquipmentButtonClickRight )
+		Hud_AddEventHandler( button, UIE_MIDDLECLICK, OnEquipmentButtonMiddleClick )
 		Hud_AddKeyPressHandler( button, OnEquipmentKeyPress )
 		Hud_SetCommandHandler( button, OnEquipmentCommand )
 
@@ -674,6 +700,11 @@ void function OnEquipmentButtonClickAction( var panel, var button, int index )
 {
 	EmitUISound( "UI_InGame_Inventory_Select" )
 	RunClientScript( "UICallback_OnEquipmentButtonAction", button, eLootActionType.PRIMARY_ACTION )
+}
+
+void function OnEquipmentButtonMiddleClick( var button )
+{
+	RunClientScript( "UICallback_PingEquipmentItem", button )
 }
 
 void function OnEquipmentButtonClickRight( var button )
@@ -1404,14 +1435,15 @@ void function InitLegendPanelInventory( var panel )
 }
 
 
-void function ClientCallback_StartEquipmentExtendedUse( var button, float duration, int actionType, bool canSwapWeapons )
+void function ClientCallback_StartEquipmentExtendedUse( var button, float duration, int actionType, bool canSwapWeapons, bool hasSling )
 {
 	if ( canSwapWeapons )
 	{
 		thread StartEquipmentExtendedUse( button, duration, actionType )
 	}
 
-	thread EquipmentSlingDecorations( button, duration, actionType, canSwapWeapons )
+	if( hasSling )
+		thread EquipmentSlingDecorations( button, duration, actionType, canSwapWeapons )
 }
 
 void function StartEquipmentExtendedUse( var button, float duration, int actionType )
@@ -1445,7 +1477,7 @@ void function StartEquipmentExtendedUse( var button, float duration, int actionT
 		}
 	)
 
-	bool isButtonFocused = GetMouseFocus() == button || (GetDpadNavigationActive() && Hud_IsFocused( button ))
+	bool isButtonFocused = GetMouseFocus() == button || ( GetDpadNavigationActive() && Hud_IsFocused( button ) )
 	while ( IsLootActionTypeButtonDown( actionType ) && UITime() < uiEndTime && isButtonFocused )
 	{
 		vector screenPos = ConvertCursorToScreenPos()
@@ -1470,12 +1502,28 @@ void function EquipmentSlingDecorations( var button, float duration, int actionT
 	Signal( uiGlobal.signalDummy, "EquipmentSlingDecorations" )
 	EndSignal( uiGlobal.signalDummy, "EquipmentSlingDecorations" )
 
-	float uiEndTime = UITime() + duration
 	var slingDecorationsRui = Hud_GetRui( Hud_GetChild( file.mainInventoryPanel, "SlingDecorations" ) )
+	if( slingDecorationsRui == null )
+		return
+
+	OnThreadEnd(
+		function() : ( slingDecorationsRui )
+		{
+			if( CanRunClientScript() )
+				RunClientScript( "EquipmentButton_SlingWarningMessage", false )
+
+			RuiSetBool( slingDecorationsRui, "highlightLeftConnector", false )
+			RuiSetBool( slingDecorationsRui, "highlightRightConnector", false )
+			RuiSetBool( slingDecorationsRui, "isNonSwappableWeapon", false )
+		}
+	)
+
+	float uiEndTime = UITime() + duration
+
 	switch ( Hud_GetScriptID( button ) )
 	{
 		case "main_weapon0":
-			if (actionType == eLootActionType.CHARACTER_ACTION1)
+			if ( actionType == eLootActionType.CHARACTER_ACTION1 )
 			{
 				RuiSetBool( slingDecorationsRui, "highlightLeftConnector", true )
 				RuiSetBool( slingDecorationsRui, "isNonSwappableWeapon", !canSwapWeapons )
@@ -1483,47 +1531,34 @@ void function EquipmentSlingDecorations( var button, float duration, int actionT
 			}
 			break
 		case "main_weapon1":
-			if (actionType == eLootActionType.CHARACTER_ACTION1)
+			if ( actionType == eLootActionType.CHARACTER_ACTION1 )
 			{
-				RuiSetBool( slingDecorationsRui, "highlightRightConnector", true)
+				RuiSetBool( slingDecorationsRui, "highlightRightConnector", true )
 				RuiSetBool( slingDecorationsRui, "isNonSwappableWeapon", !canSwapWeapons )
 				RunClientScript( "EquipmentButton_SlingWarningMessage", !canSwapWeapons )
 			}
 			break
 		case "sling_weapon":
-			if (actionType == eLootActionType.CHARACTER_ACTION1)
+			if ( actionType == eLootActionType.CHARACTER_ACTION1 )
 			{
-				RuiSetBool( slingDecorationsRui, "highlightLeftConnector", true)
-				RuiSetBool( slingDecorationsRui, "isNonSwappableWeapon", !canSwapWeapons )
+				RuiSetBool( slingDecorationsRui, "highlightLeftConnector", true )
 			}
-
-			if (actionType == eLootActionType.CHARACTER_ACTION2)
+			else if ( actionType == eLootActionType.CHARACTER_ACTION2 )
 			{
-				RuiSetBool( slingDecorationsRui, "highlightRightConnector", true)
-				RuiSetBool( slingDecorationsRui, "isNonSwappableWeapon", !canSwapWeapons )
-				RunClientScript( "EquipmentButton_SlingWarningMessage", !canSwapWeapons )
+				RuiSetBool( slingDecorationsRui, "highlightRightConnector", true )
 			}
+			RuiSetBool( slingDecorationsRui, "isNonSwappableWeapon", !canSwapWeapons )
+			RunClientScript( "EquipmentButton_SlingWarningMessage", !canSwapWeapons )
 			break
 	}
 
-	bool isButtonFocused = GetMouseFocus() == button || (GetDpadNavigationActive() && Hud_IsFocused( button ))
+	bool isButtonFocused = GetMouseFocus() == button || ( GetDpadNavigationActive() && Hud_IsFocused( button ) )
 	bool shouldHighlight = canSwapWeapons ? true : !file.isSwappingWeapons
+
 	while ( IsLootActionTypeButtonDown( actionType ) && isButtonFocused && shouldHighlight )
 	{
 		WaitFrame()
 	}
-
-	OnThreadEnd(
-		function() : ( slingDecorationsRui )
-		{
-			if( CanRunClientScript() )
-				RunClientScript("EquipmentButton_SlingWarningMessage", false )
-
-			RuiSetBool( slingDecorationsRui, "highlightLeftConnector", false)
-			RuiSetBool( slingDecorationsRui, "highlightRightConnector", false)
-			RuiSetBool( slingDecorationsRui, "isNonSwappableWeapon", false )
-		}
-	)
 
 	if ( UITime() < uiEndTime )
 		return

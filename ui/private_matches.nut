@@ -826,6 +826,29 @@ void function PrivateMatch_SetUpTeamRosters( string playlistName )
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 bool function IsPrivateMatchLobby()
 {
 

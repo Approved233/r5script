@@ -38,6 +38,7 @@ global function RemoveCallback_OnPartyUpdated
 global function AddCallback_OnPartyMemberAdded
 global function RemoveCallback_OnPartyMemberAdded
 global function AddCallback_OnPartyMemberRemoved
+global function HasCallback_OnPartyMemberRemoved
 global function RemoveCallback_OnPartyMemberRemoved
 global function UICodeCallback_PartySpectateSlotUnavailableWaitlisted
 global function AddCallback_PartySpectateSlotUnavailableWaitlisted
@@ -238,6 +239,7 @@ struct
 #endif
 
 	bool hasInitializedOnce = false
+	bool currencyDialogShowed = false
 } file
 
 
@@ -892,11 +894,12 @@ void function UIFullyConnectedInitialization()
 	ShMusic_LevelInit()
 	ShBattlePass_LevelInit()
 
+	ShCups_LevelInit()
 
 
 
 
-
+	LobbyPlaylist_Init()
 	PlayPanel_LevelInit()
 	TreasureBox_SharedInit()
 	SeasonQuest_SharedInit()
@@ -905,12 +908,13 @@ void function UIFullyConnectedInitialization()
 	MeleeShared_Init()
 	MeleeSyncedShared_Init()
 
-
+	ShArtifacts_LevelInit()
 
 	ShPing_Init()
 	ShQuickchat_Init()
 	ShChallenges_LevelInit_PreStats()
 	Sh_Challenge_Sets_Init()
+	AutogenStats_Init()
 
 	Sh_Kepler_Init()
 
@@ -927,7 +931,7 @@ void function UIFullyConnectedInitialization()
 	Sh_RankedTrials_Init() 
 	ShChallenges_LevelInit_PostStats()
 
-
+		ShCups_LevelInit_PostStats()
 
 	ShPlaylist_Init()
 
@@ -1464,13 +1468,13 @@ void function UpdateMenusOnConnectThread( string levelname )
 	bool isPrivateMatch = IsPrivateMatch()
 
 	
-	string selectedPlaylist = Lobby_GetSelectedPlaylist()
+	string selectedPlaylist = LobbyPlaylist_GetSelectedPlaylist()
 
 	if ( selectedPlaylist == PLAYLIST_TRAINING || selectedPlaylist == PLAYLIST_NEW_PLAYER_ORIENTATION )
 
 
 
-		Lobby_ClearSelectedPlaylist()
+		LobbyPlaylist_ClearSelectedPlaylist()
 
 	if ( isLobby )
 	{
@@ -2149,7 +2153,7 @@ void function DialogFlow()
 
 		DialogFlow_DidCausePotentiallyInterruptingPopup()
 	}
-	else if ( hasActiveBattlePass && IsBattlepassMilestoneEnabled() && persistenceAvailable && Lobby_OpenBattlePassMilestoneDialog() )
+	else if ( hasActiveBattlePass && IsBattlepassMilestoneEnabled() && persistenceAvailable && OpenBattlePassMilestoneDialog() )
 	{
 		IncrementNumDialogFlowDialogsDisplayed()
 
@@ -2170,7 +2174,7 @@ void function TryRunDialogFlowThread()
 }
 
 
-bool function ShouldShowPremiumCurrencyDialog( bool dialogFlow = false )
+bool function ShouldShowPremiumCurrencyDialog( bool dialogFlow = false, bool resetCurrencyDialogShowed = false )
 {
 	if( !dialogFlow && !file.dialogFlowComplete )
 		return false
@@ -2184,10 +2188,17 @@ bool function ShouldShowPremiumCurrencyDialog( bool dialogFlow = false )
 	if ( GetActiveMenu() == GetMenu( "LootBoxOpen" ) )
 		return false
 
+	if ( resetCurrencyDialogShowed )
+	{
+		file.currencyDialogShowed = false
+	}
+	else if ( file.currencyDialogShowed ) 
+	{
+		return false
+	}
+
 	int premiumBalance  = GRXCurrency_GetPlayerBalance( GetLocalClientPlayer(), GRX_CURRENCIES[GRX_CURRENCY_PREMIUM] )
 	int lastSeenBalance =  expect int( GetDialogFlowTablesValueOrPersistence( "lastSeenPremiumCurrency" ) )
-	if ( premiumBalance == lastSeenBalance )
-		return false
 
 	return premiumBalance > lastSeenBalance
 }
@@ -2218,6 +2229,7 @@ void function ShowPremiumCurrencyDialog( bool dialogFlow )
 	Remote_ServerCallFunction( "ClientCallback_lastSeenPremiumCurrency" )
 	OpenOKDialogFromData( dialogData )
 	EmitUISound( "UI_Menu_Purchase_Coins" )
+	file.currencyDialogShowed = true
 }
 
 
@@ -2336,10 +2348,10 @@ void function InitGamepadConfigs()
 	SetStandardAbilityBindingsForPilot( GetLocalClientPlayer() )
 }
 
-
 void function InitMenus()
 {
 	RegisterSignal( "EndShowGameSummaryIfNeeded" )
+	RTKCore_RegisterSignals()
 
 	InitGlobalMenuVars()
 	
@@ -2538,7 +2550,7 @@ void function InitMenus()
 			var meleeCustomizationMenu = AddMenu( "MeleeCustomizationMenu", $"resource/ui/menus/dialogs/customize_melee.menu", InitMeleeCustomizationMenu )
 			AddPanel( meleeCustomizationMenu, "MeleeCustomizationPanel", InitMeleeCustomizationPanel )
 
-
+			AddPanel( meleeCustomizationMenu, "ArtifactCustomizationPanel", InitMeleeCustomizationPanel )
 
 
 
@@ -2632,6 +2644,7 @@ void function InitMenus()
 	AddPanel( deathScreenMenu, "DeathScreenSpectate", InitDeathScreenSpectatePanel )
 	AddPanel( deathScreenMenu, "DeathScreenSquadSummary", InitDeathScreenSquadSummaryPanel )
 	AddPanel( deathScreenMenu, "DeathScreenSquadPanel", InitSquadPanelInventory )
+	AddPanel( deathScreenMenu, "DeathScreenKillreplay", InitDeathScreenKillreplayPanel )
 
 	var postGameRankedMenu = AddMenu( "PostGameRankedMenu", $"resource/ui/menus/post_game_ranked.menu", InitPostGameRankedMenu )
 	AddPanel( postGameRankedMenu, "MatchSummaryPanel", InitPostGameRankedSummaryPanel )
@@ -2685,7 +2698,7 @@ void function InitMenus()
 		AddPanel( postGameMenu, "PostGameWeapons", InitRTKPostGameWeaponsPanel )
 
 
-
+		AddPanel( postGameMenu, "PostGameCups", InitRTKPostGameCups )
 
 
 	AddMenu( "Dialog", $"resource/ui/menus/dialog.menu", InitDialogMenu )
@@ -2718,13 +2731,17 @@ void function InitMenus()
 	AddPanel( gamemodeSelectDialog, "GamemodeSelectDialogPublicPanel", InitGameModeSelectPublicPanel )
 	AddPanel( gamemodeSelectDialog, "GamemodeSelectDialogPrivatePanel", InitGameModeSelectPrivatePanel )
 
+		AddPanel( gamemodeSelectDialog, "RTKGamemodeSelectApexCups", InitRTKGameModeSelectApexCups )
 
+		var CupInfoDialog = AddMenu( "RTKCupInfoDialog", $"resource/ui/menus/apex_cups/dialog_cup_breakdown.menu", InitCupInfoDialog )
+		AddPanel( CupInfoDialog, "RTKCupInfoPoints", InitRTKCupInfoPoints )
+		AddPanel( CupInfoDialog, "RTKCupInfoTiers", InitRTKCupInfoTiers )
 
-
-
-
-
-
+		
+		var apexCupMenu = AddMenu( "RTKApexCupMenu", $"resource/ui/menus/apex_cups/rtk_cups_tab_screen.menu", InitRTKApexCupMenu )
+		AddPanel( apexCupMenu, "RTKApexCupsOverview", InitRTKApexCupsOverview )
+		AddPanel( apexCupMenu, "RTKApexCupsHistory", InitRTKApexCupHistory )
+		AddPanel( apexCupMenu, "RTKApexCupsLeaderboard", InitRTKApexCupLeaderboard )
 
 
 	
@@ -2869,6 +2886,8 @@ void function InitMenus()
 
 
 	var FeatureTutorialDialog = AddMenu( "FeatureTutorialDialog", $"resource/ui/menus/dialog_feature_tutorial.menu", InitFeatureTutorialDialog )
+	AddMenu( "PurchasePackSelectionDialog", $"resource/ui/menus/dialog_purchase_pack_selection.menu", InitPurchasePackSelectionDialog )
+
 
 	var EventShopTierDialog = AddMenu( "EventShopTierDialog", $"resource/ui/menus/dialog_event_shop.menu", InitEventShopTierDialog )
 	var SweepstakesFlowDialog = AddMenu( "SweepstakesFlowDialog", $"resource/ui/menus/dialog_sweepstakes_flow.menu", InitSweepstakesFlowDialog )
@@ -3824,8 +3843,8 @@ void function UICodeCallback_PartyUpdated()
 		if ( activeSearchingPlaylist != "" && !CanPlaylistFitPartySize( activeSearchingPlaylist, GetPartySize(), IsSendOpenInviteTrue() ) )
 			CancelMatchSearch()
 
-		if ( Lobby_GetSelectedPlaylist() == PRIVATE_MATCH_PLAYLIST && GetPartySize() > PRIVATE_MATCH_MAX_PARTY_SIZE )
-			Lobby_SetSelectedPlaylist( GetDefaultPlaylist() )
+		if ( LobbyPlaylist_GetSelectedPlaylist() == PRIVATE_MATCH_PLAYLIST && GetPartySize() > PRIVATE_MATCH_MAX_PARTY_SIZE )
+			LobbyPlaylist_SetSelectedPlaylist( GetDefaultPlaylist() )
 	}
 
 	if ( IsFullyConnected() )
@@ -3844,6 +3863,10 @@ void function UICodeCallback_PartyUpdated()
 	}
 }
 
+bool function HasCallback_OnPartyMemberRemoved( void functionref() callbackFunc )
+{
+	return file.partymemberRemovedCallbacks.contains( callbackFunc )
+}
 
 void function AddCallback_OnPartyMemberRemoved( void functionref() callbackFunc )
 {

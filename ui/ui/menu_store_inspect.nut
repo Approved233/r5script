@@ -177,8 +177,6 @@ void function StoreInspectMenu_OnClose()
 	RemoveCallback_OnGRXOffersRefreshed( StoreInspectMenu_OnGRXUpdated )
 
 	RunClientScript( "UIToClient_UnloadItemInspectPakFile" )
-
-	MilestoneEvent_TryDisplayMilestoneRewardCeremony()
 }
 
 void function StoreInspectMenu_OnHide()
@@ -208,15 +206,15 @@ void function StoreInspectMenu_UpdatePrices( GRXScriptOffer storeOffer, StoreIns
 
 	Assert( storeOffer.purchaseCount >= 0, "Store offer " + storeOffer.offerAlias +
 	" is missing a purchase count." )
-	int purchaseCount = storeOffer.purchaseCount
 
 	offerData.displayedPrice = storeOffer.prices[0].quantities[0]
 
 	
 	if ( storeOffer.prices.len() == 2 )
 	{
-		string firstPrice = GRX_GetFormattedPrice( storeOffer.prices[0], 1 )
-		string secondPrice = GRX_GetFormattedPrice( storeOffer.prices[1], 1 )
+		array<ItemFlavorBag> orderedPricesList = GRXOffer_GetPricesInPriorityOrder( storeOffer )
+		string firstPrice = GRX_GetFormattedPrice( orderedPricesList[0], 1 )
+		string secondPrice = GRX_GetFormattedPrice( orderedPricesList[1], 1 )
 		offerData.displayedPriceStr = Localize( "#STORE_PRICE_N_N", firstPrice, secondPrice )
 		offerData.isDualCurrency = true
 	}
@@ -232,7 +230,7 @@ void function StoreInspectMenu_UpdatePrices( GRXScriptOffer storeOffer, StoreIns
 	if ( storeOffer.originalPrice != null )
 		originalPriceFlavBag = expect ItemFlavorBag( storeOffer.originalPrice )
 
-	if ( originalPriceFlavBag.quantities.len() > 0 )
+	if ( originalPriceFlavBag.quantities.len() > 0 && originalPriceFlavBag.quantities[0] > 0 )
 	{
 		offerData.originalPrice = originalPriceFlavBag.quantities[0]
 		offerData.originalPriceStr = GRX_GetFormattedPrice( originalPriceFlavBag, 1 )
@@ -259,7 +257,7 @@ void function StoreInspectMenu_UpdatePrices( GRXScriptOffer storeOffer, StoreIns
 	}
 
 	bool isOfferFullyClaimed = GRXOffer_IsFullyClaimed( storeOffer )
-	bool isPurchaseLimitReached = offerData.purchaseLimit > 0 && purchaseCount >= offerData.purchaseLimit
+	bool isPurchaseLimitReached = GRXOffer_IsPurchaseLimitReached( storeOffer )
 
 	int numOfferItemsOwned = GRXOffer_GetOwnedItemsCount( storeOffer )
 	HudElem_SetRuiArg( uiData.discountInfo, "ownedItemsDesc", numOfferItemsOwned > 0 && !isOfferFullyClaimed ? Localize( "#BUNDLE_OWNED_ITEMS_DESC", numOfferItemsOwned ) : "" )
@@ -348,8 +346,15 @@ void function StoreInspectMenu_UpdatePrices( GRXScriptOffer storeOffer, StoreIns
 		{
 			case eIneligibilityCode.PURCHASE_LIMIT:
 			{
-				offerData.purchaseText = Localize( "#PURCHASE_LIMIT_REACHED" )
-				offerData.purchaseDescText = Localize( "#STORE_AVAILABLE_N_N", offerData.purchaseLimit - storeOffer.purchaseCount, offerData.purchaseLimit )
+				if ( offerData.purchaseLimit > 0 )
+				{
+					offerData.purchaseText = Localize( "#PURCHASE_LIMIT_REACHED" )
+					offerData.purchaseDescText = Localize( "#STORE_AVAILABLE_N_N", offerData.purchaseLimit - storeOffer.purchaseCount, offerData.purchaseLimit )
+				}
+				else
+				{
+					ineligibilityHandled = false
+				}
 				break
 			}
 
@@ -415,7 +420,7 @@ void function StoreInspectMenu_UpdatePrices( GRXScriptOffer storeOffer, StoreIns
 		offerData.giftDescText = giftDescText
 		offerData.giftTooltipTitleText =  Localize( "#GIFTS_LEFT", giftsLeft )
 
-		if ( !CanLocalPlayerGift() )
+		if ( !CanLocalPlayerGift( storeOffer ) )
 		{
 			offerData.giftText = Localize( "#LOCKED_GIFT" )
 			if ( !IsPlayerLeveledForGifting() )
@@ -474,6 +479,12 @@ void function StoreInspectMenu_UpdatePurchaseButton( GRXScriptOffer storeOffer, 
 			offerData.purchaseText = Localize( "#LOCKED" )
 			offerData.purchaseDescText = Localize( "#STORE_REQUIRES_LOCKED", Localize( ItemFlavor_GetLongName( prereqFlav ) ) )
 		}
+	}
+
+	
+	if (offerData.discountPct < 0)
+	{
+		offerData.discountPct = 0
 	}
 
 	HudElem_SetRuiArg( uiData.discountInfo, "discountPct", string(offerData.discountPct) )
@@ -561,10 +572,11 @@ void function StoreInspectMenu_UpdatePurchaseButton( GRXScriptOffer storeOffer, 
 
 		bool TwoFactorEnabled = IsTwoFactorAuthenticationEnabled()
 		bool PlayerHasGiftsLeft = IsPlayerWithinGiftingLimit()
-		bool PlayerHasLevelForGifting = IsPlayerLeveledForGifting()
 		Hud_ClearToolTipData( uiData.giftButton )
+		
+		bool canLocalPlayerGift = CanLocalPlayerGift( storeOffer )
 
-		if ( !CanLocalPlayerGift() )
+		if ( !canLocalPlayerGift )
 		{
 			showDisclaimers = false
 			if ( !TwoFactorEnabled || !PlayerHasGiftsLeft )
@@ -578,7 +590,7 @@ void function StoreInspectMenu_UpdatePurchaseButton( GRXScriptOffer storeOffer, 
 			}
 		}
 
-		Hud_SetLocked( uiData.giftButton, !PlayerHasLevelForGifting || !PlayerHasGiftsLeft )
+		Hud_SetLocked( uiData.giftButton, !canLocalPlayerGift )
 	}
 
 	HudElem_SetRuiArg( uiData.discountInfo, "hideDisclaimers", !showDisclaimers )
@@ -723,7 +735,7 @@ void function StoreInspectMenu_OnGRXUpdated()
 
 		HudElem_SetRuiArg( file.pageHeader, "singleItemRarity", ItemFlavor_GetQuality( itemFlav ) )
 		HudElem_SetRuiArg( file.pageHeader, "singleItemRarityText", ItemFlavor_GetQualityName( itemFlav ) )
-		HudElem_SetRuiArg( file.pageHeader, "singleItemTypeText", ItemFlavor_GetRewardShortDescription( itemFlav ) )
+		HudElem_SetRuiArg( file.pageHeader, "singleItemTypeText", Store_GetRewardShortDescription( itemFlav ) )
 	}
 	else
 	{
@@ -870,9 +882,29 @@ void function OnStoreGridItemHover( var panel, var button, int index )
 	HudElem_SetRuiArg( file.itemInfo, "rarity", ItemFlavor_GetQuality( itemFlav ) )
 	HudElem_SetRuiArg( file.itemInfo, "rarityText", rarityText )
 	HudElem_SetRuiArg( file.itemInfo, "itemName", ItemFlavor_GetLongName( itemFlav ) )
-	HudElem_SetRuiArg( file.itemInfo, "itemType", ItemFlavor_GetRewardShortDescription( itemFlav ) )
+	if( itemType == eItemType.voucher )
+	{
+		HudElem_SetRuiArg( file.itemInfo, "itemLegal", Store_GetRewardShortDescription( itemFlav ) )
+		HudElem_SetRuiArg( file.itemInfo, "itemType", "" )
+	}
+	else
+	{
+		HudElem_SetRuiArg( file.itemInfo, "itemType", Store_GetRewardShortDescription( itemFlav ) )
+		HudElem_SetRuiArg( file.itemInfo, "itemLegal", "" )
+	}
 
 	RunClientScript( "UIToClient_PreviewStoreItem", ItemFlavor_GetGUID( itemFlav ), s_inspectOffers.currentOffers[0].items.len() == 1 )
+}
+
+string function Store_GetRewardShortDescription( ItemFlavor itemFlav )
+{
+	string desc = ItemFlavor_GetRewardShortDescription( itemFlav )
+	if( ItemFlavor_GetType( itemFlav ) == eItemType.voucher && Voucher_GetEffectBattlepassStars( itemFlav ) > 0 )
+	{
+		desc = Localize( "#itemtype_voucher_bp_star_DESC" )
+	}
+
+	return desc
 }
 
 void function LockPurchaseButtonWhenInventoryIsNotReady()

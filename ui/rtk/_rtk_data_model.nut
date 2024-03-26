@@ -1,10 +1,9 @@
-global function RTKDataModel_GetOrCreateEmptyStruct
-global function RTKDataModel_GetOrCreateScriptStruct
 global function RTKStruct_GetOrCreateEmptyStruct
 global function RTKStruct_GetOrCreateScriptStruct
 global function RTKStruct_GetOrCreateScriptArrayOfStructs
 
 global function RTKDataModelType_CreateStruct
+global function RTKDataModelType_GetOrCreateStruct
 global function RTKDataModelType_DestroyStruct
 global function RTKDataModelType_GetStruct
 global function RTKDataModelType_GetDataPath
@@ -18,23 +17,13 @@ string function GetFullDataModelPath( string pathToRoot, string propertyName )
 	return pathToRoot + (pathToRoot == "&" ? "" : ".") +  propertyName
 }
 
-rtk_struct function RTKDataModel_GetOrCreateEmptyStruct( string pathToRoot, string propertyName )
+rtk_struct function GetOrCreateDataModelStruct( string pathToRoot, string propertyName )
 {
 	string fullPath = GetFullDataModelPath( pathToRoot, propertyName )
 	if ( RTKDataModel_HasDataModel( fullPath ) )
 		return RTKDataModel_GetStruct( fullPath )
 	else
 		return RTKDataModel_CreateEmptyStruct( pathToRoot, propertyName )
-	unreachable
-}
-
-rtk_struct function RTKDataModel_GetOrCreateScriptStruct( string pathToRoot, string propertyName, string structTypeName )
-{
-	string fullPath = GetFullDataModelPath( pathToRoot, propertyName )
-	if ( RTKDataModel_HasDataModel( fullPath ) )
-		return RTKDataModel_GetStruct( fullPath )
-	else
-		return RTKDataModel_CreateStruct( pathToRoot, propertyName, structTypeName )
 	unreachable
 }
 
@@ -70,11 +59,11 @@ rtk_array function RTKStruct_GetOrCreateScriptArrayOfStructs( rtk_struct props, 
 rtk_struct function RTKDataModelType_CreateStruct( string type = "", string propertyName = "", string structType = "", array< string > parentPropertyNames = [] )
 {
 	string path = RTKDataModelType_GetDataPath( type, "", true )
-	rtk_struct data = RTKDataModel_GetOrCreateEmptyStruct( "&", RTKDataModelType_GetDataPath( type, "", false ) )
+	rtk_struct data = GetOrCreateDataModelStruct( "&", RTKDataModelType_GetDataPath( type, "", false ) )
 
 	foreach( string p in parentPropertyNames )
 	{
-		data = RTKDataModel_GetOrCreateEmptyStruct( path, p )
+		data = GetOrCreateDataModelStruct( path, p )
 		path += "." + p
 	}
 
@@ -82,20 +71,38 @@ rtk_struct function RTKDataModelType_CreateStruct( string type = "", string prop
 		RTKStruct_RemoveProperty( data, propertyName )
 
 	if( structType == "" )
+		return RTKStruct_AddEmptyStructProperty( data, propertyName )
+	else
+		return RTKStruct_AddStructProperty( data, propertyName, structType )
+	unreachable
+}
+
+rtk_struct function RTKDataModelType_GetOrCreateStruct( string type = "", string propertyName = "", string structType = "", array< string > parentPropertyNames = [] )
+{
+	string path = RTKDataModelType_GetDataPath( type, "", true )
+	rtk_struct data = GetOrCreateDataModelStruct( "&", RTKDataModelType_GetDataPath( type, "", false ) )
+
+	foreach( string p in parentPropertyNames )
+	{
+		data = GetOrCreateDataModelStruct( path, p )
+		path += "." + p
+	}
+
+	if( structType == "" )
 		return RTKStruct_GetOrCreateEmptyStruct( data, propertyName )
 	else
-		return RTKDataModel_CreateStruct( path, propertyName, structType )
+		return RTKStruct_GetOrCreateScriptStruct( data, propertyName, structType )
 	unreachable
 }
 
 void function RTKDataModelType_DestroyStruct( string type = "", string propertyName = "", array< string > parentPropertyNames = [] )
 {
 	string path = RTKDataModelType_GetDataPath( type, "", true )
-	rtk_struct data = RTKDataModel_GetOrCreateEmptyStruct( "&", RTKDataModelType_GetDataPath( type, "", false ) )
+	rtk_struct data = GetOrCreateDataModelStruct( "&", RTKDataModelType_GetDataPath( type, "", false ) )
 
 	foreach( string p in parentPropertyNames )
 	{
-		data = RTKDataModel_GetOrCreateEmptyStruct( path, p )
+		data = GetOrCreateDataModelStruct( path, p )
 		path += "." + p
 	}
 

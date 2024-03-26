@@ -15,6 +15,7 @@ global function ClientToUi_SetUpgradeSelectionOpen
 
 
 
+
 void function UpgradeSelectionMenu_Init()
 {
 
@@ -45,6 +46,20 @@ bool function UpgradeSelectionMenu_IsActive()
 	return file.isOpen
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

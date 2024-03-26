@@ -239,7 +239,7 @@ void function Ranked_SetupMenuGladCardFromCommunityUserInfo( CommunityUserInfo u
 
 void function Ranked_SetupMenuGladCard_internal( int ladderPos, int rankScore, int ladderPosPrev = -1, int rankScorePrev = -1 )
 {
-	int rankShouldShow = IsRankedPlaylist( Lobby_GetSelectedPlaylist() ) ? 1 : 0
+	int rankShouldShow = IsRankedPlaylist( LobbyPlaylist_GetSelectedPlaylist() ) ? 1 : 0
 	SendMenuGladCardPreviewCommand( eGladCardPreviewCommandType.RANKED_SHOULD_SHOW, rankShouldShow, null )
 	SendMenuGladCardPreviewCommand( eGladCardPreviewCommandType.RANKED_DATA, ladderPos, null, rankScore )
 	SendMenuGladCardPreviewCommand( eGladCardPreviewCommandType.RANKED_DATA_PREV, ladderPosPrev, null, rankScorePrev )  
@@ -533,7 +533,7 @@ bool function Ranked_PartyMeetsRankedDifferenceRequirements()
 	if ( party.members.len() == 0 )
 		return true
 
-	string selectedRankedPlaylist = Lobby_GetSelectedPlaylist()
+	string selectedRankedPlaylist = LobbyPlaylist_GetSelectedPlaylist()
 	if ( GetPartySize() >= GetPlaylistVarInt( selectedRankedPlaylist, "max_team_size", 3 ) && GetPlaylistVarBool( selectedRankedPlaylist, "ranked_ignore_full_party_rank_difference", true ) )
 		return true
 
