@@ -1137,4 +1137,67 @@ void function DEV_OpenHijackedEntitlementRedeemPopup( string entitlementEnumName
 			enumValName = Entitlement_GetTwitchPrimeRef( entitlementFlav )
 
 		if ( type == eEntitlementType.TWITCH_DROPS)
-			enumValName = Entitlement_GetTwitchPrimeRef( entitl                                                                                                                                                                                                                                                 
+			enumValName = Entitlement_GetTwitchPrimeRef( entitlementFlav )
+
+		if ( enumValName == entitlementEnumName )
+		{
+			asset entitlementAsset = ItemFlavor_GetAsset( entitlementFlav )
+			OpenEntitlementMenu( entitlementAsset )
+		}
+	}
+}
+#endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
