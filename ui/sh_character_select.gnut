@@ -512,26 +512,12 @@ void function ClientToUI_UpdateHighlightedCharacter( string charGuid )
 
 
 
+
+
 bool function CharacterSelectSkinSelectionIsEnabled()
 {
 	return GetCurrentPlaylistVarBool( "character_select_do_skin_selection", false )
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -2208,6 +2194,27 @@ void function UI_CloseCharacterSelect()
 		MenuStack_Remove( fileForever.specialCharacterSelect )
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

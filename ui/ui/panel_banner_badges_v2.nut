@@ -171,6 +171,7 @@ ToolTipData function CreateBadgeToolTip( ItemFlavor badge, ItemFlavor ornull cha
 	string badgeHint                          = GladiatorCardBadge_IsCharacterBadge( badge ) ? Localize( "#CHARACTER_BADGE", Localize( ItemFlavor_GetLongName( expect ItemFlavor( character ) ) ) ) : Localize( "#ACCOUNT_BADGE", categoryName )
 
 	bool isGRXBadge = ItemFlavor_GetGRXMode( badge ) == eItemFlavorGRXMode.REGULAR
+	bool parentProvidesDescription = false
 
 	string unlockStatRef = GladiatorCardBadge_GetUnlockStatRef( badge, character )
 	if ( tierDataList.len() > 1 && unlockStatRef != ACCOUNT_BADGE_STAT )
@@ -271,6 +272,13 @@ ToolTipData function CreateBadgeToolTip( ItemFlavor badge, ItemFlavor ornull cha
 								int challengeGoalValue = Challenge_GetGoalVal( parentChallengeFlav, tier )
 								if ( challengeGoalValue > 1 && !Challenge_IsComplete( player, parentChallengeFlav ) )
 									toolTipData.actionHint1 = format( "%s / %s", FormatAndLocalizeNumber( "1", float( challengeProgressvalue ), true ), FormatAndLocalizeNumber( "1", float( challengeGoalValue ), true ) )
+
+								string parentDesc = Challenge_GetDescription( parentChallengeFlav, 0 )
+								if ( parentDesc != "" )
+								{
+									toolTipData.descText = Localize( parentDesc )
+									parentProvidesDescription = true
+								}
 							}
 						}
 					}
@@ -278,7 +286,8 @@ ToolTipData function CreateBadgeToolTip( ItemFlavor badge, ItemFlavor ornull cha
 			}
 		}
 
-		toolTipData.descText = Localize( ItemFlavor_GetShortDescription( badge ) )
+		if ( !parentProvidesDescription )
+			toolTipData.descText = Localize( ItemFlavor_GetShortDescription( badge ) )
 
 		toolTipData.actionHint2 = badgeHint
 	}

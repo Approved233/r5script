@@ -28,11 +28,7 @@ global function Perk_SupportBin_ServerToClient_DisplayOpenedSupportBoxPrompt
 
 
 
-
-global const string LOOT_BIN_SUPPORT_SKIN = "Blue_Turbo"
-
-
-
+global const string LOOT_BIN_SUPPORT_SKIN = "SecretLoot"
 global const string LOOT_BIN_DEFAULT_SKIN = "(default)"
 
 global const float SURVIVAL_ASSISTANCE_COOLDOWN_DURATION = 10.0
@@ -97,6 +93,7 @@ enum SurvivalStatusType
 {
 	SURIVIAL_LOOT_HAS_MRB,
 	SURIVIAL_LOOT_HAS_HS,
+	SURIVIAL_LOOT_HAS_EVAC,
 	SURIVIAL_LOOT_HAS_NONE
 }
 
@@ -336,6 +333,11 @@ bool function SupportBin_ValidateSurvivalNeedAgainstTeamInvetory( )
 	return ( GetCurrentPlaylistVarBool("supportbin_validate_survival_using_team_inventory", false ) )
 }
 
+bool function SupportBin_RemoveSurvivalItemsFromBaseRoll()
+{
+	return ( GetCurrentPlaylistVarBool("supportbin_remove_survival_items", true ) )
+}
+
 
 bool function SupportBin_CanUseSupportBin( entity player, entity lootBin )
 {
@@ -359,6 +361,16 @@ bool function SupportBin_EntityIsSupportBin( entity ent )
 		return false
 	return ent.GetSkin() == ent.GetSkinIndexByName( SUPPORT_LOOT_BIN_SKIN_NAME )
 }
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1693,6 +1705,15 @@ void function Perk_SupportBin_RuiThinkThread( var rui, entity ent )
 	RuiSetFloat( rui, "minAlphaDist", 1500 )
 	RuiSetFloat( rui, "maxAlphaDist", 2000 )
 }
+
+
+
+
+
+
+
+
+
 
 
 

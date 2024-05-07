@@ -330,12 +330,12 @@ void function BuildRankedMatchSummaryDataModel( rtk_behavior self )
 	if (scoreBreakdown.demotionProtectionAdjustment > 0)
 	{
 		ConditionalElement tempCondEle
-		tempCondEle.stringL	= "#RANKED_DEMOTION_PROTECTION_LINE2"
+		tempCondEle.stringL	= "#RANKED_DEMOTION_PROTECTION"
 		tempCondEle.stringR	= scoreBreakdown.demotionProtectionAdjustment
-		tempCondEle.tooltipTitle = "#RANKED_DEMOTION_PROTECTION_LINE2"
+		tempCondEle.tooltipTitle = "#RANKED_DEMOTION_PROTECTION"
 		int tierDemotionPenalty =  GetCurrentPlaylistVarInt ( "ranked_tier_demotion_penality", RANKED_LP_DEMOTION_PENALITY )
 		int playerDemotionProtectionCount = GetDemotionProtectionBuffer ( player )
-		tempCondEle.tooltipBody  = Localize( "#RANKED_DEMOTION_PROTECTION_DESC", playerDemotionProtectionCount, scoreBreakdown.demotionProtectionAdjustment, tierDemotionPenalty )
+		tempCondEle.tooltipBody  = Localize( "#RANKED_DEMOTION_PROTECTION_DESC", scoreBreakdown.demotionProtectionAdjustment, playerDemotionProtectionCount, tierDemotionPenalty )
 		tempCondEle.alternatingBGOffset = altBgOffset
 		extraInfo.totalBonus += scoreBreakdown.demotionProtectionAdjustment
 		extraInfo.conditionals.push(tempCondEle)

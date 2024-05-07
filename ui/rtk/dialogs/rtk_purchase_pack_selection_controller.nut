@@ -103,7 +103,7 @@ void function RTKPurchasePackSelectionPanel_OnDestroy( rtk_behavior self )
 void function SetUpDialogDataModel( rtk_struct packSelectionPanel )
 {
 	RTKPurchasePackSelectionModel model
-	model.eventItemsSection.title = Localize( "#MILESTONE_BUNDLE_EVENT_ITEMS_LABEL" )
+	model.eventItemsSection.title = MilestoneEvent_GetEventItemsRatesSectionHeader( file.activeEvent )
 	model.eventItemsSection.color = <0.83, 0.66, 0.15>
 	model.standardItemsSection.title = Localize( "#MILESTONE_BUNDLE_EVENT_STANDARD_LABEL" )
 	model.standardItemsSection.color = <0.7, 0.7, 0.7>
@@ -117,7 +117,10 @@ void function SetUpDialogDataModel( rtk_struct packSelectionPanel )
 	model.guaranteedInfo = MilestoneEvent_GetGuaranteedPackText( file.activeEvent )
 	model.eventItemsSection.rows = MilestoneEvent_GetEventItemRatesData( file.activeEvent )
 	model.standardItemsSection.rows = MilestoneEvent_GetStandardItemRatesData( file.activeEvent )
-	model.multiItemsSection.rows = MilestoneEvent_GetMultiItemRatesData( file.activeEvent )
+	if ( GRX_EventHasMultiPackOffers( file.activeEvent ) )
+	{
+		model.multiItemsSection.rows = MilestoneEvent_GetMultiItemRatesData( file.activeEvent )
+	}
 	model.priceSection.rows.append( MilestoneEvent_GetPricePackRangesData( file.activeEvent ) )
 	model.infoLines = MilestoneEvent_GetLegalTextData( file.activeEvent )
 	Assert( model.infoLines.len() <= MAX_INFO_SIDES )
@@ -135,64 +138,87 @@ void function SetUpPackSelectionButtonsModel( rtk_struct packSelectionPanel )
 	array<GRXScriptOffer> singlePurchaseOffers = GRX_GetItemDedicatedStoreOffers( MilestoneEvent_GetMainPackFlav( file.activeEvent ), MilestoneEvent_GetFrontPageGRXOfferLocation( file.activeEvent, file.isRestricted ) )
 	array<GRXScriptOffer> multiplePurchaseOffers = GRX_GetItemDedicatedStoreOffers( MilestoneEvent_GetGuaranteedPackFlav( file.activeEvent ), MilestoneEvent_GetFrontPageGRXOfferLocation( file.activeEvent, file.isRestricted ) )
 
-	Assert( singlePurchaseOffers.len() == 1, "RTK Pack Purchase flow only supports ONE [1 pack] offer" )
-	Assert( multiplePurchaseOffers.len() == 1, "RTK Pack Purchase flow only supports ONE [multiple pack] offer" )
-
-	file.singleOffer = singlePurchaseOffers[0]
-	file.multipleOffer = multiplePurchaseOffers[0]
-	Assert( file.singleOffer.prices.len() == 2 )
-	Assert( file.multipleOffer.prices.len() == 1 )
+	Assert( singlePurchaseOffers.len() <= 1, "RTK Pack Purchase flow only supports up to ONE [1 pack] offer" )
+	Assert( multiplePurchaseOffers.len() <= 1, "RTK Pack Purchase flow only supports up to ONE [multiple pack] offer" )
 
 	
 
 	array<RTKPurchasePackSelectionButtonModel> buttonsDataModel
-	
-	RTKPurchasePackSelectionButtonModel singlePremium
 
-	if ( !file.dialogSelectedData.isGift )
+	
+	if ( singlePurchaseOffers.len() > 0 )
 	{
-		singlePremium.price = "%$" + ItemFlavor_GetIcon( GRX_CURRENCIES[GRX_CURRENCY_PREMIUM] ) + "% " + FormatAndLocalizeNumber( "1", float( GRXOffer_GetPremiumPriceQuantity( file.singleOffer ) ), true )
-		int originalPrice = GRXOffer_GetOriginalPremiumPriceQuantity( file.singleOffer )
-		int price = GRXOffer_GetPremiumPriceQuantity( file.singleOffer )
-		if ( originalPrice > 0 )
+		file.singleOffer = singlePurchaseOffers[0]
+		Assert( file.singleOffer.prices.len() <= 2 )
+
+		
+		RTKPurchasePackSelectionButtonModel singlePremium
+
+		if ( !file.dialogSelectedData.isGift )
 		{
-			singlePremium.discount = int( (float((originalPrice - price )) / float(originalPrice)) * 100 )
-			singlePremium.originalPrice = "%$" + ItemFlavor_GetIcon( GRX_CURRENCIES[GRX_CURRENCY_PREMIUM] ) + "% " + FormatAndLocalizeNumber( "1", float(originalPrice), true )
+			singlePremium.price = "%$" + ItemFlavor_GetIcon( GRX_CURRENCIES[GRX_CURRENCY_PREMIUM] ) + "% " + FormatAndLocalizeNumber( "1", float( GRXOffer_GetPremiumPriceQuantity( file.singleOffer ) ), true )
+			int originalPrice = GRXOffer_GetOriginalPremiumPriceQuantity( file.singleOffer )
+			int price = GRXOffer_GetPremiumPriceQuantity( file.singleOffer )
+			if ( originalPrice > 0 )
+			{
+				singlePremium.discount = int( (float((originalPrice - price )) / float(originalPrice)) * 100 )
+				singlePremium.originalPrice = "%$" + ItemFlavor_GetIcon( GRX_CURRENCIES[GRX_CURRENCY_PREMIUM] ) + "% " + FormatAndLocalizeNumber( "1", float(originalPrice), true )
+			}
+		}
+		singlePremium.packQuantity = 1
+		buttonsDataModel.append( singlePremium )
+
+		
+		if ( !file.dialogSelectedData.isGift )
+		{
+			int craftingPrice = GRXOffer_GetCraftingPriceQuantity( file.singleOffer )
+			if ( craftingPrice >= 0 )
+			{
+				RTKPurchasePackSelectionButtonModel singleCraft
+				singleCraft.price = "%$" + ItemFlavor_GetIcon( GRX_CURRENCIES[GRX_CURRENCY_CRAFTING] ) + "% " + FormatAndLocalizeNumber( "1", float( craftingPrice ), true )
+				singleCraft.packQuantity = 1
+				buttonsDataModel.append( singleCraft )
+			}
 		}
 	}
-	singlePremium.packQuantity = 1
-	buttonsDataModel.append( singlePremium )
 
 	
-	RTKPurchasePackSelectionButtonModel multiplePremium
-	if ( !file.dialogSelectedData.isGift )
+	if ( multiplePurchaseOffers.len() > 0 )
 	{
-		multiplePremium.price = "%$" + ItemFlavor_GetIcon( GRX_CURRENCIES[GRX_CURRENCY_PREMIUM] ) + "% " + FormatAndLocalizeNumber( "1", float( GRXOffer_GetPremiumPriceQuantity( file.multipleOffer ) ), true )
-		int originalPrice = GRXOffer_GetOriginalPremiumPriceQuantity( file.multipleOffer )
-		int price = GRXOffer_GetPremiumPriceQuantity( file.multipleOffer )
-		if ( originalPrice > 0 )
+		file.multipleOffer = multiplePurchaseOffers[0]
+		Assert( file.multipleOffer.prices.len() == 1 )
+
+		
+		RTKPurchasePackSelectionButtonModel multiplePremium
+		if ( !file.dialogSelectedData.isGift )
 		{
-			multiplePremium.discount = int( (float((originalPrice - price )) / float(originalPrice)) * 100 )
-			multiplePremium.originalPrice = "%$" + ItemFlavor_GetIcon( GRX_CURRENCIES[GRX_CURRENCY_PREMIUM] ) + "% " + FormatAndLocalizeNumber( "1", float(originalPrice), true )
+			multiplePremium.price = "%$" + ItemFlavor_GetIcon( GRX_CURRENCIES[GRX_CURRENCY_PREMIUM] ) + "% " + FormatAndLocalizeNumber( "1", float( GRXOffer_GetPremiumPriceQuantity( file.multipleOffer ) ), true )
+			int originalPrice = GRXOffer_GetOriginalPremiumPriceQuantity( file.multipleOffer )
+			int price = GRXOffer_GetPremiumPriceQuantity( file.multipleOffer )
+			if ( originalPrice > 0 )
+			{
+				multiplePremium.discount = int( (float((originalPrice - price )) / float(originalPrice)) * 100 )
+				multiplePremium.originalPrice = "%$" + ItemFlavor_GetIcon( GRX_CURRENCIES[GRX_CURRENCY_PREMIUM] ) + "% " + FormatAndLocalizeNumber( "1", float(originalPrice), true )
+			}
 		}
-	}
-	multiplePremium.packQuantity = 4
-	buttonsDataModel.append( multiplePremium )
-
-	
-	if ( !file.dialogSelectedData.isGift )
-	{
-		RTKPurchasePackSelectionButtonModel singleCraft
-		singleCraft.price = "%$" + ItemFlavor_GetIcon( GRX_CURRENCIES[GRX_CURRENCY_CRAFTING] ) + "% " + FormatAndLocalizeNumber( "1", float( GRXOffer_GetCraftingPriceQuantity( file.singleOffer ) ), true )
-		singleCraft.packQuantity = 1
-		buttonsDataModel.append( singleCraft )
+		multiplePremium.packQuantity = 4
+		buttonsDataModel.append( multiplePremium )
 	}
 
 	rtk_array packSelectionButtonData = RTKStruct_GetOrCreateScriptArrayOfStructs( packSelectionPanel, "buttonData", "RTKPurchasePackSelectionButtonModel" )
 	RTKArray_SetValue( packSelectionButtonData, buttonsDataModel )
 
-	
-	file.dialogSelectedData.offer = file.singleOffer
+	if ( IsValid( file.singleOffer ) )
+	{
+		
+		file.dialogSelectedData.offer = file.singleOffer
+	}
+	else if ( IsValid( file.multipleOffer ) )
+	{
+		
+		file.dialogSelectedData.offer = file.multipleOffer
+	}
+
 	file.dialogSelectedData.price = GetSelectedPriceList()[0]
 	UpdatePurchaseButtonData()
 }
@@ -211,18 +237,27 @@ void function SetUpPackSelectionButtons( rtk_behavior self, rtk_struct packSelec
 				self.AutoSubscribe( button, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( self, newChildIndex, packSelectionPanel  ) {
 					if ( newChildIndex == 0 )
 					{
-						file.dialogSelectedData.offer = file.singleOffer
-						file.dialogSelectedData.price = GetSelectedPriceList()[0]
+						if ( IsValid( file.singleOffer ) )
+						{
+							file.dialogSelectedData.offer = file.singleOffer
+							file.dialogSelectedData.price = GetSelectedPriceList()[0]
+						}
 					}
 					else if ( newChildIndex == 1 )
 					{
-						file.dialogSelectedData.offer = file.multipleOffer
-						file.dialogSelectedData.price = GetSelectedPriceList()[0]
+						if ( IsValid( file.multipleOffer ) )
+						{
+							file.dialogSelectedData.offer = file.multipleOffer
+							file.dialogSelectedData.price = GetSelectedPriceList()[0]
+						}
 					}
 					else if ( newChildIndex == 2 && !file.dialogSelectedData.isGift )
 					{
-						file.dialogSelectedData.offer = file.singleOffer
-						file.dialogSelectedData.price = GetSelectedPriceList()[1]
+						if ( IsValid( file.singleOffer ) )
+						{
+							file.dialogSelectedData.offer = file.singleOffer
+							file.dialogSelectedData.price = GetSelectedPriceList()[1]
+						}
 					}
 					UpdatePurchaseButtonData()
 				} )
@@ -259,6 +294,12 @@ void function SetUpFooterButtons( rtk_behavior self )
 		}
 		else if( state == ePurchaseDialogButtonState.AVAILABLE )
 		{
+			if ( UI_OperationQueueHasGRXOperations() )
+			{
+				EmitUISound( "menu_deny" )
+				return
+			}
+
 			QueuePackPurchaseOperation()
 		}
 	} )
@@ -341,6 +382,7 @@ void function OnPurchaseOperationFinished( int status, GRXScriptOffer offer, Ite
 		EmitUISound( sound )
 		if ( GetActiveMenu() == file.menu )
 		{
+			MilestoneEvent_PurchasePackDialogOnClose()
 			CloseActiveMenu()
 		}
 	}

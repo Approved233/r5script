@@ -119,8 +119,11 @@ void function EmotesPanel_OnHide( var panel )
 
 	RunClientScript( "ClearBattlePassItem" )
 
-	for ( int i = 0; i < MAX_FAVORED_QUIPS; i++ )
-		RemoveCallback_ItemFlavorLoadoutSlotDidChange_SpecificPlayer( LocalClientEHI(), Loadout_FavoredQuip( GetTopLevelCustomizeContext(), i ), OnFavoredQuipChanged )
+	if ( IsConnected() && IsLobby() && IsLocalClientEHIValid() && IsTopLevelCustomizeContextValid() )
+	{
+		for ( int i = 0; i < MAX_FAVORED_QUIPS; i++ )
+			RemoveCallback_ItemFlavorLoadoutSlotDidChange_SpecificPlayer( LocalClientEHI(), Loadout_FavoredQuip( GetTopLevelCustomizeContext(), i ), OnFavoredQuipChanged )
+	}
 }
 
 void function Tabs_OnChanged( TabDef tabDef )

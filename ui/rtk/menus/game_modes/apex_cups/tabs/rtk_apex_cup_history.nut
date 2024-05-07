@@ -22,7 +22,7 @@ global struct RTKApexCupHistoryModel
 	array< RTKApexCupMatchesInfo > 	infoList
 	array< RTKPlayerDataModel >		playerDataList
 
-	SettingsAssetGUID 	cupId
+	SettingsAssetGUID 	apexCup
 	RTKApexCupTierInfo& tierInfo
 
 	int position = -1
@@ -38,10 +38,12 @@ void function RTKApexCupHistory_OnInitialize( rtk_behavior self )
 
 	rtk_struct apexCupsDataModel = RTKDataModelType_CreateStruct( RTK_MODELTYPE_MENUS, "apexCups", "RTKApexCupHistoryModel" )
 
-	if ( Cups_IsValidCupID(cupId ))
+	if ( Cups_IsValidCupID( cupId ))
 	{
 		CupBakeryAssetData cupBakeryData = Cups_GetCupBakeryAssetDataFromGUID( cupId )
 		bool cupStarted = CalEvent_HasStarted( cupBakeryData.containerItemFlavor, GetUnixTimestamp() )
+
+		RTKStruct_SetInt( apexCupsDataModel, "apexCup", cupId )
 
 		if ( cupStarted && ( Cups_GetPlayersPDataIndexForCupID(  GetLocalClientPlayer() , cupId) != -1 ))
 		{
@@ -49,24 +51,24 @@ void function RTKApexCupHistory_OnInitialize( rtk_behavior self )
 		}
 		else if ( cupStarted == false)
 		{
-			self.Message( "RTKApexCupHistory OnInitialize - Cup Not Started" )
+			self.Message( "OnInitialize - Cup Not Started" )
 			RTKApexCupHistoryModel apexCupHistoryModel
 			apexCupHistoryModel.noMatchesText = "#CUPS_MATCHHISTORY_NOT_STARTED"
-			apexCupHistoryModel.cupId = cupId
+			apexCupHistoryModel.apexCup = cupId
 			RTKStruct_SetValue( apexCupsDataModel, apexCupHistoryModel )
 		}
 		else
 		{
-			self.Message( "RTKApexCupHistory OnInitialize - Player Not Registered To Cup" )
+			self.Message( "OnInitialize - Player Not Registered To Cup" )
 			RTKApexCupHistoryModel apexCupHistoryModel
 			apexCupHistoryModel.noMatchesText = "#CUPS_MATCHHISTORY_NOT_ENTERED"
-			apexCupHistoryModel.cupId = cupId
+			apexCupHistoryModel.apexCup = cupId
 			RTKStruct_SetValue( apexCupsDataModel, apexCupHistoryModel )
 		}
 	}
 	else
 	{
-		self.Warn( "RTKApexCupHistory OnInitialize - Cup ID is invalid" )
+		self.Warn( "OnInitialize - Cup ID is invalid" )
 	}
 }
 
@@ -76,10 +78,12 @@ void function RTKApexCupHistory_GetHistoryData(rtk_behavior self)
 
 	SettingsAssetGUID cupId = RTKApexCupsOverview_GetCupID()
 
+	printt( "RTKApexCupHistory_GetHistoryData Cups_GetSquadCupData Start :" +  cupId )
 	while ( Cups_GetSquadCupData( cupId ) == null)
 	{
 		WaitFrame()
 	}
+	printt( "RTKApexCupHistory_GetHistoryData Cups_GetSquadCupData End :" +  cupId )
 
 	rtk_struct apexCupsDataModel = RTKDataModelType_CreateStruct( RTK_MODELTYPE_MENUS, "apexCups", "RTKApexCupHistoryModel" )
 	RTKApexCupHistoryModel apexCupHistoryModel
@@ -95,19 +99,22 @@ void function RTKApexCupHistory_GetHistoryData(rtk_behavior self)
 
 	array < CupMatchSummary > matchSummaries = cupEntryData.matchSummaryData
 
-	apexCupHistoryModel.infoList       = GetTimelineData( self, cupEntryData )
+	apexCupHistoryModel.infoList = GetTimelineData( self, cupEntryData )
 
 	apexCupHistoryModel.playerDataList = RTKApexCupHistory_GetPlayerBreakdownData( self, cupEntryData, 0 )
 	if ( apexCupHistoryModel.playerDataList.len() == 0 )
 	{
 		
-		apexCupHistoryModel.cupId = cupId
+		apexCupHistoryModel.apexCup = cupId
 		RTKStruct_SetValue( apexCupsDataModel, apexCupHistoryModel )
+
+		printt( "RTKApexCupHistory_GetHistoryData No Matches :" +  cupId )
+
 		return
 	}
 
 	
-	apexCupHistoryModel.cupId = cupId
+	apexCupHistoryModel.apexCup = cupId
 	apexCupHistoryModel.totalMatches = cupData.numMatches
 	apexCupHistoryModel.matchesCompleted = matchSummaries.len()
 	apexCupHistoryModel.position = cupEntryData.currSquadPosition
@@ -118,6 +125,8 @@ void function RTKApexCupHistory_GetHistoryData(rtk_behavior self)
 	InitTimelineButtons( self )
 
 	RTKApexCupGetPlayerTierData(self, cupId)
+
+	printt( "RTKApexCupHistory_GetHistoryData End :" +  cupId )
 }
 
 array< RTKApexCupMatchesInfo > function GetTimelineData( rtk_behavior self,  CupEntry cupEntryData )
@@ -138,12 +147,11 @@ array< RTKApexCupMatchesInfo > function GetTimelineData( rtk_behavior self,  Cup
 		int playerplacement = matchSummaries[i].playerSummaries[0].playerPlacement
 		int placementPoints = Cups_GetPointsForPlacement( cupData, playerplacement )
 		matchInfo.score = matchSummaries[i].squadCalculatedScore + placementPoints
-		matchInfo.matchNumber = (completetedNum ) - i
+		matchInfo.matchNumber = i + 1
 		matchInfo.isLastMatch = i == totalNumMatches - 1
 
 		retInfoList.append(matchInfo)
 	}
-	retInfoList.reverse()
 
 	for ( int i = completetedNum; i < totalNumMatches; i++ )
 	{
@@ -214,7 +222,7 @@ array< RTKPlayerDataModel > function  RTKApexCupHistory_GetPlayerBreakdownData( 
 		int numStats = playerData.statInformation.len()
 
 		RTKSummaryBreakdownRowModel placementRow = RTKApexCupHistory_NewStatCardRow( 0 )
-		placementRow.leftText = Localize( "#CUPS_MATCHHISTORY_PLAYER_STATS_CARD_ROW", Localize ( "#CUPS_POINTS_PLACEMENT" ), playerData.playerPlacement )
+		placementRow.leftText = Localize( "#CUPS_MATCHHISTORY_PLAYER_STATS_CARD_ROW", Localize ( "#CUPS_POINTS_PLACEMENT" ), ( FormatAndLocalizeNumber( "1" , float( playerData.playerPlacement ) , true ) ) )
 		int placementPoints = Cups_GetPointsForPlacement( cupData, playerData.playerPlacement )
 		placementRow.rightText = Localize( "#PLUS_N", FormatAndLocalizeNumber( "1" , float( placementPoints ) , true ) )
 		playerDataModel.summaryList.append( placementRow )
@@ -230,7 +238,7 @@ array< RTKPlayerDataModel > function  RTKApexCupHistory_GetPlayerBreakdownData( 
 			{
 				if ( statPoints.statRef == statInfo.statRef )
 				{
-					newRow.leftText =  Localize( "#CUPS_MATCHHISTORY_PLAYER_STATS_CARD_ROW", Localize ( ShStats_GenerateStatLocStringFromStatRef( statInfo.statRef ) ), statInfo.statChange )
+					newRow.leftText =  Localize( "#CUPS_MATCHHISTORY_PLAYER_STATS_CARD_ROW", Localize ( ShStats_GenerateStatLocStringFromStatRef( statInfo.statRef ) ), ( FormatAndLocalizeNumber( "1" , float( statInfo.statChange ) , true ) ) )
 
 					if ( statInfo.pointsGained != 0 )
 						newRow.rightText =  Localize( "#PLUS_N", FormatAndLocalizeNumber( "1" , float( statInfo.pointsGained  ) , true ) )
@@ -255,9 +263,11 @@ array< RTKPlayerDataModel > function  RTKApexCupHistory_GetPlayerBreakdownData( 
 		else
 			playerDataModel.playerName = userInfo.name
 		playerDataModel.playerHardware = playerData.playerHardware
-		playerDataModel.playerPoints = Localize( "#CUPS_TOTAL_CUP_POINTS_VALUE", totalPlayerPoints.tostring() )
-		playerDataModel.playerAssetPath = CharacterClass_GetGalleryPortrait ( GetItemFlavorByCharacterRef( playerData.playerLegendName ) )
-		playerDataModel.playerLegendName = Localize( "#"+ playerData.playerLegendName + "_NAME" )
+		playerDataModel.playerPoints = Localize( "#CUPS_PLAYER_SUMMARY_POINTS_VALUE", totalPlayerPoints.tostring() )
+
+		ItemFlavor characterItemFlav = GetItemFlavorByCharacterRef( playerData.playerLegendName )
+		playerDataModel.playerAssetPath = CharacterClass_GetGalleryPortrait( characterItemFlav )
+		playerDataModel.playerLegendName = Localize( ItemFlavor_GetLongName( characterItemFlav ))
 
 		retPlayerDataList.append( playerDataModel )
 	}
@@ -285,11 +295,8 @@ RTKSummaryBreakdownRowModel function RTKApexCupHistory_NewStatCardRow( int index
 {
 	RTKSummaryBreakdownRowModel newRow
 	newRow.index 		= index
-	newRow.rowBGAlpha 	= 0.6
 	newRow.leftText 	= "#CUPS_LEADERBOARD_EMPTY_DATA"
 	newRow.rightText 	= "#CUPS_LEADERBOARD_EMPTY_DATA"
-	newRow.rowSize 		= 457
-	newRow.textSize 	= 24
 
 	return newRow
 }

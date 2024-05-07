@@ -18,10 +18,6 @@ global function SurvivalGroundList_LevelInit
 global function IsGroundListMenuOpen
 global function UpdateSurvivalGroundList
 
-
-
-
-
 global function UIToClient_SurvivalGroundListOpened
 global function UIToClient_SurvivalGroundListClosed
 global function UIToClient_SurvivalGroundList_UpdateQuickSwapItem
@@ -126,7 +122,7 @@ struct FileStruct_LifetimeLevel
 		array<PredictedLootActionData>         predictedActions
 		bool                                   predictedActionsDirty = false
 
-
+		bool								   insideNormalRange = false
 
 
 		vector categoryHeaderTextCol
@@ -489,12 +485,18 @@ void function UIToClient_SurvivalGroundListOpened( var menu )
 	HudElem_SetRuiArg( fileLevel.backer, "headerBackgroundImageAlpha", headerBackgroundImageAlpha )
 	HudElem_SetRuiArg( fileLevel.backer, "headerBackgroundImageSize", headerBackgroundImageSize )
 	HudElem_SetRuiArg( fileLevel.backer, "isBlackMarket", isBlackMarket )
+	HudElem_SetRuiArg( fileLevel.backer, "resetAlterAnim", true )
 
 
-
-
-
-
+	if ( deathBox.GetNetworkedClassName() == "prop_death_box" )
+	{
+		thread CheckForDeathboxBreachedByAlterChanged_Thread( deathBox )
+		RemoteDeathboxInteractOnOpenDeathbox( deathBox )
+	}
+	else
+	{
+		HudElem_SetRuiArg( fileLevel.backer, "isBreachedByAlter", false )
+	}
 
 
 	UIToClient_GroundlistOpened()
@@ -513,18 +515,23 @@ void function UIToClient_SurvivalGroundListOpened( var menu )
 
 
 
+void function CheckForDeathboxBreachedByAlterChanged_Thread( entity deathbox )
+{
+	Assert( IsValid( deathbox ) )
 
+	EndSignal( fileLevel.signalDummy, "SurvivalGroundList_Closed" )
+	EndSignal( deathbox, "OnDestroy" )
 
+	while( true )
+	{
+		if ( fileLevel.backer == null )
+			return
 
+		HudElem_SetRuiArg( fileLevel.backer, "isBreachedByAlter", IsDeathboxAccessedByEnemyAlter( deathbox ) )
 
-
-
-
-
-
-
-
-
+		WaitFrame()
+	}
+}
 
 
 
@@ -557,6 +564,7 @@ void function UIToClient_SurvivalGroundListClosed()
 	fileLevel.currentDeathBoxEEH = EncodedEHandle_null
 	DeathBoxListPanel_SetActive( fileLevel.listPanel, false )
 	UIToClient_GroundlistClosed()
+	HudElem_SetRuiArg( fileLevel.backer, "resetAlterAnim", false )
 
 	if ( DoesPlayerHaveWeaponSling( GetLocalViewPlayer() ) )
 		SlingSetIsGroundListMenuOpen()
@@ -585,40 +593,40 @@ void function UpdateSurvivalGroundList( SurvivalGroundListUpdateParams params )
 	bool outOfRange = !IsPlayerCloseEnoughToDeathBoxToLoot(params.player, deathBox)
 
 
-
+		bool needToRefreshItemsDueToRange = false
 
 
 	if ( !IsValid( deathBox ) || outOfRange || GetGameState() >= eGameState.WinnerDetermined || GetLocalViewPlayer().ContextAction_IsReviving() )
 	{
 
-
+		fileLevel.insideNormalRange = false
 
 		RunUIScript( "CloseAllMenus" )
 		return
 	}
 
 
+	if ( DistanceSqr( params.player.GetOrigin(), deathBox.GetOrigin() ) < ( DEATH_BOX_MAX_DIST * DEATH_BOX_MAX_DIST ) )
+	{
+		if ( !fileLevel.insideNormalRange )
+		{
+			needToRefreshItemsDueToRange = true
+		}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+		fileLevel.insideNormalRange = true
+		HudElem_SetRuiArg( fileLevel.backer, "isAlterPassive", false )
+	}
+	else
+	{
+		
+		if ( fileLevel.insideNormalRange && fileLevel.deathBoxEntryDataByLootEnt.len() != 0 )
+		{
+			RunUIScript( "CloseAllMenus" )
+			return
+		}
+		fileLevel.insideNormalRange = false
+		HudElem_SetRuiArg( fileLevel.backer, "isAlterPassive", true )
+	}
 
 
 	float maxPredictedPickupTimeBeforeAssumingMispredict = GetCurrentPlaylistVarFloat( "death_box_menu_max_predicted_pickup_time", 0.55 )
@@ -671,15 +679,15 @@ void function UpdateSurvivalGroundList( SurvivalGroundListUpdateParams params )
 				entriesToUpdateSet[entryData] <- IN_SET
 			}
 
-
-
-
-
-
-
-
-
-
+			if ( needToRefreshItemsDueToRange )
+			{
+				LootData lootFlavor = SURVIVAL_Loot_GetLootDataByIndex( lootEnt.GetSurvivalInt() )
+				if (lootFlavor.lootType == eLootType.ARMOR)
+				{
+					DeathBoxEntryData entryData = fileLevel.deathBoxEntryDataByLootEnt[lootEnt]
+					entriesToUpdateSet[entryData] <- IN_SET
+				}
+			}
 
 			continue
 		}
@@ -812,12 +820,12 @@ void function UpdateSurvivalGroundList( SurvivalGroundListUpdateParams params )
 			deathBoxBlocked = true
 
 
-
-
-
-
-
-
+		if ( !isBlackMarket && !fileLevel.insideNormalRange && !CanPlayerRemoteInteractWithDeathbox( GetLocalClientPlayer(), deathBox ) )
+		{
+			deathBoxBlocked = true
+			RunUIScript( "CloseAllMenus" )
+			return
+		}
 
 
 		specialStateSamenessKey += "|" + (deathBoxBlocked ? "blocked" : "usable")
@@ -1448,18 +1456,18 @@ void function UpdateItem( DeathBoxListPanelItem item )
 	entryData.isClickable = entryData.isUsable && !entryData.isBlocked && ( entryData.isRelevant || isBackpackItem )
 
 
+	if ( !fileLevel.insideNormalRange )
+	{
+		if ( isArmor && !RemoteDeathboxInteractAllowTakingArmor() )
+		{
+			entryData.isBlocked = true
+		}
 
-
-
-
-
-
-
-
-
-
-
-
+		if ( isMainWeapon && !RemoteDeathboxInteractAllowTakingGuns() )
+		{
+			entryData.isBlocked = true
+		}
+	}
 
 
 	Hud_SetEnabled( button, true )
@@ -1470,6 +1478,11 @@ void function UpdateItem( DeathBoxListPanelItem item )
 	RuiSetBool( rui, "isDimmed", (fileLevel.currentQuickSwapEntry != null && fileLevel.currentQuickSwapEntry != entryData) )
 	RuiSetBool( rui, "isBlocked", entryData.isBlocked )
 	RuiSetBool( rui, "isClickable", entryData.isClickable )
+
+
+
+
+
 
 	if(bestLootEnt != null && isArmor)
 	{
@@ -1742,16 +1755,18 @@ void function PerformItemAction( DeathBoxListPanelItem item, bool isAltAction, b
 	DeathBoxEntryData entryData = fileLevel.deathBoxEntryDataByKey[item.key]
 	if ( !entryData.isClickable )
 		return
+
 	LootData lootFlavor = entryData.lootFlav
-	entity bestLootEnt  = (entryData.lootEnts.len() > 0 && IsValid( entryData.lootEnts[0] ) ? entryData.lootEnts[0] : null)
-	
-	
+	entity bestLootEnt  = ( entryData.lootEnts.len() > 0 && IsValid( entryData.lootEnts[0] ) ? entryData.lootEnts[0] : null )
+
+	if( !IsValid( bestLootEnt ) )
+		return
 
 	entity deathBox    = GetEntityFromEncodedEHandle( fileLevel.currentDeathBoxEEH )
 	bool isBlackMarket = false
 	bool needExtendedUse = false
 
-
+	bool remoteInteracting = false
 
 	if ( IsValid( deathBox ) )
 	{
@@ -1778,18 +1793,18 @@ void function PerformItemAction( DeathBoxListPanelItem item, bool isAltAction, b
 			}
 		}
 
-
-
-
-
+		else if ( !IsPlayerWithinStandardDeathBoxUseDistance( player, deathBox ) )
+		{
+			remoteInteracting = true
+		}
 
 	}
 
 	int count = SURVIVAL_GetInventorySlotCountForPlayer( player, entryData.lootFlav )
 
+	if ( entryData.lootFlav.lootType == eLootType.AMMO && !isBlackMarket && !remoteInteracting )
 
 
-	if ( entryData.lootFlav.lootType == eLootType.AMMO && !isBlackMarket )
 
 	{
 		int countToFillStack = SURVIVAL_GetCountToFillStack( player, entryData.lootFlav.ref )
@@ -1998,14 +2013,6 @@ void function SendItemActionCommand( DeathBoxEntryData entryData, int count, ent
 	if ( actionType == eLootAction.PICKUP || actionType == eLootAction.PICKUP_ALL || actionType == eLootAction.SWAP )
 	{
 		array<ConsumableInventoryItem> predictedInventory = GetPredictedInventory()
-
-		
-		
-		
-		
-		
-		
-
 		int inventoryLimit = SURVIVAL_GetInventoryLimit( localPlayer )
 		int numAdded       = SURVIVAL_AddToInventory( predictedInventory, inventoryLimit, entryData.lootFlav, plad.count, SURVIVAL_GetInventorySlotCountForPlayer( localPlayer, entryData.lootFlav ), true )
 		plad.count = numAdded

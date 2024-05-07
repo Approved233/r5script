@@ -1,6 +1,8 @@
+globalize_all_functions
 
-
-
+#if !DEV
+unreachable 
+#endif
 
 const array< string > BASE_ITEMFLAV_TYPES =
 [
@@ -208,3 +210,19 @@ const array< string > MELEE_WEAPON_ITEM_TYPES =
 
 
 
+
+void function DEV_PrintItemFlavorsOfType( int itemFlavType = eItemType.account_pack )
+{
+	
+
+	foreach ( ItemFlavor itemFlav in GetAllItemFlavorsOfType( itemFlavType ) )
+	{
+		printt( ItemFlavor_GetAsset( itemFlav ), ItemFlavor_GetGUIDString( itemFlav ) )
+
+		if ( itemFlavType == eItemType.account_pack )
+		{
+			array< ItemFlavor > packContents = GRXPack_GetPackContents( itemFlav )
+			printt( "\tPackContentsCount", packContents.len() )
+		}
+	}
+}

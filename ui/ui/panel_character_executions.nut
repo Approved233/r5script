@@ -180,7 +180,7 @@ void function ExecutionButtonUpdateFunc( ItemFlavor executionFlav, var rui )
 
 array<ItemFlavor> function GetExecutionsListForCharacterLoadout( LoadoutEntry loadoutEntry)
 {
-	array<ItemFlavor> list = GetLoadoutItemsSortedForMenu( [loadoutEntry], CharacterExecution_GetSortOrdinal )
+	array<ItemFlavor> list = GetLoadoutItemsSortedForMenu( [loadoutEntry], CharacterExecution_GetSortOrdinal, null, [] )
 
 	
 	foreach ( int flavIdx, ItemFlavor flav in list )

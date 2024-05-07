@@ -19,6 +19,10 @@ struct
 	ItemFlavor& currentWeapon
 	ItemFlavor& currentWeaponSkin
 	bool charmsMenuActive = false
+	array< ItemFlavor > weaponCharmListCache
+	table< ItemFlavor, ItemFlavor > charmToWeaponMap
+	string collectedCountString = ""
+	bool grxCallbackAdded = false
 } file
 
 
@@ -43,7 +47,6 @@ void function InitWeaponCharmsPanel( var panel )
 
 	pd.listPanel = Hud_GetChild( panel, "WeaponCharmList" )
 
-
 	AddPanelEventHandler( panel, eUIEvent.PANEL_SHOW, WeaponCharmsPanel_OnShow )
 	AddPanelEventHandler( panel, eUIEvent.PANEL_HIDE, WeaponCharmsPanel_OnHide )
 	AddPanelEventHandler_FocusChanged( panel, WeaponCharmsPanel_OnFocusChanged )
@@ -67,6 +70,12 @@ void function InitWeaponCharmsPanel( var panel )
 			}
 	)
 
+	if ( !file.grxCallbackAdded )
+	{
+		AddUICallback_OnLevelInit(  AddLevelInitUICallback_ClearCharmListCache ) 
+		file.grxCallbackAdded = true 
+	}
+
 #if PC_PROG_NX_UI
 		AddPanelFooterOption( panel, LEFT, BUTTON_Y, false, "#Y_BUTTON_SET_FAVORITE", "#Y_BUTTON_SET_FAVORITE", func, CustomizeMenus_IsFocusedItemFavoriteable )
 		AddPanelFooterOption( panel, LEFT, BUTTON_Y, false, "#Y_BUTTON_CLEAR_FAVORITE", "#Y_BUTTON_CLEAR_FAVORITE", func, CustomizeMenus_IsFocusedItemFavorite )
@@ -82,6 +91,18 @@ void function WeaponCharmsPanel_OnShow( var panel )
 	UI_SetPresentationType( ePresentationType.WEAPON_CHARMS )
 
 	file.currentPanel = panel
+
+	file.charmToWeaponMap.clear()
+	foreach ( ItemFlavor weaponFlav in GetAllWeaponItemFlavors() )
+	{
+		LoadoutEntry entry   = Loadout_WeaponCharm( weaponFlav )
+		ItemFlavor charmFlav = LoadoutSlot_GetItemFlavor( LocalClientEHI(), entry )
+		if ( !WeaponCharm_IsTheEmpty( charmFlav ) )
+		{
+			charmFlav.loadoutSortPriority = charmFlav.loadoutSortPriority | eLoadoutSortPriority.EQUIPPED
+			file.charmToWeaponMap[ charmFlav ] <- weaponFlav
+		}
+	}
 
 	thread TrackIsOverScrollBar( file.panelDataMap[panel].listPanel )
 	WeaponCharmsPanel_Update( panel )
@@ -148,9 +169,36 @@ void function WeaponCharmsPanel_Update( var panel )
 		bool ignoreDefaultItemForCount
 		bool shouldIgnoreOtherSlots
 
-
 		entry = Loadout_WeaponCharm( file.currentWeapon )
-		pd.weaponCharmList = GetLoadoutItemsSortedForMenu( [entry], WeaponCharm_GetSortOrdinal )
+
+		if ( file.weaponCharmListCache.len() == 0 )
+			file.weaponCharmListCache = clone GetLoadoutItemsSortedForMenu( [entry], WeaponCharm_GetSortOrdinal, null, [] )
+
+		if ( file.collectedCountString == "" )
+			file.collectedCountString = CustomizeMenus_GetCollectedString( entry, file.weaponCharmListCache, true, true )
+
+		pd.weaponCharmList = clone file.weaponCharmListCache
+
+		ItemFlavor emptyCharm = entry.defaultItemFlavor
+		Assert ( WeaponCharm_IsTheEmpty( emptyCharm ) )
+		emptyCharm.loadoutSortPriority = emptyCharm.loadoutSortPriority & ~eLoadoutSortPriority.EQUIPPED 
+		pd.weaponCharmList.removebyvalue( emptyCharm )
+
+		ItemFlavor equippedCharm = LoadoutSlot_GetItemFlavor( LocalClientEHI(), entry )
+		pd.weaponCharmList.removebyvalue( equippedCharm )
+		equippedCharm.loadoutSortPriority = equippedCharm.loadoutSortPriority | eLoadoutSortPriority.EQUIPPED
+
+		foreach ( charm, weapon in file.charmToWeaponMap )
+		{
+			pd.weaponCharmList.removebyvalue( charm )
+			if ( weapon != file.currentWeapon )
+				pd.weaponCharmList.insert( 0, charm )
+		}
+
+		pd.weaponCharmList.insert( 0, emptyCharm )
+		if ( equippedCharm != emptyCharm )
+			pd.weaponCharmList.insert( 0, equippedCharm )
+
 		itemList = pd.weaponCharmList
 		previewFunc = PreviewWeaponCharm
 		customButtonUpdateFunc = (void function( ItemFlavor charmFlav, var rui )
@@ -158,17 +206,15 @@ void function WeaponCharmsPanel_Update( var panel )
 			
 			asset img = $""
 
-			ItemFlavor ornull weaponFlavorOrNull = GetWeaponThatCharmIsCurrentlyEquippedToForPlayer( ToEHI( GetLocalClientPlayer() ), charmFlav )
-			if ( weaponFlavorOrNull != null )
+			if ( charmFlav in file.charmToWeaponMap )
 			{
-				ItemFlavor weaponFlavorThatCharmIsEquippedTo = expect ItemFlavor( weaponFlavorOrNull )
+				ItemFlavor weaponFlavorThatCharmIsEquippedTo = file.charmToWeaponMap[ charmFlav ]
 				if ( weaponFlavorThatCharmIsEquippedTo != file.currentWeapon )
 				{
 					img = WeaponItemFlavor_GetHudIcon( weaponFlavorThatCharmIsEquippedTo )
 					RuiSetBool( rui, "isEquipped", false ) 
 				}
 			}
-
 
 			RuiSetAsset( rui, "equippedCharmWeaponAsset", img )
 		})
@@ -198,11 +244,8 @@ void function WeaponCharmsPanel_Update( var panel )
 			})
 			OpenConfirmDialogFromData( data )
 		})
-		ignoreDefaultItemForCount = true
-		shouldIgnoreOtherSlots = true
 
-
-		RuiSetString( pd.ownedRui, "collected", CustomizeMenus_GetCollectedString( entry, itemList, ignoreDefaultItemForCount, shouldIgnoreOtherSlots ) )
+		RuiSetString( pd.ownedRui, "collected", file.collectedCountString )
 
 		Hud_InitGridButtons( pd.listPanel, itemList.len() )
 
@@ -258,4 +301,15 @@ void function PreviewWeaponCharm( ItemFlavor charmFlavor )
 		}
 	}
 	RunClientScript( "UIToClient_PreviewWeaponSkin", weaponSkinId, weaponCharmId, shouldHighlightWeapon )
+}
+
+void function AddLevelInitUICallback_ClearCharmListCache()
+{
+	AddCallback_OnGRXInventoryStateChanged( ClearCharmListCache )
+}
+
+void function ClearCharmListCache()
+{
+	file.weaponCharmListCache.clear()
+	file.collectedCountString = ""
 }

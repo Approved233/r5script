@@ -899,7 +899,9 @@ void function SocialMenu_OnShow()
 
 void function ForceSocialMenuUpdate()
 {
-	printt( "ForceSocialMenuUpdate" )
+	if( s_socialFile.eadpQueryDataMap[eEADPQuery.FRIENDS].queryState != eEADPQueryState.INVALID)
+		printt( "ForceSocialMenuUpdate  queryState moving to INVALID" ) 
+
 	s_socialFile.eadpQueryDataMap[eEADPQuery.FRIENDS].queryState = eEADPQueryState.INVALID
 }
 
@@ -1758,7 +1760,7 @@ void function FriendButton_OnJoin( var panel, var button, int index )
 
 	if ( CurrentlyInParty() )
 	{
-		if ( GetParty().numFreeSlots == 0 )
+		if ( GetParty().numFreeSlots == 0 || ( GetConVarBool( "party_bringParty_leadersOnly" ) && !AmIPartyLeader() ) )
 		{
 			ConfirmDialogData data
 			data.headerText     = "#LEAVE_PARTY"
@@ -2730,7 +2732,16 @@ void function OnUserReport(var button)
 	string friendNucleusID = GetFriendNucleusID( s_socialFile.actionFriend )
 	if( friendNucleusID != "" )
 	{
-		ClientToUI_ShowReportPlayerDialog( s_socialFile.actionFriend.name, GetHardwareFromName( s_socialFile.actionFriend.hardware ),
+		printt( "OnUserReport hardware:", s_socialFile.actionFriend.hardware )
+		printt( "OnUserReport unspoofedHardware:", s_socialFile.actionFriend.unspoofedHardware )
+
+		int hardwareID = GetHardwareFromName( s_socialFile.actionFriend.hardware )
+		if( s_socialFile.actionFriend.unspoofedHardware != "" )
+		{
+			hardwareID = GetHardwareFromName( s_socialFile.actionFriend.unspoofedHardware )
+		}
+
+		ClientToUI_ShowReportPlayerDialog( s_socialFile.actionFriend.name, hardwareID,
 			s_socialFile.actionFriend.id, friendNucleusID, "friendly" ) 
 	}
 }

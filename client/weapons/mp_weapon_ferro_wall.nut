@@ -162,9 +162,9 @@ const float FERRO_WALL_PILLAR_DELAY_FORWARD = 0.05
 const float FERRO_WALL_PILLAR_DELAY_HORIZONTAL = FERRO_WALL_PILLAR_DELAY_FORWARD * 2
 const float FERRO_WALL_PILLAR_SCALE_TIME = 0.6
 const float FERRO_WALL_PILLAR_DESCALE_TIME = 0.85
-const int FERRO_WALL_NUM_PILLARS_FORWARD = 18
+const int FERRO_WALL_NUM_PILLARS_FORWARD = 20
 
-const int UPGRADE_FERRO_WALL_NUM_PILLARS_FORWARD = 24
+const int UPGRADE_FERRO_WALL_NUM_PILLARS_FORWARD = 27
 
 const int FERRO_WALL_NUM_PILLARS_HORIZONTAL_PER_SIDE = 8
 const float FERRO_WALL_PILLAR_HEALTH = 125
@@ -721,17 +721,17 @@ vector function GetProjectileVelocity_weapon_ferro_wall( entity projectile, floa
 bool function FerroWall_BlockScan( vector startPos, vector endPos )
 {
 
+	TraceResults traceResult = TraceLine( startPos, endPos, [], CONTENTS_BLOCKSCAN, TRACE_COLLISION_GROUP_NONE, null, true )
+
+	bool retVal = ( traceResult.fraction < 1.0 )
+
+	return retVal
 
 
 
 
 
 
-	entity ent = TraceGetTargetNameEntAlongLine( FERRO_WALL_SEGMENT_TARGET_NAME, startPos, endPos )
-	if ( IsValid( ent ) )
-		return ent.GetTargetName() == FERRO_WALL_SEGMENT_TARGET_NAME
-
-	return false
 
 }
 

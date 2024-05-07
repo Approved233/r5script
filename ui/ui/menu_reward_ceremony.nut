@@ -107,7 +107,7 @@ void function ShowRewardCeremonyDialog( string headerText, string titleText, str
 		}
 	}
 
-	MilestoneEvent_SetMilestoneRewardCeremonyDue( false )
+	MilestoneEvent_DecrementMilestoneRewardCeremonyCount()
 }
 
 #if DEV
@@ -160,14 +160,14 @@ void function ShowGiftCeremonyDialog( string headerText, string titleText, strin
 
 	file.activeGiftIndex = 0
 	file.highestIndex = 0
-	array<GRXScriptInboxMessage> AllGifts = PromoDialog_GetAllGifts()
+	array<GRXContainerInfo> AllGifts = PromoDialog_GetAllGifts()
 
 	file.isCurrentGiftBattlepass = false
 	file.isCurrentGiftCharacter = false
 
 	CheckForCharacterOrBattlepass()
 
-	GRX_MarkGiftItemsAsSeen( AllGifts[0].timestamp, AllGifts[0].itemIndex )
+	GRX_MarkContainerAsSeen( AllGifts[0] )
 
 	file.isGift = true
 	file.isForBattlePass = true
@@ -240,10 +240,10 @@ void function ChangeGift( int delta )
 
 	EmitUISound( "UI_Menu_MOTD_Tab" )
 
-	array<GRXScriptInboxMessage> AllGifts = PromoDialog_GetAllGifts()
+	array<GRXContainerInfo> AllGifts = PromoDialog_GetAllGifts()
 	array<ItemFlavor> items
 
-	foreach( int index in AllGifts[file.activeGiftIndex].itemIndex )
+	foreach( int index in AllGifts[file.activeGiftIndex].itemIndices )
 	{
 		items.append( GetItemFlavorByGRXIndex( index ) )
 	}
@@ -255,7 +255,7 @@ void function ChangeGift( int delta )
 		BattlePassReward tempReward
 		tempReward.flav = items[i]
 		tempReward.isPremium = false
-		tempReward.quantity = AllGifts[ file.activeGiftIndex ].itemCount[i]
+		tempReward.quantity = AllGifts[ file.activeGiftIndex ].itemCounts[i]
 		tempReward.level = -1
 		RewardInput.append( tempReward )
 	}
@@ -271,7 +271,7 @@ void function ChangeGift( int delta )
 
 	file.titleText =  Localize( "#INBOX_REDEMPTION_HEADER",  file.activeGiftIndex + 1,  PromoDialog_GetAllGifts().len() )
 
-	GRX_MarkGiftItemsAsSeen( AllGifts[file.activeGiftIndex].timestamp, AllGifts[file.activeGiftIndex].itemIndex )
+	GRX_MarkContainerAsSeen( AllGifts[file.activeGiftIndex] )
 
 	PassAwardsDialog_UpdateAwards()
 }
@@ -383,7 +383,7 @@ void function ContinueButton_OnActivate( var button )
 
 	if ( file.isGift )
 	{
-		array<GRXScriptInboxMessage> tempGifts = GetGiftingInboxMessages()
+		array<GRXContainerInfo> tempGifts = GetGiftingInboxMessages()
 		if ( tempGifts.len() > 0 )
 		{
 			AdvanceMenu( GetMenu( "PromoDialogUM" ) )

@@ -582,6 +582,33 @@ void function EntitiesDidLoad()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function OnPanelCreated( entity panel )
 {
 	if ( panel.GetScriptName() != EXPLOSIVE_HOLD_PANEL_SCRIPTNAME )

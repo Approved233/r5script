@@ -17,6 +17,7 @@ global function Gifting_LevelInit
 global function Gifting_LevelShutdown
 global function MarkNewGiftedItemsAsNew
 global function GetFriendNameFromNucleusPId
+global function AddGiftCacheMessages
 global function RemoveGiftCacheMessage
 global function ShowGiftErrorDialogue
 global function ShowGiftTimeOutDialogue
@@ -32,7 +33,7 @@ global function DEV_PrintGiftingInboxMessages
 
 
 struct{
-	array<GRXScriptInboxMessage> inboxMessages
+	array<GRXContainerInfo> inboxMessages
 	bool UIisFullyConnected = false
 } file
 
@@ -243,7 +244,16 @@ void function ProcessGiftingInboxMessage( int batchCounter, int totalNumBatches,
 			return
 	}
 
-	file.inboxMessages.append( inboxMessage )
+	
+	GRXContainerInfo containerInfo
+	containerInfo.type = GRX_CONTAINERTYPE_GIFT
+	containerInfo.isNew = inboxMessage.isNew
+	containerInfo.senderNucleusPid = inboxMessage.senderNucleusPid
+	containerInfo.timestamp = inboxMessage.timestamp
+	containerInfo.itemIndices = inboxMessage.itemIndex
+	containerInfo.itemCounts = inboxMessage.itemCount
+
+	file.inboxMessages.append( containerInfo )
 
 	if ( batchCounter == totalNumBatches )
 	{
@@ -252,7 +262,7 @@ void function ProcessGiftingInboxMessage( int batchCounter, int totalNumBatches,
 		file.inboxMessages.sort( SortInboxMessagesByOldest )
 		for ( int i = 0; i < file.inboxMessages.len(); i++ )
 		{
-			file.inboxMessages[i].gifterName = GetFriendNameFromNucleusPId( file.inboxMessages[i].senderNucleusPid, eadFriendlist.people )
+			file.inboxMessages[i].senderName = GetFriendNameFromNucleusPId( file.inboxMessages[i].senderNucleusPid, eadFriendlist.people )
 		}
 
 		
@@ -267,7 +277,7 @@ void function ProcessGiftingInboxMessage( int batchCounter, int totalNumBatches,
 	}
 }
 
-int function SortInboxMessagesByOldest( GRXScriptInboxMessage a, GRXScriptInboxMessage b )
+int function SortInboxMessagesByOldest( GRXContainerInfo a, GRXContainerInfo b )
 {
 	if ( a.timestamp < b.timestamp )
 		return 1
@@ -280,11 +290,23 @@ int function SortInboxMessagesByOldest( GRXScriptInboxMessage a, GRXScriptInboxM
 
 
 
+void function AddGiftCacheMessages( array<GRXContainerInfo> messages )
+{
+	file.inboxMessages.clear()
+
+	foreach ( GRXContainerInfo message in messages )
+	{
+		file.inboxMessages.append( message )
+	}
+}
+
+
+
 void function RemoveGiftCacheMessage( int timestamp, string nID )
 {
 	for ( int i = 0; i < file.inboxMessages.len(); i++ )
 	{
-		GRXScriptInboxMessage message = file.inboxMessages[i]
+		GRXContainerInfo message = file.inboxMessages[i]
 
 		if ( message.senderNucleusPid == nID && message.timestamp == timestamp )
 		{
@@ -297,15 +319,15 @@ void function RemoveGiftCacheMessage( int timestamp, string nID )
 
 
 
-array<GRXScriptInboxMessage> function GetGiftingInboxMessages()
+array<GRXContainerInfo> function GetGiftingInboxMessages()
 {
 	
-	foreach ( GRXScriptInboxMessage message in file.inboxMessages )
-	for ( int i = 0; i < message.itemIndex.len(); i++ )
+	foreach ( GRXContainerInfo message in file.inboxMessages )
+	for ( int i = 0; i < message.itemIndices.len(); i++ )
 	{
-		ItemFlavor flav = GetItemFlavorByGRXIndex( message.itemIndex[i] )
+		ItemFlavor flav = GetItemFlavorByGRXIndex( message.itemIndices[i] )
 		if ( ItemFlavor_IsBattlepass( flav ) )
-			message.itemIndex.remove( i )
+			message.itemIndices.remove( i )
 	}
 	return file.inboxMessages
 }
@@ -332,11 +354,11 @@ void function MarkNewGiftedItemsAsNew()
 	if ( !IsLobby() )
 		return
 
-	foreach ( GRXScriptInboxMessage inboxMessage in file.inboxMessages )
+	foreach ( GRXContainerInfo inboxMessage in file.inboxMessages )
 	{
 		if ( inboxMessage.isNew )
 		{
-			foreach ( int itemIndex in inboxMessage.itemIndex )
+			foreach ( int itemIndex in inboxMessage.itemIndices )
 			{
 				ItemFlavor itemFlav = GetItemFlavorByGRXIndex( itemIndex )
 				Newness_TEMP_MarkItemAsNewAndInformServer( itemFlav )
@@ -357,11 +379,11 @@ void function DEV_PrintGiftingInboxMessages()
 		printt( "\ttimestamp = " + file.inboxMessages[idx].timestamp )
 		printt( "\tsenderNucleusPid = " + file.inboxMessages[idx].senderNucleusPid )
 
-		if ( file.inboxMessages[idx].itemIndex.len() == file.inboxMessages[idx].itemCount.len() )
+		if ( file.inboxMessages[idx].itemIndices.len() == file.inboxMessages[idx].itemCounts.len() )
 		{
-			for ( int itemIdx = 0; itemIdx < file.inboxMessages[idx].itemIndex.len(); ++itemIdx )
+			for ( int itemIdx = 0; itemIdx < file.inboxMessages[idx].itemIndices.len(); ++itemIdx )
 			{
-				printt( "\t\titemIndex = " + file.inboxMessages[idx].itemIndex[itemIdx] + ", itemCount = " + file.inboxMessages[idx].itemCount[itemIdx] )
+				printt( "\t\titemIndex = " + file.inboxMessages[idx].itemIndices[itemIdx] + ", itemCount = " + file.inboxMessages[idx].itemCounts[itemIdx] )
 			}
 		}
 	}

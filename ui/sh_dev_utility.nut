@@ -43,22 +43,6 @@ void function ShDevUtility_Init()
 
 }
 
-void function DEV_PrintItemFlavorsOfType( int itemFlavType = eItemType.account_pack )
-{
-	
-
-	foreach ( ItemFlavor itemFlav in GetAllItemFlavorsOfType( itemFlavType ) )
-	{
-		printt( ItemFlavor_GetAsset( itemFlav ), ItemFlavor_GetGUIDString( itemFlav ) )
-
-		if ( itemFlavType == eItemType.account_pack )
-		{
-			array< ItemFlavor > packContents = GRXPack_GetPackContents( itemFlav )
-			printt( "\tPackContentsCount", packContents.len() )
-		}
-	}
-}
-
 
 
 
@@ -149,6 +133,98 @@ void function PrintIntArray( array<int> arr )
 	foreach ( int index, int intVal in arr )
 		printf( " [%d] - %d", index, intVal )
 }
+
+void function PrintFloatArray( array<float> arr )
+{
+	printf( "%s() - len:%d  %s", FUNC_NAME(), arr.len(), string( arr ) )
+	foreach ( int index, float val in arr )
+		printf( " [%d] - %f", index, val )
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

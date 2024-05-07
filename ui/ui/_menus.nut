@@ -831,14 +831,30 @@ void function UIFullyConnectedInitialization()
 		Perks_Init()
 		Perk_BeaconScan_Init()
 		Perk_ExtraBinLoot_Init()
-		Perk_DefensiveEvoBoost_Init()
 		Perk_CarePackageInsight_Init()
 		Perk_ExtraFirepower_Init()
 		Perk_KillBoostUlt_Init()
 		Perk_SupportLootbin_Init()
 		Perk_MunitionsBox_Init()
 
-	StorePanelCollectionEvent_LevelInit()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		StorePanelCollectionEvent_LevelInit()
+
+
 	StorePanelThemedShopEvent_LevelInit()
 	StorePanelHeirloomShopEvent_LevelInit()
 	Entitlements_LevelInit()
@@ -899,6 +915,9 @@ void function UIFullyConnectedInitialization()
 
 
 
+
+
+
 	LobbyPlaylist_Init()
 	PlayPanel_LevelInit()
 	TreasureBox_SharedInit()
@@ -914,6 +933,9 @@ void function UIFullyConnectedInitialization()
 	ShQuickchat_Init()
 	ShChallenges_LevelInit_PreStats()
 	Sh_Challenge_Sets_Init()
+
+
+
 	AutogenStats_Init()
 
 	Sh_Kepler_Init()
@@ -1012,7 +1034,9 @@ void function UICodeCallback_LevelShutdown()
 
 	Kepler_LevelShutdown()
 
+
 	StorePanelCollectionEvent_LevelShutdown()
+
 	StorePanelThemedShopEvent_LevelShutdown()
 	StorePanelHeirloomShopEvent_LevelShutdown()
 	PlayPanel_LevelShutdown()
@@ -1289,6 +1313,10 @@ void function AdvanceMenu( var newMenu )
 			uiGlobal.menuData[ currentMenu ].loseTopLevelFunc()
 	}
 
+	if ( file.activeMenu != null )
+	{
+		SetLastMenuIDForPIN( Hud_GetHudName( file.activeMenu ) )
+	}
 	MenuStack_Push( newMenu )
 	file.activeMenu = newMenu
 
@@ -1319,12 +1347,15 @@ void function UpdateMenuBlur( var menu )
 	if ( _HasActiveTabPanel( menu ) )
 	{
 		var panel = _GetActiveTabPanel( menu )
-		if ( uiGlobal.panelData[ panel ].panelClearBlur )
+		if ( panel != null && uiGlobal.panelData[ panel ].panelClearBlur )
 			enableBlur = false
 	}
 
-	Hud_SetVisible( Hud_GetChild( menu, "ScreenBlur" ), enableBlur )
-	Hud_SetAboveBlur( menu, enableBlur )
+	if ( Hud_HasChild( menu, "ScreenBlur" ) )
+	{
+		Hud_SetVisible( Hud_GetChild( menu, "ScreenBlur" ), enableBlur )
+		Hud_SetAboveBlur( menu, enableBlur )
+	}
 
 	
 	if ( Hud_HasChild( menu, "DarkenBackground" ) )
@@ -1620,7 +1651,6 @@ void function UICodeCallback_EadpInviteDataChanged()
 
 void function UICodeCallback_EadpFriendsChanged()
 {
-	printt( "UICodeCallback_EadpFriendsChanged" )
 	ForceSocialMenuUpdate()
 }
 
@@ -2200,7 +2230,10 @@ bool function ShouldShowPremiumCurrencyDialog( bool dialogFlow = false, bool res
 	int premiumBalance  = GRXCurrency_GetPlayerBalance( GetLocalClientPlayer(), GRX_CURRENCIES[GRX_CURRENCY_PREMIUM] )
 	int lastSeenBalance =  expect int( GetDialogFlowTablesValueOrPersistence( "lastSeenPremiumCurrency" ) )
 
-	return premiumBalance > lastSeenBalance
+	int exoticBalance  = GRXCurrency_GetPlayerBalance( GetLocalClientPlayer(), GRX_CURRENCIES[GRX_CURRENCY_EXOTIC] )
+	int lastSeenExoticBalance =  expect int( GetDialogFlowTablesValueOrPersistence( "lastSeenExoticCurrency" ) )
+
+	return ( premiumBalance > lastSeenBalance || exoticBalance > lastSeenExoticBalance )
 }
 
 
@@ -2208,14 +2241,28 @@ void function ShowPremiumCurrencyDialog( bool dialogFlow )
 {
 	int premiumBalance  = GRXCurrency_GetPlayerBalance( GetLocalClientPlayer(), GRX_CURRENCIES[GRX_CURRENCY_PREMIUM] )
 	int lastSeenBalance = expect int( GetDialogFlowTablesValueOrPersistence( "lastSeenPremiumCurrency" ) )
+
+	int exoticBalance  = GRXCurrency_GetPlayerBalance( GetLocalClientPlayer(), GRX_CURRENCIES[GRX_CURRENCY_EXOTIC] )
+	int lastSeenExoticBalance = expect int( GetDialogFlowTablesValueOrPersistence( "lastSeenExoticCurrency" ) )
+
 	
-	Assert( premiumBalance > lastSeenBalance )
+	
+
+	Assert( premiumBalance > lastSeenBalance || exoticBalance > lastSeenExoticBalance)
 	Assert( GRX_IsInventoryReady() )
 
-	ItemFlavor currency = GRX_CURRENCIES[GRX_CURRENCY_PREMIUM]
+	ItemFlavor premiumCurrency = GRX_CURRENCIES[GRX_CURRENCY_PREMIUM]
+	ItemFlavor exoticCurrency = GRX_CURRENCIES[GRX_CURRENCY_EXOTIC]
 	ConfirmDialogData dialogData
 	dialogData.headerText = "#RECEIVED_PREMIUM_CURRENCY"
-	dialogData.messageText = Localize( "#RECEIVED_PREMIUM_CURRENCY_DESC", FormatAndLocalizeNumber( "1", float( premiumBalance - lastSeenBalance ), true ), "%$" + ItemFlavor_GetIcon( currency ) + "%" )
+	dialogData.messageText = Localize( "#RECEIVED_PREMIUM_CURRENCY_DESC")
+
+	if ( premiumBalance > lastSeenBalance)
+		dialogData.messageText = dialogData.messageText + FormatAndLocalizeNumber( "1", float( premiumBalance - lastSeenBalance ), true ) + " " + "%$" + ItemFlavor_GetIcon( premiumCurrency ) + "%" + "\n"
+
+	if ( exoticBalance > lastSeenExoticBalance )
+		dialogData.messageText = dialogData.messageText + FormatAndLocalizeNumber( "1", float( exoticBalance - lastSeenExoticBalance ), true ) + " " + "%$" + ItemFlavor_GetIcon( exoticCurrency ) + "%"
+
 	if ( dialogFlow )
 	{
 		dialogData.resultCallback = void function ( int result )
@@ -2225,6 +2272,7 @@ void function ShowPremiumCurrencyDialog( bool dialogFlow )
 	}
 
 	SetDialogFlowPersistenceTables( "lastSeenPremiumCurrency", premiumBalance )
+	SetDialogFlowPersistenceTables( "lastSeenExoticCurrency", exoticBalance )
 
 	Remote_ServerCallFunction( "ClientCallback_lastSeenPremiumCurrency" )
 	OpenOKDialogFromData( dialogData )
@@ -2368,6 +2416,7 @@ void function InitMenus()
 	AddPanel( mainMenu, "MainMenuPanel", InitMainMenuPanel )
 
 	var crossProgressionDialog = AddMenu( "CrossProgressionDialog", $"resource/ui/menus/dialog_cross_progression.menu", InitCrossProgressionDialog )
+	var tabbedModal = AddMenu( "TabbedModal", $"resource/ui/menus/tabbed_modal.menu", RTKTabbedModal_InitTabbedModal )
 
 	
 	
@@ -2381,20 +2430,29 @@ void function InitMenus()
 	AddPanel( lobbyMenu, "PlayPanel", InitPlayPanel )
 
 	var seasonPanel = AddPanel( lobbyMenu, "SeasonPanel", InitSeasonPanel )
-	AddPanel( seasonPanel, "ChallengesPanel", void function( var panel ) : () {
-		InitAllChallengesPanel( panel, false )
-	} )
 	AddPanel( seasonPanel, "QuestPanel", InitQuestPanel )
 	AddPanel( seasonPanel, "PassPanel", InitPassPanel )
 
 	var eventPanel = AddPanel( lobbyMenu, "EventPanel", InitEventPanel )
 	AddPanel( eventPanel, "RTKEventsPanel", InitRTKEventsPanel )
 	AddPanel( eventPanel, "ThemedShopPanel", ThemedShopPanel_Init )
-	AddPanel( eventPanel, "CollectionEventPanel", CollectionEventPanel_Init )
 
-	AddPanel( lobbyMenu, "CharactersPanel", InitCharactersPanel )
+		AddPanel( eventPanel, "CollectionEventPanel", CollectionEventPanel_Init )
+
+
+
+
+
+
+
+		AddPanel( lobbyMenu, "ChallengesPanel", void function( var panel ) : () {
+			InitAllChallengesPanel( panel, false )
+		} )
+
+
 	var armoryPanel = AddPanel( lobbyMenu, "ArmoryPanel", InitArmoryPanel )
 
+	AddPanel( armoryPanel, "CharactersPanel", InitCharactersPanel )
 
 		AddPanel( armoryPanel, "ArmoryWeaponsPanel", InitRTKArmoryCategoriesPanel )
 		AddPanel( armoryPanel, "ArmoryMorePanel", InitRTKArmoryMorePanel )
@@ -2420,13 +2478,19 @@ void function InitMenus()
 		AddPanel( storePanel, "StoreItemShop", InitStoreItemShop )
 
 
+		AddPanel( storePanel, STORE_MYTHIC_SHOP, InitStoreItemShop )
 
-	AddMenu( "VCPopUp", $"resource/ui/menus/dialog_store_vc.menu", InitVCPopUp )
+
+
 	AddMenu( "GiftInfoDialog", $"resource/ui/menus/dialogs/gift_information_dialog.menu", InitGiftInformationDialog )
 	AddMenu( "TwoFactorInfoDialog", $"resource/ui/menus/dialogs/two_factor_information_dialog.menu", InitTwoFactorInformationDialog )
 
 	AddMenu( "StoreInspectMenu", $"resource/ui/menus/store_inspect.menu", InitStoreInspectMenu )
 	AddMenu( "StoreMythicInspectMenu", $"resource/ui/menus/store_mythic_inspect.menu", InitStoreMythicInspectMenu )
+	AddMenu( "ArtifactsInspectMenu", $"resource/ui/menus/artifacts_inspect.menu", InitArtifactsInspectMenu )
+
+	var storeOfferSetItemsMenu = AddMenu( "StoreOfferSetItemsMenu", $"resource/ui/menus/store_offer_set_items.menu", InitStoreOfferSetItemsMenu )
+	AddPanel( storeOfferSetItemsMenu, "StoreOfferSetItemsPanel", InitStoreOfferSetItemsPanel )
 
 	
 	var customMatchDashboard			= AddMenu( "CustomMatchLobbyMenu", $"resource/ui/menus/custom_match_dashboard.menu", InitCustomMatchDashboardMenu )
@@ -2547,8 +2611,8 @@ void function InitMenus()
 		AddPanel( customizeCharacterMenu, "LegendLorePanel", InitRTKLegendLorePanel )
 
 
-			var meleeCustomizationMenu = AddMenu( "MeleeCustomizationMenu", $"resource/ui/menus/dialogs/customize_melee.menu", InitMeleeCustomizationMenu )
-			AddPanel( meleeCustomizationMenu, "MeleeCustomizationPanel", InitMeleeCustomizationPanel )
+			var meleeCustomizationMenu = AddMenu( "MeleeCustomizationMenu", $"resource/ui/menus/customize_melee.menu", InitMeleeCustomizationMenu )
+			
 
 			AddPanel( meleeCustomizationMenu, "ArtifactCustomizationPanel", InitMeleeCustomizationPanel )
 
@@ -2893,6 +2957,9 @@ void function InitMenus()
 	var SweepstakesFlowDialog = AddMenu( "SweepstakesFlowDialog", $"resource/ui/menus/dialog_sweepstakes_flow.menu", InitSweepstakesFlowDialog )
 	var SweepstakesRulesDialog = AddMenu( "SweepstakesRulesDialog", $"resource/ui/menus/dialog_sweepstakes_rules.menu", InitSweepstakesRulesDialog )
 
+	var storeOnlyMilestoneEventsMenu = AddMenu( "StoreOnlyMilestoneEventsMenu", $"resource/ui/menus/store_only_milestone_events.menu", InitStoreOnlyMilestoneEventsMenu )
+	AddPanel( storeOnlyMilestoneEventsMenu, "StoreOnlyMilestoneEventsPanel", InitStoreOnlyMilestoneEventsPanel )
+
 
 
 
@@ -3131,6 +3198,9 @@ void function OpenMenuWrapper( var menu, bool isFirstOpen )
 
 	if ( uiGlobal.menuData[ menu ].getTopLevelFunc != null )
 		uiGlobal.menuData[ menu ].getTopLevelFunc()
+
+	PIN_PageView( Hud_GetHudName( menu ), UITime() - uiGlobal.menuData[ menu ].enterTime, GetLastMenuIDForPIN(), IsDialog( menu ), uiGlobal.menuData[ menu ].pin_metaData )
+	
 
 	uiGlobal.menuData[ menu ].enterTime = UITime()
 

@@ -107,7 +107,7 @@ void function MapMetrics_RegisterNetworking()
 	Remote_RegisterClientFunction( "MapMetrics_ClientEndMapMetrics" )
 	Remote_RegisterClientFunction( "MapMetrics_ClientRecordDataPoint", "entity", "vector", -32000.0, 32000.0, 32, "vector", -200.0, 200.0, 32, "int", -100, 100 )
 
-	Remote_RegisterServerFunction( "MapMetrics_OnClientRecordMetricsData", "int", 0, 600 )
+	Remote_RegisterServerFunction( "MapMetrics_OnClientRecordMetricsData", "int", 0, INT_MAX )
 	Remote_RegisterServerFunction( "MapMetrics_OnClientTakeScreenshot" )
 }
 
@@ -403,6 +403,7 @@ void function MapMetrics_InitFile( int fpsThreshold, int gridSize, array<string>
 {
 	string mapName = GetMapName()
 	string hardware = GetConsoleName()
+	string buildType = GetBuildType()
 	string buildString = GetGameVersion()
 
 	int buildNum = buildString.slice( buildString.find( "#" ) + 1 ).tointeger()
@@ -435,7 +436,7 @@ void function MapMetrics_InitFile( int fpsThreshold, int gridSize, array<string>
 		}
 		file.metricsDataBuffer += "\n"
 
-		file.metricsDataBuffer += format( "%s,%s,%s,%i,%i", hardware, buildString, mapName, fpsThreshold, gridSize )
+		file.metricsDataBuffer += format( "%s,%s,%s,%i,%i", hardware, buildString + " (" + buildType + ")", mapName, fpsThreshold, gridSize )
 		foreach( string category in metricsCategories )
 		{
 			file.metricsDataBuffer += ","

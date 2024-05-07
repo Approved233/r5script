@@ -19,10 +19,10 @@ void function InitCupInfoDialog( var newMenuArg )
 	file.contentElm = Hud_GetChild( menu, "DialogContent" )
 
 	{
-		TabDef pointsTabDef = AddTab( menu, Hud_GetChild( menu, "RTKCupInfoPoints" ), "Points" )
+		TabDef pointsTabDef = AddTab( menu, Hud_GetChild( menu, "RTKCupInfoPoints" ), "#CUPS_POINTS" )
 		SetTabBaseWidth( pointsTabDef, 150 )
 
-		TabDef tiersTabDef = AddTab( menu, Hud_GetChild( menu, "RTKCupInfoTiers" ), "Tiers" )
+		TabDef tiersTabDef = AddTab( menu, Hud_GetChild( menu, "RTKCupInfoTiers" ), "#CUPS_TIERS" )
 		SetTabBaseWidth( tiersTabDef, 150 )
 	}
 
@@ -47,7 +47,7 @@ void function CupInfoDialog_OnOpen()
 	SettingsAssetGUID cupId = RTKApexCupsOverview_GetCupID()
 	CupBakeryAssetData cupData = Cups_GetCupBakeryAssetDataFromGUID( cupId )
 	ItemFlavor cupItemFlav = cupData.containerItemFlavor
-	RuiSetString( Hud_GetRui( file.contentElm ), "messageText", Localize( ItemFlavor_GetLongName( cupItemFlav ) ) )
+	RuiSetString( Hud_GetRui( file.contentElm ), "messageText", Localize( ItemFlavor_GetLongName( cupItemFlav ) ).toupper() )
 
 	EmitUISound( SFX_MENU_OPENED )
 }

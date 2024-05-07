@@ -147,7 +147,7 @@ void function SetRTKDataModel( int index )
 
 string function FeatureTutorial_GetGameModeName()
 {
-	string playlist = GetPlaylist()
+	string playlist = GamemodeUtility_GetPlaylist()
 	return GetPlaylistVarString( playlist, "name", "" )
 }
 
@@ -209,23 +209,12 @@ void function FeatureTutorialDialog_Cancel( var button )
 	CloseActiveMenu()
 }
 
-
-string function GetPlaylist()
-{
-	if ( IsLobby() )
-		return LobbyPlaylist_GetSelectedPlaylist()
-	else
-		return GetCurrentPlaylistName()
-
-	unreachable
-}
-
 string function GetPlaylist_UIRules()
 {
 	if( !IsFullyConnected() )
 		return ""
 
-	return GetPlaylistVarString( GetPlaylist(), "ui_rules", "" )
+	return GetPlaylistVarString( GamemodeUtility_GetPlaylist(), "ui_rules", "" )
 }
 
 bool function FeatureHasTutorialTabs( string feature )

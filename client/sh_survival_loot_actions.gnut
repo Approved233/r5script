@@ -441,7 +441,6 @@ bool function TryPickupSlingWeapon( int action, entity pickup, entity player, in
 
 
 
-
 		var slingPassiveRui = GetSlingPassiveRui()
 		if ( slingPassiveRui != null )
 			RuiSetBool( slingPassiveRui, "hasMainWeapon", true )
@@ -653,6 +652,7 @@ bool function PickupAmmo( entity ammoPickup, entity player, int pickupFlags, ent
 	int ammoType  = AmmoType_GetTypeFromRef( data.ref )
 	int poolMax   = player.AmmoPool_GetCapacity()
 	int poolCount = player.AmmoPool_GetCount( ammoType )
+
 	if ( !IsInfiniteAmmoEnabled() )
 		numToPickup = minint( numToPickup, poolMax - poolCount )
 
@@ -660,6 +660,27 @@ bool function PickupAmmo( entity ammoPickup, entity player, int pickupFlags, ent
 		return false
 
 	int numPickedUp = numToPickup
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -854,6 +875,49 @@ bool function PickupBackpackItem( entity pickup, entity player, int pickupFlags,
 
 	if ( numPickedUp == 0 )
 		return false
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

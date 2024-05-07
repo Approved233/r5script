@@ -140,12 +140,39 @@ void function ConfirmLeaveMatchDialog_Open()
 	}
 
 
+	else if( IsSoloMode() && Survival_Solos_CanLocalPlayerRespawn() && ( gamestate > eGameState.Prematch && gamestate < eGameState.WinnerDetermined ) )
+	{
+		data.messageText = "#SURVIVAL_MODE_SOLOS_ARE_YOU_SURE_YOU_WANT_TO_LEAVE"
+		data.extendedUseYes = true
+		data.yesText = ["#A_BUTTON_HOLD_YES", "#HOLD_YES"]
+	}
+
+
+
+
+
+
+
+
+
+
+
+
 	else if( !file.playerCanBeRespawned && file.playerBannerCanBeCrafted && !file.playerIsAlive && ( gamestate > eGameState.Prematch && gamestate < eGameState.WinnerDetermined ) )
 	{
-
-		data.messageText = "#YOUR_BANNER_CAN_STILL_BE_CRAFTED"
-		data.contextImage = $"rui/menu/character_select/utility/role_support"
-		data.onOpenAudio = "UI_Menu_LeaveMatch_BannerWarning"
+		if ( file.penaltyMayBeActive )
+		{
+			data.messageText = "#YOUR_BANNER_CAN_STILL_BE_CRAFTED_LEAVE_PENALTY"
+			data.extendedUseYes = true
+			data.yesText = ["#A_BUTTON_HOLD_YES", "#HOLD_YES"]
+			data.timePenaltyWarning = float( file.penaltyLength )
+		}
+		else
+		{
+			data.messageText = "#YOUR_BANNER_CAN_STILL_BE_CRAFTED"
+			data.contextImage = $"rui/menu/character_select/utility/role_support"
+			data.onOpenAudio = "UI_Menu_LeaveMatch_BannerWarning"
+		}
 	}
 
 	else if ( file.penaltyMayBeActive )

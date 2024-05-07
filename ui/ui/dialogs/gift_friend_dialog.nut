@@ -288,7 +288,7 @@ void function Gifting_AlphabetizeFriends()
 
 void function GiftPurchase_OnActive( var button )
 {
-	if ( Hud_IsLocked( button ) )
+	if ( Hud_IsLocked( button ) || UI_OperationQueueHasGRXOperations() )
 	{
 		EmitUISound( "menu_deny" )
 		return
@@ -341,8 +341,11 @@ void function FriendButton_OnActivate( var button )
 
 	string alias = file.originalOffer.offerAlias
 
-	if ( activeFriend.activePresence.hardware == HARDWARE_PC_STEAM )
-		activeFriend.activePresence.hardware = HARDWARE_PC
+	if( !GetConVarBool( "steam_useProperHardware" ) )
+	{
+		if ( activeFriend.activePresence.hardware == HARDWARE_PC_STEAM )
+			activeFriend.activePresence.hardware = HARDWARE_PC
+	}
 
 	GetGiftOfferEligibility( alias, activeFriend.activePresence.hardware, activeFriend.activeNucleusPersonaId, activeFriend.eadpData.eaid )
 }
@@ -855,17 +858,17 @@ void function Delayed_CloseMenuAfterPurchase( float delay = 1.0, bool enableInpu
 
 void function UpdateSearchBar_OnInputChanged( bool isController )
 {
-	int width = 367 
-	int buttonWidth = 126 
-	int x = 0
+	int width = Hud_GetBaseWidth( file.friendNameFieldFrame ) 
+	int buttonWidth = Hud_GetBaseWidth( file.friendNameFieldSearchButton ) 
+	int buttonOffsetX = 0
 	if ( isController )
 	{
-		width = 367 - 126
-		x = -buttonWidth/2
+		width = width - buttonWidth
+		buttonOffsetX = -buttonWidth/2
 	}
-	Hud_SetWidth( file.friendNameField, ContentScaledXAsInt( width ) )
-	Hud_SetWidth( file.friendNameFieldFrame, ContentScaledXAsInt( width ) )
-	Hud_SetX( file.friendNameField, ContentScaledXAsInt( x ) )
+	Hud_SetWidth( file.friendNameField, width )
+	Hud_SetWidth( file.friendNameFieldFrame, width )
+	Hud_SetX( file.friendNameField, buttonOffsetX )
 	Hud_SetVisible( file.friendNameFieldSearchButton, isController )
 }
 

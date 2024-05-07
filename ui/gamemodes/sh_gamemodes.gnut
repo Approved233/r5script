@@ -85,6 +85,10 @@ global function GameMode_GetLoadoutSelectTime
 
 
 
+
+global function GameMode_AboutDialog_AppendRequeueTab
+
+
 global struct GamemodeSettings
 {
 	string name = ""
@@ -281,8 +285,8 @@ void function GameModes_Init()
 
 
 
-		AddCallback_UI_FeatureTutorialDialog_PopulateTabsForMode( AprilFools_S20_BR_PopulateAboutText, GAMEMODE_APRIL_FOOLS_S20 )
-		AddCallback_UI_FeatureTutorialDialog_SetTitle( FeatureTutorial_GetGameModeName, GAMEMODE_APRIL_FOOLS_S20 )
+
+
 
 
 
@@ -310,12 +314,14 @@ void function GameModes_Init()
 
 
 
+	
 	gameMode = GAMEMODE_STRIKEOUT
 	LimitedTimeMode_Create( gameMode )
 	LimitedTimeMode_SetName( gameMode, "#STRIKEOUT_NAME" )
 	LimitedTimeMode_SetIcon( gameMode, $"rui/menu/gamemode_emblem/emblem_three_strikes" )
 	LimitedTimeMode_SetPlaylistFlag( gameMode, "is_gamemode_strikeout" )
 
+	
 
 		AddCallback_UI_FeatureTutorialDialog_PopulateTabsForMode( Survival_Strikeout_PopulateAboutText, GAMEMODE_STRIKEOUT )
 		AddCallback_UI_FeatureTutorialDialog_SetTitle( FeatureTutorial_GetGameModeName, GAMEMODE_STRIKEOUT )
@@ -367,6 +373,52 @@ void function GameModes_Init()
 
 			AddCallback_UI_FeatureTutorialDialog_PopulateTabsForMode( TreasureHunt_PopulateAboutText, GAMEMODE_TREASURE_HUNT )
 			AddCallback_UI_FeatureTutorialDialog_SetTitle( FeatureTutorial_GetGameModeName, GAMEMODE_TREASURE_HUNT )
+
+
+
+
+	
+	gameMode = GAMEMODE_SURVIVAL_SOLOS
+	LimitedTimeMode_Create( gameMode )
+	LimitedTimeMode_SetName( gameMode, "#SURVIVAL_MODE_SOLOS" )
+	LimitedTimeMode_SetIcon( gameMode, $"rui/menu/gamemode_emblem/emblem_three_strikes" )
+	LimitedTimeMode_SetPlaylistFlag( gameMode, "is_gamemode_solos" )
+
+	
+
+		AddCallback_UI_FeatureTutorialDialog_PopulateTabsForMode( Survival_Solos_PopulateAboutText, GAMEMODE_SURVIVAL_SOLOS )
+		AddCallback_UI_FeatureTutorialDialog_SetTitle( FeatureTutorial_GetGameModeName, GAMEMODE_SURVIVAL_SOLOS )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -448,6 +500,10 @@ void function GameModes_Init()
 		AddCallback_UI_FeatureTutorialDialog_SetTitle( FeatureTutorial_GetGameModeName, TDM_SWAT )
 	AddCallback_UI_FeatureTutorialDialog_PopulateTabsForMode( TDM_PopulateAboutText, TEAM_DEATHMATCH )
 		AddCallback_UI_FeatureTutorialDialog_SetTitle( FeatureTutorial_GetGameModeName, TEAM_DEATHMATCH )
+
+
+
+
 
 
 
@@ -1014,4 +1070,24 @@ bool function GameMode_AreRoundsEnabled()
 
 
 
+
+
+
+void function GameMode_AboutDialog_AppendRequeueTab(array<featureTutorialTab> tabs)
+{
+	if ( GetPlaylistVarBool( GamemodeUtility_GetPlaylist(), "matchmake_from_match", false ) )
+	{
+		featureTutorialTab tab
+		array< featureTutorialData > tabRules
+		tab.tabName = "#ABOUT_REQUEUE_TITLE"
+		tabRules.append( UI_FeatureTutorialDialog_BuildDetailsData( "#ABOUT_REQUEUE_1_HEADER", "#ABOUT_REQUEUE_1_BODY", $"rui/hud/gametype_icons/ltm/about_quickmatch_no_dull_moment" ) )
+
+		if ( GetConVarBool( "matchSquadRequeue_enabled" ) )
+			tabRules.append( UI_FeatureTutorialDialog_BuildDetailsData( "#ABOUT_REQUEUE_2_HEADER", "#ABOUT_REQUEUE_2_BODY", $"rui/hud/gametype_icons/ltm/about_quickmatch_band_together" ) )
+
+		tabRules.append( UI_FeatureTutorialDialog_BuildDetailsData( "#ABOUT_REQUEUE_3_HEADER", "#ABOUT_REQUEUE_3_BODY", $"rui/hud/gametype_icons/ltm/about_quickmatch_lobby_friends" ) )
+		tab.rules = tabRules
+		tabs.append( tab )
+	}
+}
 

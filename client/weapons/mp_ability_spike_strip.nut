@@ -1835,6 +1835,15 @@ bool function CanDeployOnEnt( entity ent, vector pos )
 
 
 
+
+
+
+
+
+
+
+
+
 void function OnClientAnimEvent_ability_spike_strip( entity weapon, string name )
 {
 	GlobalClientEventHandler( weapon, name )
@@ -1866,6 +1875,9 @@ entity function SpikeStripCreatePlacementProxy( asset modelName )
 
 void function MainSpikeCreated( entity spike )
 {
+	SetAllowForKillreplayProjectileCam( spike )
+	SetCustomKillreplayChaseCamFromWeaponClass( spike, SPIKE_STRIP_WEAPON_NAME )
+
 	entity player = GetLocalViewPlayer()
 	ShowGrenadeArrow( player, spike, GetTriggerRadius( spike.GetOwner() ), 0.0, true, eThreatIndicatorVisibility.INDICATOR_SHOW_TO_ENEMIES )
 }

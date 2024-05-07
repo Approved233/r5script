@@ -9,6 +9,11 @@ global function DiscardVideoSettingsDialog
 global function VideoPanel_GetConVarData
 global function AreVideoSettingsChanged
 
+
+
+
+
+
 struct
 {
 	var                panel
@@ -20,6 +25,11 @@ struct
 	array<ConVarData>    conVarDataList
 
 	bool videoSettingsChanged = false
+
+	
+
+
+
 } file
 
 void function InitVideoPanelForCode( var panel )
@@ -95,9 +105,7 @@ void function InitVideoPanel( var panel )
 		SetupSettingsButton( Hud_GetChild( file.videoPanel, "SwchDynamicSpotShadows" ), "#MENU_DYNAMIC_SPOT_SHADOWS", "#ADVANCED_VIDEO_MENU_DYNAMIC_SPOT_SHADOWS_DESC", $"rui/menu/settings/settings_video" )
 		SetupSettingsButton( Hud_GetChild( file.videoPanel, "SwchAmbientOcclusionQuality" ), "#MENU_AMBIENT_OCCLUSION_QUALITY", "#ADVANCED_VIDEO_MENU_AMBIENT_OCCLUSION_QUALITY_DESC", $"rui/menu/settings/settings_video" )
 		SetupSettingsButton( Hud_GetChild( file.videoPanel, "SwchModelDetail" ), "#MENU_MODEL_DETAIL", "#ADVANCED_VIDEO_MENU_MODEL_DETAIL_DESC", $"rui/menu/settings/settings_video" )
-#if DEV
 		SetupSettingsButton( Hud_GetChild( file.videoPanel, "SwchMapDetail" ), "#MENU_MAP_DETAIL", "#ADVANCED_VIDEO_MENU_MAP_DETAIL_DESC", $"rui/menu/settings/settings_video" )
-#endif
 		SetupSettingsButton( Hud_GetChild( file.videoPanel, "SwchEffectsDetail" ), "#MENU_EFFECT_DETAIL", "#ADVANCED_VIDEO_MENU_EFFECTS_DETAIL_DESC", $"rui/menu/settings/settings_video" )
 		SetupSettingsButton( Hud_GetChild( file.videoPanel, "SwchImpactMarks" ), "#MENU_IMPACT_MARKS", "#ADVANCED_VIDEO_MENU_IMPACT_MARKS_DESC", $"rui/menu/settings/settings_video" )
 		SetupSettingsButton( Hud_GetChild( file.videoPanel, "SwchRagdolls" ), "#MENU_RAGDOLLS", "#ADVANCED_VIDEO_MENU_RAGDOLLS_DESC", $"rui/menu/settings/settings_video" )
@@ -208,6 +216,10 @@ void function OnVideoPanel_Show( var panel )
 			Hud_ClearToolTipData( resolutionButton )
 		}
 
+
+
+
+
 }
 
 
@@ -246,7 +258,20 @@ void function AdvancedVideoButton_Changed( var button )
 
 
 	if ( button == Hud_GetChild( file.videoPanel, "SldFOV" ) )
+	{
+		
+
+
+
+
+
+
+
+
+
+
 		FOV_Changed( button )
+	}
 
 	
 	if ( !IsTabPanelActive( file.panel ) )
@@ -433,3 +458,38 @@ void function FooterButton_Focused( var button )
 	
 	
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

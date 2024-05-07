@@ -266,6 +266,9 @@ struct
 
 
 
+
+
+
 void function Strikeout_UI_SetIsRespawnDisabled( bool respawnDisabled )
 {
 	file.respawnDisabled = respawnDisabled
@@ -277,6 +280,13 @@ bool function Strikeout_UI_GetIsRespawnDisabled()
 {
 	return file.respawnDisabled
 }
+
+
+
+
+
+
+
 
 
 

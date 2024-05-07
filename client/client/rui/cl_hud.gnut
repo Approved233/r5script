@@ -581,7 +581,7 @@ void function DamageFlyout( float damageAmount, vector damagePosition, entity vi
 	else
 		file.entityDamageFlyouts[victim] <- flyoutData
 
-	bool initNewStackingDamageText = Time() - flyoutData.lastDamageFlyoutTime > FDT_STACK_THRESHOLD || flyoutData.viewEntity != GetLocalViewPlayer() || flyoutData.replayDelay != GetReplayDelay() || !showStackingDamageText
+	bool initNewStackingDamageText = Time() - flyoutData.lastDamageFlyoutTime > FDT_STACK_THRESHOLD || flyoutData.viewEntity != GetLocalViewPlayer() || flyoutData.replayDelay != GetReplayDelay() || !showStackingDamageText || !RuiIsAlive( flyoutData.stackingDamageRui )
 	if ( initNewStackingDamageText )
 	{
 		flyoutData.lastDamageFlyoutTime = Time()

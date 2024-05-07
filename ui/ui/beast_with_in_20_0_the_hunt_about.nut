@@ -1,15 +1,6 @@
 
 global function BeastWithIn_20_0_The_Hunt_PopulateAboutText
 
-string function GetPlaylist() 
-{
-	if ( IsLobby() )
-		return LobbyPlaylist_GetSelectedPlaylist()
-	else
-		return GetCurrentPlaylistName()
-
-	unreachable
-}
 
 array< featureTutorialTab > function BeastWithIn_20_0_The_Hunt_PopulateAboutText()
 {

@@ -10,7 +10,7 @@ global function CodeCallback_ShouldUseBlockReload
 global function SetCallback_ShouldUseBlockReloadCallback
 global function CodeCallback_PlayerClassChanged
 global function CodeCallback_OnUseEntity
-
+global function CodeCallback_OnUseStart
 global function CodeCallback_OnUseEnd
 global function CodeCallback_OnUseButtonPressed
 global function CodeCallback_OnUseButtonReleased
@@ -101,7 +101,6 @@ global function AddGetExtendedRangeUseEntityCallback
 global function RemoveGetExtendedRangeUseEntityCallback
 
 global function CodeCallback_ObjectPlacementSpecial_CheckInvalidEnt
-global function CodeCallback_ObjectPlacementSpecial_GetMaxHeight
 
 struct
 {
@@ -300,7 +299,7 @@ bool function CodeCallback_CanPlayerReload( entity player )
 }
 
 
-bool function CodeCallback_CanHitPingTrace( entity ent )
+bool function CodeCallback_CanHitPingTrace( entity ent, entity ornull tracingEntity )
 {
 	return !ent.e.ignorePingTrace
 }
@@ -521,11 +520,13 @@ void function CancelDisembark( entity player )
 }
 
 
-
-
-
-
-
+void function CodeCallback_OnUseStart( entity player )
+{
+	if ( IsValid( player.GetUseEntity() ) )
+	{
+		player.p.lastUseTime = Time()
+	}
+}
 
 void function CodeCallback_OnUseEnd( entity player )
 {
@@ -813,10 +814,10 @@ string function CodeCallback_CheckPassThroughAddsMods( entity player, entity hit
 		}
 
 
-			if ( currMods.contains( "hopup_april_fools_energy" ) )
-			{
-				return "amped_damage_alt"
-			}
+
+
+
+
 
 		return "amped_damage"
 	}
@@ -1065,20 +1066,9 @@ void function RemoveGetExtendedRangeUseEntityCallback( void functionref( entity,
 bool function CodeCallback_ObjectPlacementSpecial_CheckInvalidEnt( entity ent )
 {
 
+	return PhaseDoor_CheckInvalidEnt( ent )
 
 
-	return false
-
-
-	unreachable
-}
-
-float function CodeCallback_ObjectPlacementSpecial_GetMaxHeight( entity player )
-{
-
-
-
-	return 0
 
 
 	unreachable

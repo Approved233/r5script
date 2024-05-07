@@ -1062,7 +1062,8 @@ void function HandleBroadcastCommsAction( entity player, int commsAction, entity
 		else
 		{
 			
-			if ( !IsValid( subjectEnt ) || subjectEnt.GetModelName() != CRAFTED_BANNER_MODEL_NAME || GetEntityFromEncodedEHandle( subjectEnt.GetSurvivalProperty() ).GetTeam() == player.GetTeam() )
+			if ( !IsValid( subjectEnt ) || subjectEnt.GetModelName() != CRAFTED_BANNER_MODEL_NAME ||
+					( IsValid( GetEntityFromEncodedEHandle( subjectEnt.GetSurvivalProperty() ) ) && GetEntityFromEncodedEHandle( subjectEnt.GetSurvivalProperty() ).GetTeam() == player.GetTeam() ) )
 			{
 				PlaySoundForCommsAction( player, subjectEnt, act, opt,  secondaryCommsAction > 0 ? GetNameForCommsAction( secondaryCommsAction ) : "", selector)
 			}

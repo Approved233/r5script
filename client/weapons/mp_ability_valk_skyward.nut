@@ -53,7 +53,7 @@ const asset VALK_SKYWARD_USE_MODEL = $"mdl/humans_r5/pilots_r5/pilot_valkyrie/in
 
 
 
-const array<vector> attachPositions = [<-10, -50, -40>, <-10, 50, -40>, <-20, 50, -60>, <-20, -50, -60>]
+const array<vector> attachPositions = [<-10, -50, -40>, <-10, 50, -40>, <-50, 25, -60>, <-20, -50, -60>]
 
 struct
 {
@@ -933,18 +933,6 @@ var function OnWeaponPrimaryAttack_ability_valk_skyward( entity weapon, WeaponPr
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 void function ValkUlt_ShowEmbarkUI( entity player, int statusEffect, bool actuallyChanged )
 {
 	if ( player != GetLocalViewPlayer() )
@@ -1194,7 +1182,7 @@ bool function ValkUlt_CanUseAlly( entity ally, entity proxy, int useFlags )
 	if ( ally.IsPhaseShiftedOrPending() )
 		return false
 
-	if ( weapon.w.valkAlliesWaitingForLaunch.len() >= 2 )
+	if ( weapon.w.valkAlliesWaitingForLaunch.len() >= GetExpectedSquadSize() - 1 )
 		return false
 
 	return true
@@ -1229,9 +1217,6 @@ void function ValkUlt_AllyUse( entity proxy, entity ally, int useInputFlags )
 
 	if( IsValid( ally ) )
 		ally.Signal( "OnSkywardAllyUse" )
-
-	if ( weapon.w.valkAlliesWaitingForLaunch.len() > 2 )
-		return
 
 
 

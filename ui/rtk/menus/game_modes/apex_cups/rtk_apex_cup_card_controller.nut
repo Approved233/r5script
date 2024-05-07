@@ -3,10 +3,11 @@ global function RTKApexCupCardController_OnInitialize
 
 global struct RTKCupCardEntry
 {
-	int score
-	int lowerBound
-	int upperBound
-	int gamesPlayed
+	int  score
+	int  lowerBound
+	int  upperBound
+	int	 gamesPlayed
+	bool isTop100
 }
 
 global struct RTKApexCupCardController_Properties
@@ -81,6 +82,7 @@ void function RTKApexCupCardController_OnBindingChanged( rtk_behavior self )
 	model.score = cupEntry.currSquadScore
 	model.upperBound = cupEntry.tierScoreBounds[ maxint( 0, index - 1 ) ]
 	model.lowerBound = index <  cupEntry.tierScoreBounds.len() ? cupEntry.tierScoreBounds[index] : 0
+	model.isTop100 = model.score > model.upperBound
 
 	RTKStruct_SetValue( entry, model )
 }

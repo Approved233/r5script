@@ -817,7 +817,7 @@ void function CustomizeButton_OnMiddleClick( var button )
 		if ( favorites.contains( cbc.itemFlavor ) )
 		{
 			EmitUISound( "ui_menu_cosmetic_unlock" )
-			RequestClearItemFlavorFavoritesSlot( LocalClientEHI(), entry, favorites.find( cbc.itemFlavor ) )
+			RequestClearItemFlavorFavoritesSlot( LocalClientEHI(), entry, favorites.find( cbc.itemFlavor ), cbc.itemFlavor )
 			if ( IsTopLevelCustomizeContextValid() )
 				PIN_Customization( GetTopLevelCustomizeContext(), cbc.itemFlavor, "clear_favorite" )
 			else
@@ -862,7 +862,6 @@ void function CustomizeButton_AddOrClearFavoredQuip( var button )
 	EHI playerEHI = LocalClientEHI()
 
 	ItemFlavor character = GetTopLevelCustomizeContext()
-	array<LoadoutEntry> slotsForFavoredQuips = Loadout_FavoredQuipArrayForCharacter( character )
 
 	array<ItemFlavor> favorites = ItemFlavor_GetFavoredQuipArrayForCharacter( character )
 
@@ -1125,20 +1124,7 @@ void function UpdateCustomizeItemButton( CustomizeButtonContext cbc, bool justAd
 		name = Localize( ItemFlavor_GetLongName( cbc.itemFlavor ) )
 	int quality = ItemFlavor_HasQuality( cbc.itemFlavor ) ? ItemFlavor_GetQuality( cbc.itemFlavor ) : 0
 
-	bool isFavorite = false
-
-	if ( cbc.loadoutEntries.len() == 1 )
-	{
-		LoadoutEntry entry     = cbc.loadoutEntries[0]
-		array<ItemFlavor> favs = LoadoutSlot_GetFavorites( LocalClientEHI(), entry )
-		isFavorite = favs.contains( cbc.itemFlavor )
-	}
-	else if ( cbc.loadoutEntries.len() > 1 && Loadout_IsCharacterQuipLoadoutEntry( cbc.loadoutEntries[0] ) )
-	{
-		ItemFlavor character = GetTopLevelCustomizeContext()
-		array<ItemFlavor> favs = ItemFlavor_GetFavoredQuipArrayForCharacter( character )
-		isFavorite = favs.contains( cbc.itemFlavor )
-	}
+	bool isFavorite = IsBitFlagSet( cbc.itemFlavor.loadoutSortPriority, eLoadoutSortPriority.FAVORITE )
 
 	RuiSetBool( rui, "isFavorite", isFavorite )
 	RuiSetString( rui, "buttonText", name )
@@ -1146,10 +1132,9 @@ void function UpdateCustomizeItemButton( CustomizeButtonContext cbc, bool justAd
 	RuiSetInt( rui, "quality", quality )
 	RuiSetImage( rui, "sourceIcon", ItemFlavor_GetSourceIcon( cbc.itemFlavor ) )
 
-
 	if( ItemFlavor_GetType( cbc.itemFlavor ) == eItemType.weapon_skin )
 	{
-		RuiSetBool( rui, "displayShimmer", WeaponSkin_DoesReactToKills( cbc.itemFlavor ) )
+		RuiSetBool( rui, "displayShimmer", IsBitFlagSet( cbc.itemFlavor.loadoutSortPriority, eLoadoutSortPriority.WEAPON_REACTIVE ) )
 	}
 	else
 	{
@@ -1171,7 +1156,7 @@ void function UpdateCustomizeItemButton( CustomizeButtonContext cbc, bool justAd
 	Hud_SetNew( cbc.button, isNew )
 	RuiSetColorAlpha( rui, "seasonColor", SrgbToLinear( seasonStyle.seasonNewColor ), 1.0 )
 	
-	bool isEquipped = IsItemInCBCEquipped( cbc )
+	bool isEquipped = IsBitFlagSet( cbc.itemFlavor.loadoutSortPriority, eLoadoutSortPriority.EQUIPPED )
 
 	if ( justAdded )
 		Hud_SetSelected( cbc.button, false )

@@ -223,40 +223,39 @@ void function OnLobbyMenu_Open()
 			TabDef tab = AddTab( file.menu, panel, GetPanelTabTitle( panel ) )
 			file.playPanelTabDef = tab
 			tab.isBannerLogoSmall = false
-			SetTabBaseWidth( tab, 145 )
+			SetTabBaseWidth( tab, 125 )
 		}
 		{
 			var panel = Hud_GetChild( file.menu, "EventPanel" )
 			TabDef tab = AddTab( file.menu, panel, GetPanelTabTitle( panel ) )
 			file.eventsPanelTabDef = tab
 			tab.isBannerLogoSmall = false
-			SetTabBaseWidth( tab, 190 )
+			SetTabBaseWidth( tab, 170 )
+		}
+		{
+			var panel = Hud_GetChild( file.menu, "ChallengesPanel" )
+			TabDef tab = AddTab( file.menu, panel, GetPanelTabTitle( panel ) )
+			tab.isBannerLogoSmall = false
+			SetTabBaseWidth( tab, 235 )
 		}
 		{
 			var panel = Hud_GetChild( file.menu, "SeasonPanel" )
 			TabDef tab = AddTab( file.menu, panel, GetPanelTabTitle( panel ) )
 			file.seasonalPanelTabDef = tab
 			tab.isBannerLogoSmall = false
-			SetTabBaseWidth( tab, 235 )
-		}
-		{
-			var panel = Hud_GetChild( file.menu, "CharactersPanel" )
-			TabDef tab = AddTab( file.menu, panel, GetPanelTabTitle( panel ) )
-			tab.isBannerLogoSmall = true
-			tab.hideSubtabPips = true
-			SetTabBaseWidth( tab, 205 )
+			SetTabBaseWidth( tab, 225 )
 		}
 		{
 			var panel = Hud_GetChild( file.menu, "ArmoryPanel" )
 			TabDef tab = AddTab( file.menu, panel, GetPanelTabTitle( panel ) )
 			tab.isBannerLogoSmall = true
-			SetTabBaseWidth( tab, 205 )
+			SetTabBaseWidth( tab, 260 )
 		}
 		{
 			var panel = Hud_GetChild( file.menu, "StorePanel" )
 			TabDef tab = AddTab( file.menu, panel, GetPanelTabTitle( panel ) )
 			tab.isBannerLogoSmall = true
-			SetTabBaseWidth( tab, 180 )
+			SetTabBaseWidth( tab, 160 )
 			tab.new = HasNewPersonalisedOffers()
 		}
 
@@ -402,8 +401,8 @@ void function OnGRXStateChanged()
 
 	array<var> panels = [
 		GetPanel( "EventPanel" ),
+		GetPanel( "ChallengesPanel" ),
 		GetPanel( "SeasonPanel" ),
-		GetPanel( "CharactersPanel" ),
 		GetPanel( "ArmoryPanel" ),
 		GetPanel( "StorePanel" ),
 	]
@@ -447,8 +446,10 @@ void function UpdateNewnessCallbacks()
 {
 	ClearNewnessCallbacks()
 
+
+
+
 	Newness_AddCallbackAndCallNow_OnRerverseQueryUpdated( NEWNESS_QUERIES.SeasonTab, OnNewnessQueryChangedUpdatePanelTab, GetPanel( "SeasonPanel" ) )
-	Newness_AddCallbackAndCallNow_OnRerverseQueryUpdated( NEWNESS_QUERIES.GladiatorTab, OnNewnessQueryChangedUpdatePanelTab, GetPanel( "CharactersPanel" ) )
 	Newness_AddCallbackAndCallNow_OnRerverseQueryUpdated( NEWNESS_QUERIES.ArmoryTab, OnNewnessQueryChangedUpdatePanelTab, GetPanel( "ArmoryPanel" ) )
 	Newness_AddCallbackAndCallNow_OnRerverseQueryUpdated( NEWNESS_QUERIES.StoreTab, OnNewnessQueryChangedUpdatePanelTab, GetPanel( "StorePanel" ) )
 	file.newnessInitialized = true
@@ -460,8 +461,10 @@ void function ClearNewnessCallbacks()
 	if ( !file.newnessInitialized )
 		return
 
+
+
+
 	Newness_RemoveCallback_OnRerverseQueryUpdated( NEWNESS_QUERIES.SeasonTab, OnNewnessQueryChangedUpdatePanelTab, GetPanel( "SeasonPanel" ) )
-	Newness_RemoveCallback_OnRerverseQueryUpdated( NEWNESS_QUERIES.GladiatorTab, OnNewnessQueryChangedUpdatePanelTab, GetPanel( "CharactersPanel" ) )
 	Newness_RemoveCallback_OnRerverseQueryUpdated( NEWNESS_QUERIES.ArmoryTab, OnNewnessQueryChangedUpdatePanelTab, GetPanel( "ArmoryPanel" ) )
 	Newness_RemoveCallback_OnRerverseQueryUpdated( NEWNESS_QUERIES.StoreTab, OnNewnessQueryChangedUpdatePanelTab, GetPanel( "StorePanel" ) )
 	file.newnessInitialized = false
@@ -523,7 +526,7 @@ void function LobbyMenuUpdateLowFrequencyElements()
 
 void function UpdatePromoToast()
 {
-	array<GRXScriptInboxMessage> inboxMessages = GetGiftingInboxMessages()
+	array<GRXContainerInfo> inboxMessages = GetGiftingInboxMessages()
 	var rui = Hud_GetRui( file.newsButton )
 	file.hasNewGifts = false
 

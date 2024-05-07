@@ -24,6 +24,7 @@ global function BleedoutState_GetPlayerBleedoutState
 global function Bleedout_GetCanForceBleedoutTimeout
 global function Bleedout_CheckPlayerUseTargetDist
 global function Bleedout_GetIsBleedoutDeathBlocked
+global function Bleedout_AreFinishersEnabledDuringDeathPrevention
 global function Bleedout_GetIsBleedoutDamageBlocked
 global function Bleedout_IsReviverFriendlyToVictim
 
@@ -472,6 +473,12 @@ bool function Bleedout_GetIsBleedoutDeathBlocked()
 }
 
 
+bool function Bleedout_AreFinishersEnabledDuringDeathPrevention()
+{
+	return GetCurrentPlaylistVarBool( "bleedout_death_prevention_allow_finishers", false )
+}
+
+
 bool function Bleedout_GetIsBleedoutDamageBlocked()
 {
 	return GetCurrentPlaylistVarBool( "bleedout_downedplayers_invulnerable", false )
@@ -654,7 +661,8 @@ bool function Bleedout_PlayerCanRes( entity player )
 	if ( !__PlayerInValidResState( player ) )
 		return false
 
-	if ( player.GetWeaponDisableFlags() == WEAPON_DISABLE_FLAGS_ALL )
+	
+	if ( player.GetWeaponDisableFlags() == WEAPON_DISABLE_FLAGS_ALL && !CanInterruptBannerPickupEarly( player ) )
 		return false
 
 	entity activeWeapon = player.GetActiveWeapon( eActiveInventorySlot.mainHand )
@@ -699,6 +707,9 @@ bool function __PlayerInValidResState( entity player )
 	if ( player.ContextAction_IsMeleeExecution() )
 		return false
 
+	if ( player.p.isInExtendedUse )
+		return false
+
 	return true
 }
 
@@ -708,6 +719,9 @@ bool function Bleedout_PlayerInValidSeldResState( entity player )
 		return false
 
 	if ( !__PlayerInValidResState( player ) )
+		return false
+
+	if ( (Time() - player.p.lastUseTime) < 0.2 )
 		return false
 
 	return true

@@ -109,6 +109,7 @@ global const table<string, asset> GAMEMODE_IMAGE_MAP = {
 	panel_storm_point_mu2 = $"rui/menu/gamemode/playlist_bg_storm_point_mu2",
 
 	panel_divided_moon = $"rui/menu/gamemode/playlist_bg_divided_moon",
+	panel_divided_moon_mu1 = $"rui/menu/gamemode/playlist_bg_divided_moon_mu1",
 
 	shotguns_and_snipers = $"rui/menu/gamemode/playlist_bg_shotguns_and_snipers",
 	panel_worlds_edge_mu2_airdrop = $"rui/menu/gamemode/playlist_bg_worldsedge_airdrop",
@@ -240,6 +241,10 @@ global const table<string, asset> GAMEMODE_IMAGE_MAP = {
 
 
 
+		survival_solos = $"rui/menu/gamemode/playlist_bg_survival_solos",
+
+
+
 		mixtape_treasurehunt_thunderdome = $"rui/menu/gamemode/treasure_hunt/playlist_bg_treasurehunt_thunderdome",
 		mixtape_treasurehunt_skulltown = $"rui/menu/gamemode/treasure_hunt/playlist_bg_treasurehunt_skulltown",
 		mixtape_treasurehunt_storm_point_mu2 = $"rui/menu/gamemode/treasure_hunt/playlist_bg_treasurehunt_storm_point_mu2",
@@ -302,6 +307,7 @@ global const table<string, asset> GAMEMODE_THUMBNAIL_IMAGE_MAP = {
 	panel_storm_point_mu2 = $"rui/menu/gamemode/playlist_bg_sq_storm_point_mu2",
 
 	panel_divided_moon = $"rui/menu/gamemode/playlist_bg_sq_divided_moon",
+	panel_divided_moon_mu1 = $"rui/menu/gamemode/playlist_bg_sq_divided_moon_mu1",
 
 	shotguns_and_snipers = $"rui/menu/gamemode/playlist_bg_sq_shotguns_and_snipers",
 	panel_worlds_edge_mu2_airdrop = $"rui/menu/gamemode/playlist_bg_worldsedge_airdrop",
@@ -429,6 +435,10 @@ global const table<string, asset> GAMEMODE_THUMBNAIL_IMAGE_MAP = {
 
 		trios_bounty_hunt = $"rui/menu/gamemode/playlist_bg_sq_thehunt_trios",
 		duos_bounty_hunt = $"rui/menu/gamemode/playlist_bg_sq_thehunt_duos",
+
+
+
+		survival_solos = $"rui/menu/gamemode/playlist_bg_sq_survival_solos",
 
 
 
@@ -1159,6 +1169,10 @@ const table<string, asset> GAMEMODE_EMBLEM_MAP = {
 
 
 		emblem_bounty_hunt = $"rui/hud/gametype_icons/ltm/hunt_ltm_logo_colorized",
+
+
+
+		emblem_survival_solos = $"rui/menu/gamemode_emblem/generic_ltm", 
 
 
 

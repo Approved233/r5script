@@ -123,8 +123,6 @@ void function InitStoreInspectMenu( var newMenuArg )
 	GridPanel_SetButtonHandler( file.itemGrid, UIE_CLICK, OnStoreGridItemClicked )
 	GridPanel_SetButtonHandler( file.itemGrid, UIE_GET_FOCUS, OnStoreGridItemHover )
 
-	Hud_AddEventHandler( Hud_GetChild( newMenuArg, "CoinsPopUpButton" ), UIE_CLICK, OpenVCPopUp )
-
 	AddMenuFooterOption( menu, LEFT, BUTTON_B, true, "#B_BUTTON_BACK", "#B_BUTTON_BACK" )
 	AddMenuFooterOption( menu, LEFT, BUTTON_X, true, "#X_GIFT_INFO_TITLE", "#GIFT_INFO_TITLE", OpenGiftInfoPopUp, CheckIsGiftable )
 }
@@ -164,8 +162,14 @@ void function StoreInspectMenu_OnShow()
 	StoreInspectMenu_OnGRXUpdated()
 	StoreInspectMenu_OnUpdate()
 
-	RegisterButtonPressedCallback( KEY_TAB, ToggleVCPopUp )
-	RegisterButtonPressedCallback( BUTTON_BACK, ToggleVCPopUp )
+	RegisterButtonPressedCallback( KEY_TAB, ToggleApexCoinsWalletModal )
+	RegisterButtonPressedCallback( BUTTON_BACK, ToggleApexCoinsWalletModal )
+	RegisterButtonPressedCallback( KEY_Q, ToggleExoticShardsWalletModal )
+	RegisterButtonPressedCallback( BUTTON_STICK_LEFT, ToggleExoticShardsWalletModal )
+
+	Hud_AddEventHandler( Hud_GetChild( file.menu, "CoinsPopUpButton" ), UIE_CLICK, OpenVCPopUp )
+	Hud_AddEventHandler( Hud_GetChild( file.menu, "ExoticShardsPopUpButton" ), UIE_CLICK, OpenExoticShardsModal )
+
 	Lobby_AdjustScreenFrameToMaxSize( Hud_GetChild( file.menu, "ScreenFrame" ), true )
 }
 
@@ -181,8 +185,12 @@ void function StoreInspectMenu_OnClose()
 
 void function StoreInspectMenu_OnHide()
 {
-	DeregisterButtonPressedCallback( KEY_TAB, ToggleVCPopUp )
-	DeregisterButtonPressedCallback( BUTTON_BACK, ToggleVCPopUp )
+	DeregisterButtonPressedCallback( KEY_TAB, ToggleApexCoinsWalletModal )
+	DeregisterButtonPressedCallback( BUTTON_BACK, ToggleApexCoinsWalletModal )
+	DeregisterButtonPressedCallback( KEY_Q, ToggleExoticShardsWalletModal )
+	DeregisterButtonPressedCallback( BUTTON_STICK_LEFT, ToggleExoticShardsWalletModal )
+	Hud_RemoveEventHandler( Hud_GetChild( file.menu, "CoinsPopUpButton" ), UIE_CLICK, OpenVCPopUp )
+	Hud_RemoveEventHandler( Hud_GetChild( file.menu, "ExoticShardsPopUpButton" ), UIE_CLICK, OpenExoticShardsModal )
 }
 
 void function StoreInspectMenu_OnUpdate()
@@ -399,7 +407,20 @@ void function StoreInspectMenu_UpdatePrices( GRXScriptOffer storeOffer, StoreIns
 	bool isMythic = OfferContainsMythic( storeOffer )
 	if ( offerData.isPurchasable && !isMythic && !isEventShopOffer )
 	{
-		offerData.purchaseText = offerData.canAfford ? offerData.purchaseText : Localize( "#CONFIRM_GET_PREMIUM" )
+		if ( !offerData.canAfford )
+		{
+			if ( storeOffer.prices[0].flavors[0] == GRX_CURRENCIES[GRX_CURRENCY_EXOTIC] )
+			{
+				offerData.purchaseText = Localize( "#CONFIRM_GET_EXOTIC" )
+				HudElem_SetRuiArg( uiData.discountInfo, "canNotAffordTextString", Localize( "#NOT_ENOUGH_EXOTIC_SHARDS" ) )
+
+			}
+			else
+			{
+				offerData.purchaseText = Localize( "#CONFIRM_GET_PREMIUM" )
+				HudElem_SetRuiArg( uiData.discountInfo, "canNotAffordTextString", Localize( "#NOT_ENOUGH_COINS" ) )
+			}
+		}
 
 		if ( ( offerData.discountPct == 0 && isGiftable ) || !offerData.canAfford )
 			offerData.purchaseDescText = ""
@@ -736,6 +757,23 @@ void function StoreInspectMenu_OnGRXUpdated()
 		HudElem_SetRuiArg( file.pageHeader, "singleItemRarity", ItemFlavor_GetQuality( itemFlav ) )
 		HudElem_SetRuiArg( file.pageHeader, "singleItemRarityText", ItemFlavor_GetQualityName( itemFlav ) )
 		HudElem_SetRuiArg( file.pageHeader, "singleItemTypeText", Store_GetRewardShortDescription( itemFlav ) )
+
+#if PC_PROG_NX_UI
+			
+			
+			
+			
+			if( ItemFlavor_GetType( itemFlav ) == eItemType.voucher && Voucher_GetEffectBattlepassStars( itemFlav ) > 0 )
+			{
+				HudElem_SetRuiArg( file.pageHeader, "nxSingleItemTextPHOverride", 42.0 )
+			}
+			else
+			{
+				
+				
+				HudElem_SetRuiArg( file.pageHeader, "nxSingleItemTextPHOverride", 0.0 )
+			}
+#endif
 	}
 	else
 	{
@@ -940,7 +978,10 @@ void function PurchaseOfferButton_OnClick( var button )
 
 		if ( !canAfford && !s_inspectOffers.isOwnedItemEquippable && !IsOfferPartOfEventShop( offer ) )
 		{
-			OpenVCPopUp( null )
+			if ( offer.prices[0].flavors[0] == GRX_CURRENCIES[GRX_CURRENCY_EXOTIC] )
+				OpenExoticShardsModal( null )
+			else
+				OpenVCPopUp( null )
 			return
 		}
 	}

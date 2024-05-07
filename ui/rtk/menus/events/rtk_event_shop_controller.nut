@@ -287,6 +287,8 @@ void function RTKEventShopPanel_OnInitialize( rtk_behavior self )
 						}
 						else
 						{
+							RTKEventsPanelController_SendPageViewEventOffer( self , newChildIndex, file.offers[newChildIndex].offerAlias )
+
 							StoreInspectMenu_AttemptOpenWithOffer( file.offers[newChildIndex], true )
 						}
 					}

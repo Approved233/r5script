@@ -2,16 +2,20 @@
 global function ShChallenges_LevelInit_PreStats
 global function ShChallenges_LevelInit_PostStats
 global function GetAllChallenges
+global function HasChallengeForCharacter
 global function GetAllChallengesOfTimespan
 global function Challenge_IsAutogen
 global function Challenge_GetRequestedAutogenSlotFromFlavor
+global function Challenge_GetScriptHookForAutogenChallenge
 global function Challenge_GetTierCount
 global function Challenge_LastTierIsInfinite
 global function Challenge_GetCurrentTier
 global function Challenge_IsComplete
 global function Challenge_IsAllComplete
+global function Challenge_CountComplete
 global function Challenge_GetTimeSpanKind
 global function Challenge_IsBoostEnabled
+global function Challenge_IsRerollEnabled
 global function Challenge_GetGoalVal
 global function Challenge_EitherOr_GetGoalVals
 global function Challenge_GetBPStarsReward
@@ -26,7 +30,6 @@ global function Challenge_GetStatRefs
 global function Challenge_EitherOr_GetStatRefs
 global function Challenge_CanRerollChallenge
 global function Challenge_IsChallengesStateInititated
-global function DoesPlayerHaveChallenge
 global function RegisterChallengeSource
 global function RegisterChallengeFromAsset
 global function Challenge_IsAssigned
@@ -44,6 +47,7 @@ global function Challenge_IsMetaChallenge
 global function MetaChallenge_GetStatRef
 global function MetaChallenge_GetParentFlav
 global function MetaChallenge_GetGoalVal
+global function GetCompletedChallengeCount
 #if DEV
 global function PrintChallengePersistence
 #endif
@@ -62,10 +66,12 @@ global function SetSeasonColors
 global function SetBattlePassLevelBadgeForLevel
 global function SetRuiArgsForMythicSkinChallenge
 global function IsFavoriteChallenge
+global function GetFavoriteChallenges
 
 #if DEV
 global function DEV_DumpFavoritePersistenceData
 #endif
+
 
 
 
@@ -128,6 +134,7 @@ global function DEV_PrintAllChallenges
 
 
 global function GetPlayerChallengeGroupData
+global function Challenge_IterateAssignedWeeklyChallenges
 global function GetPinnedChallenges
 global function GetLocalPinnedChallenges
 global function GetLocalPinnedChallengesForKind
@@ -891,6 +898,10 @@ void function ClientToUI_ChallengeDataDidChange( bool didEventChallengesRefresh 
 			AllChallengesMenu_SetLastGroupButton( button )
 		AllChallengesMenu_ActivateLastGroupButton()
 
+
+
+
+
 		if ( didEventChallengesRefresh )
 			fileLevel.haveEventChallengesRefreshedOnUI = true
 	}
@@ -1026,6 +1037,7 @@ void function UpdateLobbyChallengeMenu()
 		}
 	}
 
+	
 	array<ItemFlavor> challenges = GetChallengesByCategory( player, challengeCategory, currentEvent )
 	if ( IsRewardCampaignChallengeCategory( challengeCategory ) )
 	{
@@ -1099,6 +1111,7 @@ bool function ShouldChallengeCountTowardsNewness( ItemFlavor challenge )
 
 	return true
 }
+
 
 
 
@@ -1738,7 +1751,7 @@ array<int> function GetChallengeCategoryIDArray( bool hideStories = false )
 
 
 		array<ItemFlavor> allBeginnerChallenges = GetAssignedChallengesByTimeSpan( GetLocalClientPlayer(), eChallengeTimeSpanKind.BEGINNER )
-		if ( allBeginnerChallenges.len() > 0 )
+		if ( allBeginnerChallenges.len() > 0 && BeginnerChallenges_GetPlayerCompletedChallengeCount( GetLocalClientPlayer() ) < allBeginnerChallenges.len() )
 			categoryIDtoStringArray.append( eChallengeCategory.BEGINNER )
 
 	
@@ -1763,13 +1776,19 @@ array<int> function GetChallengeCategoryIDArray( bool hideStories = false )
 		}
 	}
 
-	ChallengeCollection ornull activeCollection = ChallengeCollection_GetActiveCollection()
-	if ( activeCollection != null )
+	ItemFlavor ornull activeRewardCampaign = RewardCampaign_GetActiveRewardCampaign()
+	if ( activeRewardCampaign != null )
 	{
-		expect ChallengeCollection( activeCollection )
-		if ( ChallengeCollection_HasChallenges( activeCollection ) )
+		expect ItemFlavor( activeRewardCampaign )
+		ItemFlavor ornull collectionFlav = RewardCampaign_GetChallengeCollection( activeRewardCampaign )
+		if ( collectionFlav != null )
 		{
-			categoryIDtoStringArray.append( eChallengeCategory.REWARD_CAMPAIGN )
+			expect ItemFlavor( collectionFlav )
+			ChallengeCollection activeCollection = ChallengeCollection_GetByGUID( collectionFlav.guid )
+			if ( ChallengeCollection_HasChallenges( activeCollection ) )
+			{
+				categoryIDtoStringArray.append( eChallengeCategory.REWARD_CAMPAIGN )
+			}
 		}
 	}
 
@@ -1876,10 +1895,11 @@ void function UpdateChallengeCategorySelection( var rui, bool longName = false, 
 			{
 
 				case eChallengeCategory.BEGINNER:
+					entity player = GetLocalClientPlayer()
 
 
 
-					string beginnerChallengeCount = ( BeginnerChallenges_GetPlayerCurrentChallengeIndex( GetLocalClientPlayer() ) ) + " / " + BeginnerChallenges_GetBeginnerChallengesCount( GetLocalClientPlayer() )
+					string beginnerChallengeCount = Localize( "#N_SLASH_N", string( BeginnerChallenges_GetPlayerCompletedChallengeCount( player ) ), string( BeginnerChallenges_GetBeginnerChallengesCount( player ) ) )
 
 					RuiSetString( rui, "beginnerChallengeCount", beginnerChallengeCount )
 					break
@@ -2129,7 +2149,7 @@ array<ChallengeGroupData> function GetPlayerChallengeGroupData( entity player )
 		if( BeginnerChallenges_IsActive() )
 		{
 			challenges = GetAssignedChallengesByTimeSpan( player, eChallengeTimeSpanKind.BEGINNER )
-			if( challenges.len() > 0 )
+			if( challenges.len() > 0 && BeginnerChallenges_GetPlayerCompletedChallengeCount( GetLocalClientPlayer() ) < challenges.len() )
 				groupData.append( CreateChallengeGroup( player, Localize( "#CHALLENGE_GROUP_BEGINNER" ), challenges, eChallengeTimeSpanKind.BEGINNER ) )
 		}
 
@@ -2208,6 +2228,21 @@ array<ChallengeGroupData> function GetPlayerChallengeGroupData( entity player )
 
 
 
+
+void function Challenge_IterateAssignedWeeklyChallenges( entity player, void functionref ( int, int, array<ItemFlavor> ) weekCallback )
+{
+	for ( int i = 0 ; i < NUM_CHALLENGE_WEEKS_MAX ; i++ )
+	{
+		int groupIndex = GetPersistentVarAsInt( "weeklyGroupOrder[" + i + "]" )
+		if ( groupIndex == 0 )
+			break 
+		array<ItemFlavor> challenges = GetAssignedChallengesByTimeSpan( player, eChallengeTimeSpanKind.SEASON_WEEKLY, groupIndex )
+		weekCallback( i, groupIndex, challenges )
+	}
+}
+
+
+
 array<ItemFlavor> function GetPinnedChallenges()
 {
 	PlayerChallengesState pcs = GetPlayerChallengesState( GetLocalClientPlayer() )
@@ -2254,6 +2289,12 @@ array<ItemFlavor> function GetLocalPinnedChallengesForKind( int kind )
 
 	return pinnedChallenges
 }
+
+
+
+
+
+
 
 
 
@@ -3055,6 +3096,53 @@ bool function Challenge_IsChallengesStateInititated( entity player )
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ItemFlavor function OverrideChallengeIfNecessary( ItemFlavor challenge, entity player )
+{
+	if ( Kepler_IsPlayerInVariant( player, eKeplerScenario.BATTLEPASS_DAILIES_CHALLENGE_21_0, "set-a" ) )
+	{
+		if ( Challenge_GetDifficulty( challenge ) == eChallegeDifficulty.EASY )
+		{
+			return GetItemFlavorByAsset( $"settings/itemflav/challenge/s21exp/play_game_x_legends_any_mode_set_b.rpak"  )
+			
+			
+		} 
+	}
+	return challenge
+}
 
 
 
@@ -5200,7 +5288,7 @@ void function UpdateChallengeBoxHeaderBPProgress( entity player, var rui )
 			{
 				expect ItemFlavor( starChallenge )
 
-				if ( DoesPlayerHaveChallenge( player, starChallenge ) )
+				if ( Challenge_IsAssigned( player, starChallenge ) )
 				{
 					SetSeasonColors( rui )
 
@@ -5286,7 +5374,7 @@ void function UpdateEventShopButton( entity player, var button, ItemFlavor ornul
 			{
 				void functionref(var) headerClickHandler = (void function( var button ) : ( eventFlav ) {
 					EmitUISound( "ui_menu_accept" )
-					ItemFlavor ornull milestoneEvent = GetActiveMilestoneEvent( GetUnixTimestamp() )
+					ItemFlavor ornull milestoneEvent = GetActiveEventTabMilestoneEvent( GetUnixTimestamp() )
 					if ( milestoneEvent != null )
 					{
 						EventsPanel_SetOpenPageIndex( eEventsPanelPage.EVENT_SHOP )
@@ -5344,10 +5432,13 @@ void function UpdateEventTrackButton( entity player, var button, ItemFlavor ornu
 
 				asset buttonImage = BuffetEvent_GetChallengeButtonImage( eventFlav )
 				vector textColor  = BuffetEvent_GetChallengeButtonTextCol( eventFlav )
+				string buttonText = BuffetEvent_GetChallengeButtonText( eventFlav )
 
 				var rui = Hud_GetRui( button )
 				RuiSetImage( rui, "buttonImage", buttonImage )
 				RuiSetFloat3( rui, "textColor", textColor )
+				if ( buttonText != "" )
+					RuiSetString( rui, "buttonText", buttonText )
 			}
 		}
 	}
@@ -5419,7 +5510,7 @@ void function UpdateChallengeBoxButtonEvent( var mainElem, ItemFlavor ornull eve
 
 				void functionref( var ) headerClickHandler = ( void function( var button ) : ( eventFlav ) {
 					EmitUISound( "ui_menu_accept" )
-					ItemFlavor ornull milestoneEvent = GetActiveMilestoneEvent( GetUnixTimestamp() )
+					ItemFlavor ornull milestoneEvent = GetActiveEventTabMilestoneEvent( GetUnixTimestamp() )
 					if ( milestoneEvent != null )
 					{
 						EventsPanel_SetOpenPageIndex( eEventsPanelPage.LANDING )
@@ -5642,9 +5733,15 @@ BattlePassReward ornull function TrySetBattlePassRewardOnButton( var rewardButto
 
 bool function Challenge_CanRerollChallenge( ItemFlavor challenge )
 {
+	bool isRerollEnabled = Challenge_IsRerollEnabled( challenge ) 
+	if ( !isRerollEnabled )
+		return false
+
+	
 	if ( Challenge_GetTimeSpanKind( challenge ) != eChallengeTimeSpanKind.DAILY )
 		return false
 
+	
 	if ( Challenge_GetDifficulty( challenge ) == eChallegeDifficulty.VERY_EASY )
 		return false
 
@@ -6142,6 +6239,8 @@ void function MaybeAddChallengeClickEventToButton( var menu, var button, ItemFla
 				else
 					EmitUISound( "UI_Menu_Challenge_RemoveFavorite" )
 				SettingsAssetGUID challengeGUID = ItemFlavor_GetGUID( challenge )
+
+				PIN_UIInteraction_OnChallengeTracked( ItemFlavor_GetAssetName( challenge ), !isFavorite )
 				Remote_ServerCallFunction( "ClientCallback_ToggleFavoriteChallenge", challengeGUID )
 			})
 		}
@@ -6246,13 +6345,9 @@ string function Challenge_GetDescription( ItemFlavor challenge, int tier, bool g
 
 
 
-bool function DoesPlayerHaveChallenge( entity player, ItemFlavor flavor )
-{
-	Assert( ItemFlavor_GetType( flavor ) == eItemType.challenge )
 
-	PlayerChallengesState pcs = GetPlayerChallengesState( player )
-	return (flavor in pcs.challengeStateMap)
-}
+
+
 
 
 
@@ -6645,11 +6740,90 @@ bool function IsChallengeTierComplete( entity player, ItemFlavor challenge, int 
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 array<ItemFlavor> function GetAllChallenges()
 {
 	
 	return GetAllItemFlavorsOfType( eItemType.challenge )
 }
+
+
+
+bool function HasChallengeForCharacter( entity player, ItemFlavor character )
+{
+	foreach ( ItemFlavor challenge in GetAllChallenges() )
+	{
+		if( !Challenge_IsAssigned( player, challenge ) )
+			continue
+
+		if( Challenge_GetTierCount( challenge ) <= 0 || Challenge_IsComplete(player, challenge) )
+			continue
+
+		array<ItemFlavor> charPrereq = Challenge_GetCharacterItemFlavors( challenge, 0 )
+
+		foreach ( char in charPrereq )
+		{
+			if( char == character )
+				return true
+		}
+	}
+
+	return false
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6724,7 +6898,7 @@ array<ChallengeProgressData> function GetPlayerChallengesWithNewProgress( entity
 			{
 				expect ItemFlavor( challengeFlav )
 
-				if ( !DoesPlayerHaveChallenge( player, challengeFlav ) )
+				if ( !Challenge_IsAssigned( player, challengeFlav ) )
 					continue
 
 				if ( Challenge_ShouldExcludeFromPostMatchSummary( challengeFlav ) )
@@ -6810,7 +6984,6 @@ array<ChallengeProgressData> function GetPlayerChallengesWithNewProgress( entity
 				}
 
 				int remainingProgress = currentProgress - startProgress
-				
 				if ( remainingProgress <= 0 )
 					continue    
 
@@ -6821,7 +6994,9 @@ array<ChallengeProgressData> function GetPlayerChallengesWithNewProgress( entity
 				{
 					
 					int tierGoalProgress = Challenge_GetGoalVal( challengeFlav, startTier, useAlt )
+					bool oneTierPerMatch = Challenge_MaxOneTierPerMatch( challengeFlav ) 
 					bool tierCompleted   = startProgress + remainingProgress >= tierGoalProgress
+					tierCompleted        = oneTierPerMatch ? startTier != currentTier || tierCompleted : tierCompleted
 					int usedProgress     = tierCompleted ? tierGoalProgress - startProgress : currentProgress - startProgress
 					int endProgress      = startProgress + usedProgress
 
@@ -6858,7 +7033,11 @@ array<ChallengeProgressData> function GetPlayerChallengesWithNewProgress( entity
 					}
 
 					bool lastTier = startTier == tierCount - 1
-					if ( Challenge_ShouldStartAtZero( challengeFlav, startTier ) && lastTierIsInfinite && lastTier )
+					if ( tierCompleted && oneTierPerMatch )
+					{
+						break
+					}
+					else if ( Challenge_ShouldStartAtZero( challengeFlav, startTier ) && lastTierIsInfinite && lastTier )
 					{
 						currentProgress = currentProgress - endProgress
 						startProgress   = 0
@@ -6904,7 +7083,7 @@ array<ChallengeProgressData> function GetPlayerChallengesWithNewProgress( entity
 				if ( starChallenge != null )
 				{
 					expect ItemFlavor( starChallenge )
-					if ( DoesPlayerHaveChallenge( player, starChallenge ) )
+					if ( Challenge_IsAssigned( player, starChallenge ) )
 					{
 						int currentLevel = GetPlayerBattlePassLevel( player, activeBattlePass, false )
 						int prevLevel    = GetPlayerBattlePassLevel( player, activeBattlePass, true )
@@ -6928,7 +7107,7 @@ array<ChallengeProgressData> function GetPlayerChallengesWithNewProgress( entity
 
 		foreach ( ChallengeProgressData progressData in progressDataArray )
 		{
-			if ( !DoesPlayerHaveChallenge( player, progressData.challengeFlav ) )
+			if ( !Challenge_IsAssigned( player, progressData.challengeFlav ) )
 			{
 				Warning( "Tried to check progress on challenge player doesn't have: " + string(ItemFlavor_GetAsset( progressData.challengeFlav )) )
 				continue
@@ -7085,7 +7264,8 @@ int function Challenge_GetCurrentTier( entity player, ItemFlavor flavor )
 
 bool function Challenge_IsAssigned( entity player, ItemFlavor flavor )
 {
-	
+	Assert( ItemFlavor_GetType( flavor ) == eItemType.challenge )
+
 	PlayerChallengesState pcs = GetPlayerChallengesState( player )
 	return (flavor in pcs.challengeStateMap)
 }
@@ -7118,6 +7298,22 @@ bool function Challenge_IsAllComplete( entity player, array< ItemFlavor > challe
 
 
 
+int function Challenge_CountComplete( entity player, array< ItemFlavor > challenges )
+{
+	int count = 0
+	foreach ( ItemFlavor challenge in challenges )
+	{
+		if ( Challenge_IsComplete( player, challenge ) )
+		{
+			count += 1
+		}
+	}
+
+	return count
+}
+
+
+
 bool function Challenge_IsAutogen( ItemFlavor flavor )
 {
 	Assert( ItemFlavor_GetType( flavor ) == eItemType.challenge )
@@ -7129,9 +7325,25 @@ bool function Challenge_IsAutogen( ItemFlavor flavor )
 int function Challenge_GetRequestedAutogenSlotFromFlavor( ItemFlavor flavor )
 {
 	Assert( ItemFlavor_GetType( flavor ) == eItemType.challenge )
+	Assert( Challenge_IsAutogen( flavor ) )
+
 	string key = GetGlobalSettingsString( ItemFlavor_GetAsset( flavor ), "autogenSlot" )
 	Assert( key in eAutogenStatSlots, format( "Challenge %s has invalid autogen slot: %s", string( ItemFlavor_GetAsset( flavor ) ), key ) )
+
 	return eAutogenStatSlots[ key ]
+}
+
+
+
+int function Challenge_GetScriptHookForAutogenChallenge( ItemFlavor flavor )
+{
+	Assert( ItemFlavor_GetType( flavor ) == eItemType.challenge )
+	Assert( Challenge_IsAutogen( flavor ) )
+
+	string key = GetGlobalSettingsString( ItemFlavor_GetAsset( flavor ), "autogenScriptHook" )
+	Assert( key in eAutogenStatHooks, format( "Challenge %s has invalid autogen script hook: %s", string( ItemFlavor_GetAsset( flavor ) ), key ) )
+
+	return eAutogenStatHooks[ key ]
 }
 
 
@@ -7163,6 +7375,15 @@ bool function Challenge_IsBoostEnabled( ItemFlavor flavor )
 	Assert( ItemFlavor_GetType( flavor ) == eItemType.challenge )
 
 	return GetGlobalSettingsBool( ItemFlavor_GetAsset( flavor ), "isBoostEnabled" )
+}
+
+
+
+bool function Challenge_IsRerollEnabled( ItemFlavor flavor )
+{
+	Assert( ItemFlavor_GetType( flavor ) == eItemType.challenge )
+
+	return GetGlobalSettingsBool( ItemFlavor_GetAsset( flavor ), "isRerollEnabled" )
 }
 
 
@@ -7332,6 +7553,16 @@ bool function Challenge_LastTierIsInfinite( ItemFlavor flavor )
 	Assert( ItemFlavor_GetType( flavor ) == eItemType.challenge )
 
 	return GetGlobalSettingsBool( ItemFlavor_GetAsset( flavor ), "lastTierIsInfinite" )
+}
+
+
+
+
+bool function Challenge_MaxOneTierPerMatch( ItemFlavor flavor )
+{
+	Assert( ItemFlavor_GetType( flavor ) == eItemType.challenge )
+
+	return GetGlobalSettingsBool( ItemFlavor_GetAsset( flavor ), "maxOneTierPerMatch" )
 }
 
 
@@ -7629,6 +7860,18 @@ vector function Challenge_GetGameModeTagColor( int key )
 		return GAME_MODE_TAG_COLOR[ key ]
 
 	return < 0, 0, 0 >
+}
+
+
+
+bool function Challenge_IsBitfieldType( ItemFlavor challengeFlav, int tier )
+{
+	Assert( ItemFlavor_GetType( challengeFlav ) == eItemType.challenge )
+	Assert( tier >= 0 && tier < Challenge_GetTierCount( challengeFlav ) )
+
+	var tierData = Challenge_GetTierDataBlock( challengeFlav, tier )
+
+	return GetSettingsBlockString( tierData, "progressAccrual" ) == "bitfieldStyle"
 }
 
 

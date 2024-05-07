@@ -500,6 +500,8 @@ void function CharacterSelectMenu_Init()
 
 		fileLevel.colorCorrection = ColorCorrection_Register( COLOR_CORRECTION )
 
+		AddClientCallback_OnResolutionChanged( CharacterSelectMenu_OnResolutionChanged )
+
 
 
 
@@ -587,25 +589,9 @@ bool function CharacterSelect_Menu_ShouldOpen( entity player )
 
 	if ( !IsWatchingReplay() )
 	{
-		
-		
-		array< string > legendsToLockCharSelDuringUlt = [ "#character_newcastle_NAME" ]
-		int playerEHI = ToEHI( player )
-		ItemFlavor legendFlavor = LoadoutSlot_GetItemFlavor( playerEHI, Loadout_Character() )
-		string legendName = ItemFlavor_GetLongName( legendFlavor )
-
-#if DEV
-			printt( "DEV-RYEH: Legend Trying to Open Character Select Menu == ", legendName )
-#endif
-
-		if( legendsToLockCharSelDuringUlt.contains( legendName ) )
-		{
-			entity ultimateWeapon = player.GetOffhandWeapon( OFFHAND_ULTIMATE )
-			if( IsValid( ultimateWeapon ) && ultimateWeapon.GetWeaponPrimaryClipCount() == 0 )
-				return false
-		}
+		if ( GetCurrentArmoredLeapPhase( player ) != PLAYER_ARMORED_LEAP_PHASE_NONE )
+			return false
 	}
-
 
 	if( player.ContextAction_IsEmoting() ) 
 		return false
@@ -2749,6 +2735,11 @@ void function UpdateForFocusOnButtonIndex( int buttonIndex )
 	Signal( fileLevel.signalDummy, "UpdateScene" )
 }
 
+void function CharacterSelectMenu_OnResolutionChanged()
+{
+	fileLevel.preFocusedButton = null
+}
+
 void function ServerToClient_SetInitialSelection( int characterGUID )
 {
 	ItemFlavor startCharacter = GetItemFlavorByGUID( characterGUID )
@@ -2883,6 +2874,18 @@ void function OnLoadoutButton_Activate( var button )
 			return
 		if ( GetCurrentArmoredLeapPhase( player ) != PLAYER_ARMORED_LEAP_PHASE_NONE )
 			return
+
+		if ( IsFiringRangeGameMode() )
+		{
+			if ( player.IsPhaseShifted() )
+				return
+
+			if( IsAlive( player ) && player.ContextAction_IsMeleeExecution() )
+				return
+
+			if( Bleedout_IsBleedingOut( player ) )
+				return
+		}
 
 		ItemFlavor currentCharacter = LoadoutSlot_GetItemFlavor( ToEHI( player ), Loadout_Character() )
 		ItemFlavor currentSkin = LoadoutSlot_GetItemFlavor( ToEHI( player ), Loadout_CharacterSkin( currentCharacter ) )
@@ -3390,6 +3393,20 @@ void function UpdateButtonStates()
 			RuiSetBool( buttonRui, "isTempUnlocked", true )
 		}
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 		if ( fileLevel.disabledButtonIndexes.contains( i ) )
 		{
 			
@@ -3602,25 +3619,15 @@ void function UpdateButtonStates()
 	}
 	else if ( SquadMuteLegendSelectEnabled() )
 	{
+		bottomString = ""
 
 			if ( WinterExpress_IsModeEnabled() && GetGameState() == eGameState.Playing )
-			{
 				bottomString = Localize( "#CHAR_SEL_BUTTON_HINT_SELECT_DETAILS" )
-			}
-			else if ( !IsSoloMode() )
-			{
-				bottomString = Localize( IsSquadMuted() ? "#CHAR_SEL_BUTTON_UNMUTE" : "#CHAR_SEL_BUTTON_MUTE" )
-			}
-			else
-			{
-				bottomString = ""
-			}
 
-
-
-
-
-
+		if ( !IsSoloMode() )
+		{
+			bottomString = Localize( IsSquadMuted() ? "#CHAR_SEL_BUTTON_UNMUTE" : "#CHAR_SEL_BUTTON_MUTE" )
+		}
 	}
 	else if( isTempUnlocked )
 	{

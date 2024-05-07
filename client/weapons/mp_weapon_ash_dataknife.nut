@@ -117,6 +117,8 @@ void function MpWeaponAshDataknife_Init()
 
 
 
+
+
 			RegisterConCommandTriggeredCallback( "+scriptCommand5", OnCharacterButtonPressed )
 			AddCallback_OnPassiveChanged( ePassives.PAS_ASH, OnPassiveChanged )
 			AddCreateCallback( PLAYER_WAYPOINT_CLASSNAME, OnWaypointCreated )
@@ -138,13 +140,6 @@ void function OnPassiveChanged( entity player, int passive, bool didHave, bool n
 
 
 
-
-
-
-
-
-
-
 			
 			if ( HasCallback_OnFindFullMapAimEntity( GetDeathboxUnderAim ) )
 				RemoveCallback_OnFindFullMapAimEntity( GetDeathboxUnderAim )
@@ -155,20 +150,29 @@ void function OnPassiveChanged( entity player, int passive, bool didHave, bool n
 
 
 
-
-
-
-
-
-
-
-
 			
 			if ( !HasCallback_OnFindFullMapAimEntity( GetDeathboxUnderAim ) )
 				AddCallback_OnFindFullMapAimEntity( GetDeathboxUnderAim, PingDeathboxUnderAim )
 
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 bool function DeathboxNetwork_CanPlayerUse( entity player, entity deathbox, bool checkDistance = false )
 {

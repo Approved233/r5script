@@ -412,7 +412,7 @@ void function PopulateData( entity player )
 			{
 				expect ItemFlavor( challengeFlav )
 				
-				if ( !chapter.isTimeLocked && file.isPrologueCompleted && DoesPlayerHaveChallenge( player, challengeFlav ) )
+				if ( !chapter.isTimeLocked && file.isPrologueCompleted && Challenge_IsAssigned( player, challengeFlav ) )
 				{
 					hasValidChallenge = true
 					objective.challengeTier = Challenge_GetCurrentTier( player, challengeFlav )

@@ -95,6 +95,9 @@ global function CharSelect_GetOutroTransitionDuration
 
 
 
+
+
+
 global function GamemodeSurvivalShared_UI_Init
 
 
@@ -216,8 +219,7 @@ global enum ePodiumBanner
 	SR_REV,
 
 
-	S20_ANNIVERSARY,
-	TURBO
+	TURBO,
 
 	_COUNT
 }
@@ -307,6 +309,10 @@ float function CharSelect_GetOutroSquadPresentDuration()		{ return GetCurrentPla
 float function CharSelect_GetOutroMVPPresentDuration()			{ return GetCurrentPlaylistVarFloat( "charselect_outro_mvp_present_duration", 0.0 ) }
 float function CharSelect_GetOutroChampionPresentDuration()		{ return GetCurrentPlaylistVarFloat( "charselect_outro_champion_present_duration", 8.0 ) }
 float function CharSelect_GetOutroTransitionDuration()			{ return GetCurrentPlaylistVarFloat( "charselect_outro_transition_duration", 3.0 ) }
+
+
+
+
 
 
 
@@ -945,13 +951,25 @@ void function UIInputChanged( bool controllerModeActive )
 
 
 
-bool function Survival_ClampToRing()
+bool function Survival_IsDropshipClampedToRing()
 {
 	return GetCurrentPlaylistVarBool( "dropship_bounds_clamp_to_ring", false )
 }
 
+float function Survival_GetPlaneMoveSpeed()
+{
+	return GetCurrentPlaylistVarFloat( "survival_plane_move_speed", 2000.0 )
+}
 
+float function Survival_GetPlaneJumpDelay()
+{
+	return GetCurrentPlaylistVarFloat( "survival_plane_jump_delay", 9.0 )
+}
 
+float function Survival_GetPlaneLeaveMapDurationMultiplier()
+{
+	return GetCurrentPlaylistVarFloat( "survival_plane_leave_map_duration_multiplier", 3.0 )
+}
 
 
 

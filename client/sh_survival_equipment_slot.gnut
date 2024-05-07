@@ -1198,6 +1198,14 @@ LootData function EquipmentSlot_GetEquippedLootDataForSlot( entity player, strin
 	if ( SURVIVAL_Loot_IsRefValid( ref ) )
 		lootData = SURVIVAL_Loot_GetLootDataByRef( ref )
 
+	
+	if( es.weaponSlot >= 0 )
+	{
+		entity weapon = player.GetNormalWeapon( es.weaponSlot )
+		if( IsValid( weapon ) )
+			lootData.hudIcon = weapon.GetWeaponSettingAsset( eWeaponVar.hud_icon )
+	}
+
 	return lootData
 }
 

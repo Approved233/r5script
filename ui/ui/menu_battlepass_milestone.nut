@@ -720,6 +720,9 @@ bool function IsBattlepassMilestoneMenuOpened()
 
 bool function OpenBattlePassMilestoneDialog( bool forceShow = false )
 {
+	if ( !IsLocalClientEHIValid() )
+		return false
+
 	if ( !IsBattlepassMilestoneEnabled() || !GRX_IsInventoryReady() || !GRX_AreOffersReady() )
 		return false
 
@@ -728,6 +731,11 @@ bool function OpenBattlePassMilestoneDialog( bool forceShow = false )
 		return false
 
 	expect ItemFlavor( activeBattlePass )
+
+	ItemFlavor basicPurchaseFlav = BattlePass_GetBasicPurchasePack ( activeBattlePass )
+	array<GRXScriptOffer> basicPurchaseOffers = GRX_GetItemDedicatedStoreOffers( basicPurchaseFlav, "battlepass" )
+	if ( basicPurchaseOffers.len() != 1 )
+		return false
 
 	entity player = GetLocalClientPlayer()
 

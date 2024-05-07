@@ -61,7 +61,7 @@ global function Ranked_GetHistoricalRankScoreAcrossSplitsForPlayer
 global function Ranked_GetHistoricalRankedPersistenceData
 global function Ranked_HasActiveLadderOnlyDivision
 global function Ranked_GetActiveLadderOnlyDivisionData
-global function Ranked_GetTierOfThresholdForRankedPartyDifferences
+global function Ranked_RankedPartyMaxTierDifferential
 
 
 
@@ -101,6 +101,11 @@ global function Ranked_PopulateAboutText
 
 global function Ranked_IsRankedV2FirstSplit
 global function Ranked_IsRankedV2SecondSplit
+global function Ranked_IsDisablePointGain
+
+
+
+
 
 global const int SHARED_RANKED_LEVEL_REQUIREMENT = (20 - 1) 
 
@@ -170,6 +175,16 @@ global const string XPROG_PERSISTENCE_RANKED_STRUCT_NAME = "xProgRanked"
 global const string XPROG_PERSISTENCE_PREFIX_FORMAT_STRING = XPROG_PERSISTENCE_MERGED_PLAT_STRUCT_NAME + "[ %s ]." + XPROG_PERSISTENCE_RANKED_STRUCT_NAME + "." 
 global const string XPROG_PERSISTENCE_FORMAT_STRING = XPROG_PERSISTENCE_PREFIX_FORMAT_STRING + "%s" 
 
+
+global const string RANKED_IGNORE_MAX_TIER_DIFFERENTIAL_PLAYLIST_VAR = "ranked_ignore_party_rank_difference"
+global const string RANKED_PARTY_IGNORE_MAX_TIER_DIFFERENTIAL_PLAYLIST_VAR = "ranked_ignore_full_party_rank_difference"
+
+global const string RANKED_DEV_PLAYTEST_PLAYLIST_VAR = "ranked_dev_playtest"
+const string RANKED_PARTY_MAX_TIER_DIFFERENTIAL_PLAYLIST_VAR = "ranked_party_max_tier_differential"
+const int RANKED_PARTY_MAX_TIER_DIFFERENTIAL = 3
+
+global const float RANKED_LEAVER_PENALTY_TIME_LIMIT_SEC = 60.0
+
 const array<string> RANKED_2PT0_PERSISTENCE_FIELDS = [
 	RANKED_CURRENT_SCORE_PERSISTENCE_VAR_NAME,
 	"highestRankedScore",
@@ -184,6 +199,8 @@ global enum emblemDisplayMode
 	DISPLAY_LADDER_POSITION,
 	NONE,
 }
+
+
 
 
 
@@ -543,7 +560,6 @@ void function OnRankedPeriodRegistered( ItemFlavor rp )
 	
 	for ( int i = 0; i < tierData.len(); i++ )
 	{
-		SharedRankedTierData data = tierData[i]
 		tierData[i].isTopEnd = GetPlaylistVarBool( "defaults", "ranked_tier_isTopEnd_" + i, tierData[i].isTopEnd )
 	}
 
@@ -1198,16 +1214,9 @@ SharedRankedTierData function Ranked_GetHighestHistoricalRankedTierData( entity 
 }
 
 
-int function Ranked_GetTierOfThresholdForRankedPartyDifferences()
+int function Ranked_RankedPartyMaxTierDifferential()
 {
-	array<SharedRankedTierData> tiers = Ranked_GetTiers()
-	foreach ( rankTier in tiers )
-	{
-		if ( rankTier.name == "#RANKED_TIER_PLATINUM" )
-			return rankTier.index
-	}
-
-	return tiers.len() + 1 
+	return GetCurrentPlaylistVarInt( RANKED_PARTY_MAX_TIER_DIFFERENTIAL_PLAYLIST_VAR, RANKED_PARTY_MAX_TIER_DIFFERENTIAL )
 }
 
 
@@ -1466,6 +1475,65 @@ int function GetPlayerRankScore( entity player )
 
 	unreachable
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2556,6 +2624,27 @@ bool function Ranked_IsRankedV2SecondSplit( ItemFlavor rankPeriodItemFlav )
 	return Ranked_GetRankedV2SplitStatus( rankPeriodItemFlav ) == RANKED_2PT0_SPLIT2
 }
 
+bool function Ranked_IsDisablePointGain()
+{
+
+
+
+	return GetConVarBool( "ranked_disable_point_gain" )
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2911,6 +3000,8 @@ array< featureTutorialTab > function Ranked_PopulateAboutText()
 
 	
 	tab1.tabName = 	"#RANKED_ABOUT_TAB_1_NAME"
+	
+	
 	tab1Rules.append( UI_FeatureTutorialDialog_BuildDetailsData( "#RANKED_ABOUT_TAB_1_HEADER_1", "#RANKED_ABOUT_TAB_1_DESC_1", $"" ) )
 	tab1Rules.append( UI_FeatureTutorialDialog_BuildDetailsData( "#RANKED_ABOUT_TAB_1_HEADER_2", "#RANKED_ABOUT_TAB_1_DESC_2", $"" ) )
 	tab1Rules.append( UI_FeatureTutorialDialog_BuildDetailsData( "#RANKED_ABOUT_TAB_1_HEADER_3", "#RANKED_ABOUT_TAB_1_DESC_3", $"" ) )

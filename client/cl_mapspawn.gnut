@@ -131,17 +131,17 @@ void function PrecacheResFiles()
 	if ( IsLobby() )
 		return
 
-	PrecacheRes( "vgui_icon" )
-	PrecacheRes( "vgui_binding" )
-	PrecacheRes( "vgui_jump_quest" )
-	PrecacheRes( "vgui_xpbar" )
-	PrecacheRes( "vgui_fullscreen_titan" )
-	PrecacheRes( "vgui_fullscreen_pilot" )
-	PrecacheRes( "vgui_enemy_announce" )
-	PrecacheRes( "Coop_TeamScoreEventNotification" )
-	PrecacheRes( "control_panel_generic_screen" )
 
-	PrecacheRes( "vgui_callsign_menu" )
+
+
+
+
+
+
+
+
+
+
 }
 
 

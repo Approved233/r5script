@@ -50,8 +50,6 @@ const bool CARE_PACKAGE_INSIGHT_PERF_TESTING = false
 
 
 
-global function S16_PathfinderSkirmisherPassiveActive
-
 struct
 {
 
@@ -196,10 +194,7 @@ float function Perk_CarePackageInsight_IgnoreLosRevealDistance()
 	return GetCurrentPlaylistVarFloat( "care_package_insight_ignore_los_distance", 6000.0 )
 }
 
-bool function S16_PathfinderSkirmisherPassiveActive()
-{
-	return GetCurrentPlaylistVarBool( "s16_pathfinder_skirmisher_passive_active", true )
-}
+
 
 
 

@@ -670,6 +670,8 @@ void function OnWeaponActivate_revive_shield( entity weapon )
 
 
 
+
+
 }
 
 void function OnWeaponDeactivate_revive_shield( entity weapon )

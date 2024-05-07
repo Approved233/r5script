@@ -39,7 +39,7 @@ asset function GetPromoImage( string identifier )
 	return image
 }
 
-void function OpenPromoLink( string linkType, string link )
+void function OpenPromoLink( string linkType, string link, string fromPageId = "")
 {
 	
 	switch ( linkType )
@@ -163,7 +163,7 @@ void function OpenPromoLink( string linkType, string link )
 			break
 
 		case "milestoneevent":
-			ItemFlavor ornull milestoneEvent = GetActiveMilestoneEvent( GetUnixTimestamp() )
+			ItemFlavor ornull milestoneEvent = GetActiveEventTabMilestoneEvent( GetUnixTimestamp() )
 			if ( milestoneEvent != null )
 			{
 				switch ( link )
@@ -191,14 +191,34 @@ void function OpenPromoLink( string linkType, string link )
 			}
 			break
 
+		case "storemilestoneevent":
+			array<ItemFlavor> storeMilestoneEvents = GetActiveStoreOnlyMilestoneEvents( GetUnixTimestamp() )
+			if ( storeMilestoneEvents.len() > 0 )
+			{
+				JumpToStoreMilestoneEventsMenu( link, fromPageId )
+			}
+			break
+
 		case "storeOfferShop":
 			EmitUISound( "UI_Menu_Accept" )
 			JumpToStoreSection( link )
 			break
 
+		case "storeMythicShop":
+			EmitUISound( "UI_Menu_Accept" )
+			JumpToMythicSection( link )
+			break
+
 		case "rumble":
 			EmitUISound( "UI_Menu_Accept" )
 			GamemodeSelect_JumpToCups( null )
+			break
+
+		case "rankedrumble":
+
+
+
+
 			break
 	}
 }

@@ -82,7 +82,10 @@ void function LoadscreenPanel_OnHide( var panel )
 {
 	RemoveCallback_OnTopLevelCustomizeContextChanged( panel, LoadscreenPanel_Update )
 	LoadscreenPanel_Update( panel )
-	RemoveCallback_ItemFlavorLoadoutSlotDidChange_SpecificPlayer( LocalClientEHI(), Loadout_Loadscreen(), OnLoadscreenEquipChanged )
+
+	if ( IsConnected() && IsLobby() && IsLocalClientEHIValid() )
+		RemoveCallback_ItemFlavorLoadoutSlotDidChange_SpecificPlayer( LocalClientEHI(), Loadout_Loadscreen(), OnLoadscreenEquipChanged )
+
 	DeregisterStickMovedCallback( ANALOG_RIGHT_Y, FocusDescriptionForScrolling )
 }
 
@@ -124,7 +127,7 @@ void function LoadscreenPanel_Update( var panel )
 	if ( IsPanelActive( file.panel ) )
 	{
 		LoadoutEntry entry = Loadout_Loadscreen()
-		file.loadscreenList = GetLoadoutItemsSortedForMenu( [entry], Loadscreen_GetSortOrdinal )
+		file.loadscreenList = GetLoadoutItemsSortedForMenu( [entry], Loadscreen_GetSortOrdinal, null, [] )
 
 		Hud_InitGridButtons( file.listPanel, file.loadscreenList.len() )
 		foreach ( int flavIdx, ItemFlavor flav in file.loadscreenList )

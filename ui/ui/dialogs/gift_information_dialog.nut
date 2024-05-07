@@ -1,5 +1,7 @@
 global function InitGiftInformationDialog
 global function OpenGiftInfoPopUp
+global function OpenGiftInfoPopUpWithEventTabTelemetry
+global function OpenGiftInfoPopUpWithMilestoneStoreTelemetry
 global function InitTwoFactorInformationDialog
 global function OpenTwoFactorInfoDialog
 struct {
@@ -24,17 +26,35 @@ void function InitGiftInformationDialog( var newMenuArg )
 
 	AddMenuFooterOption( menu, LEFT, BUTTON_B, true, "#B_BUTTON_CLOSE", "#B_BUTTON_CLOSE" )
 	SetDialog( menu, true )
+
+	AddMenuEventHandler( menu, eUIEvent.MENU_OPEN, GiftInformationDialog_OnOpen )
 }
 
 void function GiftInformationDialog_OnOpen()
 {
-}
+	int minAccountLevel = GetConVarInt( "mtx_giftingMinAccountLevel" )
+	int minFriendshipTenure = ( GetConVarInt( "mtx_giftingMinFriendshipInDays" ) + DAYS_PER_WEEK - 1 ) / DAYS_PER_WEEK 
+	int maxGiftsPerDay = GetConVarInt( "mtx_giftingLimit" )
 
+	HudElem_SetRuiArg( giftFile.infoPanel, "playerDescription", Localize( "#GIFT_INFO_PLAYER_DESC", minAccountLevel, minFriendshipTenure, maxGiftsPerDay ) )
+}
 
 void function OpenGiftInfoPopUp( var button )
 {
 	if ( GetActiveMenu() != giftFile.menu )
 		AdvanceMenu( GetMenu( "GiftInfoDialog" ) )
+}
+
+void function OpenGiftInfoPopUpWithEventTabTelemetry( var button )
+{
+	RTKEventsPanelController_SendPageViewInfoPage( "giftingInfoDialog" )
+	OpenGiftInfoPopUp( button )
+}
+
+void function OpenGiftInfoPopUpWithMilestoneStoreTelemetry( var button )
+{
+	StoreMilestoneEvents_SendPageViewInfoPage( "giftingInfoDialog" )
+	OpenGiftInfoPopUp( button )
 }
 
 void function InitTwoFactorInformationDialog( var newMenuArg )

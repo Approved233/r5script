@@ -21,6 +21,9 @@ global enum ePlaylistState
 	ROTATION_GROUP_MISMATCH,
 	DEV_PLAYTEST,
 	LOCKED_FOR_EVENT,
+
+
+
 	_COUNT
 }
 
@@ -50,7 +53,10 @@ const table< int, string > playlistStateMap = {
 	[ ePlaylistState.ROTATION_GROUP_MISMATCH ] = "#PLAYLIST_UNAVAILABLE",
 	[ ePlaylistState.ACCOUNT_LEVEL_REQUIRED ] = "#PLAYLIST_STATE_RANKED_LEVEL_REQUIRED",
 	[ ePlaylistState.DEV_PLAYTEST ] = "#PLAYLIST_STATE_PLAYTEST",
-	[ ePlaylistState.LOCKED_FOR_EVENT ] = "#PLAYSTATE_STATE_EVENTLOCKED"
+	[ ePlaylistState.LOCKED_FOR_EVENT ] = "#PLAYSTATE_STATE_EVENTLOCKED",
+
+
+
 }
 
 global const int TRAINING_REQUIRED_BELOW_LEVEL_0_BASE = 14
@@ -512,12 +518,34 @@ int function LobbyPlaylist_GetPlaylistState( string playlistName )
 			return ePlaylistState.LOCKED
 
 
+
+
+
+
+
 	return ePlaylistState.AVAILABLE
 }
 
 string function LobbyPlaylist_GetPlaylistStateString( int playlistState )
 {
-	return playlistStateMap[playlistState]
+	string playlistStateString = playlistStateMap[playlistState]
+	if ( playlistState == ePlaylistState.ACCOUNT_LEVEL_REQUIRED )
+	{
+		int level = GetPlaylistVarInt( LobbyPlaylist_GetSelectedPlaylist(), "account_level_required", 0 )
+		playlistStateString = Localize( playlistStateString, level )
+	}
+	else if ( playlistState == ePlaylistState.RANKED_LEVEL_REQUIRED )
+	{
+		int level = Ranked_GetRankedLevelRequirement() + 1
+		playlistStateString = Localize( playlistStateString, level )
+	}
+	else if ( playlistState == ePlaylistState.RANKED_LARGE_RANK_DIFFERENCE )
+	{
+		int level = Ranked_RankedPartyMaxTierDifferential()
+		playlistStateString = Localize( playlistStateString, level )
+	}
+
+	return playlistStateString
 }
 
 

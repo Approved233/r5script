@@ -123,21 +123,13 @@ void function MarkAllChallengeItemsAsViewed( var button )
 
 void function JumpToChallenges( string link )
 {
-	file.link = link
-
 	while ( GetActiveMenu() != GetMenu( "LobbyMenu" ) )
 		CloseActiveMenu()
 
 	TabData lobbyTabData = GetTabDataForPanel( GetMenu( "LobbyMenu" ) )
-	int index            = Tab_GetTabIndexByBodyName( lobbyTabData, "SeasonPanel" )
+	int index            = Tab_GetTabIndexByBodyName( lobbyTabData, "ChallengesPanel" )
 	if ( lobbyTabData.activeTabIdx != index )
 		ActivateTab( lobbyTabData, index )
-
-	TabDef seasonTabDef   = Tab_GetTabDefByBodyName( lobbyTabData, "SeasonPanel" )
-	TabData seasonTabData = GetTabDataForPanel( seasonTabDef.panel )
-	index = Tab_GetTabIndexByBodyName( seasonTabData, "ChallengesPanel" )
-	if ( seasonTabData.activeTabIdx != index )
-		ActivateTab( seasonTabData, index )
 }
 
 void function JumpToChallengesLink ( string link )
@@ -399,7 +391,7 @@ void function AllChallengesMenu_UpdateCategories( bool ornull isShown )
 					}
 					RuiSetGameTime( Hud_GetRui( button ), "expireTime", remainingDuration > 0 ? ClientTime() + remainingDuration : RUI_BADGAMETIME )
 				}
-				else if ( group.timeSpanKind == eChallengeTimeSpanKind.EVENT_SPECIAL )
+				else if ( group.timeSpanKind == eChallengeTimeSpanKind.EVENT_SPECIAL || group.timeSpanKind == eChallengeTimeSpanKind.EVENT_SPECIAL_2 )
 				{
 					if ( group.challenges.len() > 0 )
 					{

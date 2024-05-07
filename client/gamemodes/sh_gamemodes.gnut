@@ -85,6 +85,10 @@ global function GameMode_DoesModeDisplayIconsForAllTeams
 global function GameMode_OverrideCompletedResolutionCleanupFunc
 
 
+
+
+
+
 global struct GamemodeSettings
 {
 	string name = ""
@@ -310,12 +314,14 @@ void function GameModes_Init()
 
 
 
+	
 	gameMode = GAMEMODE_STRIKEOUT
 	LimitedTimeMode_Create( gameMode )
 	LimitedTimeMode_SetName( gameMode, "#STRIKEOUT_NAME" )
 	LimitedTimeMode_SetIcon( gameMode, $"rui/menu/gamemode_emblem/emblem_three_strikes" )
 	LimitedTimeMode_SetPlaylistFlag( gameMode, "is_gamemode_strikeout" )
 
+	
 
 
 
@@ -333,6 +339,52 @@ void function GameModes_Init()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+	gameMode = GAMEMODE_SURVIVAL_SOLOS
+	LimitedTimeMode_Create( gameMode )
+	LimitedTimeMode_SetName( gameMode, "#SURVIVAL_MODE_SOLOS" )
+	LimitedTimeMode_SetIcon( gameMode, $"rui/menu/gamemode_emblem/emblem_three_strikes" )
+	LimitedTimeMode_SetPlaylistFlag( gameMode, "is_gamemode_solos" )
+
+	
 
 
 
@@ -436,6 +488,10 @@ void function GameModes_Init()
 	GameMode_AddScoreboardColumnData( gameMode, "#SCOREBOARD_ASSISTS", PGS_ASSISTS, 2 )
 	GameMode_SetColor( gameMode, [212, 83, 152, 255] )
 	GameMode_SetTimedEventsEnabled( gameMode, true )
+
+
+
+
 
 
 
@@ -1014,4 +1070,24 @@ void function GameMode_OverrideCompletedResolutionCleanupFunc( void functionref(
 {
 	file.completedResolutionCleanupFunc = func
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

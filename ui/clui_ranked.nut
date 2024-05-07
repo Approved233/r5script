@@ -479,7 +479,7 @@ bool function SharedRanked_PartyHasRankedLevelAccess()
 	if ( !IsFullyConnected() )
 		return false
 
-	if ( GetCurrentPlaylistVarBool( "ranked_dev_playtest", false ) )
+	if ( GetCurrentPlaylistVarBool( RANKED_DEV_PLAYTEST_PLAYLIST_VAR, false ) )
 		return true
 
 	Party party = GetParty()
@@ -523,10 +523,10 @@ bool function Ranked_PartyMeetsRankedDifferenceRequirements()
 	if ( !IsFullyConnected() )
 		return false
 
-	if ( GetCurrentPlaylistVarBool( "ranked_dev_playtest", false ) )
+	if ( GetCurrentPlaylistVarBool( RANKED_DEV_PLAYTEST_PLAYLIST_VAR, false ) )
 		return true
 
-	if ( GetCurrentPlaylistVarBool( "ranked_ignore_party_rank_difference", false ) )
+	if ( GetCurrentPlaylistVarBool( RANKED_IGNORE_MAX_TIER_DIFFERENTIAL_PLAYLIST_VAR, false ) )
 		return true
 
 	Party party = GetParty()
@@ -534,64 +534,28 @@ bool function Ranked_PartyMeetsRankedDifferenceRequirements()
 		return true
 
 	string selectedRankedPlaylist = LobbyPlaylist_GetSelectedPlaylist()
-	if ( GetPartySize() >= GetPlaylistVarInt( selectedRankedPlaylist, "max_team_size", 3 ) && GetPlaylistVarBool( selectedRankedPlaylist, "ranked_ignore_full_party_rank_difference", true ) )
+	if ( GetPartySize() >= GetPlaylistVarInt( selectedRankedPlaylist, "max_team_size", 3 ) && GetPlaylistVarBool( selectedRankedPlaylist, RANKED_PARTY_IGNORE_MAX_TIER_DIFFERENTIAL_PLAYLIST_VAR, false ) )
 		return true
 
-	bool allPartyMembersMeetRankedDifferenceRequirements = true
-
+	int partyMaxTier = 0
+	int partyMinTier = INT_MAX
 	foreach ( member in party.members )
 	{
 		CommunityUserInfo ornull userInfoOrNull = GetUserInfo( member.hardware, member.uid )
-
 		if ( userInfoOrNull != null )
 		{
-			CommunityUserInfo userInfo = expect CommunityUserInfo(userInfoOrNull)
-
-			int rankedTierThresholdIndex = Ranked_GetTierOfThresholdForRankedPartyDifferences()
-
+			CommunityUserInfo userInfo = expect CommunityUserInfo( userInfoOrNull )
 			SharedRankedTierData tierData = GetCurrentRankedDivisionFromScore( userInfo.rankScore ).tier
-			if ( tierData.index < rankedTierThresholdIndex )
-			{
-				continue
-			}
-			else
-			{
-				foreach ( partyMember in party.members ) 
-				{
-					if ( partyMember.hardware == member.hardware && partyMember.uid == member.uid )
-						continue
+			if ( tierData.index < partyMinTier )
+				partyMinTier = tierData.index
 
-					CommunityUserInfo ornull partyMemberUserInfo = GetUserInfo( partyMember.hardware, partyMember.uid )
-					if ( partyMemberUserInfo == null )
-					{
-						allPartyMembersMeetRankedDifferenceRequirements = false
-						break
-					}
-
-					expect CommunityUserInfo( partyMemberUserInfo )
-
-					SharedRankedTierData partyMemberTierData = GetCurrentRankedDivisionFromScore( partyMemberUserInfo.rankScore ).tier
-
-					if ( abs( partyMemberTierData.index - tierData.index ) > 1 )
-					{
-						allPartyMembersMeetRankedDifferenceRequirements = false
-						break
-					}
-				}
-
-				if ( !allPartyMembersMeetRankedDifferenceRequirements )
-					break
-			}
-		}
-		else
-		{
-			allPartyMembersMeetRankedDifferenceRequirements = false
-			break
+			if ( tierData.index > partyMaxTier )
+				partyMaxTier = tierData.index
 		}
 	}
 
-	return allPartyMembersMeetRankedDifferenceRequirements
-
+	Assert( (partyMaxTier - partyMinTier) >= 0 )
+	return (partyMaxTier - partyMinTier) < Ranked_RankedPartyMaxTierDifferential()
 }
 
 
@@ -617,7 +581,7 @@ bool function Ranked_HasBeenInitialized()
 		}
 #endif
 
-	if ( GetCurrentPlaylistVarBool( "ranked_dev_playtest", false ) )
+	if ( GetCurrentPlaylistVarBool( RANKED_DEV_PLAYTEST_PLAYLIST_VAR, false ) )
 		return true
 
 	if ( GetCurrentPlaylistVarBool( "ranked_ignore_intialization_check", false ) )

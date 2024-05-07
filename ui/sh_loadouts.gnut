@@ -32,6 +32,10 @@ global function LoadoutSlot_GetBackups
 
 global function LoadoutSlot_GetRawStorageContents
 
+
+global function Loadouts_SetSortPriorityForItemFlavor
+
+
 global function AddCallback_ItemFlavorLoadoutSlotDidChange_AnyPlayer
 global function AddCallback_IntegerLoadoutSlotDidChange_AnyPlayer
 global function RemoveCallback_ItemFlavorLoadoutSlotDidChange_AnyPlayer
@@ -66,6 +70,7 @@ global function GetUnlockedItemFlavorsForLoadoutSlot
 global function GetRandomGoodItemFlavorForLoadoutSlot
 global function GetMostPlayedCharacterItemFlavor
 global function GetDefaultItemFlavorForLoadoutSlot
+global function RemoveNonShippingCharacters
 global function ConvertItemFlavorToLoadoutSlotContentsIndex
 global function IsValidLoadoutSlotContentsIndexForItemFlavor
 global function ConvertLoadoutSlotContentsIndexToItemFlavor
@@ -135,7 +140,7 @@ global typedef LoadoutEntry_IsSlotLocked bool functionref( EHI playerEHI )
 
 
 global typedef LoadoutEntry_IsItemFlavorUnlockedFuncType bool functionref( EHI playerEHI, ItemFlavor itemFlavor, bool shouldIgnoreGRX = false, bool shouldIgnoreOtherSlots = false )
-global typedef ItemFlavorLoadoutSlotDidChangeFuncType void functionref( EHI playerEHI, ItemFlavor flavor )
+global typedef ItemFlavorLoadoutSlotDidChangeFuncType void functionref( EHI playerEHI, ItemFlavor flavor ) 
 global typedef IntegerLoadoutSlotDidChangeFuncType void functionref( EHI playerEHI, int value )
 
 global enum eLoadoutNetworking
@@ -221,6 +226,26 @@ global enum eTristate
 	TRUE,
 	FALSE,
 	UNKNOWN,
+}
+
+global enum eLoadoutSortPriority
+{
+	HAS_SOURCE_ICON = ( 1 << 0 ),
+
+	COMMON = ( 1 << 1 ),
+	RARE = ( 1 << 2 ),
+	EPIC = ( 1 << 3 ),
+	LEGENDARY = ( 1 << 4 ),
+	ICONIC = ( 1 << 5 ),
+	MYTHIC = ( 1 << 6 ),
+
+	WEAPON_REACTIVE = ( 1 << 7 ),
+	RANDOM = ( 1 << 8 ),
+	DEFAULT = ( 1 << 9 ),
+	SENTINEL = ( 1 << 10 ),
+	FAVORITE = ( 1 << 11 ),
+
+	EQUIPPED = ( 1 << 12 ),
 }
 
 
@@ -1188,6 +1213,11 @@ void function RequestSetItemFlavorLoadoutSlot( EHI playerEHI, LoadoutEntry entry
 		DEV_LoadoutsDebug( entry )
 #endif
 
+
+		ItemFlavor currentFlavor = LoadoutSlot_GetItemFlavor( playerEHI, entry, true )
+		currentFlavor.loadoutSortPriority = currentFlavor.loadoutSortPriority & ~eLoadoutSortPriority.EQUIPPED
+
+
 	Assert( playerEHI == LocalClientEHI(), "Tried to use RequestSetLoadoutSlot on a different player" )
 
 	int seqNum            = 0
@@ -1211,13 +1241,17 @@ void function RequestSetItemFlavorFavoritesSlot( EHI playerEHI, LoadoutEntry ent
 	printf( "loadout favorites change request: %s = %s (%s)", entry.id, string(ItemFlavor_GetAsset( itemFlavor )), ItemFlavor_GetGUIDString( itemFlavor ) )
 }
 
-void function RequestClearItemFlavorFavoritesSlot( EHI playerEHI, LoadoutEntry entry, int favIndex )
+void function RequestClearItemFlavorFavoritesSlot( EHI playerEHI, LoadoutEntry entry, int favIndex, ItemFlavor flavor )
 {
 #if LOADOUTS_DBG
 		DEV_LoadoutsDebug( entry )
 #endif
 
 	Assert( playerEHI == LocalClientEHI(), "Tried to use RequestClearItemFlavorFavoritesSlot on a different player" )
+
+
+		flavor.loadoutSortPriority = flavor.loadoutSortPriority & ~eLoadoutSortPriority.FAVORITE
+
 
 	Remote_ServerCallFunction( "ClientCallback_favorites_clear", favIndex, entry.entryIndex )
 
@@ -1257,6 +1291,10 @@ void function RequestClearFavoredQuip( ItemFlavor quipToClear )
 
 
 		character = GetTopLevelCustomizeContext()
+
+
+
+		quipToClear.loadoutSortPriority = quipToClear.loadoutSortPriority & ~eLoadoutSortPriority.FAVORITE
 
 
 	foreach ( loadoutEntry in Loadout_FavoredQuipArrayForCharacter( character ) )
@@ -1484,8 +1522,9 @@ array<ItemFlavor> function GetUnlockedItemFlavorsForLoadoutSlot( EHI playerEHI, 
 
 void function RemoveNonShippingCharacters( array<ItemFlavor> characterList )
 {
-	foreach( ItemFlavor character in characterList )
+	foreach( ItemFlavor character in clone characterList )
 	{
+		int shippingStatus = eItemFlavorShippingStatus[GetGlobalSettingsString( ItemFlavor_GetAsset( character ), "shippingStatus" )]
 		if ( !CharacterClass_GetIsShippingCharacter( character ) )
 		{
 			characterList.fastremovebyvalue( character )
@@ -1979,6 +2018,13 @@ int function GetLoadoutSlotContentsIndexInternal( EHI playerEHI, LoadoutEntry en
 
 				slotContentsIndex = GetLoadoutSlotContentsIndexFromCache( playerEHI, entry )
 
+
+
+			if ( !IsLobby() && entry.defaultItemFlavor.guid == DEFAULT_MELEE_WEAPON_SKIN_GUID && IsValidItemFlavorGUID( slotContentsIndex ) && ItemFlavor_GetType( GetItemFlavorByGUID( slotContentsIndex ) ) == Artifacts_Loadouts_GetMeleeSkinNetVarOverrideType( false ) )
+			{
+				return slotContentsIndex 
+			}
+
 		}
 		else
 		{
@@ -2363,12 +2409,6 @@ int function GetLoadoutSlotContentsIndexFromCache( EHI playerEHI, LoadoutEntry e
 
 
 
-
-
-
-
-
-
 void function RefreshLoadoutSlotInternal( EHI playerEHI, LoadoutEntry entry, table<LoadoutEntry, bool> ornull refreshedSlotsSet, array<int> ornull queuedSlotsIndicesForRpc, bool isDependent )
 {
 #if LOADOUTS_DBG
@@ -2393,6 +2433,19 @@ void function RefreshLoadoutSlotInternal( EHI playerEHI, LoadoutEntry entry, tab
 
 
 	int slotContentsIndex = GetLoadoutSlotContentsIndexInternal( playerEHI, entry )
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2554,6 +2607,32 @@ void function ClientToUI_RefreshLoadoutSlot( EHI playerEHI, int entryIndex, int 
 	EHIScriptStruct ehiss = GetEHIScriptStruct( playerEHI )
 	ehiss.loadoutSlotsLastSeenContentsMap[entryIndex] = slotContentsIndex
 
+	if ( IsLobby() && playerEHI == LocalClientEHI() && IsTopLevelCustomizeContextValid() && entry.type == eLoadoutEntryType.ITEM_FLAVOR )
+	{
+		Assert( IsValidItemFlavorGUID( slotContentsIndex ) )
+		if ( IsValidItemFlavorGUID( slotContentsIndex ) )
+		{
+			if ( entry.category == eLoadoutCategory.CHARACTER_FAVORED_QUIPS ) 
+			{
+				ItemFlavor favored = GetItemFlavorByGUID( slotContentsIndex )
+				favored.loadoutSortPriority = favored.loadoutSortPriority | eLoadoutSortPriority.FAVORITE
+			}
+			else
+			{
+				
+				ItemFlavor equipped = LoadoutSlot_GetItemFlavor( playerEHI, entry, true )
+				equipped.loadoutSortPriority = equipped.loadoutSortPriority | eLoadoutSortPriority.EQUIPPED
+
+				
+				if ( entry.maxFavoriteCount > 0 )
+				{
+					foreach( favorite in LoadoutSlot_GetFavorites( playerEHI, entry ) )
+						favorite.loadoutSortPriority = favorite.loadoutSortPriority | eLoadoutSortPriority.FAVORITE
+				}
+			}
+		}
+	}
+
 	RefreshLoadoutSlotInternal( playerEHI, entry, null, null, false )
 }
 
@@ -2626,21 +2705,117 @@ array<ItemFlavor> function FilterItemsForVisibility( EHI playerEHI, array<ItemFl
 	return filteredItems
 }
 
-array<ItemFlavor> function GetLoadoutItemsSortedForMenu( array<LoadoutEntry> loadoutEntries, int functionref( ItemFlavor ) sortOrdinalFunc )
+void function Loadouts_SetSortPriorityForItemFlavor( ItemFlavor item )
 {
-	LoadoutEntry entry = loadoutEntries[0]
+	int priority = 0
+
+	
+	if ( ItemFlavor_GetSourceIcon( item ) != $"" ) 
+		priority = priority | eLoadoutSortPriority.HAS_SOURCE_ICON
+	else if ( ItemFlavor_IsTheFavoriteSentinel( item ) )
+		priority = priority | eLoadoutSortPriority.SENTINEL
+	else if ( ItemTypeHasDefault( ItemFlavor_GetType( item ) ) && ItemFlavor_IsTheDefault( item ) )
+		priority = priority | eLoadoutSortPriority.DEFAULT
+	else if ( ItemTypeHasRandom( ItemFlavor_GetType( item ) ) && ItemFlavor_IsTheRandom( item ) )
+		priority = priority | eLoadoutSortPriority.RANDOM
+
+	if ( ItemFlavor_HasQuality( item ) )
+	{
+		
+		if( ItemFlavor_GetType( item ) == eItemType.weapon_skin && WeaponSkin_DoesReactToKills( item ) )
+			priority = priority | eLoadoutSortPriority.WEAPON_REACTIVE
+
+		switch ( ItemFlavor_GetQuality( item ) )
+		{
+			case eRarityTier.COMMON:
+				priority = priority | eLoadoutSortPriority.COMMON
+				break
+
+			case eRarityTier.RARE:
+				priority = priority | eLoadoutSortPriority.RARE
+				break
+
+			case eRarityTier.EPIC:
+				priority = priority | eLoadoutSortPriority.EPIC
+				break
+
+			case eRarityTier.LEGENDARY:
+				priority = priority | eLoadoutSortPriority.LEGENDARY
+				break
+
+			case eRarityTier.ICONIC:
+				priority = priority | eLoadoutSortPriority.ICONIC 
+				break
+
+			case eRarityTier.MYTHIC:
+				priority = priority | eLoadoutSortPriority.MYTHIC
+				break
+		}
+	}
+
+	item.loadoutSortPriority = priority
+}
+
+array<ItemFlavor> function GetLoadoutItemsSortedForMenu( array<LoadoutEntry> loadoutEntries, int functionref( ItemFlavor ) sortOrdinalFunc, bool functionref( ItemFlavor ) isEmptyFunc, array<int> filterTypes )
+{
+	LoadoutEntry entry = loadoutEntries[0] 
 
 #if LOADOUTS_DBG
 		DEV_LoadoutsDebug( entry )
 #endif
 
 	EHI playerEHI           = LocalClientEHI()
-	array<ItemFlavor> items = GetValidItemFlavorsForLoadoutSlot( playerEHI, entry )
+	array<ItemFlavor> items = clone GetValidItemFlavorsForLoadoutSlot( playerEHI, entry )
 
+	
+	
+	
+	
+
+	
+	
+	if ( filterTypes.len() > 0 )
+	{
+		foreach ( item in clone items )
+		{
+			if ( !filterTypes.contains( ItemFlavor_GetType( item ) ) )
+				items.fastremovebyvalue( item )
+		}
+	}
+
+	
 	if ( GetCurrentPlaylistVarBool( "filter_uncraftable_items", true ) )
 		items = TEMP_FilterItemsForGRX( playerEHI, items )
 
+	if ( isEmptyFunc != null )
+	{
+		foreach ( item in items )
+		{
+			if ( isEmptyFunc( item ) )
+			{
+				items.fastremovebyvalue( item )
+				break 
+			}
+		}
+	}
+
+	
 	items = FilterItemsForVisibility( playerEHI, items )
+
+	foreach ( item in items ) 
+	{
+		item.loadoutSortPriority = item.loadoutSortPriority & ~eLoadoutSortPriority.EQUIPPED
+		item.loadoutSortPriority = item.loadoutSortPriority & ~eLoadoutSortPriority.FAVORITE
+	}
+
+	array<ItemFlavor> favs
+	if ( loadoutEntries.len() == 1 )
+		favs = LoadoutSlot_GetFavorites( LocalClientEHI(), entry )
+	else if ( loadoutEntries.len() > 1 && Loadout_IsCharacterQuipLoadoutEntry( entry) )
+		favs = ItemFlavor_GetFavoredQuipArrayForCharacter( GetTopLevelCustomizeContext() )
+
+	foreach ( item in favs )
+		item.loadoutSortPriority = item.loadoutSortPriority | eLoadoutSortPriority.FAVORITE
 
 	array<ItemFlavor> equippedItems
 	foreach ( loadoutEntry in loadoutEntries )
@@ -2649,99 +2824,35 @@ array<ItemFlavor> function GetLoadoutItemsSortedForMenu( array<LoadoutEntry> loa
 			equippedItems.append( LoadoutSlot_GetItemFlavor( playerEHI, loadoutEntry, true ) )
 	}
 
-	items.sort( int function( ItemFlavor a, ItemFlavor b ) : ( playerEHI, equippedItems, sortOrdinalFunc, entry ) {
-		
-		
-		
-		
-		
-		
+	foreach ( item in equippedItems )
+		item.loadoutSortPriority = item.loadoutSortPriority | eLoadoutSortPriority.EQUIPPED
 
-		bool aIsEquipped = equippedItems.contains( a )
-		bool bIsEquipped = equippedItems.contains( b )
-		if ( aIsEquipped && !bIsEquipped )
+	items.sort( int function( ItemFlavor a, ItemFlavor b ) : ( sortOrdinalFunc ) {
+		if ( a.loadoutSortPriority > b.loadoutSortPriority )
 			return -1
-		else if ( bIsEquipped && !aIsEquipped )
+		else if ( a.loadoutSortPriority < b.loadoutSortPriority )
 			return 1
 
-		array<ItemFlavor> favs = LoadoutSlot_GetFavorites( playerEHI, entry )
-		bool aInFavs           = favs.contains( a )
-		bool bInFavs           = favs.contains( b )
-		if ( aInFavs && !bInFavs )
-			return -1
-		else if ( !aInFavs && bInFavs )
-			return 1
-
-		if ( ItemFlavor_IsTheFavoriteSentinel( a ) && !ItemFlavor_IsTheFavoriteSentinel( b ) )
-			return -1
-		else if ( !ItemFlavor_IsTheFavoriteSentinel( a ) && ItemFlavor_IsTheFavoriteSentinel( b ) )
-			return 1
-
-		int itemType = ItemFlavor_GetType( a )
-		if ( ItemTypeHasDefault( itemType ) )
+		if ( IsBitFlagSet( a.loadoutSortPriority, eLoadoutSortPriority.HAS_SOURCE_ICON ) && IsBitFlagSet( b.loadoutSortPriority, eLoadoutSortPriority.HAS_SOURCE_ICON ) )
 		{
-			if ( ItemFlavor_IsTheDefault( a ) && !ItemFlavor_IsTheDefault( b ) )
+			string aTag = string(ItemFlavor_GetSourceIcon( a ))
+			string bTag = string(ItemFlavor_GetSourceIcon( b ))
+			if ( aTag > bTag )
 				return -1
-			else if ( !ItemFlavor_IsTheDefault( a ) && ItemFlavor_IsTheDefault( b ) )
-				return 1
-		}
-		if ( ItemTypeHasRandom( itemType ) )
-		{
-			if ( ItemFlavor_IsTheRandom( a ) && !ItemFlavor_IsTheRandom( b ) )
-				return -1
-			else if ( !ItemFlavor_IsTheRandom( a ) && ItemFlavor_IsTheRandom( b ) )
+			else if ( aTag < bTag )
 				return 1
 		}
 
-		if( ItemFlavor_GetType( a ) == eItemType.weapon_skin && ItemFlavor_GetType( b ) == eItemType.weapon_skin )
-		{
-			bool aIsReactive = WeaponSkin_DoesReactToKills( a )
-			bool bIsReactive = WeaponSkin_DoesReactToKills( b )
-			if ( aIsReactive && !bIsReactive )
-				return -1
-			else if ( bIsReactive && !aIsReactive )
-				return 1
-		}
-
-		int aQuality = ItemFlavor_HasQuality( a ) ? ItemFlavor_GetQuality( a ) : -1
-		int bQuality = ItemFlavor_HasQuality( b ) ? ItemFlavor_GetQuality( b ) : -1
-
-		
-		aQuality = SwapIconicAndMythicQuality_HACK( aQuality )
-		bQuality = SwapIconicAndMythicQuality_HACK( bQuality )
-
-
-		if ( aQuality > bQuality )
-			return -1
-		else if ( aQuality < bQuality )
-			return 1
-
-		string aTag = string(ItemFlavor_GetSourceIcon( a ))
-		string bTag = string(ItemFlavor_GetSourceIcon( b ))
-		if ( aTag > bTag )
-			return -1
-		else if ( aTag < bTag )
-			return 1
-
-		if ( ItemTypeAlphabetizable(itemType))
+		if ( ItemTypeAlphabetizable( ItemFlavor_GetType( a ) ) ) 
 			return SortStringAlphabetize( Localize( ItemFlavor_GetLongName( a ) ), Localize( ItemFlavor_GetLongName( b ) ) )
 
-		return sortOrdinalFunc( a ) - sortOrdinalFunc( b )
+		if ( sortOrdinalFunc != null )
+			return sortOrdinalFunc( a ) - sortOrdinalFunc( b )
+
+		return 0
 	} )
 
 	return items
-}
-
-
-
-
-int function SwapIconicAndMythicQuality_HACK( int a )
-{
-	if ( a == 5 ) 
-		return 4
-	else if( a == 4 ) 
-		return 5
-	return a
 }
 
 

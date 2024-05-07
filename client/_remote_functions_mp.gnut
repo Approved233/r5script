@@ -137,6 +137,9 @@ void function RemoteFunctions_Init_Begin()
 		Remote_RegisterClientFunction( "ServerToClient_PlayLootRarityFXOnDeathboxDrop", "entity" )
 
 
+	Remote_RegisterClientFunction( "Flyer_ServerToClient_DisplayFlyerDeathboxPrompt" )
+	Remote_RegisterServerFunction( "Flyer_ClientToServer_PingFlyerDeathbox" )
+
 	RegisterNetworkedVariable( "lootRarity", SNDC_DEATH_BOX, SNVT_INT, -1 )
 	RegisterNetworkedVariable( "ownerEHI", SNDC_DEATH_BOX, SNVT_BIG_INT, -1 )
 
@@ -365,8 +368,6 @@ void function RemoteFunctions_Init_Begin()
 
 			Remote_RegisterClientFunction( "ServerCallback_AutoReloadComplete", "entity" )
 
-			Remote_RegisterClientFunction( "ServerCallback_SetLaserSightVMLaserEnabled", "entity" , "bool")
-
 			Remote_RegisterUIFunction( "ServerCallback_OpenSurvivalExitMenu", "bool" )
 			
 
@@ -434,7 +435,7 @@ void function RemoteFunctions_Init_Begin()
 
 
 
-			Remote_RegisterUIFunction( "ServerCallback_MilestoneEvent_MilestoneRewardCeremonyIsDue" )
+			Remote_RegisterUIFunction( "ServerCallback_MilestoneEvent_MilestoneRewardCeremonyIsDue", "int", 0, 255 )
 			Remote_RegisterUIFunction( "ServerCallback_MilestoneEvent_TryDisplayMilestoneRewardCeremonyForAutoOpenPacks" )
 
 
@@ -540,6 +541,7 @@ void function RemoteFunctions_Init_Begin()
 
 
 
+
 			WinterExpress_RegisterNetworking()
 
 
@@ -617,6 +619,15 @@ void function RemoteFunctions_Init_Begin()
 
 
 
+
+
+
+
+
+
+
+
+
 			EvacShip_RegisterNetworking()
 
 
@@ -675,10 +686,6 @@ void function RemoteFunctions_Init_Begin()
 	Remote_RegisterClientFunction( "ServerCallback_NessyMessage", "int", 0, 50 )
 
 	Remote_RegisterClientFunction( "ServerCallback_PlayPassiveVoice", "int", 0, 50 )
-
-
-
-
 
 
 
@@ -761,7 +768,15 @@ void function RemoteFunctions_Init_Begin()
 
 
 
+
+
+
+
 		CrowdNoiseMeter_RegisterNetworking()
+
+
+
+
 
 
 
@@ -928,10 +943,6 @@ void function RemoteFunctions_Init_Begin()
 	Remote_RegisterClientFunction( "ServerCallback_PlayerPerformPodiumScreenFlourish", "int", INT_MIN, INT_MAX )
 
 	
-	Remote_RegisterServerFunction( "ClientCallback_InitializeCraftingAtWorkbench", "int", 0, 32 )
-	Remote_RegisterServerFunction( "ClientCallback_ClosedCraftingMenu" )
-
-	
 	Remote_RegisterServerFunction( "ClientCallback_newness_clear", "int", INT_MIN, INT_MAX )
 	Remote_RegisterServerFunction( "ClientCallback_temp_newness_mark", "int", INT_MIN, INT_MAX )
 
@@ -980,7 +991,7 @@ void function RemoteFunctions_Init_Begin()
 	GibraltarShield_RegisterNetworkFunctions()
 
 
-
+		ShPassiveBattleSense_RegisterNetworking()
 
 
 	MobileHMG_RegisterNetworkFunctions()
@@ -1051,7 +1062,7 @@ void function RemoteFunctions_Init_Begin()
 
 
 	Remote_RegisterUIFunction( "ServerCallback_GamemodeSelectorInitialize" )
-	Remote_RegisterServerFunction( "ClientCallback_GamemodeSelectorDismiss", "int", INT_MIN, INT_MAX )
+	Remote_RegisterServerFunction( "ClientCallback_GamemodeSelectorDismiss", "int", 0, GAMEMODE_MAX_SEEN_INDEX )
 
 
 	Remote_RegisterServerFunction( "ClientCallback_RequestPlayerLastRank" )

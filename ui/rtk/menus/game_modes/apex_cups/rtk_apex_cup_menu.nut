@@ -1,5 +1,4 @@
 global function InitRTKApexCupMenu
-global function RTKMutator_ApexCupGetTierIcon
 global function RTKMutator_ApexCupGetTierText
 global function RTKApexCupGetPlayerTierData
 struct
@@ -14,6 +13,7 @@ global struct RTKApexCupTierInfo
 	int positionPercentage = -1
 	int tierIndex = -1
 	int lowerBounds = -1
+	bool isTop100 = false
 
 	SettingsAssetGUID apexCup
 }
@@ -83,7 +83,8 @@ void function RTKApexCupGetPlayerTierData( rtk_behavior self , SettingsAssetGUID
 		tierInfo.apexCup	   = cupId
 
 		tierInfo.targetPoints  = cupEntryData.tierScoreBounds[ maxint( 0, tierInfo.tierIndex - 1 ) ]
-		tierInfo.lowerBounds   = tierInfo.tierIndex <  cupEntryData.tierScoreBounds.len() ? cupEntryData.tierScoreBounds[tierInfo.tierIndex] : 0
+		tierInfo.lowerBounds   = tierInfo.tierIndex < cupEntryData.tierScoreBounds.len() ? cupEntryData.tierScoreBounds[tierInfo.tierIndex] : 0
+		tierInfo.isTop100	   = tierInfo.currentPoints > tierInfo.targetPoints
 
 		
 		float percent = cupEntryData.positionPercentage
@@ -95,35 +96,6 @@ void function RTKApexCupGetPlayerTierData( rtk_behavior self , SettingsAssetGUID
 
 	rtk_struct tierModel = expect rtk_struct( RTKDataModelType_GetStruct( RTK_MODELTYPE_MENUS, "tierInfo", true, [ "apexCups" ] ) )
 	RTKStruct_SetValue( tierModel, tierInfo )
-}
-
-
-
-asset function RTKMutator_ApexCupGetTierIcon( int tier )
-{
-	asset iconAsset = $""
-	switch ( tier )
-	{
-		case 0:
-			iconAsset = $"ui_image/rui/menu/apex_rumble/cups_emblem_01.rpak"
-			break
-		case 1:
-			iconAsset = $"ui_image/rui/menu/apex_rumble/cups_emblem_02.rpak"
-			break
-		case 2:
-			iconAsset = $"ui_image/rui/menu/apex_rumble/cups_emblem_03.rpak"
-			break
-		case 3:
-			iconAsset = $"ui_image/rui/menu/apex_rumble/cups_emblem_04.rpak"
-			break
-		case 4:
-			iconAsset = $"ui_image/rui/menu/apex_rumble/cups_emblem_05.rpak"
-			break
-		default:
-			Warning( "RTKMutator_ApexCupGetTierIcon Invalid Tier" )
-			iconAsset = $""
-	}
-	return iconAsset
 }
 
 string function RTKMutator_ApexCupGetTierText( int tier )
@@ -147,7 +119,7 @@ string function RTKMutator_ApexCupGetTierText( int tier )
 			tierString = "#NUMERAL_5"
 			break
 		default:
-			Warning( "RTKMutator_ApexCupGetTierIcon Invalid Tier" )
+			Warning( "RTKMutator_ApexCupGetTierText Invalid Tier" )
 			tierString = ""
 	}
 	return tierString

@@ -1036,7 +1036,7 @@ void function DeathScreenTryToggleUpgradesOnGladCard( var button )
 void function DeathScreenUpdateCursor()
 {
 	int tabIndex = GetMenuActiveTabIndex( file.menu )
-	if ( tabIndex == eDeathScreenPanel.SPECTATE )
+	if ( tabIndex == eDeathScreenPanel.SPECTATE || tabIndex == eDeathScreenPanel.KILLREPLAY )
 	{
 		HideGameCursor()
 		SetGamepadCursorEnabled( file.menu, false )

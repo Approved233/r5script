@@ -28,13 +28,19 @@ global struct RTKOfferButtonModel
 	string discount
 	string purchaseLimit
 	string imageRef
+	asset  binkRef
 	int	   pakType
 	asset  sourceIcon
+	asset  legendIcon
+	asset  finishIcon
+	asset  trailIcon
+	array<RTKAutoCrossfaderImageModel> crossfaderImages
 
 	vector priceColor
 	vector newPriceColor
 
 	bool   isOnlyGiftable
+	bool   locked
 }
 
 struct PrivateData
@@ -77,6 +83,8 @@ RTKOfferButtonModel function RTKStore_CreateOfferButtonModel( GRXScriptOffer off
 	offerButtonModel.priceColor = <1, 1, 1>
 
 	offerButtonModel.isOnlyGiftable = GRXOffer_IsOfferOnlyGiftable( offer )
+
+	offerButtonModel.binkRef = GetAssetFromString( offer.binkRef )
 
 	string offerTypeName
 	if ( offer.output.flavors.len() > 1 || offer.output.quantities[0] > 1)
@@ -178,6 +186,53 @@ RTKOfferButtonModel function RTKStore_CreateOfferButtonModel( GRXScriptOffer off
 		{
 			offerButtonModel.newPriceShow = false
 			offerButtonModel.price        = Localize( GRX_GetFormattedPrice( offer.prices[0], 1 ) )
+		}
+	}
+
+	if ( "location" in offer.attributes )
+	{
+		if ( offer.attributes.location == "heirloom_set_shop" )
+		{
+			ItemFlavor skinFlavor = ItemFlavorBag_GetMeleeSkinItem( offer.output )
+			ItemFlavor character = Mythics_GetCharacterForSkin( skinFlavor )
+
+			offerButtonModel.offerImage = MeleeSkin_GetStoreImage( skinFlavor )
+			offerButtonModel.offerName = ItemFlavor_GetLongName( skinFlavor )
+			offerButtonModel.offerType = ItemFlavor_GetLongName( character )
+			offerButtonModel.legendIcon = ItemFlavor_GetIcon( character )
+		}
+		else if ( offer.attributes.location == "prestige_set_shop" )
+		{
+			ItemFlavor skinFlavor = ItemFlavorBag_GetMythicSkinItem( offer.output )
+			ItemFlavor character = Mythics_GetCharacterForSkin( skinFlavor )
+			bool hasSkydiveTrail = Mythics_SkinHasCustomSkydivetrail( skinFlavor )
+
+			offerButtonModel.offerName = ItemFlavor_GetLongName( skinFlavor )
+			offerButtonModel.offerType = ItemFlavor_GetLongName( character )
+			offerButtonModel.legendIcon = ItemFlavor_GetIcon( character )
+			offerButtonModel.finishIcon = ItemFlavor_GetIcon( Mythics_GetCustomExecutionForCharacterOrSkin( character ) )
+			offerButtonModel.trailIcon = hasSkydiveTrail ? CustomizeMenu_GetRewardButtonImage( Mythics_GetCustomSkydivetrailForCharacterOrSkin( character ) ) : $""
+
+			for ( int i = 0; i < 3; i++ )
+			{
+				RTKAutoCrossfaderImageModel imageModel
+				imageModel.image = Mythics_GetStoreImageForCharacter( character, i )
+				imageModel.active = false
+				offerButtonModel.crossfaderImages.append( imageModel )
+			}
+		}
+		else if ( offer.attributes.location == "artifact_set_shop" )
+		{
+			if ( Artifacts_IsBaseArtifact( itemFlav ) )
+			{
+				offerButtonModel.offerType = Localize( GRXOffer_IsFullyClaimed( offer ) ? "#BASE_ARTIFACT_OWNED" : "#BASE_ARTIFACT_UNOWNED" )
+			}
+			else
+			{
+				bool locked = ( offer.prereq != null && !GRX_IsItemOwnedByPlayer( expect ItemFlavor( offer.prereq ) ) )
+				offerButtonModel.offerType = Localize( locked ? "#ARTIFACT_SET_ITEM_LOCKED" : "#ARTIFACT_SET_ITEM_UNLOCKED", Artifacts_GetComponentOrder( itemFlav ) + 1, eArtifactComponentType.COUNT )
+				offerButtonModel.locked = locked
+			}
 		}
 	}
 

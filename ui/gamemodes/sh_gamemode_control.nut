@@ -1104,7 +1104,7 @@ void function Control_RegisterNetworking()
 	Remote_RegisterClientFunction( "ServerCallback_Control_DisplayIconAtPosition", "vector", -1.0, 1.0, 32, "int", 0, eControlIconIndex._count, "int", INT_MIN, INT_MAX, "float", 0.0, FLT_MAX, 32 )
 	Remote_RegisterClientFunction( "ServerCallback_Control_BountyActiveAlert", "entity" )
 	Remote_RegisterClientFunction( "ServerCallback_Control_BountyClaimedAlert", "entity", "int", INT_MIN, INT_MAX, "int",ALLIANCE_NONE, 2  )
-	Remote_RegisterClientFunction( "ServerCallback_Control_AirdropNotification", "bool" )
+	Remote_RegisterClientFunction( "ServerCallback_Control_AirdropNotification" )
 	Remote_RegisterClientFunction( "ServerCallback_Control_UpdateExtraScoreBoardInfo", "int", 0, 2, "int", INT_MIN, INT_MAX, "int", INT_MIN, INT_MAX )
 	Remote_RegisterClientFunction( "ServerCallback_Control_SetIsPlayerUsingLosingExpTiers", "bool" )
 	Remote_RegisterClientFunction( "ServerCallback_Control_DisplaySpawnAlertMessage", "int", 0, eControlSpawnAlertCode._count )
@@ -1497,16 +1497,19 @@ array< featureTutorialTab > function Control_PopulateAboutText()
 	tabs.append( tab3 )
 
 
-		if ( !AprilFools_S20_LTM_PopulateAboutText( tabs, "#APRILFOOLS_S20_ABOUT_TAB", "#APRILFOOLS_S20_ABOUT_CONTROL_HEADER", "#APRILFOOLS_S20_ABOUT_CONTROL_BODY" ) )
-		{
-			tabs.append( tab4 )
-		}
 
 
+
+
+
+		tabs.append( tab4 )
 
 
 	return tabs
 }
+
+
+
 
 
 
@@ -7464,14 +7467,6 @@ bool function Control_IsSpawnWaypointIndexAnObjective( int waypointIndex )
 {
 	return waypointIndex == eControlWaypointTypeIndex.OBJECTIVE_A || waypointIndex == eControlWaypointTypeIndex.OBJECTIVE_B || waypointIndex == eControlWaypointTypeIndex.OBJECTIVE_C
 }
-
-
-
-
-
-
-
-
 
 
 

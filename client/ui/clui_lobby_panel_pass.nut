@@ -204,6 +204,8 @@ struct
 
 
 
+
+
 } file
 
 
@@ -238,6 +240,14 @@ void function ShPassPanel_LevelInit()
 
 
 }
+
+
+
+
+
+
+
+
 
 
 
@@ -3103,7 +3113,7 @@ void function UIToClient_ItemPresentation( SettingsAssetGUID itemFlavorGUID, int
 
 	if ( isMilestoneEvent )
 	{
-		fileLevel.sceneRefOrigin += <30, 0, -15>
+		fileLevel.sceneRefOrigin += <-45, 0, 0>
 		if ( !showLow )
 			fileLevel.sceneRefOrigin += <0, 0, 5>
 
@@ -3114,9 +3124,17 @@ void function UIToClient_ItemPresentation( SettingsAssetGUID itemFlavorGUID, int
 		else if ( itemType == eItemType.gladiator_card_frame )
 			fileLevel.sceneRefOrigin += <0, 0, 0>
 		else if ( itemType == eItemType.emote_icon )
-			fileLevel.sceneRefOrigin += <0, 0, 0>
+			fileLevel.sceneRefOrigin += <0, -50, 30>
+		else if ( itemType == eItemType.character_emote )
+		{
+			fileLevel.sceneRefOrigin += <0, 0, -25>
+			scale *= 1.25
+		}
 		else if ( itemType == eItemType.weapon_skin )
-			fileLevel.sceneRefOrigin += <0, 0, 0>
+		{
+			fileLevel.sceneRefOrigin += <-10, 0, -3>
+			scale *= 1.25
+		}
 		else if ( itemType == eItemType.character_skin )
 			fileLevel.sceneRefOrigin += <0, 0, 0>
 		else if ( itemType == eItemType.melee_skin )
@@ -3221,6 +3239,8 @@ void function ShowBattlepassItem( ItemFlavor item, int level, float scale, var l
 
 
 		case eItemType.artifact_component_blade:
+		case eItemType.artifact_component_power_source:
+		case eItemType.artifact_component_theme:
 
 		case eItemType.melee_skin:
 			ShowBattlePassItem_MeleeSkin( item, scale )
@@ -3304,8 +3324,9 @@ void function ShowBattlepassItem( ItemFlavor item, int level, float scale, var l
 
 
 
+		case eItemType.artifact_component_activation_emote:
 		case eItemType.artifact_component_deathbox:
-			ShowBattlePassItem_Deathbox( item, scale )
+			ShowBattlePassItem_ArtifactBink( item, scale )
 			break
 
 
@@ -3615,8 +3636,16 @@ void function ShowBattlePassItem_MeleeSkin( ItemFlavor item, float scale )
 
 	bool isArtifact = false
 
-	if ( ItemFlavor_GetType( item ) == eItemType.artifact_component_blade )
+	int setIndex = -1
+	array< ItemFlavor > setItems = []
+	array< ItemFlavor > emptySetItems = Artifacts_GetSetItems( eArtifactSetIndex._EMPTY )
+	bool isBlade = ItemFlavor_GetType( item ) == eItemType.artifact_component_blade
+	bool isPowerSource = ItemFlavor_GetType( item ) == eItemType.artifact_component_power_source
+	bool isTheme = ItemFlavor_GetType( item ) == eItemType.artifact_component_theme
+	if ( isBlade || isPowerSource || isTheme )
 	{
+		setIndex = Artifacts_GetSetIndex( item )
+		setItems = Artifacts_GetSetItems( setIndex )
 		item = GetItemFlavorByGUID( ARTIFACT_CONFIGURATION_PTR_0_GUID )
 		isArtifact = true
 	}
@@ -3630,18 +3659,13 @@ void function ShowBattlePassItem_MeleeSkin( ItemFlavor item, float scale )
 
 	if ( isArtifact )
 	{
-		int configIdx = 0
-		LoadoutEntry bladeEntry = Artifacts_Loadouts_GetEntryForConfigIndexAndType( configIdx, eArtifactComponentType.BLADE )
-		LoadoutEntry powerSourceEntry = Artifacts_Loadouts_GetEntryForConfigIndexAndType( configIdx, eArtifactComponentType.POWER_SOURCE )
-		LoadoutEntry themeEntry = Artifacts_Loadouts_GetEntryForConfigIndexAndType( configIdx, eArtifactComponentType.THEME )
+		
+		
+		
 
-		if ( bladeEntry.validItemFlavorList.len() < 2 )
-			return
-
-		ItemFlavor bladeComponent = bladeEntry.validItemFlavorList[1]
-		ItemFlavor powerSourceComponent = powerSourceEntry.validItemFlavorList[1]
-		ItemFlavor themeComponent = themeEntry.validItemFlavorList[1]
-		int setIndex = eArtifactSetIndex.MOB
+		ItemFlavor bladeComponent = setItems[ eArtifactComponentType.BLADE ] 
+		ItemFlavor themeComponent = isBlade ? emptySetItems[ eArtifactComponentType.THEME ] : setItems[ eArtifactComponentType.THEME ] 
+		ItemFlavor powerSourceComponent = isPowerSource ? setItems[ eArtifactComponentType.POWER_SOURCE ] : emptySetItems[ eArtifactComponentType.POWER_SOURCE ] 
 
 		Artifacts_Loadouts_ApplyModelForSet( model, setIndex )
 		Artifacts_Loadouts_PreviewBladeAndPowerSource( model, bladeComponent, powerSourceComponent )
@@ -3948,9 +3972,45 @@ void function ShowBattlePassItem_Badge( ItemFlavor item, float scale, int level 
 	fileLevel.rui = rui
 }
 
-void function ShowBattlePassItem_Image( ItemFlavor item, float scale, float width, float height, vector origin, bool disableLoadIcon, asset ruiAsset, int itemFlavType, asset functionref( ItemFlavor itemFlavor) getAsset )
+void function ShowBattlePassItem_Image2D( ItemFlavor item )
 {
-	Assert( ItemFlavor_GetType( item ) == itemFlavType )
+	Assert( ItemFlavor_GetType( item ) == eItemType.image_2d )
+	UISize screenSize = GetScreenSize()
+
+	
+	float heightOffset = 100.0 / 1080.0
+	
+	vector origin = <0, screenSize.height * heightOffset * -1, 0>
+
+	const asset ruiAsset = $"ui/world_space_image2d.rpak"
+
+	var topo = RuiTopology_CreatePlane( origin, <screenSize.width, 0, 0>, <0, screenSize.height, 0>, true )
+	var rui = RuiCreate( ruiAsset, topo, RUI_DRAW_POSTEFFECTS, 0 )
+
+	RuiSetImage( rui, "image2d", $"" )
+
+	fileLevel.topo = topo
+	fileLevel.rui = rui
+
+	
+	float baseImageScale = 0.7
+	float baseImageWidth = 1570.0
+	float baseImageHeight = 740.0
+	bool disableLoadIcon = false
+
+	RuiSetImage( rui, "image2d", GetImage2DAssetFromItemFlav( item ) )
+	RuiSetFloat( rui, "imageWidth", baseImageWidth )
+	RuiSetFloat( rui, "imageHeight", baseImageHeight )
+	RuiSetFloat( rui, "imageScale", baseImageScale )
+	RuiSetBool( rui, "disableLoadIcon", disableLoadIcon )
+}
+
+const float RUI_REWARD_SET_TRACKER_Z_OFFSET = 30.0
+void function ShowBattlePassItem_RewardSetTracker( ItemFlavor item )
+{
+	Assert( ItemFlavor_GetType( item ) == eItemType.reward_set_tracker )
+
+	vector origin = fileLevel.sceneRefOrigin + <0, 0, RUI_REWARD_SET_TRACKER_Z_OFFSET>
 	vector angles        = fileLevel.sceneRefAngles
 	vector placardAngles = VectorToAngles( AnglesToForward( angles ) * -1 )
 
@@ -3962,49 +4022,30 @@ void function ShowBattlePassItem_Image( ItemFlavor item, float scale, float widt
 	fileLevel.topo = topo
 	fileLevel.rui = rui
 
-	RuiSetImage( rui, "image2d", getAsset( item ) )
-	RuiSetFloat( rui, "imageWidth", width )
-	RuiSetFloat( rui, "imageHeight", height )
-	RuiSetFloat( rui, "imageScale", scale )
-	RuiSetBool( rui, "disableLoadIcon", disableLoadIcon )
-}
-
-void function ShowBattlePassItem_Image2D( ItemFlavor item )
-{
-	UISize screenSize = GetScreenSize()
 	
-	float heightOffset = 100.0 / 1080.0
-	
-	vector origin = <0, screenSize.height * heightOffset * -1, 0>
+	float baseImageScale = 0.0625
+	float baseImageWidth = 630.0
+	float baseImageHeight = 820.0
 
-	asset ruiAsset = $"ui/world_space_image2d.rpak"
-
-	
-	float baseImageScale = 0.7
-	float baseImageWidth = 1570.0
-	float baseImageHeight = 740.0
-	bool disableLoadIcon = false
-
-	ShowBattlePassItem_Image( item, baseImageScale, baseImageWidth, baseImageHeight, origin, disableLoadIcon, ruiAsset, eItemType.image_2d, GetImage2DAssetFromItemFlav )
-}
-
-const float RUI_REWARD_SET_TRACKER_WIDTH = 630.0
-const float RUI_REWARD_SET_TRACKER_HEIGHT = 820.0
-const float RUI_REWARD_SET_TRACKER_Z_OFFSET = 30.0
-const float RUI_REWARD_SET_TRACKER_SCALE = 0.0625
-void function ShowBattlePassItem_RewardSetTracker( ItemFlavor item )
-{
-	vector origin = fileLevel.sceneRefOrigin + <0, 0, RUI_REWARD_SET_TRACKER_Z_OFFSET>
-	asset ruiAsset = $"ui/world_space_image2d.rpak"
-	bool disableLoadIcon = true
-
-	ShowBattlePassItem_Image( item, RUI_REWARD_SET_TRACKER_SCALE, RUI_REWARD_SET_TRACKER_WIDTH, RUI_REWARD_SET_TRACKER_HEIGHT, origin, disableLoadIcon, ruiAsset, eItemType.reward_set_tracker, RewardSetTracker_GetDisplayImageAsset )
+	RuiSetImage( rui, "image2d", RewardSetTracker_GetDisplayImageAsset( item ) )
+	RuiSetFloat( rui, "imageWidth", baseImageWidth )
+	RuiSetFloat( rui, "imageHeight", baseImageHeight )
+	RuiSetFloat( rui, "imageScale", baseImageScale )
+	RuiSetBool( rui, "disableLoadIcon", true )
 }
 
 void function ShowBattlePassItem_Currency( ItemFlavor item, float scale )
 {
 	int itemType = ItemFlavor_GetType( item )
 	Assert( itemType == eItemType.account_currency || itemType == eItemType.account_currency_bundle )
+
+
+
+
+
+
+
+
 
 	asset modelAsset = $"mdl/dev/empty_model.rmdl"
 	float modelScale = 1.0
@@ -4465,7 +4506,7 @@ void function ShowBattlePassItem_Sticker( ItemFlavor item )
 }
 
 
-void function ShowBattlePassItem_Deathbox( ItemFlavor item, float scale )
+void function ShowBattlePassItem_ArtifactBink( ItemFlavor item, float scale )
 {
 	const float BATTLEPASS_UNKNOWN_Z_OFFSET = 28
 
@@ -4481,7 +4522,24 @@ void function ShowBattlePassItem_Deathbox( ItemFlavor item, float scale )
 
 	fileLevel.videoChannel = ReserveVideoChannel( BattlePassVideoOnFinished )
 	RuiSetInt( rui, "channel", fileLevel.videoChannel )
-	StartVideoOnChannel( fileLevel.videoChannel, Deathbox_GetVideo( item ), true, 0.0 )
+
+	asset video
+	switch( ItemFlavor_GetType( item ) )
+	{
+		case eItemType.artifact_component_deathbox:
+			video = Deathbox_GetVideo( item )
+			break
+
+		case eItemType.artifact_component_activation_emote:
+			video = Artifacts_ActivationEmote_GetVideo( item )
+			break
+
+		default:
+			Assert( false )
+			return
+	}
+
+	StartVideoOnChannel( fileLevel.videoChannel, video, true, 0.0 )
 
 	fileLevel.topo = topo
 	fileLevel.rui = rui

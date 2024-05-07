@@ -1,6 +1,13 @@
 global function MpWeaponLmg_Init
 
 global function OnWeaponActivate_weapon_lmg
+global function OnWeaponDeactivate_weapon_lmg
+
+
+
+
+
+
 
 
 global function OnWeaponPrimaryAttack_weapon_lmg
@@ -14,6 +21,12 @@ void function MpWeaponLmg_Init()
 
 void function OnWeaponActivate_weapon_lmg( entity weapon )
 {
+
+
+
+
+
+
 
 		UpdateViewmodelAmmo( false, weapon )
 
@@ -31,3 +44,29 @@ var function OnWeaponPrimaryAttack_weapon_lmg( entity weapon, WeaponPrimaryAttac
 	return weapon.GetWeaponSettingInt( eWeaponVar.ammo_per_shot )
 }
 
+
+void function OnWeaponDeactivate_weapon_lmg( entity weapon )
+{
+
+
+
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      

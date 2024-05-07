@@ -27,6 +27,8 @@ global function SurveyBeacons_ShouldUseNextZoneSurveyBeaconProp
 
 
 
+
+
 void function Perk_NextZoneBeaconScan_Init()
 {
 	if ( !(GetCurrentPlaylistVarBool( "disable_perk_beacon_scan", false ) ) )
@@ -62,6 +64,11 @@ void function Perk_NextZoneBeaconScan_Init()
 
 
 	}
+
+
+
+
+
 
 }
 

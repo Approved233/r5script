@@ -1,5 +1,6 @@
 global function RTKRuiAnimation_InitMetaData
 global function RTKRuiAnimation_OnInitialize
+global function RTKRuiAnimation_OnDrawEnd
 global function RTKRuiAnimation_OnDestroy
 
 global struct RTKRuiAnimation_Properties
@@ -12,6 +13,7 @@ global struct RTKRuiAnimation_Properties
 
 	bool writeStartTime = true
 	bool clearWhenFinished = true
+	bool invalidateVisualsOnDraw = false
 
 	bool isDone = false 
 }
@@ -124,6 +126,14 @@ void function RTKRuiAnimation_Start( rtk_behavior self )
 		ruiBehavior.PropSetAssetPath( "ruiAsset", $"" )
 
 	self.PropSetBool( "isDone", true )
+}
 
-
+void function RTKRuiAnimation_OnDrawEnd( rtk_behavior self )
+{
+	
+	
+	if( self.PropGetBool( "invalidateVisualsOnDraw" ) )
+	{
+		self.InvalidateVisuals()
+	}
 }

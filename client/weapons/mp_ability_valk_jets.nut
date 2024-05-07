@@ -380,14 +380,14 @@ void function _ValkFlightReveal( entity victim )
 		}
 	)
 
+		while( true )
+		{
+			bool scanBlocked = FerroWall_BlockScan( player.EyePosition(), victim.GetWorldSpaceCenter() )
+			RuiSetBool( rui, "isVisible", !scanBlocked )
+			WaitFrame()
+		}
 
 
-
-
-
-
-
-		WaitForever()
 
 }
 

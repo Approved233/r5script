@@ -12,7 +12,7 @@ global struct RTKApexCupLeaderboardRow
 	int placement = -1
 	int index = -1
 
-	array <RTKSummaryBreakdownRowModel> SquadStats
+	array <RTKSummaryBreakdownRowModel> squadStats
 }
 
 const int NUM_LEADERBOARDROWS = 10
@@ -24,6 +24,7 @@ global struct RTKApexCupLeaderboardModel
 
 	array < RTKApexCupLeaderboardRow > rows
 	int selectedIdx = 0
+	int showStatTable = -1
 
 	RTKApexCupTierInfo& tierInfo
 }
@@ -63,7 +64,6 @@ void function RTKApexCupLeaderboard_OnInitialize( rtk_behavior self )
 
 		if ( cupStarted && ( Cups_GetPlayersPDataIndexForCupID(  GetLocalClientPlayer() , cupId) != -1 ))
 		{
-			self.Warn( "RTKApexCupLeaderboard OnInitialize - set up leaderboard" )
 			thread RTKApexCupLeaderboard_GetPlayerTierData( self )
 		}
 		else if ( cupStarted == false)
@@ -105,6 +105,7 @@ void function RTKApexCupLeaderboard_OnInitRows( rtk_behavior self )
 				{
 					rtk_struct rtkModel = expect rtk_struct( RTKDataModelType_GetStruct( RTK_MODELTYPE_MENUS, "apexCups", true ) )
 					RTKStruct_SetInt( rtkModel, "selectedIdx", newChildIndex )
+					RTKStruct_SetInt( rtkModel, "showStatTable", 0 )
 				})
 			}
 		})
@@ -142,10 +143,6 @@ RTKSummaryBreakdownRowModel function CreateBreakdownRow( int index )
 {
 	RTKSummaryBreakdownRowModel row
 	row.index 		= index
-	row.rowBGAlpha 	= 0.7
-	row.rowSize 	= 450
-	row.textSize 	= 28
-	row.textColor 	= <1.0,1.0,1.0>
 	row.rightText = "#CUPS_LEADERBOARD_EMPTY_DATA"
 	return row
 }
@@ -181,7 +178,7 @@ void function RTKApexCupLeaderboard_UpdateLeaderboard( SettingsAssetGUID cupID, 
 			statRow.leftText = key
 			if ( value > 0 )
 				statRow.rightText = FormatAndLocalizeNumber( "1" , float(value), true )
-			newRow.SquadStats.append( statRow )
+			newRow.squadStats.append( statRow )
 			idx++
 		}
 		apexCupLeaderBoardModel.rows.append( newRow )
@@ -224,6 +221,7 @@ void function RTKApexCupLeaderboard_GetPlayerTierData( rtk_behavior self )
 		tierInfo.tierIndex     = Cups_GetPlayerTierIndexForCup( cupId )
 		tierInfo.targetPoints  = cupEntryData.tierScoreBounds[ maxint( 0, tierInfo.tierIndex - 1 ) ]
 		tierInfo.lowerBounds   = tierInfo.tierIndex <  cupEntryData.tierScoreBounds.len() ? cupEntryData.tierScoreBounds[tierInfo.tierIndex] : 0
+		tierInfo.isTop100	   = tierInfo.currentPoints > tierInfo.targetPoints
 
 		
 		float percent = cupEntryData.positionPercentage

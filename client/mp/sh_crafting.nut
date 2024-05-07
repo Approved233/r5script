@@ -81,6 +81,8 @@ global function Crafting_IsPingMapIconEnabled
 
 
 
+
+
 #if DEV
 
 
@@ -495,6 +497,9 @@ struct {
 
 
 
+
+
+
 	table<entity, entity>		   ambGenericTable
 	array<entity>				   workbenchClusterArray
 
@@ -715,6 +720,8 @@ void function Crafting_RegisterNetworking()
 
 	Remote_RegisterClientFunction( "ServerCallback_Crafting_Notify_Player_On_Obit", "entity", "int", 0, eCrafting_Obit_NotifyType.COUNT_, "int", 0, 256, "int", 0, 128, "int", -1, MAX_ARMOR_EVO_TIER + 1 )
 	Remote_RegisterServerFunction( "ClientCallback_Crafting_Notify_Teammates_On_Obit", 		  "int", 0, eCrafting_Obit_NotifyType.COUNT_, "int", 0, 256, "int", 0, 128, "int", -1, MAX_ARMOR_EVO_TIER + 1 )
+	Remote_RegisterServerFunction( "ClientCallback_InitializeCraftingAtWorkbench", "int", 0, 32 )
+	Remote_RegisterServerFunction( "ClientCallback_ClosedCraftingMenu" )
 
 	Remote_RegisterServerFunction( FUNCNAME_PingCrafterFromMap, "typed_entity", "prop_dynamic" )
 
@@ -786,6 +793,11 @@ bool function Crafting_QuickOpenCraftingMenu()
 bool function Crafting_DispenserReactivation_IsEnabled()
 {
 	return GetCurrentPlaylistVarBool( "crafting_dispensers_reactivate_enabled", false )
+}
+
+bool function Crafting_LocationBeam_Enabled()
+{
+	return GetCurrentPlaylistVarBool( "crafting_dispensers_locationbeam", true )
 }
 
 
@@ -3642,6 +3654,20 @@ asset function Crafting_GetCraftingZoneIcon()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function OnWorkbenchClusterCreated( entity target )
 {
 	if ( !file.isEnabled )
@@ -4900,6 +4926,8 @@ ExtendedUseSettings function WorkbenchExtendedUseSettings( entity ent, entity pl
 
 
 
+
+
 int function EnsureValidEvoTier( int evoTier )
 {
 
@@ -4975,6 +5003,13 @@ array< string > function GenerateCraftingItemsInCategory( entity player, Craftin
 				CraftingBundle bundle = GetBundleForCategory( categoryToCheck )
 				return bundle.itemsInBundle
 			}
+
+
+
+
+
+
+
 			else
 			{
 				return []
@@ -5960,6 +5995,12 @@ bool function Crafting_OnMenuItemSelected( int index, var menuRui )
 				canBuy = false
 		}
 
+
+
+
+
+
+
 	}
 	else
 	{
@@ -6393,6 +6434,16 @@ void function Crafting_PopulateItemRuiAtIndex( var rui, int index )
 				canBuy = false
 			}
 		}
+
+
+
+
+
+
+
+
+
+
 
 	else
 	{

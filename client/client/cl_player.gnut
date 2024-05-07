@@ -1778,8 +1778,8 @@ vector function GetShieldEffectCurrentColor( float shieldHealthFrac )
 
 string function GetPlayerDeathSound1P()
 {
-	if ( IsFiringRangeGameMode() )
-		return "player_death_begin_survival_firingrange"
+	if ( GamemodeUtility_GetKillReplayActive() )
+		return GetCurrentPlaylistVarString( "player_death_sound_killreplay", "player_death_begin_killcam_noduck" )
 
 	return GetCurrentPlaylistVarString( "player_death_sound", "player_death_begin_survival" )
 }

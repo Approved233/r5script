@@ -61,6 +61,7 @@ global function BuffetEvent_GetRewardIconCol
 
 
 
+
 global struct BuffetEventBadgeData
 {
 	ItemFlavor& badge
@@ -383,6 +384,14 @@ asset function BuffetEvent_GetHeaderIcon( ItemFlavor event )
 	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_buffet )
 	return GetGlobalSettingsAsset( ItemFlavor_GetAsset( event ), "headerIcon" )
 }
+
+
+
+
+
+
+
+
 
 
 

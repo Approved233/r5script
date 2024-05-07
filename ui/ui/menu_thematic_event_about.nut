@@ -29,7 +29,7 @@ void function ThematicEventAboutPage_OnOpen()
 	HudElem_SetRuiArg( file.infoPanel, "bgPatternImage", ThemedShopEvent_GetHeaderIcon( activeThemeShopEvent ) )
 
 	array<string> aboutLines = ThemedShopEvent_GetAboutText( activeThemeShopEvent, GRX_IsOfferRestricted() )
-	Assert( aboutLines.len() < 7, "Rui about_collection_event does not support more than 6 lines." )
+	Assert( aboutLines.len() < 7, "Rui about_collection_event does not support more than 7 lines." )
 
 	foreach ( int lineIdx, string line in aboutLines )
 	{

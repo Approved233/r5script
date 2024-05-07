@@ -1785,6 +1785,14 @@ SkyDiveTrailPackage function GetSkyDiveTrailPackageForPlayerWithOverrides( entit
 
 
 
+
+
+
+
+
+
+
+
 void function CL_AttemptDropEmote( entity player )
 {
 	printt( "CLIENT EMOTE" )
@@ -2372,6 +2380,7 @@ void function Freefall_DestroyEnemyFullmapDisplayAfterDelay( var ruiToDestroy, f
 
 void function CodeCallback_PlayerSkydiveBegin( entity player )
 {
+
 
 
 

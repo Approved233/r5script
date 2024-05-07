@@ -5,6 +5,13 @@ global function EventsPanel_SetOpenPageIndex
 global function EventsPanel_GoToPage
 global function EventsPanel_GetCurrentPageIndex
 global function EventsPanel_CanStartCarouselThreads
+global function GetEventGiftButtonState
+global function GetEventPurchaseButtonState
+global function EventsPanel_SaveDeepLink
+
+global function RTKEventsPanelController_SendPageViewEventOffer
+global function RTKEventsPanelController_SendPageViewInfoPage
+global function RTKEventsPanelController_SendPageViewPurchaseDialog
 
 global const string FEATURE_EVENT_SHOP_TUTORIAL = "event_shop"
 
@@ -14,37 +21,36 @@ global struct RTKEventsPanel_Properties
 	rtk_behavior paginationBehavior
 }
 
-global struct RTKEventInfoModel
+global struct RTKBaseEventModel
 {
-	string currentPageTitle
 	string name
 	string remainingDays
 	int titleEndTimestamp
 	string titleCounterLocalizationString
 	vector titleCounterColor
 	asset mainIcon
-	asset leftCornerHeaderBg
-	bool leftCornerHeaderBgBlur
-	float leftCornerHeaderBGDarkening
-	asset rightPanelBg
-	vector rightPanelBgColor
-	bool rightPanelBgBlur
-	asset gridItemsBg
+	string nextSection
+	string prevSection
+	SettingsAssetGUID calEventBase
+}
+
+global struct RTKEventShopInfoModel
+{
+	string currentPageTitle
+	string eventTitleText
+	string name
+	string remainingDays
+	int titleEndTimestamp
+	string titleCounterLocalizationString
+	vector titleCounterColor
+	asset mainIcon
 	int currencyInWallet
 	asset currencyIcon
 	string currencyShortName
 	string currencyLongName
-	vector leftCornerTitleColor
-	vector leftCornerEventNameColor
-	vector leftCornerTimeRemainingColor
-	float backgroundDarkening
-	float rightPanelDarkening
-	float leftPanelDarkening
-	bool leftPanelBlur
 	vector barsColor
 	vector tooltipsColor
-	string nextSection
-	string prevSection
+	SettingsAssetGUID calEventShop
 }
 
 
@@ -66,6 +72,24 @@ global enum eEventsPanelPage
 }
 
 
+global enum eEventGiftingButtonState
+{
+	AVAILABLE,
+	UNAVAILABLE,
+	GIFTING_EXCEEDED,
+	NOT_ENOUGH_LEVEL,
+	TWO_FACTOR_DISABLED
+}
+
+global enum eEventPackPurchaseButtonState
+{
+	AVAILABLE,
+	COMPLETED,
+	UNAVAILABLE
+}
+
+global const string NAV_TYPE_CLICK = "click"
+global const string NAV_TYPE_DEEPLINK = "deeplink"
 
 struct PrivateData
 {
@@ -119,21 +143,38 @@ const string EVENT_SHOP_NAME = "Event Shop Page"
 
 
 
+bool function EventsPanel_IsPlaylistVarEnabled()
+{
+	return GetCurrentPlaylistVarBool( "enable_events_panel", true )
+}
+
 void function RTKEventsPanel_OnInitialize( rtk_behavior self )
 {
-	if ( MilestoneEvent_IsEnabled() == false )
+	SetStoreOnlyEventsFilter( false )
+
+	if ( EventsPanel_IsPlaylistVarEnabled() == false )
 	{
 		
 		file.didInitialize = false
 		return
 	}
 
+
 	if ( EventShop_GetCurrentActiveEventShop() == null )
 	{
 		
+		Warning("RTKEventsPanel_OnInitialize: no active event shop")
 		file.didInitialize = false
 		return
 	}
+
+
+
+
+
+
+
+
 
 	if ( !GRX_AreOffersReady() )
 	{
@@ -143,7 +184,8 @@ void function RTKEventsPanel_OnInitialize( rtk_behavior self )
 	file.didInitialize = true
 
 	rtk_struct activeEvents = RTKDataModelType_CreateStruct( RTK_MODELTYPE_COMMON, "activeEvents" )
-	EventShop_BuildCommonModel( self, activeEvents )
+	BuildBaseModel( self, activeEvents )
+	BuildEventShopModel( self, activeEvents )
 
 	InstantiateActiveEventsPanels( self )
 	SetUpPaginationBehavior( self )
@@ -151,6 +193,16 @@ void function RTKEventsPanel_OnInitialize( rtk_behavior self )
 	UpdateVGUIFooterButtons()
 	UpdatePaginationButtonText( self )
 	RegisterButtonPressedCallback( KEY_H, OpenCurrentPanelAdditionalInfo )
+
+	RTKEventsPanelController_SaveTelemetryData( self )
+
+	if ( fileTelemetry.linkName != "" )
+	{
+		fileTelemetry.clickType = NAV_TYPE_DEEPLINK
+	}
+
+	RTKEventsPanelController_SendPageViewEvent( self )
+	fileTelemetry.linkName = ""
 }
 
 void function RTKEventsPanel_OnDestroy( rtk_behavior self )
@@ -188,10 +240,10 @@ void function InitRTKEventsPanel( var panel )
 
 #if PC_PROG_NX_UI
 		file.secondFooter = AddPanelFooterOption( panel, LEFT, BUTTON_Y, true, "#EVENTS_EVENT_SHOP_GET_CURRENCY", "#EVENTS_EVENT_SHOP_GET_CURRENCY", OpenEventShopTutorial )
-		file.thirdFooter = AddPanelFooterOption( panel, LEFT, BUTTON_X, true, "#GIFT_INFO_TITLE", "#X_GIFT_INFO_TITLE", OpenGiftInfoPopUp )
+		file.thirdFooter = AddPanelFooterOption( panel, LEFT, BUTTON_X, true, "#GIFT_INFO_TITLE", "#X_GIFT_INFO_TITLE", OpenGiftInfoPopUpWithEventTabTelemetry )
 #else
 		file.secondFooter = AddPanelFooterOption( panel, LEFT, BUTTON_X, true, "#EVENTS_EVENT_SHOP_GET_CURRENCY", "#EVENTS_EVENT_SHOP_GET_CURRENCY", OpenEventShopTutorial )
-		file.thirdFooter = AddPanelFooterOption( panel, LEFT, BUTTON_Y, true, "#GIFT_INFO_TITLE", "#Y_GIFT_INFO_TITLE", OpenGiftInfoPopUp )
+		file.thirdFooter = AddPanelFooterOption( panel, LEFT, BUTTON_Y, true, "#GIFT_INFO_TITLE", "#Y_GIFT_INFO_TITLE", OpenGiftInfoPopUpWithEventTabTelemetry )
 #endif
 	file.panel = panel
 
@@ -199,21 +251,52 @@ void function InitRTKEventsPanel( var panel )
 
 }
 
-void function EventShop_BuildCommonModel( rtk_behavior self, rtk_struct activeEvents )
+void function BuildBaseModel( rtk_behavior self, rtk_struct activeEvents )
+{
+	rtk_struct baseEventModelStruct = RTKDataModelType_GetOrCreateStruct( RTK_MODELTYPE_MENUS, "baseEvent", "RTKBaseEventModel" )
+
+	ItemFlavor ornull event = GetActiveBaseEvent( GetUnixTimestamp() )
+	if ( event == null )
+	{
+		Warning("BuildBaseModel: no active base event")
+		return
+	}
+
+	expect ItemFlavor( event )
+
+	DisplayTime dt = SecondsToDHMS( maxint( 0, CalEvent_GetFinishUnixTime( event ) - GetUnixTimestamp() ) )
+
+	RTKBaseEventModel infoModel
+	infoModel.calEventBase = event.guid
+	infoModel.name = ItemFlavor_GetShortName( event )
+	infoModel.mainIcon = $""
+	infoModel.remainingDays = Localize( GetDaysHoursRemainingLoc( dt.days, dt.hours ), dt.days, dt.hours )
+	infoModel.titleEndTimestamp = CalEvent_GetFinishUnixTime( event )
+	infoModel.titleCounterLocalizationString =  "#TIME_REMAINING"
+	infoModel.titleCounterColor = <0.88, 0.79, 0.49>
+	infoModel.nextSection = GetPaginationButtonText( false )
+	infoModel.prevSection = GetPaginationButtonText( true )
+
+	RTKStruct_SetValue( baseEventModelStruct, infoModel )
+}
+
+void function BuildEventShopModel( rtk_behavior self, rtk_struct activeEvents )
 {
 	PrivateData p
 	self.Private( p )
-
-	rtk_array eventsArray   = RTKStruct_AddArrayOfStructsProperty(activeEvents, "events", "RTKEventInfoModel")
-
-	if ( RTKArray_GetCount( eventsArray ) > 0 )
-		RTKArray_Clear( eventsArray )
 
 	ItemFlavor ornull activeEventShop = EventShop_GetCurrentActiveEventShop()
 	file.activeEventShop = activeEventShop
 
 	if ( activeEventShop == null )
+	{
 		return
+	}
+
+	rtk_array eventsArray   = RTKStruct_GetOrCreateScriptArrayOfStructs(activeEvents, "events", "RTKEventShopInfoModel")
+
+	if ( RTKArray_GetCount( eventsArray ) > 0 )
+		RTKArray_Clear( eventsArray )
 
 	expect ItemFlavor( activeEventShop )
 
@@ -233,9 +316,10 @@ void function EventShop_BuildCommonModel( rtk_behavior self, rtk_struct activeEv
 
 			array<int> resetTimestamps = EventShop_GetWeeklyResetsTimestamps( activeEventShop )
 
-			
-			RTKEventInfoModel infoModel
+			RTKEventShopInfoModel infoModel
+			infoModel.calEventShop = event.guid
 			infoModel.currentPageTitle = Localize("#EVENTS_EVENT_SHOP")
+			infoModel.eventTitleText = ItemFlavor_GetShortName( event )
 			infoModel.name = ItemFlavor_GetShortName( event )
 			infoModel.remainingDays = Localize( GetDaysHoursRemainingLoc( dt.days, dt.hours ), dt.days, dt.hours )
 			infoModel.titleEndTimestamp = resetTimestamps.len() > 0 ? resetTimestamps[0] : 0
@@ -246,34 +330,9 @@ void function EventShop_BuildCommonModel( rtk_behavior self, rtk_struct activeEv
 			infoModel.currencyIcon = ItemFlavor_GetIcon( EventShop_GetEventShopCurrency( event ) )
 			infoModel.currencyShortName = ItemFlavor_GetShortName( EventShop_GetEventShopCurrency( event ) )
 			infoModel.currencyLongName = ItemFlavor_GetLongName( EventShop_GetEventShopCurrency( event ) )
-			infoModel.rightPanelBg = EventShop_GetRightPanelBackground( event )
-			infoModel.rightPanelBgColor = EventShop_GetRightPanelBackgroundColor( event )
-			infoModel.rightPanelBgBlur = EventShop_GetGlobalSettingsBool( event, "rightPanelBgBlur" )
-			infoModel.rightPanelDarkening = EventShop_GetRightPanelOpacity( event )
-			infoModel.gridItemsBg = EventShop_GetShopPageItemsBackground( event )
-			infoModel.leftPanelDarkening = EventShop_GetLeftPanelOpacity( event )
-			infoModel.leftPanelBlur = EventShop_GetGlobalSettingsBool( event, "leftPanelBlur" )
-			infoModel.leftCornerHeaderBg = EventShop_GetLeftCornerHeaderBackground( event )
-			infoModel.leftCornerHeaderBgBlur = EventShop_GetGlobalSettingsBool( event, "leftCornerHeaderBgBlur" )
-			infoModel.leftCornerHeaderBGDarkening = EventShop_GetGlobalSettingsFloat( event, "leftCornerHeaderBGDarkening" )
-			infoModel.leftCornerTitleColor = EventShop_GetLeftPanelTitleColor( event )
-			infoModel.leftCornerEventNameColor = EventShop_GetLeftPanelEventNameColor( event )
-			infoModel.leftCornerTimeRemainingColor = EventShop_GetLeftPanelTimeRemainingColor( event )
-			infoModel.backgroundDarkening = EventShop_GetBackgroundDarkeningOpacity( event )
 			infoModel.barsColor = EventShop_GetBarsColor( event )
 			infoModel.tooltipsColor = EventShop_GeTooltipsColor( event )
-			infoModel.nextSection = GetPaginationButtonText( false )
-			infoModel.prevSection = GetPaginationButtonText( true )
 
-			
-			ItemFlavor ornull activeMilestoneEvent = GetActiveMilestoneEvent( GetUnixTimestamp() )
-			if ( activeMilestoneEvent )
-			{
-				expect ItemFlavor( activeMilestoneEvent )
-				infoModel.backgroundDarkening = max(infoModel.backgroundDarkening, MilestoneEvent_GetGlobalSettingsFloat( activeMilestoneEvent, "backgroundDarkeningOpacity" ) )
-			}
-
-			
 			RTKStruct_SetValue( eventArrayItem, infoModel )
 		}
 	}
@@ -296,9 +355,6 @@ void function EventShop_BuildCommonModel( rtk_behavior self, rtk_struct activeEv
 			file.registeredSweepstakesKeyboardCallback = true
 		}
 	}
-
-	p.rootCommonPath = RTKDataModelType_GetDataPath( RTK_MODELTYPE_COMMON, "events", true, ["activeEvents"] )
-	self.GetPanel().SetBindingRootPath( p.rootCommonPath + "[0]")
 }
 
 array<featureTutorialTab> function EventShop_PopulateAboutText()
@@ -367,7 +423,8 @@ void function InstantiateActiveEventsPanels( rtk_behavior self )
 		expect rtk_panel( context )
 		file.baseEvent = GetActiveBaseEvent( GetUnixTimestamp() )
 		int count = -1
-		if ( file.baseEvent != null )
+		
+		if ( file.baseEvent != null && BaseEvent_IsEnabled() )
 		{
 			RTKPanel_Instantiate( $"ui_rtk/menus/events/base_event_landing.rpak", context, LANDING_PAGE_NAME )
 			count++
@@ -385,22 +442,36 @@ void function InstantiateActiveEventsPanels( rtk_behavior self )
 
 
 
+
 			file.milestoneEvent = GetActiveMilestoneEvent( GetUnixTimestamp() )
-			if ( file.milestoneEvent != null )
+			
+			if ( file.milestoneEvent != null && MilestoneEvent_IsPlaylistVarEnabled() )
 			{
-				RTKPanel_Instantiate( $"ui_rtk/menus/events/milestone/milestone_event_main_panel.rpak", context, MILESTONE_PAGE_NAME )
-				RTKPanel_Instantiate( $"ui_rtk/menus/events/milestone/milestone_event_collection_panel.rpak", context, COLLECTION_PAGE_NAME )
-				count++
-				file.enumToInstantiatedPage[ eEventsPanelPage.MILESTONES ] <- count
-				file.indexToInstantiatedPage[ count ] <- eEventsPanelPage.MILESTONES
-				count++
-				file.enumToInstantiatedPage[ eEventsPanelPage.COLLECTION ] <- count
-				file.indexToInstantiatedPage[ count ] <- eEventsPanelPage.COLLECTION
+				if ( !MilestoneEvent_UseOriginalEventTabLayout() )
+				{
+					RTKPanel_Instantiate( $"ui_rtk/menus/events/milestone/milestone_event_panel.rpak", context, "Milestone Event" )
+					count++
+					file.enumToInstantiatedPage[ eEventsPanelPage.MILESTONES ] <- count
+					file.indexToInstantiatedPage[ count ] <- eEventsPanelPage.MILESTONES
+				}
+				else
+				{
+					RTKPanel_Instantiate( $"ui_rtk/menus/events/milestone/milestone_event_main_panel.rpak", context, MILESTONE_PAGE_NAME )
+					RTKPanel_Instantiate( $"ui_rtk/menus/events/milestone/milestone_event_collection_panel.rpak", context, COLLECTION_PAGE_NAME )
+					count++
+					file.enumToInstantiatedPage[ eEventsPanelPage.MILESTONES ] <- count
+					file.indexToInstantiatedPage[ count ] <- eEventsPanelPage.MILESTONES
+					count++
+					file.enumToInstantiatedPage[ eEventsPanelPage.COLLECTION ] <- count
+					file.indexToInstantiatedPage[ count ] <- eEventsPanelPage.COLLECTION
+				}
 
 				thread ClearItemPreviewOnStart_Thread()
 			}
 
-		if ( file.activeEventShop != null )
+		file.activeEventShop = EventShop_GetCurrentActiveEventShop()
+		
+		if ( file.activeEventShop != null && EventShop_IsPlaylistVarEnabled()  )
 		{
 			RTKPanel_Instantiate( $"ui_rtk/menus/events/events_event_shop.rpak", context, EVENT_SHOP_NAME )
 			count++
@@ -417,15 +488,27 @@ void function SetUpPaginationBehavior( rtk_behavior self )
 	{
 		expect rtk_behavior( pagination )
 		file.paginationBehavior = pagination
-		if ( file.currentPage < file.indexToInstantiatedPage.len() )
-		{
-			file.currentPage = file.indexToInstantiatedPage[file.currentPage]
-		} 
+		
+
+
+
+
+
 
 		pagination.PropSetInt( "startPageIndex", file.currentPage )
 		self.AutoSubscribe( pagination, "onScrollStarted", function () : ( self, pagination ) {
-			file.currentPage = file.indexToInstantiatedPage[ RTKPagination_GetTargetPage( pagination ) ]
-			file.previousPage = file.indexToInstantiatedPage[ RTKPagination_GetCurrentPage( pagination ) ]
+
+			int targetPageIndex = RTKPagination_GetTargetPage( pagination )
+			if (targetPageIndex < file.indexToInstantiatedPage.len())
+			{
+				file.currentPage = file.indexToInstantiatedPage[ targetPageIndex ]
+			}
+
+			int currentPageIndex = RTKPagination_GetCurrentPage( pagination )
+			if (currentPageIndex < file.indexToInstantiatedPage.len())
+			{
+				file.previousPage = file.indexToInstantiatedPage[ currentPageIndex ]
+			}
 
 			UpdateDefaultItemPreviews()
 			UpdateVGUIFooterButtons()
@@ -487,6 +570,24 @@ void function RTKEventsPanelController_SendPageViewEvent( rtk_behavior self )
 		fileTelemetry.eventName )
 }
 
+void function RTKEventsPanelController_SendPageViewEventOffer( rtk_behavior self, int buttonIndex, string offerName, bool isReward = false  )
+{
+	PIN_PageView_EventsTabOffer( fileTelemetry.pageName, fileTelemetry.prevPageDuration, fileTelemetry.prevPage,
+		buttonIndex, fileTelemetry.linkName, fileTelemetry.clickType, fileTelemetry.eventName, offerName, isReward )
+}
+
+void function RTKEventsPanelController_SendPageViewInfoPage( string infoPageName )
+{
+	PIN_PageView_EventsTabMilestoneInfoPage( fileTelemetry.pageName, fileTelemetry.prevPageDuration, fileTelemetry.prevPage,
+		fileTelemetry.pageNum, infoPageName, fileTelemetry.clickType, fileTelemetry.eventName )
+}
+
+void function RTKEventsPanelController_SendPageViewPurchaseDialog( bool asGift )
+{
+	PIN_PageView_EventsTabMilestoneViewPurchasePanel( fileTelemetry.pageName, fileTelemetry.prevPageDuration, fileTelemetry.prevPage,
+		fileTelemetry.pageNum, fileTelemetry.clickType, fileTelemetry.eventName, asGift )
+}
+
 void function EventsPanel_GoToPage( int page )
 {
 	if ( file.paginationBehavior != null )
@@ -495,8 +596,13 @@ void function EventsPanel_GoToPage( int page )
 		expect rtk_behavior( pagination )
 
 		UpdateMilestoneInstantiatedEnumMap()
-		RTKPagination_GoToPage( pagination, file.enumToInstantiatedPage[page])
+		RTKPagination_GoToPage( pagination, file.enumToInstantiatedPage[page], NAV_TYPE_CLICK )
 	}
+}
+
+void function EventsPanel_SaveDeepLink( string link )
+{
+	fileTelemetry.linkName = link
 }
 
 bool function EventsPanel_CanStartCarouselThreads()
@@ -524,7 +630,7 @@ void function UpdateVGUIFooterButtons()
 		{
 			file.secondFooter.mouseLabel = "#MILESTONE_BUTTON_EVENT_INFO"
 			file.secondFooter.gamepadLabel = "#MILESTONE_BUTTON_EVENT_INFO"
-			file.secondFooter.activateFunc = OpenCollectionEventAboutPage
+			file.secondFooter.activateFunc = OpenCollectionEventAboutPageWithEventTabTelemetry
 #if PC_PROG_NX_UI
 			file.thirdFooter.gamepadLabel = "#X_GIFT_INFO_TITLE"
 			file.thirdFooter.mouseLabel = "#GIFT_INFO_TITLE"
@@ -532,7 +638,7 @@ void function UpdateVGUIFooterButtons()
 			file.thirdFooter.gamepadLabel = "#Y_GIFT_INFO_TITLE"
 			file.thirdFooter.mouseLabel = "#GIFT_INFO_TITLE"
 #endif
-			file.thirdFooter.activateFunc = OpenGiftInfoPopUp
+			file.thirdFooter.activateFunc = OpenGiftInfoPopUpWithEventTabTelemetry
 			break
 		}
 		case eEventsPanelPage.COLLECTION: 
@@ -543,6 +649,18 @@ void function UpdateVGUIFooterButtons()
 			file.secondFooter.activateFunc = null
 			break
 		}
+
+
+
+
+
+
+
+
+
+
+
+
 		case eEventsPanelPage.EVENT_SHOP: 
 		{
 			file.secondFooter.mouseLabel = "#EVENTS_EVENT_SHOP_GET_CURRENCY"
@@ -559,8 +677,16 @@ void function OpenCurrentPanelAdditionalInfo( var button )
 {
 	if ( file.currentPage == eEventsPanelPage.MILESTONES ) 
 	{
-		OpenCollectionEventAboutPage( button )
+		SetCollectionEventAboutPageEvent( file.milestoneEvent )
+		OpenCollectionEventAboutPageWithEventTabTelemetry( button )
 	}
+
+
+
+
+
+
+
 	else if ( file.currentPage == eEventsPanelPage.EVENT_SHOP ) 
 	{
 		OpenEventShopTutorial( button )
@@ -573,6 +699,12 @@ string function GetPaginationButtonText( bool isPrev )
 	{
 		case eEventsPanelPage.LANDING: 
 		{
+
+
+
+
+
+
 			if ( GRX_IsOfferRestricted() )
 			{
 				return isPrev ? "" : "#S19ME01_LANDING_PAGE_BUTTON_PACKS_NAME_RESTRICTED"
@@ -585,6 +717,12 @@ string function GetPaginationButtonText( bool isPrev )
 		}
 		case eEventsPanelPage.MILESTONES: 
 		{
+
+
+
+
+
+
 			return isPrev ? "#S19ME01_LANDING_PAGE_BUTTON_LANDING_NAME" : "#S19ME01_LANDING_PAGE_BUTTON_COLLECTION_NAME"
 			break
 		}
@@ -600,6 +738,16 @@ string function GetPaginationButtonText( bool isPrev )
 			}
 			break
 		}
+
+
+
+
+
+
+
+
+
+
 		case eEventsPanelPage.EVENT_SHOP: 
 		{
 			return isPrev ? "#S19ME01_LANDING_PAGE_BUTTON_COLLECTION_NAME" : ""
@@ -611,11 +759,9 @@ string function GetPaginationButtonText( bool isPrev )
 
 void function UpdatePaginationButtonText( rtk_behavior self )
 {
-	PrivateData p
-	self.Private( p )
-	rtk_struct eventsStruct = RTKDataModel_GetStruct( p.rootCommonPath + "[0]" )
-	RTKStruct_SetString( eventsStruct, "nextSection", GetPaginationButtonText( false ) )
-	RTKStruct_SetString( eventsStruct, "prevSection", GetPaginationButtonText( true ) )
+	rtk_struct baseEventModelStruct = RTKDataModelType_GetOrCreateStruct( RTK_MODELTYPE_MENUS, "baseEvent", "RTKBaseEventModel" )
+	RTKStruct_SetString( baseEventModelStruct, "nextSection", GetPaginationButtonText( false ) )
+	RTKStruct_SetString( baseEventModelStruct, "prevSection", GetPaginationButtonText( true ) )
 }
 
 void function UpdateDefaultItemPreviews()
@@ -627,8 +773,12 @@ void function UpdateDefaultItemPreviews()
 			if ( file.previousPage != eEventsPanelPage.MILESTONES && file.previousPage != eEventsPanelPage.COLLECTION )
 			{
 				Signal( uiGlobal.signalDummy, "EndAutoAdvanceFeaturedItems" )
-				thread AutoAdvanceFeaturedItems_Tracking()
-				thread AutoAdvanceFeaturedItems_Collection()
+
+				if ( MilestoneEvent_UseOriginalEventTabLayout() )
+				{
+					thread AutoAdvanceFeaturedItems_Tracking()
+					thread AutoAdvanceFeaturedItems_Collection()
+				}
 			}
 		}
 		else if ( file.currentPage == eEventsPanelPage.EVENT_SHOP )
@@ -664,7 +814,9 @@ void function UpdateMilestoneInstantiatedEnumMap()
 	if ( file.milestoneEvent != null )
 	{
 		file.enumToInstantiatedPage[ eEventsPanelPage.MILESTONES ] <- count++
-		file.enumToInstantiatedPage[ eEventsPanelPage.COLLECTION ] <- count++
+
+		if ( MilestoneEvent_UseOriginalEventTabLayout() )
+			file.enumToInstantiatedPage[ eEventsPanelPage.COLLECTION ] <- count++
 	}
 
 	file.activeEventShop = EventShop_GetCurrentActiveEventShop()
@@ -672,4 +824,40 @@ void function UpdateMilestoneInstantiatedEnumMap()
 	{
 		file.enumToInstantiatedPage[ eEventsPanelPage.EVENT_SHOP ] <- count++
 	}
+}
+
+int function GetEventPurchaseButtonState( array<GRXScriptOffer> offers )
+{
+	if ( offers.len() == 0 )
+		return eEventPackPurchaseButtonState.UNAVAILABLE
+
+	if ( offers[0].ineligibilityCode == eIneligibilityCode.PURCHASE_CONDITIONS )
+		return eEventPackPurchaseButtonState.COMPLETED
+
+	if ( !GRXOffer_IsEligibleForPurchase( offers[0] ) )
+		return eEventPackPurchaseButtonState.UNAVAILABLE
+
+	return eEventPackPurchaseButtonState.AVAILABLE
+}
+
+int function GetEventGiftButtonState( array<GRXScriptOffer> offers )
+{
+	if ( offers.len() < 1 )
+	{
+		return eEventGiftingButtonState.UNAVAILABLE
+	}
+
+	if ( !IsPlayerLeveledForGifting() )
+	{
+		return eEventGiftingButtonState.NOT_ENOUGH_LEVEL
+	}
+	else if ( !IsTwoFactorAuthenticationEnabled() )
+	{
+		return eEventGiftingButtonState.TWO_FACTOR_DISABLED
+	}
+	else if ( !IsPlayerWithinGiftingLimit() )
+	{
+		return eEventGiftingButtonState.GIFTING_EXCEEDED
+	}
+	return eEventGiftingButtonState.AVAILABLE
 }

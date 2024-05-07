@@ -48,8 +48,8 @@ const string SOUND_PORTAL_TRAVEL_3P = "Wraith_phasegate_Travel_3p"
 const string SOUND_PORTAL_TRAVEL_1P_BREACH = "Ash_PhaseBreach_Travel_1p"
 const string SOUND_PORTAL_TRAVEL_3P_BREACH = "Ash_PhaseBreach_Travel_3p"
 
-
-
+const string SOUND_PORTAL_TRAVEL_1P_TRANSPORT = "Alter_Ult_Teleport_VoidEnter_1p"
+const string SOUND_PORTAL_TRAVEL_3P_TRANSPORT = "Alter_Ult_Teleport_VoidEnter_3p"
 
 
 
@@ -437,6 +437,37 @@ var function OnWeaponPrimaryAttack_ability_phase_tunnel( entity weapon, WeaponPr
 
 	return weapon.GetWeaponSettingInt( eWeaponVar.ammo_per_shot )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

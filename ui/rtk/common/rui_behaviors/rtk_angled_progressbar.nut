@@ -19,6 +19,7 @@ global struct RTKAngledProgressBar_Properties
 	float angle
 
 	bool isDoubleSided = false
+	bool isForwardLeaning = false
 	bool isDraining = false
 }
 
@@ -51,6 +52,8 @@ void function UpdateRuiAsset( rtk_behavior self )
 		ruiAsset = expect asset( self.rtkprops.rui )
 	else if( self.PropGetBool( "isDoubleSided" ) )
 		ruiAsset = $"ui/rtk_slanted_progressbar_double.rpak"
+	else if( self.PropGetBool( "isForwardLeaning" ) )
+		ruiAsset = $"ui/rtk_slanted_progressbar_forward.rpak"
 	else
 		ruiAsset = $"ui/rtk_slanted_progressbar.rpak"
 

@@ -2,8 +2,7 @@ global function InitStorePanel
 global function InitLootPanel
 global function InitOffersPanel
 global function InitSpecialsPanel
-global function InitVCPopUp
-global function IsVCPopUp
+global function IsWalletModalOpened
 
 global function OffersPanel_LevelShutdown
 
@@ -13,9 +12,13 @@ global function JumpToStorePacks
 global function JumpToHeirloomShop
 global function JumpToStorePanel
 global function JumpToStoreSection
+global function JumpToMythicSection
 
+global function OpenWalletInventoryModal
 global function OpenVCPopUp
-global function ToggleVCPopUp
+global function OpenExoticShardsModal
+global function ToggleApexCoinsWalletModal
+global function ToggleExoticShardsWalletModal
 
 global function OnGRXStoreUpdate
 global function GetLootTickPurchaseOffers
@@ -53,6 +56,8 @@ global const string SEASONAL_STORE_PANEL = "SeasonalPanel"
 global const string SPECIALS_STORE_PANEL = "SpecialsPanel"
 global const string PERSONALIZED_STORE_PANEL = "PersonalizedStorePanel"
 global const string STORE_OFFER_SHOP = "StoreItemShop"
+global const string STORE_MYTHIC_SHOP = "StoreMythicShop"
+global const string STORE_SET_ITEM_SHOP = "StoreSetItemShop"
 
 global struct bpPresaleOfferData
 {
@@ -79,6 +84,7 @@ struct
 	bool isOpened = false
 	bool showStoreV2
 	bool sortApexPacksFirst = false
+	bool isWalletOpened = false
 
 	var eventStoreButton
 
@@ -137,7 +143,6 @@ struct
 	array<asset> vcPackImage = [$"rui/menu/store/store_coins_t1", $"rui/menu/store/store_coins_t0", $"rui/menu/store/store_coins_t2", $"rui/menu/store/store_coins_t3", $"rui/menu/store/store_coins_t4", $"rui/menu/store/store_coins_t5"]
 	var			 vcPopUpMenu
 	var			 vcPopUpPanel
-	var			 vcButton
 
 	VCPackDef[STORE_VC_NUM_PACKS] vcPacks
 
@@ -252,12 +257,7 @@ void function InitStorePanel( var panel )
 	
 	
 
-	
-	{
-		s_vc.vcButton = Hud_GetChild( panel, "CoinsPopUpButton" )
-		Hud_AddEventHandler( s_vc.vcButton, UIE_CLICK, OpenVCPopUp )
-	}
-
+	SetUpAccessToTheCurrenciesWallet()
 	AddTabsToStoreMenu( panel )
 }
 
@@ -291,7 +291,7 @@ void function AddTabsToStoreMenu( var panel, bool reOpen = false )
 	if ( showStoreV2 )
 	{
 
-		var tabBody = Hud_GetChild( panel, "StoreItemShop" )
+		var tabBody = Hud_GetChild( panel, STORE_OFFER_SHOP )
 		AddTab( panel, tabBody, "#STORE_V2_SHOP_NAME" )
 
 	}
@@ -332,7 +332,7 @@ void function AddTabsToStoreMenu( var panel, bool reOpen = false )
 
 	
 	{
-		var tabBody = Hud_GetChild( panel, "HeirloomShopPanel" )
+		var tabBody = Hud_GetChild( panel, GetMythicShopName() )
 		AddTab( panel, tabBody, "#MENU_STORE_PANEL_PRESTIGE_SHOP" )
 	}
 
@@ -376,8 +376,15 @@ void function OnStorePanel_Show( var panel )
 	AddCallbackAndCallNow_OnGRXInventoryStateChanged( OnGRXStoreUpdate )
 	AddCallbackAndCallNow_OnGRXOffersRefreshed( OnGRXStoreUpdate )
 
-	RegisterButtonPressedCallback( KEY_TAB, ToggleVCPopUp )
-	RegisterButtonPressedCallback( BUTTON_BACK, ToggleVCPopUp )
+	RegisterButtonPressedCallback( KEY_TAB, ToggleApexCoinsWalletModal )
+	RegisterButtonPressedCallback( BUTTON_BACK, ToggleApexCoinsWalletModal )
+	RegisterButtonPressedCallback( KEY_Q, ToggleExoticShardsWalletModal )
+	RegisterButtonPressedCallback( BUTTON_STICK_LEFT, ToggleExoticShardsWalletModal )
+
+
+	Hud_AddEventHandler( Hud_GetChild( file.storePanel, "CoinsPopUpButton" ), UIE_CLICK, OpenVCPopUp )
+	Hud_AddEventHandler( Hud_GetChild( file.storePanel, "ExoticShardsPopUpButton" ), UIE_CLICK, OpenExoticShardsModal )
+
 
 	var parentPanel = Hud_GetParent( file.storePanel )
 	var mmStatus = Hud_GetChild( parentPanel, "MatchmakingStatus" )
@@ -405,8 +412,13 @@ void function OnStorePanel_Hide( var panel )
 	RemoveCallback_OnGRXInventoryStateChanged( OnGRXStoreUpdate )
 	RemoveCallback_OnGRXOffersRefreshed( OnGRXStoreUpdate )
 
-	DeregisterButtonPressedCallback( KEY_TAB, ToggleVCPopUp )
-	DeregisterButtonPressedCallback( BUTTON_BACK, ToggleVCPopUp )
+	DeregisterButtonPressedCallback( KEY_TAB, ToggleApexCoinsWalletModal )
+	DeregisterButtonPressedCallback( BUTTON_BACK, ToggleApexCoinsWalletModal )
+	DeregisterButtonPressedCallback( KEY_Q, ToggleExoticShardsWalletModal )
+	DeregisterButtonPressedCallback( BUTTON_STICK_LEFT, ToggleExoticShardsWalletModal )
+
+	Hud_RemoveEventHandler( Hud_GetChild( file.storePanel, "CoinsPopUpButton" ), UIE_CLICK, OpenVCPopUp )
+	Hud_RemoveEventHandler( Hud_GetChild( file.storePanel, "ExoticShardsPopUpButton" ), UIE_CLICK, OpenExoticShardsModal )
 
 	file.storeCacheValid = false
 
@@ -502,7 +514,7 @@ void function OnGRXStoreUpdate()
 					
 				}
 			}
-			else if ( Hud_GetHudName( tabDef.panel ) == "HeirloomShopPanel" )
+			else if ( Hud_GetHudName( tabDef.panel ) == GetMythicShopName() )
 			{
 				showTab = haveActiveHeirloomTab
 				enableTab = haveActiveHeirloomTab
@@ -650,40 +662,94 @@ void function InitVCPopUp( var newMenuArg )
 	AddMenuFooterOption( newMenuArg, LEFT, BUTTON_B, true, "#B_BUTTON_CLOSE", "#B_BUTTON_CLOSE" )
 }
 
-bool function IsVCPopUp( var menu ) {
-	if ( menu == null )
-		return false
-	return menu == s_vc.vcPopUpMenu
+bool function IsWalletModalOpened()
+{
+	return file.isWalletOpened
 }
 
-bool function CanOpenVCPopUp()
+bool function CanOpenWalletModal()
 {
 	var activeMenu = GetActiveMenu()
 	
 	bool activeMenuShouldBlock = IsSelfClosingMenu( activeMenu )
-	return activeMenu != s_vc.vcPopUpMenu && !activeMenuShouldBlock
+	return activeMenu != file.isWalletOpened && !activeMenuShouldBlock
+}
+
+void function OpenWalletInventoryModal( var button )
+{
+	if ( CanOpenWalletModal() )
+		OpenWalletModal(eTabbedModalType.WALLET_INVENTORY)
 }
 
 void function OpenVCPopUp( var button )
 {
-	if ( CanOpenVCPopUp() )
-		AdvanceMenu( GetMenu( "VCPopUp" ) )
+	if ( CanOpenWalletModal() )
+		OpenWalletModal(eTabbedModalType.WALLET_APEX_COINS)
 }
 
-void function ToggleVCPopUp( var button )
+void function OpenExoticShardsModal( var button )
 {
-	if ( GetActiveMenu() == s_vc.vcPopUpMenu )
+	if ( CanOpenWalletModal() )
+		OpenWalletModal(eTabbedModalType.WALLET_EXOTIC_SHARDS)
+}
+
+void function OpenWalletModal( int defaultTabType )
+{
+	int tabIndex = 0
+
+	array<int> types = [ eTabbedModalType.WALLET_INVENTORY,
+		eTabbedModalType.WALLET_APEX_COINS,
+		eTabbedModalType.WALLET_EXOTIC_SHARDS
+	]
+
+	array<string> titles = [ "#CURRENCIES_WALLET_TITLE",
+		"#CURRENCY_PREMIUM",
+		"#CURRENCIES_WALLET_EXOTIC_SHARDS"
+	]
+
+	for ( int typeIndex = 0; typeIndex < types.len(); typeIndex++ )
 	{
-		CloseVCPopUp()
+		if ( types[typeIndex] == defaultTabType )
+		{
+			tabIndex = typeIndex
+			break
+		}
+	}
+
+	UI_RTKTabbedModal_Open( "", Localize("#CURRENCIES_TITLE").toupper(), types, titles, tabIndex, OnWalletModalOpened, OnWalletModalClosed )
+}
+
+void function OnWalletModalOpened()
+{
+	file.isWalletOpened = true
+}
+
+void function OnWalletModalClosed()
+{
+	file.isWalletOpened = false
+
+	if ( ShouldShowPremiumCurrencyDialog( false, true ) )
+		ShowPremiumCurrencyDialog( false )
+}
+
+void function ToggleApexCoinsWalletModal( var button )
+{
+	if ( file.isWalletOpened )
+	{
+		CloseActiveMenu()
 	} else {
 		OpenVCPopUp( button )
 	}
 }
 
-void function CloseVCPopUp()
+void function ToggleExoticShardsWalletModal( var button )
 {
-	if ( GetActiveMenu() == s_vc.vcPopUpMenu )
+	if ( file.isWalletOpened )
+	{
 		CloseActiveMenu()
+	} else {
+		OpenExoticShardsModal( button )
+	}
 }
 
 void function OnOpenVCPopUp()
@@ -2318,8 +2384,8 @@ bool function JumpToStorePanel( string panelName )
 
 void function JumpToStoreSection( string sectionName )
 {
-	RTKStore_SetOverrideStartingSection()
-	RTKStore_SetStartingSection( sectionName )
+	RTKStore_SetOverrideStartingSection( STORE_OFFER_SHOP )
+	RTKStore_SetStartingSection( sectionName, 0, STORE_OFFER_SHOP )
 	StoreTelemetry_SaveDeepLink( sectionName )
 
 	JumpToStoreTab()
@@ -2329,6 +2395,15 @@ void function JumpToStoreSection( string sectionName )
 
 	if ( !IsTabActive( storeTabData ) )
 		ActivateTab( storeTabData, storeTabData.activeTabIdx )
+}
+
+void function JumpToMythicSection( string sectionName )
+{
+	RTKStore_SetOverrideStartingSection( STORE_MYTHIC_SHOP )
+	RTKStore_SetStartingSection( sectionName, 0, STORE_MYTHIC_SHOP )
+	StoreTelemetry_SaveDeepLink( sectionName )
+
+	JumpToHeirloomShop()
 }
 
 int function GetBPPresaleOfferType( GRXScriptOffer offer )
@@ -2467,7 +2542,19 @@ void function JumpToHeirloomShop()
 {
 	JumpToStoreTab()
 	TabData storeTabData = GetTabDataForPanel( file.storePanel )
-	ActivateTab( storeTabData, Tab_GetTabIndexByBodyName( storeTabData, "HeirloomShopPanel" ) )
+	ActivateTab( storeTabData, Tab_GetTabIndexByBodyName( storeTabData, GetMythicShopName() ) )
+}
+
+string function GetMythicShopName()
+{
+	string panelName = ""
+
+		panelName = STORE_MYTHIC_SHOP
+
+
+
+
+	return panelName
 }
 
 

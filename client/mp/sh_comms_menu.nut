@@ -17,7 +17,7 @@ global function CommsMenu_Shutdown
 global function CommsMenu_OpenMenuForNewPing
 global function CommsMenu_OpenMenuForPingReply
 
-
+global function CommsMenu_OpenMenuForTransportPortal
 
 global function CommsMenu_HasValidSelection
 global function CommsMenu_ExecuteSelection
@@ -98,6 +98,9 @@ global enum eChatPage
 	INVENTORY_HEALTH,
 	ORDNANCE_LIST,
 
+
+
+
 	SKYDIVE_EMOTES,
 
 
@@ -112,10 +115,6 @@ global enum eChatPage
 
 
 	UPGRADE_CORE,
-
-
-
-
 
 
 
@@ -358,39 +357,32 @@ void function CommsMenu_OpenMenuForPingReply( entity player, entity wp )
 }
 
 
+void function CommsMenu_OpenMenuForTransportPortal( entity player, entity wp )
+{
+	entity receiver = wp.GetParent()
+	if ( !IsValid( receiver ) )
+		return
 
+	CommsMenu_OpenMenuTo( player, eChatPage.PINGREPLY_DEFAULT, eCommsMenuStyle.PINGREPLY_MENU )
 
+	if ( IsValid( wp ) )
+	{
+		if ( file.menuRui != null )
+		{
+			int wpt = wp.GetWaypointType()
+			if ( wpt == eWaypoint.PING_LOCATION )
+			{
+				RuiTrackFloat3( file.menuRui, "targetPos", wp, RUI_TRACK_ABSORIGIN_FOLLOW )
+			}
+		}
 
+		SetFocusedWaypointForced( wp )
+		if( wp.wp.ruiHud != null )
+			RuiSetBool( wp.wp.ruiHud, "hasWheelFocus", true )
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+		s_focusWaypoint = wp
+	}
+}
 
 
 void function CommsMenu_OpenMenuTo( entity player, int chatPage, int commsMenuStyle, bool debounce = true )
@@ -933,6 +925,15 @@ array<CommsMenuOptionData> function BuildMenuOptions( int chatPage )
 		}
 			break
 
+
+
+
+
+
+
+
+
+
 		case eChatPage.PINGREPLY_DEFAULT:
 		{
 			array<int> pingReplies = Ping_GetOptionsForPendingReply( player )
@@ -983,6 +984,16 @@ array<CommsMenuOptionData> function BuildMenuOptions( int chatPage )
 					}
 					else
 
+
+
+
+
+
+
+
+
+
+
 					results.append( MakeOption_CraftItem( counter ) )
 					counter++
 				}
@@ -990,14 +1001,6 @@ array<CommsMenuOptionData> function BuildMenuOptions( int chatPage )
 			break
 		}
 		
-
-
-
-
-
-
-
-
 
 
 
@@ -1098,7 +1101,7 @@ string[2] function GetPromptsForMenuOption( int index )
 			{
 				LootData data = SURVIVAL_Loot_GetLootDataByIndex( op.healType )
 				int count     = SURVIVAL_CountItemsInInventory( player, data.ref )
-				promptTexts[0] = data.pickupString
+				promptTexts[0] = Localize( data.pickupString )
 				promptTexts[1] = SURVIVAL_Loot_GetDesc( data, player )
 			}
 			break
@@ -1255,6 +1258,9 @@ bool function ShouldPopulateRuiForIndex( int index )
 	CommsMenuOptionData op = s_currentMenuOptions[index]
 	switch( op.optionType )
 	{
+
+		case eOptionType.ARTIFACT_ACTIVATION_EMOTE:
+
 		case eOptionType.QUIP:
 			ItemFlavor data = expect ItemFlavor( op.emote )
 			int type = ItemFlavor_GetType( data )
@@ -1639,7 +1645,26 @@ void function SetRuiOptionsForChatPage( var rui, int chatPage )
 		case eChatPage.ORDNANCE_LIST:
 			labelText = "#COMMS_ORDNANCE"
 			promptText = "#LOOT_EQUIP"
+
+
+
+
+
+
+
 			break
+
+
+
+
+
+
+
+
+
+
+
+
 
 		case eChatPage.SKYDIVE_EMOTES:
 			labelText = "#COMMS_SKYDIVE_EMOTES"
@@ -1806,7 +1831,11 @@ void function ShowCommsMenu( int chatPage )
 			RuiSetInt( nestedRui, "tier", tier )
 			RuiSetBool( nestedRui, "isEnabled", itemCount > 0 )
 		}
-		else if ( chatPage == eChatPage.ORDNANCE_LIST )
+		else if ( chatPage == eChatPage.ORDNANCE_LIST
+
+
+
+		)
 		{
 			int index = options[idx].healType
 
@@ -1871,7 +1900,11 @@ void function ShowCommsMenu( int chatPage )
 			break
 		}
 	}
-	else if ( (chatPage == eChatPage.ORDNANCE_LIST) )
+	else if ( (chatPage == eChatPage.ORDNANCE_LIST
+
+
+
+			) )
 	{
 		entity player      = GetLocalViewPlayer()
 		entity weapon      = player.GetNormalWeapon( WEAPON_INVENTORY_SLOT_ANTI_TITAN )
@@ -1969,6 +2002,37 @@ bool function CommsMenu_HandleKeyInput( int key )
 				}
 			}
 		}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 		
 
 
@@ -2235,6 +2299,25 @@ void function SetCurrentChoice( int choice )
 		}
 	}
 
+	if ( s_currentChatPage == eChatPage.ORDNANCE_LIST )
+	{
+		SetRuiOptionsForChatPage( file.menuRui, s_currentChatPage )
+
+		if ( s_currentChoice >= 0 )
+		{
+			CommsMenuOptionData op = s_currentMenuOptions[s_currentChoice]
+
+			int optionType = op.healType
+			LootData data = SURVIVAL_Loot_GetLootDataByIndex( optionType )
+
+			int count = SURVIVAL_CountItemsInInventory( GetLocalViewPlayer(), data.ref )
+			if ( count == 0 )
+			{
+				RuiSetString( file.menuRui, "promptText", "#PING_PROMPT_REQUEST" )
+			}
+		}
+	}
+
 	RuiDestroyNestedIfAlive( file.menuRui, "compatibleWeaponsHandle" )
 	var nestedCompatibleWeaponsRui = RuiCreateNested( file.menuRui, "compatibleWeaponsHandle", $"ui/loot_pickup_tag_text_crafting.rpak" )
 
@@ -2443,8 +2526,14 @@ bool function MakeCommMenuSelection( int choice, int wheelInputType )
 
 		case eOptionType.ARTIFACT_ACTIVATION_EMOTE:
 		{
-			Remote_ServerCallFunction( "ClientCallback_ActivationEmote" )
-			
+			if ( GetLocalViewPlayer().IsZiplining() )
+				return false
+
+			Remote_ServerCallFunction( "ClientCallback_ActivationEmote", true )
+#if DEV
+			Artifacts_DEV_PlayActivationEmote3PEffects()
+#endif
+
 			return true
 		}
 
@@ -2517,6 +2606,31 @@ bool function MakeCommMenuSelection( int choice, int wheelInputType )
 
 		case eOptionType.ORDNANCE_EQUIP:
 		{
+			int optionType = op.healType
+			LootData data = SURVIVAL_Loot_GetLootDataByIndex( optionType )
+
+			if ( wheelInputType == eWheelInputType.REQUEST )
+			{
+				
+				switch( data.ref )
+				{
+					case "mp_weapon_thermite_grenade":
+						Quickchat( eCommsAction.INVENTORY_NEED_THERMITE, null )
+						break
+					case "mp_weapon_frag_grenade":
+						Quickchat( eCommsAction.INVENTORY_NEED_FRAG, null )
+						break
+					case GRENADE_EMP_WEAPON_NAME:
+						Quickchat( eCommsAction.INVENTORY_NEED_ARCSTAR, null )
+						break
+					default:
+						break
+				}
+				HandleOrdnanceSelection( optionType )
+				return false 
+			}
+
+			
 			HandleOrdnanceSelection( op.healType )
 			return true
 		}

@@ -33,6 +33,8 @@ global function IsLocalPlayerOnTeamSpectatorWithCallback
 
 global function IsObserverInPrivateGame
 
+const float TEAMS_DATA_UPDATE_FREQUENCY = 1.0
+
 global struct ScoreboardData
 {
 	int             numScoreColumns
@@ -51,7 +53,6 @@ global struct TeamsScoreboardPlayerStats
 global struct TeamsScoreboardPlayer
 {
 	EHI playerEHI 
-	entity player
 
 	string playerName
 	string platformIcon
@@ -87,7 +88,7 @@ struct
 struct {
 	ScoreboardData functionref( ) Callback_ScoreboardData
 	array< string > functionref( entity ) Callback_PlayerScores
-	array< entity > functionref( array< entity >, ScoreboardData ) Callback_SortScoreboardPlayers
+	array< TeamsScoreboardPlayer > functionref( array< TeamsScoreboardPlayer > players ) Callback_SortScoreboardPlayers
 	void functionref( var, var, int ) Callback_Header
 	vector functionref( int ) Callback_GetTeamColor
 	string functionref( int ) Callback_GetTeamName
@@ -108,13 +109,10 @@ void function Teams_RegisterSignals()
 	RegisterSignal( "Teams_OnResolutionChanged" )
 
 	AddClientCallback_OnResolutionChanged( Teams_OnResolutionChanged )
+	AddCallback_GameStateEnter( eGameState.PickLoadout, Teams_OnPickLoadout )
+	AddCallback_ClientOnPlayerConnectionStateChanged( Teams_OnPlayerConnectionStateChanged )
 
-	AddCallback_GameStateEnter( eGameState.WinnerDetermined, Teams_OnWinnerDetermined )
-	AddCallback_GameStateEnter( eGameState.Resolution, Teams_OnPostWinnerDeterminedDetermined )
-	AddCallback_GameStateEnter( eGameState.Epilogue, Teams_OnPostWinnerDeterminedDetermined )
-	AddCallback_GameStateEnter( eGameState.Postmatch, Teams_OnPostWinnerDeterminedDetermined )
-
-	AddCallback_GameStateEnter( eGameState.Playing, Teams_OnPlaying )
+	SetupMaxTeamsForCache()
 }
 
 void function Teams_OnResolutionChanged()
@@ -141,7 +139,7 @@ void function Teams_AddCallback_PlayerScores( array< string > functionref( entit
 	file.Callback_PlayerScores = callbackFunc
 }
 
-void function Teams_AddCallback_SortScoreboardPlayers(  array< entity > functionref( array< entity >, ScoreboardData ) callbackFunc )
+void function Teams_AddCallback_SortScoreboardPlayers(  array< TeamsScoreboardPlayer > functionref( array< TeamsScoreboardPlayer > ) callbackFunc )
 {
 	Assert( !IsValid( file.Callback_SortScoreboardPlayers ), "SortScoreboardPlayers already has a callback function - " + string( callbackFunc ) + ", ensure this is only called once" )
 	file.Callback_SortScoreboardPlayers = callbackFunc
@@ -188,6 +186,59 @@ void function Teams_AddCallback_IsEnabled(  bool functionref() callbackFunc )
 {
 	Assert( !IsValid( file.Callback_IsEnabled ), "_IsEnabled already has a callback function - " + string( callbackFunc ) + ", ensure this is only called once" )
 	file.Callback_IsEnabled = callbackFunc
+}
+
+void function Teams_OnPlayerConnectionStateChanged( entity player )
+{
+	if ( player.IsConnectionActive() )
+	{
+		int playerTeam = Teams_GetPlayerTeam( player )
+
+		if( playerTeam < 0 || teamsScoreboardCachedData.teamsOfPlayers.len() - 1 < playerTeam  )
+			return
+
+		bool playerExists = false
+		foreach( cachedPlayer in teamsScoreboardCachedData.teamsOfPlayers[ playerTeam ] )
+		{
+			if( cachedPlayer.playerEHI == ToEHI( player ) )
+				playerExists = true
+		}
+
+		if( !playerExists && teamsScoreboardCachedData.teamsOfPlayers.len() - 1 >= playerTeam  )
+			teamsScoreboardCachedData.teamsOfPlayers[ playerTeam ].append( GetTeamsScoreboardPlayer( player ))
+	}
+}
+
+int function Teams_GetPlayerTeam( entity player )
+{
+	int playerTeam = player.GetTeam()
+
+	if ( playerTeam == TEAM_SPECTATOR || playerTeam == TEAM_UNASSIGNED )
+		playerTeam = -1
+	else
+	{
+		if ( AllianceProximity_IsUsingAlliances() )
+			playerTeam = AllianceProximity_GetAllianceFromTeam( playerTeam )
+		else
+			playerTeam = playerTeam - TEAM_IMC
+	}
+
+	return playerTeam
+}
+
+void function SetupMaxTeamsForCache()
+{
+	
+	teamsScoreboardCachedData.teamsOfPlayers.clear() 
+
+	int teamCount = GetTeamCount()
+	int maxTeamSize = Teams_GetMaxTeamSize()
+
+	for( int i = 0; i < teamCount; i++ )
+	{
+		array< TeamsScoreboardPlayer > emptyPlayers
+		teamsScoreboardCachedData.teamsOfPlayers[ i ] <- emptyPlayers
+	}
 }
 
 void function IsLocalPlayerOnTeamSpectatorWithCallback( var button, int teamIndex, int row )
@@ -257,27 +308,11 @@ TeamsScoreboardPlayer function GetPlayer( int teamIndex, int row )
 {
 	TeamsScoreboardPlayer data
 
-	if ( (GetGameState() >= eGameState.WinnerDetermined) )
+	if( teamsScoreboardCachedData.teamsOfPlayers.len() > teamIndex )
 	{
-		if( teamsScoreboardCachedData.teamsOfPlayers.len() > teamIndex )
-		{
-			array<TeamsScoreboardPlayer> cachedTeamData = teamsScoreboardCachedData.teamsOfPlayers[teamIndex]
-			if ( cachedTeamData.len() > row )
-				data = cachedTeamData[ row ]
-		}
-	}
-	else
-	{
-		array<entity> teamPlayers = ScoreboardMenu_GetPlayersOnTeam( teamIndex )
-		if ( teamPlayers.len() > row )
-		{
-			entity player = teamPlayers[ row ]
-
-			if ( LoadoutSlot_IsReady( ToEHI( player ), Loadout_Character() ) )
-			{
-				data = GetTeamsScoreboardPlayer( player )
-			}
-		}
+		array<TeamsScoreboardPlayer> cachedTeamData = teamsScoreboardCachedData.teamsOfPlayers[teamIndex]
+		if ( cachedTeamData.len() > row )
+			data = cachedTeamData[ row ]
 	}
 
 	return data
@@ -285,51 +320,13 @@ TeamsScoreboardPlayer function GetPlayer( int teamIndex, int row )
 
 int function ScoreboardMenu_GetTeamSize( int teamIndex )
 {
-	if ( (GetGameState() >= eGameState.WinnerDetermined) )
+	if( teamsScoreboardCachedData.teamsOfPlayers.len() > teamIndex )
 	{
-		if( teamsScoreboardCachedData.teamsOfPlayers.len() > teamIndex )
-		{
-			array<TeamsScoreboardPlayer> cachedTeamData = teamsScoreboardCachedData.teamsOfPlayers[teamIndex]
-			return cachedTeamData.len()
-		}
-	}
-	else
-	{
-		array<entity> teamPlayers = ScoreboardMenu_GetPlayersOnTeam( teamIndex )
-		return teamPlayers.len()
+		array<TeamsScoreboardPlayer> cachedTeamData = teamsScoreboardCachedData.teamsOfPlayers[teamIndex]
+		return cachedTeamData.len()
 	}
 
 	return 0
-}
-
-array<entity> function ScoreboardMenu_GetPlayersOnTeam( int teamIndex )
-{
-	array<entity> teamPlayers =  []
-
-	if ( AllianceProximity_IsUsingAlliances() )
-	{
-		teamPlayers = AllianceProximity_GetAllPlayersInAlliance( teamIndex, false )
-	}
-	else
-	{
-		teamPlayers = GetPlayerArrayOfTeam( teamIndex + 2 )
-	}
-
-	if( IsObserverInStartOfPrivateGame() )
-	{
-		teamPlayers.sort( SortPlayersByLockStep )
-	}
-	else if( IsObserverInPrivateGame() )
-	{
-		teamPlayers.sort( SortPlayersByName )
-	}
-	else if( IsValid(file.Callback_SortScoreboardPlayers) )
-	{
-		ScoreboardData data = GetScoreboardData()
-		teamPlayers = file.Callback_SortScoreboardPlayers( teamPlayers, data )
-	}
-
-	return teamPlayers
 }
 
 int function GetTeamCount()
@@ -358,18 +355,8 @@ void function ClientCallback_Teams_SetScoreboardData( var panel )
 	array<int> teams = GetAllValidPlayerTeams()
 	int maxTeamSize = GetMaxTeamSizeForPlaylist( GetCurrentPlaylistName() )
 
-	int localPlayerTeamIndex
-
 	entity localplayer = GetLocalClientPlayer()
-	if ( localplayer.GetTeam() == TEAM_SPECTATOR )
-		localPlayerTeamIndex = -1
-	else
-	{
-		if( AllianceProximity_IsUsingAlliances() )
-			localPlayerTeamIndex = AllianceProximity_GetAllianceFromTeam( localplayer.GetTeam() )
-		else
-			localPlayerTeamIndex = localplayer.GetTeam() - 2
-	}
+	int localPlayerTeamIndex = Teams_GetPlayerTeam( localplayer )
 
 	
 	int mode = GetCurrentPlaylistVarInt( "scoreboard_mode_id", 0 )
@@ -453,7 +440,7 @@ void function ClientCallback_Teams_OnPlayerClicked(  int teamIndex, int row  )
 
 	if( IsPrivateMatch() && GetLocalClientPlayer().IsObserver() && GetLocalClientPlayer().GetTeam() == TEAM_SPECTATOR && GetGameState() < eGameState.WinnerDetermined )
 	{
-		entity player = data.player
+		entity player = FromEHI( data.playerEHI )
 		if ( !IsValid( player ) )
 			return
 
@@ -492,43 +479,67 @@ void function UICallback_Scoreboard_OnReportClicked( var button, int teamIndex, 
 		ReportPlayer( data.playerEHI )
 }
 
+void function Teams_OnPickLoadout()
+{
+	thread Thread_Teams_UpdateCache()
+}
 
-void function Teams_OnWinnerDetermined()
+array< TeamsScoreboardPlayer > function Teams_SortPlayersOnTeam( array< TeamsScoreboardPlayer > players )
 {
 	
-	teamsScoreboardCachedData.teamsOfPlayers.clear() 
+	players.sort( SortPlayersByName )
 
-	int teamCount = GetTeamCount()
-	int maxTeamSize = Teams_GetMaxTeamSize()
-
-	for( int i = 0; i < teamCount; i++ )
+	if( IsObserverInStartOfPrivateGame() )
 	{
-		array<entity> teamPlayers = ScoreboardMenu_GetPlayersOnTeam( i )
-		array< TeamsScoreboardPlayer > players
+		players.sort( SortPlayersByLockStep )
+	}
+	else if( IsValid(file.Callback_SortScoreboardPlayers) )
+	{
+		players = file.Callback_SortScoreboardPlayers( players )
+	}
 
-		for( int j = 0; j < teamPlayers.len(); j++ )
+	return players
+}
+
+void function Thread_Teams_UpdateCache()
+{
+	while ( GetGameState() < eGameState.WinnerDetermined )
+	{
+		int teamCount = GetTeamCount()
+
+		for( int i = 0; i < teamCount; i++ )
 		{
-			TeamsScoreboardPlayer playerData = GetTeamsScoreboardPlayer( teamPlayers[j] )
-			players.append( playerData )
+			if( teamsScoreboardCachedData.teamsOfPlayers.len() - 1 >= i )
+			{
+				array< TeamsScoreboardPlayer > players
+
+				foreach( cachedPlayer in teamsScoreboardCachedData.teamsOfPlayers[ i ] )
+				{
+					entity player = FromEHI( cachedPlayer.playerEHI )
+					if( IsValid( player ) && player.IsConnectionActive()  )
+					{
+						players.append( GetTeamsScoreboardPlayer( player ) )
+					}
+					else
+					{
+						
+						if( !GamemodeUtility_IsJIPEnabled() )
+						{
+							cachedPlayer.isDisconnected = true
+							players.append( cachedPlayer )
+						}
+					}
+				}
+
+				teamsScoreboardCachedData.teamsOfPlayers[ i ] <- Teams_SortPlayersOnTeam( players )
+			}
+
+			
+			WaitFrame()
 		}
 
-		teamsScoreboardCachedData.teamsOfPlayers[i] <- players
+		wait TEAMS_DATA_UPDATE_FREQUENCY
 	}
-}
-
-void function Teams_OnPostWinnerDeterminedDetermined()
-{
-	
-	
-	if( teamsScoreboardCachedData.teamsOfPlayers.len() == 0 )
-	{
-		Teams_OnWinnerDetermined()
-	}
-}
-
-void function Teams_OnPlaying()
-{
-	teamsScoreboardCachedData.teamsOfPlayers.clear()
 }
 
 
@@ -646,7 +657,7 @@ int function Teams_NormalizeTeamIndex( int teamIndex )
 	if( AllianceProximity_IsUsingAlliances() )
 		team = teamIndex
 	else
-		team = teamIndex + 2
+		team = teamIndex + TEAM_IMC
 
 	return team
 }
@@ -661,13 +672,12 @@ TeamsScoreboardPlayer function GetTeamsScoreboardPlayer( entity player )
 
 	EHI playerEHI = ToEHI( player )
 
-	entity localPlayer = GetLocalViewPlayer()
+	entity localPlayer = GetLocalClientPlayer()
 	int localTeam = localPlayer.GetTeam()
 
 	ItemFlavor character = LoadoutSlot_GetItemFlavor( playerEHI, Loadout_Character() )
 
 	data.playerEHI = playerEHI
-	data.player = player
 	data.playerName = GetDisplayablePlayerNameFromEHI( playerEHI )
 	data.playerImage = CharacterClass_GetGalleryPortrait( character )
 
@@ -846,6 +856,7 @@ void function Teams_PopulatePlayerRow( var rui, TeamsScoreboardPlayer data, floa
 	RuiSetColorAlpha( rui, "customCharacterColor", data.customCharacterColor, 1.0 )
 	RuiSetBool( rui, "useCustomCharacterColor", data.useCustomCharacterColor )
 	RuiSetBool( rui, "isJIP", false )
+	RuiSetBool( rui, "isDisconnected", data.isDisconnected )
 	RuiSetColorAlpha( rui, "playerImageTint", < 1.0, 1.0, 1.0 >, 1.0 )
 	RuiSetColorAlpha( rui, "enemyBackgroundColor", data.enemyBackgroundColor, 1.0 )
 }
@@ -874,10 +885,16 @@ void function Threaded_DoModeSpecificWork( var panel )
 	}
 }
 
-int function SortPlayersByLockStep( entity a, entity b )
+int function SortPlayersByLockStep( TeamsScoreboardPlayer a, TeamsScoreboardPlayer b )
 {
-	int aStepIndex = a.GetPlayerNetInt( CHARACTER_SELECT_NETVAR_LOCK_STEP_PLAYER_INDEX )
-	int bStepIndex = b.GetPlayerNetInt( CHARACTER_SELECT_NETVAR_LOCK_STEP_PLAYER_INDEX )
+	entity playerA = FromEHI( a.playerEHI )
+	entity playerB = FromEHI( b.playerEHI )
+
+	if( !IsValid( playerA ) ||  !IsValid( playerB ) )
+		return 0
+
+	int aStepIndex = playerA.GetPlayerNetInt( CHARACTER_SELECT_NETVAR_LOCK_STEP_PLAYER_INDEX )
+	int bStepIndex = playerB.GetPlayerNetInt( CHARACTER_SELECT_NETVAR_LOCK_STEP_PLAYER_INDEX )
 
 	if ( aStepIndex > bStepIndex )
 		return 1
@@ -888,12 +905,18 @@ int function SortPlayersByLockStep( entity a, entity b )
 	return 0
 }
 
-int function SortPlayersByName( entity a, entity b )
+int function SortPlayersByName( TeamsScoreboardPlayer a, TeamsScoreboardPlayer b )
 {
-	if ( a.GetPlayerName() > b.GetPlayerName() )
+	entity playerA = FromEHI( a.playerEHI )
+	entity playerB = FromEHI( b.playerEHI )
+
+	if( !IsValid( playerA ) ||  !IsValid( playerB ) )
+		return 0
+
+	if ( playerA.GetPlayerName() > playerB.GetPlayerName() )
 		return 1
 
-	if ( a.GetPlayerName() < b.GetPlayerName() )
+	if ( playerA.GetPlayerName() < playerB.GetPlayerName() )
 		return -1
 
 	return 0

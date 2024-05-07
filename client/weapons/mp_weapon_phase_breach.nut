@@ -689,6 +689,17 @@ void function ServerToClient_NotifyAshCooldownReduction()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
 const float DOWN_TRACE_DISTANCE = 1000.0
 const float BACK_TRACE_STEP_DIST = 50.0
 const float BACK_TRACE_MAX_STEP = 200.0

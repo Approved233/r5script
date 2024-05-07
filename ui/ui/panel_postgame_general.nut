@@ -132,6 +132,34 @@ global table<string, array< array< int > > > xpDisplayGroups = {
 		],
 	],
 
+
+
+		survival_solos = [
+			[
+				eXPType.WIN_MATCH,
+				eXPType.TOP_FIVE,
+				eXPType.SURVIVAL_DURATION,
+				eXPType.KILL,
+				eXPType.DAMAGE_DEALT,
+				
+				
+			],
+
+			[
+				eXPType.BONUS_FIRST_GAME,
+				eXPType.BONUS_FIRST_KILL,
+				eXPType.KILL_CHAMPION_MEMBER,
+				eXPType.KILL_LEADER,
+				eXPType.BONUS_CHAMPION,
+				eXPType.BONUS_FIRST_TOP_FIVE,
+			],
+
+			[
+				eXPType.TOTAL_MATCH,
+				eXPType.CHALLENGE_COMPLETED,
+			],
+		],
+
 }
 
 struct
@@ -291,10 +319,15 @@ var function DisplayPostGameSummary( bool isFirstTime )
 		return
 
 	string lastGameMode = expect string( GetPersistentVar( "lastGameMode" ) )
+	string lastGameUIRules = expect string( GetPersistentVar( "lastGameUIRules" ) )
 
-	if (!( lastGameMode in xpDisplayGroups ))
+	if ( lastGameUIRules in xpDisplayGroups )
 	{
-		lastGameMode = "survival"
+		lastGameMode = lastGameUIRules
+	}
+	else if (!( lastGameMode in xpDisplayGroups ))
+	{
+		lastGameMode = SURVIVAL
 	}
 
 	EmitUISound( "UI_Menu_MatchSummary_Appear" )

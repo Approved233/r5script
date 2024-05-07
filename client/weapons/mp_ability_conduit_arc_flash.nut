@@ -10,7 +10,6 @@ global function OnWeaponPrimaryAttackAnimEvent_ability_conduit_arc_flash
 
 global function GetArcFlashRangeSqr
 global function GetArcFlashState
-global function Conduit_GetArrayOfPossibleAllies
 
 
 
@@ -426,67 +425,53 @@ var function OnWeaponPrimaryAttackAnimEvent_ability_conduit_arc_flash( entity we
 	return weapon.GetAmmoPerShot()
 }
 
-array<entity> function Conduit_GetArrayOfPossibleAllies( entity conduit, bool includeAlliance = true )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+bool function ConduitRevNerfOn()
 {
-	array<entity> allyArray
-	int conduitTeam = conduit.GetTeam()
-
-	if ( includeAlliance && AllianceProximity_IsUsingAlliances() )
-	{
-		int conduitAlliance = AllianceProximity_GetAllianceFromTeam( conduitTeam )
-		allyArray = AllianceProximity_GetAllPlayersInAlliance( conduitAlliance, true )
-	}
-	else
-	{
-		allyArray = GetPlayerArrayOfTeam_Alive( conduitTeam )
-	}
-	allyArray.removebyvalue( conduit )
-
-	return allyArray
+	return GetCurrentPlaylistVarBool( "conduit_rev_nerf", true )
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 int function IsValidTacTarget( entity user, entity target, bool ignoreFaceWhenClose )
 {
@@ -505,6 +490,12 @@ int function IsValidTacTarget( entity user, entity target, bool ignoreFaceWhenCl
 	if ( target.IsPhaseShifted() )
 		return eLockResult.FAILED_GENERIC
 
+	if ( ConduitRevNerfOn() )
+	{
+		if ( IsInForgedShadows( target ) )
+			return eLockResult.FAILED_GENERIC
+	}
+
 	if ( GetRespawnStatus( target ) != eRespawnStatus.NONE )
 		return eLockResult.FAILED_GENERIC
 
@@ -512,7 +503,6 @@ int function IsValidTacTarget( entity user, entity target, bool ignoreFaceWhenCl
 	if ( ignoreFaceWhenClose && distanceSqr < ARC_FLASH_MIN_RANGE_SQR )
 		return eLockResult.SUCCESS
 
-	entity tacWeapon = user.GetOffhandWeapon( OFFHAND_TACTICAL )
 	float EFFECTIVE_RANGE_SQR = GetArcFlashRangeSqr( user )
 	if ( distanceSqr > EFFECTIVE_RANGE_SQR )
 		return eLockResult.FAILED_OUT_OF_RANGE
@@ -573,6 +563,31 @@ float function ScoreTarget( entity player, entity target )
 
 	return score
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1005,7 +1020,7 @@ void function TargetingHUD_Thread( entity player )
 
 	while ( true )
 	{
-		array<entity> allyArray = Conduit_GetArrayOfPossibleAllies( player )
+		array<entity> allyArray = GetArrayOfPossibleAlliesForPlayer( player )
 
 		foreach ( ally in allyArray )
 		{

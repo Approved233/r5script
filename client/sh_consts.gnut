@@ -158,7 +158,7 @@ global const GAMEMODE_THE_HUNT_20 = "the_hunt_20"
 
 
 
-global const GAMEMODE_APRIL_FOOLS_S20 = "aprilfools_s20"
+
 
 
 global const GAMEMODE_ARMED_AND_DANGEROUS = "armed_and_dangerous"
@@ -173,6 +173,22 @@ global const EVENT_ABILITIES = "event_abilities"
 
 
 global const GAMEMODE_QUICK_MATCH = "quick_match"
+
+
+
+global const GAMEMODE_SURVIVAL_SOLOS = "survival_solos"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 global const string PLAYLIST_TRAINING = "survival_training"
@@ -818,6 +834,9 @@ global enum ePresentationType
 	UNAPPLIED_STICKER,
 	WEAPON_TRIAL_CELEBRATIONS,
 	MELEE_INSPECT,
+
+
+
 
 	COUNT
 }
@@ -1580,6 +1599,8 @@ global enum eCommsAction
 	INVENTORY_NEED_SHIELDS,
 	INVENTORY_NEED_INCAPSHIELD,
 	INVENTORY_NEED_THERMITE,
+	INVENTORY_NEED_FRAG,
+	INVENTORY_NEED_ARCSTAR,
 
 	INVENTORY_NEED_ATTACHMENT_MAG_BULLET,
 	INVENTORY_NEED_ATTACHMENT_MAG_SPECIAL,
@@ -1912,6 +1933,10 @@ global enum eCommsAction
 		MARK_MY_LAST_DEATHBOX,
 
 
+
+		MARK_MY_LAST_DEATH_LOCATION,
+
+
 	PROMPT_THANKS_RESPAWN,
 
 	QUICKCHAT_SKYDIVE_ENEMIES_NEARBY,
@@ -1959,7 +1984,7 @@ global enum eCommsAction
 
 
 
-		PING_WEAPON_MOZAMBIQUE_OLNESSIE,
+
 
 
 
@@ -2049,11 +2074,11 @@ global enum eCommsAction
 
 
 
-
-
-
-
-
+		PING_TRANSPORT_PORTAL_FRIENDLY,
+		PING_TRANSPORT_PORTAL_ENEMY,
+		PING_CHASE_PORTAL_FRIENDLY,
+		PING_CHASE_PORTAL_ENEMY,
+		PING_PHASE_DOOR,
 
 
 
@@ -2073,6 +2098,7 @@ global enum eCommsAction
 	
 	global const string PROWLER_DEN_SCRIPT_NAME = "prop_prowler_den"
 	global const string SPIDER_EGG_SCRIPT_NAME = "prop_spider_egg"
+	global const string SPIDER_HATCHED_EGG_EDITOR_CLASS_KEYWORD = "script_ai_spider_egg_hatched"
 
 
 global const string BUBBLE_SHIELD_SCRIPTNAME = "bubble_shield"
@@ -2357,7 +2383,26 @@ global enum eFRSettingType
 	COUNT_
 }
 
+global enum eTarget_Selector_Speeds
+{
+	CROUCHWALK 	= 1,
+	WALK		= 2,
+	RUN			= 3,
+	ZIPLINE		= 4,
+	COUNT_
+}
+
 global const int FR_RANDOM_SHIELD_SETTING = 10
+
+global enum eDummie_Selector_Shields
+{
+	WHITE 	= 1,
+	BLUE 	= 2,
+	PURPLE 	= 3,
+	RED 	= 4,
+	RANDOM 	= 10,
+	COUNT_	= 11
+}
 
 global enum eDummie_Selector_Movements
 {
@@ -2373,6 +2418,14 @@ global enum eDummie_Selector_States
 	STAND,
 	CROUCH,
 	RANDOM,
+	COUNT_
+}
+
+global enum eDummie_Selector_Speeds
+{
+	WALK 	= 1,
+	RUN		= 2,
+	RANDOM 	= 3,
 	COUNT_
 }
 
@@ -2528,7 +2581,7 @@ global enum eRarityTier
 	EPIC = 2,
 	LEGENDARY = 3,
 	MYTHIC = 4,
-	ICONIC = 5,
+	ICONIC = 5, 
 	_COUNT,
 }
 
@@ -2702,6 +2755,7 @@ global const string XPROG_PERSISTENCE_MERGED_PLAT_STRUCT_NAME = "xMergedPlat"
 global const table< int, string > HARDWARE_TO_MERGED_PLATFORM = 
 {
 	[HARDWARE_PC] = "pc",
+	[HARDWARE_PC_STEAM] = "pc",
 	[HARDWARE_PS4] = "ps",
 	[HARDWARE_PS5] = "ps",
 	[HARDWARE_SWITCH] = "nx",
@@ -2784,13 +2838,16 @@ global enum eRuiArgType
 
 
 
-global const string POISPAWN_PLACEDCENTER_SCRIPTNAME = "poispawn_placedcenter"
 global const vector POISPAWN_LANDINGMARKER_COLOR = < 19, 255, 190 >
 global const vector POISPAWN_LANDINGMARKER_ENEMY_COLOR = < 255, 19, 19 >
 global const int TEAM_MMR_BOT_PAIRING_OVERRIDE = -1		
 
+global const string 	POISPAWNING_CURATED_SPAWNPOINT_CLASSNAME 		= "info_poispawning_squadspawn"
+global const string 	POISPAWNING_CURATED_SPAWNPOINT_SCRIPTNAME 		= "poispawning_curated_spawn"
 
-global const int MAX_GAMEMODE_SELECTOR = 10
+
+global const int GAMEMODE_MAX_SEEN_INDEX = 9
+global const int GAMEMODE_INVALID_INDEX = -1
 
 
 

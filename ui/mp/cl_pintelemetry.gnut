@@ -39,9 +39,21 @@ global function PIN_PlayerTagChange
 global function PIN_BattlepassPurchase
 global function PIN_BattlepassMilestonePageView
 global function PIN_UIInteraction_PersonalisedStoreInteraction
+global function PIN_UIInteraction_OnClick
+global function PIN_UIInteraction_OnScroll
+global function PIN_UIInteraction_OnChallengeTracked
+global function PIN_UIInteraction_OnBattlepassPageChange
+global function PIN_UIInteraction_OnBattlepassItemSelected
 global function PIN_UIInteraction_PersonalisedStoreReveal
 
 global function PIN_PageView_EventsTab
+global function PIN_PageView_EventsTabOffer
+global function PIN_PageView_EventsTabMilestoneInfoPage
+global function PIN_PageView_EventsTabMilestoneViewPurchasePanel
+global function PIN_PageView_StoreMilestone
+global function PIN_PageView_StoreMilestoneOffer
+global function PIN_PageView_StoreMilestoneInfoPage
+global function PIN_PageView_StoreMilestoneViewPurchasePanel
 
 global function SetCurrentHubForPIN
 global function SetCurrentTabForPIN
@@ -1037,6 +1049,88 @@ void function PIN_NET_TraceRouteResult(entity player, table result)
 
 
 
+void function PIN_UIInteraction_OnClick( string menuName, string objectName )
+{
+	AddPINTelemetryEvent( "ui_interaction",
+		PIN_StandardHeader(),
+		{
+			action = "click"
+			object_id = objectName.tolower()
+			pgid = menuName.tolower()
+			sdur = PIN_GetSessionDuration()
+		}
+	)
+}
+
+
+
+void function PIN_UIInteraction_OnScroll( string menuName, string objectName )
+{
+	AddPINTelemetryEvent( "ui_interaction",
+		PIN_StandardHeader(),
+		{
+			action = "scroll"
+			object_id = objectName.tolower()
+			pgid = menuName.tolower()
+			sdur = PIN_GetSessionDuration()
+		}
+	)
+}
+
+
+
+void function PIN_UIInteraction_OnChallengeTracked( string challengeId, bool isTracking )
+{
+	AddPINTelemetryEvent( "achievement",
+		PIN_StandardHeader(),
+		{
+			achv_id = challengeId.tolower()
+			status = isTracking? "track": "untrack"
+			type = "challenge"
+			sdur = PIN_GetSessionDuration()
+		}
+	)
+}
+
+
+
+void function PIN_UIInteraction_OnBattlepassPageChange( bool isClick, string fromName, string toName, int openDuration  )
+{
+	AddPINTelemetryEvent( "page_view",
+		PIN_StandardHeader(),
+		{
+			click_type = ( isClick )? "click" : "scroll"
+			pgid = toName.tolower()
+			fromid = fromName.tolower()
+			pgdur = openDuration
+			type = "menu"
+			hud_name = "seasonal"
+			tab_name = "battlepass"
+		}
+	)
+}
+
+
+
+void function PIN_UIInteraction_OnBattlepassItemSelected( string fromName, string toName, string offerName, int openDuration )
+{
+	AddPINTelemetryEvent( "page_view",
+		PIN_StandardHeader(),
+		{
+			click_type = "click"
+			pgid = toName.tolower()
+			fromid = fromName.tolower()
+			pgdur = openDuration
+			type = "menu"
+			hud_name = "seasonal"
+			tab_name = "battlepass"
+			offer_name = offerName.tolower()
+		}
+	)
+}
+
+
+
 void function PIN_UIInteraction_PersonalisedStoreInteraction( string menuName, string objectName, int slotNumber, string offerSelectorName, string offerName )
 {
 	AddPINTelemetryEvent( "ui_interaction",
@@ -1147,6 +1241,207 @@ void function PIN_PageView_EventsTab( string menuName, int openDuration, string 
 			click_type		= clickType
 
 			event			= eventName
+		}
+	)
+}
+
+
+
+void function PIN_PageView_EventsTabOffer( string menuName, int openDuration, string fromId, int buttonIndex, string linkName, string clickType, string eventName, string offerAlias, bool isReward )
+{
+	table<string, string> metaData
+	metaData["hub_name"] <- "seasonal"
+	metaData["tab_name"] <- "event"
+
+	AddPINTelemetryEvent( "page_view",
+		PIN_StandardHeader(),
+		{
+			ldur = 0
+			pgdur = openDuration
+			pgid = menuName.tolower()
+			fromid = fromId.tolower()
+			type = "menu"
+			meta = metaData
+			button_index = buttonIndex
+			link_name		= linkName
+			click_type		= "click"
+
+			event			= eventName
+			offer_alias		= offerAlias
+			offer_type		= isReward ? "milestonereward" : "offer"
+		}
+	)
+}
+
+
+
+void function PIN_PageView_EventsTabMilestoneInfoPage( string menuName, int openDuration, string fromId, int pageNum, string infoPageName, string clickType, string milestoneName )
+{
+	if ( openDuration < 1.0 )
+		return
+
+	table<string, string> metaData
+	metaData["hub_name"] <- "seasonal"
+	metaData["tab_name"] <- "event"
+
+	AddPINTelemetryEvent( "page_view",
+		PIN_StandardHeader(),
+		{
+			ldur = 0
+			pgdur = openDuration
+			pgid = menuName.tolower()
+			fromid = fromId.tolower()
+			type = "menu"
+			meta = metaData
+			h_tab			= pageNum
+			link_name		= infoPageName
+			click_type		= clickType
+
+			event			= milestoneName
+		}
+	)
+}
+
+
+
+void function PIN_PageView_EventsTabMilestoneViewPurchasePanel( string menuName, int openDuration, string fromId, int pageNum, string clickType, string milestoneName, bool asGift = false )
+{
+	if ( openDuration < 1.0 )
+		return
+
+	table<string, string> metaData
+	metaData["hub_name"] <- "seasonal"
+	metaData["tab_name"] <- "event"
+
+	AddPINTelemetryEvent( "page_view",
+		PIN_StandardHeader(),
+		{
+			ldur = 0
+			pgdur = openDuration
+			pgid = menuName.tolower()
+			fromid = fromId.tolower()
+			type = "menu"
+			meta = metaData
+			h_tab			= pageNum
+			link_name		= asGift ? "giftingPurchaseDialog" : "packPurchaseDialog"
+			click_type		= clickType
+
+			event			= milestoneName
+		}
+	)
+}
+
+
+
+void function PIN_PageView_StoreMilestone( string menuName, int openDuration, string fromId, int pageNum, string linkName, string clickType, string milestoneName )
+{
+	if ( openDuration < 1.0 )
+		return
+
+	table<string, string> metaData
+	metaData["hub_name"] <- "store"
+	metaData["tab_name"] <- "milestone"
+
+	AddPINTelemetryEvent( "page_view",
+		PIN_StandardHeader(),
+		{
+			ldur = 0
+			pgdur = openDuration
+			pgid = menuName.tolower()
+			fromid = fromId.tolower()
+			type = "menu"
+			meta = metaData
+			h_tab			= pageNum
+			link_name		= linkName
+			click_type		= clickType
+
+			event			= milestoneName
+		}
+	)
+}
+
+
+
+void function PIN_PageView_StoreMilestoneOffer( string menuName, int openDuration, string fromId, int buttonIndex, string linkName, string clickType, string eventName, string offerAlias, bool isReward )
+{
+	table<string, string> metaData
+	metaData["hub_name"] <- "seasonal"
+	metaData["tab_name"] <- "event"
+
+	AddPINTelemetryEvent( "page_view",
+		PIN_StandardHeader(),
+		{
+			ldur = 0
+			pgdur = openDuration
+			pgid = menuName.tolower()
+			fromid = fromId.tolower()
+			type = "menu"
+			meta = metaData
+			button_index = buttonIndex
+			link_name		= linkName
+			click_type		= "click"
+
+			event			= eventName
+			offer_alias		= offerAlias
+			offer_type		= isReward ? "milestonereward" : "offer"
+		}
+	)
+}
+
+
+
+void function PIN_PageView_StoreMilestoneInfoPage( string menuName, int openDuration, string fromId, int pageNum, string infoPageName, string clickType, string milestoneName )
+{
+	if ( openDuration < 1.0 )
+		return
+
+	table<string, string> metaData
+	metaData["hub_name"] <- "store"
+	metaData["tab_name"] <- "milestone"
+
+	AddPINTelemetryEvent( "page_view",
+		PIN_StandardHeader(),
+		{
+			ldur = 0
+			pgdur = openDuration
+			pgid = menuName.tolower()
+			fromid = fromId.tolower()
+			type = "menu"
+			meta = metaData
+			h_tab			= pageNum
+			link_name		= infoPageName
+			click_type		= clickType
+
+			event			= milestoneName
+		}
+	)
+}
+
+
+
+void function PIN_PageView_StoreMilestoneViewPurchasePanel( string menuName, int openDuration, string fromId, int pageNum, string clickType, string milestoneName, bool asGift = false )
+{
+	if ( openDuration < 1.0 )
+		return
+
+	table<string, string> metaData
+	metaData["hub_name"] <- "store"
+	metaData["tab_name"] <- "milestone"
+
+	AddPINTelemetryEvent( "page_view",
+		PIN_StandardHeader(),
+		{
+			ldur = 0
+			pgdur = openDuration
+			pgid = menuName.tolower()
+			fromid = fromId.tolower()
+			type = "menu"
+			meta = metaData
+			h_tab			= pageNum
+			link_name		= asGift ? "giftingPurchaseDialog" : "packPurchaseDialog"
+			click_type		= clickType
+
+			event			= milestoneName
 		}
 	)
 }

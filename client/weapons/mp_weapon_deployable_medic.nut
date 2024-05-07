@@ -1619,6 +1619,9 @@ void function OnDeployableMedicPlanted( entity projectile,  DeployableCollisionP
 
 
 
+
+
+
 void function DeployableMedic_OnPropScriptCreated( entity ent )
 {
 }

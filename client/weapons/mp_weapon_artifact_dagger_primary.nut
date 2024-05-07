@@ -6,10 +6,6 @@ global function OnWeaponActivate_weapon_artifact_dagger_primary
 global function OnWeaponDeactivate_weapon_artifact_dagger_primary
 global function OnWeaponOwnerChanged_weapon_artifact_dagger
 
-
-global function OnCreateVMFx_ArtifactDagger
-
-
 const string ARTIFACT_MODEL_IDENTIFIER = "char_artifact"
 
 void function MpWeaponArtifactDaggerPrimary_Init()
@@ -21,26 +17,29 @@ void function OnWeaponActivate_weapon_artifact_dagger_primary( entity weapon )
 {
 	entity owner = weapon.GetOwner()
 
-
-
-
+	Melee_SetModsForLegendAbilities( owner )
 
 	if ( owner.p.artifactConfig != null )
 	{
 		Artifacts_Loadouts_SetupWeaponComponents( weapon, owner )
 		Artifacts_FX_StopWeaponFX( weapon, eArtifactFXPackageType.IDLE ) 
-		Artifacts_FX_StartWeaponFX( weapon, eArtifactFXPackageType.IDLE, null )
+		Artifacts_FX_StopWeaponFX( weapon, eArtifactFXPackageType.ATTACK ) 
+		Artifacts_FX_StartWeaponFX( weapon, eArtifactFXPackageType.IDLE )
+		Artifacts_FX_StartWeaponFX( weapon, eArtifactFXPackageType.BLADE_EMISSIVE )
 	}
 }
 
 void function OnWeaponDeactivate_weapon_artifact_dagger_primary( entity weapon )
 {
 	Artifacts_FX_StopWeaponFX( weapon, eArtifactFXPackageType.IDLE )
+	Artifacts_FX_StopWeaponFX( weapon, eArtifactFXPackageType.BLADE_EMISSIVE )
 
 
 
 
 
+
+	Melee_RemoveModsForLegendAbilities( weapon.GetOwner() )
 }
 
 void function OnWeaponOwnerChanged_weapon_artifact_dagger( entity weapon, WeaponOwnerChangedParams params )
@@ -50,14 +49,9 @@ void function OnWeaponOwnerChanged_weapon_artifact_dagger( entity weapon, Weapon
 	if( !IsValid( owner ) )
 		return
 
-
-		if ( owner != GetLocalClientPlayer() )
-			return 
-
-
 	if ( !owner.IsBot() )
 	{
-		Artifacts_StoreLoadoutDataOnPlayerEntityStruct( owner )
+		Artifacts_StoreLoadoutDataOnPlayerEntityStruct( owner, weapon, false )
 		Artifacts_Loadouts_SetupWeaponComponents( weapon, owner )
 		Artifacts_OnWeaponOwnerChanged( weapon, owner )
 	}
@@ -97,12 +91,5 @@ void function ArtifactDagger_ScriptAnimWindowStopCallback( entity ent, string pa
 
 	Artifacts_FX_ScriptAnimWindowCallback( weapon, parameter, false )
 }
-
-
-void function OnCreateVMFx_ArtifactDagger( entity weapon, int effectHandle )
-{
-	Artifact_Set1pFxControlPoints( weapon, effectHandle )
-}
-
 
                                   

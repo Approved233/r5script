@@ -1220,12 +1220,18 @@ array< string > function GunGame_GetPlayerScores( entity player )
 
 
 
-array< entity > function GunGame_SortPlayersByScore( array< entity > teamPlayers, ScoreboardData gameData )
+array< TeamsScoreboardPlayer > function GunGame_SortPlayersByScore( array< TeamsScoreboardPlayer > players )
 {
-	teamPlayers.sort( int function( entity a, entity b )
+	players.sort( int function( TeamsScoreboardPlayer a, TeamsScoreboardPlayer b )
 	{
-		int aScore = a.GetPlayerNetInt( "kills" )
-		int bScore = b.GetPlayerNetInt( "kills" )
+		entity playerA = FromEHI( a.playerEHI )
+		entity playerB = FromEHI( b.playerEHI )
+
+		if( !IsValid( playerA ) || !IsValid( playerB ) )
+			return 0
+
+		int aScore = playerA.GetPlayerNetInt( "kills" )
+		int bScore = playerB.GetPlayerNetInt( "kills" )
 
 		if ( aScore > bScore ) return -1
 		else if ( aScore < bScore ) return 1
@@ -1233,7 +1239,7 @@ array< entity > function GunGame_SortPlayersByScore( array< entity > teamPlayers
 	}
 	)
 
-	return teamPlayers
+	return players
 }
 
 

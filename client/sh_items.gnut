@@ -180,6 +180,7 @@ global enum eItemType
 	calevent_challenge_collection
 	calevent_challenge_set
 	calevent_reward_campaign
+	calevent_challenge_tile
 	_CALEVENT_RANGE_END
 
 	
@@ -229,20 +230,12 @@ global enum eItemType
 
 	image_2d
 	battlepass_presale_voucher
-
-		reward_set_tracker
-
+	reward_set_tracker
 
 
 		character_class
 		character_perk
 
-
-	
-	__loot_start
-	loot_main_weapon
-	melee_weapon
-	__loot_end
 
 
 	artifact_component_START
@@ -257,6 +250,12 @@ global enum eItemType
 
 	artifact_component_END
 
+
+	
+	__loot_start
+	loot_main_weapon
+	melee_weapon
+	__loot_end
 
 	
 	ping
@@ -425,6 +424,10 @@ global struct ItemFlavor
 	int               grxMode   = -1 
 	int               grxIndex  = -1 
 
+
+
+
+
 	array<int> ornull grxOwnershipTargettedBy = null 
 	table<string, string> ornull metaData = null 
 }
@@ -444,7 +447,7 @@ global struct ItemFlavorBag
 {
 	array<ItemFlavor>     flavors
 	array<int>            quantities
-	int                   associatedError = -1
+	int                   associatedError = GRX_INVENTORYERROR_NONE
 }
 
 global typedef ItemFlavorSet table< ItemFlavor, void >
@@ -1773,6 +1776,10 @@ ItemFlavor ornull function RegisterItemFlavorFromSettingsAsset( asset settingsAs
 	
 	ShGRX_RegisterItemFlavor( flavor )
 
+
+
+
+
 	if ( IsItemFlavorTypeCosmetic( flavor.typeIndex ) )
 	{
 		fileLevel.itemFlavorListCosmetic.append( flavor )
@@ -1963,7 +1970,7 @@ bool function ItemFlavorBag_HasSameContents( ItemFlavorBag first, ItemFlavorBag 
 string function DEV_DescribeItemFlavorBag( ItemFlavorBag bag )
 {
 	string out = ""
-	if ( bag.associatedError != -1 )
+	if ( bag.associatedError != GRX_INVENTORYERROR_NONE )
 	{
 		out += format( "(ERROR:%d) ", bag.associatedError )
 	}
@@ -2386,6 +2393,7 @@ bool function ItemTypeHasRandom( int itemType )
 
 bool function ItemTypeAlphabetizable( int itemType )
 {
+	
 	switch ( itemType )
 	{
 		case eItemType.gladiator_card_intro_quip:

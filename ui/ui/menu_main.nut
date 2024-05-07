@@ -51,7 +51,7 @@ void function InitMainMenu( var newMenuArg )
 	RuiSetImage( titleArtRui, "basicImage", $"ui/menu/title_screen/title_art" )
 
 	var subtitleRui = Hud_GetRui( Hud_GetChild( file.menu, "Subtitle" ) )
-	RuiSetString( subtitleRui, "subtitleText", Localize( "#BP_S20_NAME").toupper() )
+	RuiSetString( subtitleRui, "subtitleText", Localize( "#BP_S21_NAME").toupper() )
 	if ( GetLanguage() == "polish" )
 		RuiSetBool( subtitleRui, "useAltFont", true )
 

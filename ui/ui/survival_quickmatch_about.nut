@@ -1,16 +1,6 @@
 
 global function Survival_Quickmatch_PopulateAboutText
 
-string function GetPlaylist()
-{
-	if ( IsLobby() )
-		return LobbyPlaylist_GetSelectedPlaylist()
-	else
-		return GetCurrentPlaylistName()
-
-	unreachable
-}
-
 array< featureTutorialTab > function Survival_Quickmatch_PopulateAboutText()
 {
 	array< featureTutorialTab > tabs
@@ -28,20 +18,7 @@ array< featureTutorialTab > function Survival_Quickmatch_PopulateAboutText()
 	tab1.rules = tab1Rules
 	tabs.append( tab1 )
 
-	if ( GetPlaylistVarBool( GetPlaylist(), "matchmake_from_match", false ) )
-	{
-		
-		tab2.tabName = "#BATTLE_RUSH_REQUEUE_TITLE"
-
-		tab2Rules.append( UI_FeatureTutorialDialog_BuildDetailsData( "#BATTLE_RUSH_4_HEADER", "#BATTLE_RUSH_4_BODY", $"rui/hud/gametype_icons/ltm/about_quickmatch_no_dull_moment" ) )
-
-		if ( GetConVarBool( "matchSquadRequeue_enabled" ) )
-			tab2Rules.append( UI_FeatureTutorialDialog_BuildDetailsData( "#BATTLE_RUSH_5_HEADER", "#BATTLE_RUSH_5_BODY", $"rui/hud/gametype_icons/ltm/about_quickmatch_band_together" ) )
-
-		tab2Rules.append( UI_FeatureTutorialDialog_BuildDetailsData( "#BATTLE_RUSH_6_HEADER", "#BATTLE_RUSH_6_BODY", $"rui/hud/gametype_icons/ltm/about_quickmatch_lobby_friends" ) )
-		tab2.rules = tab2Rules
-		tabs.append( tab2 )
-	}
+	GameMode_AboutDialog_AppendRequeueTab(tabs)
 
 	return tabs
 }

@@ -19,3 +19,20 @@ void function RTKAnim_SetAnimationDuration( rtk_behavior animator, string animNa
 		}
 	}
 }
+
+bool function RTK_DevAssert( bool assertion, string contextString = "" )
+{
+#if DEV
+		Assert( assertion, contextString )
+#else
+		if ( assertion == false )
+		{
+			printl( "*** WARNING ***" )
+			printl( contextString )
+			printt( "%s", GetStack() )
+			printl( "*** WARNING ***" )
+			return false
+		}
+#endif
+	return true
+}

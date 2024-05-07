@@ -75,7 +75,6 @@ const string FREEDM_FIREBALL_SFX_PODIUM   = "TDM_Podium_Pyro_FlameBurst_Sequence
 const string FREEDM_SPARKS_SFX_PODIUM   = "TDM_Podium_Pyro_Sparklers"
 
 const float FREEDM_SCORE_VO_BC_DELAY = 6.0 
-const int FREEDM_NEAR_ENDSCORE_DELTA = 5
 
 const string FREEDM_VICTORY_SOUND = "UI_InGame_GunGame_Victory"
 const string FREEDM_DEFEAT_SOUND = "UI_InGame_GunGame_Defeat"
@@ -218,6 +217,9 @@ void function FreeDM_GamemodeInitShared()
 {
 	SetScoreEventOverrideFunc( FreeDM_SetScoreEventOverride )
 	GamemodeSurvivalShared_Init()
+
+
+
 
 
 
@@ -1707,7 +1709,7 @@ void function ServerCallback_FreeDM_AirdropNotification()
 
 	string announcementText
 
-	announcementText = Localize( "#FREEDM_INCOMING_AIRDROPS" )
+	announcementText = Localize( "#FREEDM_INCOMING_AIRDROP" )
 
 	vector announcementColor = <0, 0, 0>
 	Obituary_Print_Localized( announcementText, announcementColor )
@@ -1728,7 +1730,7 @@ void function ServerCallback_FreeDM_AirdropNotification()
 
 const string FREEDM_DEFAULT_AIRDROP_CONTENTS = "arenas_red_airdrop_weapons arenas_gold_airdrop_weapons arenas_gold_airdrop_weapons"
 
-const string FREEDM_AF_AIRDROP_CONTENTS = "af_airdrop_weapons af_airdrop_weapons af_airdrop_weapons"
+
 
 
 
@@ -2106,17 +2108,23 @@ array< string > function FreeDM_GetPlayerScores( entity player )
 
 
 
-array< entity > function FreeDM_SortPlayersByScore( array< entity > teamPlayers, ScoreboardData gameData )
+array< TeamsScoreboardPlayer > function FreeDM_SortPlayersByScore( array< TeamsScoreboardPlayer > players )
 {
-	teamPlayers.sort( int function( entity a, entity b )
+	players.sort( int function( TeamsScoreboardPlayer a, TeamsScoreboardPlayer b )
 	{
+		entity playerA = FromEHI( a.playerEHI )
+		entity playerB = FromEHI( b.playerEHI )
+
+		if( !IsValid( playerA ) || !IsValid( playerB ) )
+			return 0
+
 		
-		int aKills = a.GetPlayerNetInt( "kills" )
-		int bKills = b.GetPlayerNetInt( "kills" )
-		int aAssists = a.GetPlayerNetInt( "assists" )
-		int bAssists = b.GetPlayerNetInt( "assists" )
-		int aDamage = a.GetPlayerNetInt( "damageDealt" )
-		int bDamage = b.GetPlayerNetInt( "damageDealt" )
+		int aKills = playerA.GetPlayerNetInt( "kills" )
+		int bKills = playerB.GetPlayerNetInt( "kills" )
+		int aAssists = playerA.GetPlayerNetInt( "assists" )
+		int bAssists = playerB.GetPlayerNetInt( "assists" )
+		int aDamage = playerA.GetPlayerNetInt( "damageDealt" )
+		int bDamage = playerB.GetPlayerNetInt( "damageDealt" )
 
 		if ( aKills > bKills ) return -1
 		else if ( aKills < bKills ) return 1
@@ -2135,7 +2143,7 @@ array< entity > function FreeDM_SortPlayersByScore( array< entity > teamPlayers,
 	}
 	)
 
-	return teamPlayers
+	return players
 }
 
 
@@ -2459,6 +2467,11 @@ float function GetDroppedLootCleanupScanPeriod()
 bool function GetShouldShuffleLoadoutsRounds()
 {
 	return GetCurrentPlaylistVarBool( "round_shuffle_loadouts", false )
+}
+
+int function GetPlayMusicOnScore()
+{
+	return GetCurrentPlaylistVarInt( "start_music_and_vo_on_kills_remaining", FREEDM_MUSIC_START_ON_KILLS_LEFT )
 }
 
 

@@ -30,6 +30,7 @@ global function LoadoutSelection_Init
 
 global function LoadoutSelection_RegisterNetworking
 global function LoadoutSelection_GetWeaponLootTierForMenu
+global function ModeUsesLoadoutWeapons
 
 
 
@@ -1181,6 +1182,24 @@ int function LoadoutSelection_GetWeaponLootTierForMenu( LootData data )
 {
 	bool isLockedSet = data.baseMods.contains( "crate" ) || SURVIVAL_Weapon_IsAttachmentLocked( data.ref ) || data.baseMods.contains( "hopup_april_fools_light" ) || data.baseMods.contains( "hopup_april_fools_heavy" ) || data.baseMods.contains( "hopup_april_fools_sniper" ) || data.baseMods.contains( "hopup_april_fools_energy" )
 	return isLockedSet ? data.tier : 0
+}
+
+bool function ModeUsesLoadoutWeapons()
+{
+	if( IsUsingLoadoutSelectionSystem() )
+		return true
+
+
+	if ( GetCurrentPlaylistVarBool( "is_gamemode_battle_rush", false ) )
+		return true
+
+
+
+	if ( IsShadowArmyGamemode() )
+		return true
+
+
+	return false
 }
 
 

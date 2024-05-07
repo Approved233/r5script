@@ -548,6 +548,12 @@ int function GetPlayerBattlePassXPProgress( EHI playerEHI, ItemFlavor pass, bool
 			return 0
 #endif
 
+	if ( !( pass in fileLevel.battlePassMap ) )
+	{
+		Assert( false, format( "Requested BP is not in map: %s", string( ItemFlavor_GetAsset( pass ) ) ) )
+		return 0
+	}
+
 	entity player = FromEHI( playerEHI )
 
 	int earnedBattlePassXP    = player == null ? 0 : player.GetPersistentVarAsInt( format( getPreviousProgress ? "battlePasses[%s].previousEarnedXP" : "battlePasses[%s].earnedXP", ItemFlavor_GetGUIDString( pass ) ) )

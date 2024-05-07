@@ -569,29 +569,29 @@ void function FR_Init_NetVars_And_PVars()
 	
 	frIntSettings_NetVars	[ eFRSettingType.TARGETSPEED ] 		<- "frsetting_targetspeed"
 	frIntSettings_PVars		[ eFRSettingType.TARGETSPEED ] 		<- "FRSettingsPVars.targetspeed"
-	frIntSettings_Mins		[ eFRSettingType.TARGETSPEED ] 		<- 1
-	frIntSettings_Maxs		[ eFRSettingType.TARGETSPEED ] 		<- 4
-	frIntSettings_Defaults	[ eFRSettingType.TARGETSPEED ] 		<- 2
+	frIntSettings_Mins		[ eFRSettingType.TARGETSPEED ] 		<- eTarget_Selector_Speeds.CROUCHWALK
+	frIntSettings_Maxs		[ eFRSettingType.TARGETSPEED ] 		<- eTarget_Selector_Speeds.ZIPLINE
+	frIntSettings_Defaults	[ eFRSettingType.TARGETSPEED ] 		<- eTarget_Selector_Speeds.WALK
 
 	
 	frIntSettings_NetVars	[ eFRSettingType.FRDUMMIESHIELDLVL ] <- "frsetting_dummieshieldlvl"
 	frIntSettings_PVars		[ eFRSettingType.FRDUMMIESHIELDLVL ] <- "FRSettingsPVars.dummieshieldlvl"
-	frIntSettings_Mins		[ eFRSettingType.FRDUMMIESHIELDLVL ]	<- 1
-	frIntSettings_Maxs		[ eFRSettingType.FRDUMMIESHIELDLVL ]	<- FR_RANDOM_SHIELD_SETTING	
-	frIntSettings_Defaults	[ eFRSettingType.FRDUMMIESHIELDLVL ] <- 3
+	frIntSettings_Mins		[ eFRSettingType.FRDUMMIESHIELDLVL ] <- eDummie_Selector_Shields.WHITE	
+	frIntSettings_Maxs		[ eFRSettingType.FRDUMMIESHIELDLVL ] <- eDummie_Selector_Shields.RANDOM 
+	frIntSettings_Defaults	[ eFRSettingType.FRDUMMIESHIELDLVL ] <- eDummie_Selector_Shields.PURPLE	
 
 	
 	frIntSettings_NetVars	[ eFRSettingType.FRDUMMIESPEED ] 	<- "frsetting_dummiespeed"
 	frIntSettings_PVars		[ eFRSettingType.FRDUMMIESPEED ] 	<- "FRSettingsPVars.dummiespeed"
-	frIntSettings_Mins		[ eFRSettingType.FRDUMMIESPEED ] 	<- 1
-	frIntSettings_Maxs		[ eFRSettingType.FRDUMMIESPEED ] 	<- 3
-	frIntSettings_Defaults	[ eFRSettingType.FRDUMMIESPEED ] 	<- 2
+	frIntSettings_Mins		[ eFRSettingType.FRDUMMIESPEED ] 	<- eDummie_Selector_Speeds.WALK
+	frIntSettings_Maxs		[ eFRSettingType.FRDUMMIESPEED ] 	<- eDummie_Selector_Speeds.RANDOM
+	frIntSettings_Defaults	[ eFRSettingType.FRDUMMIESPEED ] 	<- eDummie_Selector_Speeds.RUN
 
 	
 	frIntSettings_NetVars	[ eFRSettingType.FRDUMMIEMOVEMENT ] 	<- "frsetting_dummiemovement"
 	frIntSettings_PVars		[ eFRSettingType.FRDUMMIEMOVEMENT ] 	<- "FRSettingsPVars.dummiemovement"
 	frIntSettings_Mins		[ eFRSettingType.FRDUMMIEMOVEMENT ] 	<- eDummie_Selector_Movements.STAYINPLACE
-	frIntSettings_Maxs		[ eFRSettingType.FRDUMMIEMOVEMENT ] 	<- eDummie_Selector_Movements.COUNT_
+	frIntSettings_Maxs		[ eFRSettingType.FRDUMMIEMOVEMENT ] 	<- ( eDummie_Selector_Movements.COUNT_ - 1 )
 	frIntSettings_Defaults	[ eFRSettingType.FRDUMMIEMOVEMENT ] 	<- eDummie_Selector_Movements.STAYINPLACE
 	FRDummie_Movements_Settings_Init()
 
@@ -599,7 +599,7 @@ void function FR_Init_NetVars_And_PVars()
 	frIntSettings_NetVars	[ eFRSettingType.FRDUMMIESTANCE ] 	<- "frsetting_dummiestate"
 	frIntSettings_PVars		[ eFRSettingType.FRDUMMIESTANCE ] 	<- "FRSettingsPVars.dummiestate"
 	frIntSettings_Mins		[ eFRSettingType.FRDUMMIESTANCE ] 	<- eDummie_Selector_States.STAND
-	frIntSettings_Maxs		[ eFRSettingType.FRDUMMIESTANCE ] 	<- eDummie_Selector_States.COUNT_
+	frIntSettings_Maxs		[ eFRSettingType.FRDUMMIESTANCE ] 	<- ( eDummie_Selector_States.COUNT_ - 1 )
 	frIntSettings_Defaults	[ eFRSettingType.FRDUMMIESTANCE ] 	<- eDummie_Selector_States.STAND
 	FRDummie_Stances_Settings_Init()
 
@@ -4751,7 +4751,7 @@ void function SCB_Broadcast_FRBehavior_Change( entity playerThatChanged, int beh
 	string onOff = isOn ? Localize( "#FRSETTING_ON" ) : Localize( "#FRSETTING_OFF" )
 	vector valueColor  = isOn ? FRIENDLY_COLOR : ENEMY_COLOR
 
-	Assert( (( behaviorType <= eDummieBehaviorType.COUNT_ ) && ( behaviorType >= 0 )), format( "%s(): Behavior Type Out of Range.", FUNC_NAME() ) )
+	Assert( (( behaviorType < eDummieBehaviorType.COUNT_ ) && ( behaviorType >= 0 )), format( "%s(): Behavior Type Out of Range.", FUNC_NAME() ) )
 
 	
 	table< int, string > settingNamesByType

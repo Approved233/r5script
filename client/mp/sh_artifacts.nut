@@ -6,17 +6,21 @@ global function Artifacts_GetAssociatedWeaponForComponent
 global function Artifacts_GetComponentType
 global function Artifacts_GetSetKey
 global function Artifacts_GetSetIndex
-global function Artifacts_GetSetNameLocalized
 global function Artifacts_GetComponentChangeGUID
 global function Artifacts_IsEmptyComponent
+global function Artifacts_GetComponentIcon
+global function Artifacts_GetComponentMainColor
+global function Artifacts_GetComponentSecondaryColor
+global function Artifacts_IsItemFlavorArtifact
 
 
 global function Artifacts_StoreLoadoutDataOnPlayerEntityStruct
 global function Artifacts_OnWeaponOwnerChanged
-global function Artifact_PrecacheDeathboxModelAndFX
+global function Artifact_PrecacheDeathboxModelAndFX 
 
 
 
+global function Artifacts_Loadouts_GetMeleeSkinNetVarOverrideType
 global function Artifacts_Loadouts_IsAnyArtifactUnlocked
 global function Artifacts_Loadouts_GetConfigIndex
 global function Artifacts_Loadouts_GetEntryForConfigIndexAndType
@@ -33,6 +37,8 @@ global function Artifacts_Loadouts_SetBladeMod
 global function Artifacts_Loadouts_SetPowerSourceMod
 
 
+global function Artifacts_Loadouts_StorePreviewDataOnPlayerEntityStruct
+global function Artifacts_ClearMenuEffects
 global function Artifacts_Loadouts_PreviewBladeAndPowerSource
 global function Artifacts_Loadouts_PreviewTheme
 
@@ -43,13 +49,7 @@ global function Artifacts_Loadouts_PreviewTheme
 
 
 
-
-
-
-global function Artifact_Set1pFxControlPoints
-global function ServerCallback_Artifacts_SetPlayerArtifactViewmodelData
 global function ClientCodeCallback_GetArtifactViewmodelDataForWeapon
-
 
 
 
@@ -68,10 +68,9 @@ global function Artifacts_FX_GetFlourishFX
 global function Artifacts_FX_GetAttackFX
 global function Artifacts_FX_GetStartupFX
 global function Artifacts_FX_GetLobbyFX
-global function Artifacts_FX_GetSmearColor
+global function Artifacts_FX_GetEmissiveAndSmearColor
 global function Artifacts_FX_GetSkinIndex
-global function Artifacts_FX_GetImpactTable
-global function Artifacts_FX_Get1PAnd3PFXArraysFromPlayerLoadouts
+global function Artifacts_FX_Get1PAnd3PFXArraysForWeapon
 
 global function Artifacts_FX_GetDeathboxFX
 global function Artifacts_GetDeathboxModel
@@ -81,6 +80,27 @@ global function Artifacts_FX_GetBladeControlPoints
 
 global function Artifacts_PlayActivationEmote
 global function Artifacts_PlayerHasArtifactActive
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+global function Artifacts_GetSetItems
+global function Artifacts_IsBaseArtifact
+global function Artifacts_IsBaseArtifactOwned
+global function Artifacts_ActivationEmote_GetVideo
 
 
 #if DEV
@@ -95,6 +115,10 @@ global function Artifacts_PlayerHasArtifactActive
 
 
 
+
+
+
+global function Artifacts_DEV_PlayActivationEmote3PEffects
 
 #endif
 
@@ -154,6 +178,7 @@ global struct ArtifactFXControlPoint {
 
 global struct ArtifactConfig
 {
+	ItemFlavor& character
 	ItemFlavor& powerSource
 	ItemFlavor& theme
 	ItemFlavor& blade
@@ -166,6 +191,14 @@ struct ArtifactThemeModelData
 	asset worldModel
 	asset viewModel
 }
+
+
+
+
+
+
+
+
 
 struct FileStruct_LifetimeLevel
 {
@@ -184,6 +217,15 @@ struct FileStruct_LifetimeLevel
 	table< int, ArtifactThemeModelData > setModels 
 
 
+
+
+
+
+
+
+
+
+
 	array< int > lobbyFxHandles
 
 }
@@ -199,8 +241,13 @@ global const int ARTIFACT_CONFIGURATION_PTR_0_GUID = 1182724979
 
 const int ARTIFACT_DAGGER_ITEM_FLAVOR_GUID = 2113589622
 
+const float DEACTIVATED_EMISSIVE_FACTOR = 0.15
+const float ACTIVATION_EMOTE_ANIM_TIME_RESTART_LIMIT = 2.0 
+
 const string WORLD_MODEL = "worldModel"
 const string VIEW_MODEL = "viewModel"
+const string SET_NAME = "setName"
+const string SET_IMAGE_REF = "setImageRef"
 
 const string BASE_WEAPON = "base_weapon"
 const table< int, string > ARTIFACT_COMPONENTS_TO_LOADOUT_NAMES_MAP = {
@@ -212,54 +259,85 @@ const table< int, string > ARTIFACT_COMPONENTS_TO_LOADOUT_NAMES_MAP = {
 }
 
 
-const string MOB = "MOB"
 const string EMPTY = "_EMPTY"
-const table< string, string > THEME_NAMES_TO_LOC_KEYS = {
-	[EMPTY] = "#ARTIFACT_THEME_EMPTY",
-	[MOB] = "#ARTIFACT_THEME_MOBSTER",
-
-
-
-
-
-
-
-}
-
+const string RAGOLD = "RAGOLD"
 global enum eArtifactSetIndex { 
+	
+	
+	RAGOLD = -2,
 	_EMPTY = -1, 
 
-
-
-
+	CELES = 0,
+	DEATH = 1,
+	HISOC = 2,
 
 	MOB = 3,
 
-
-
+	STEAM = 4,
+	STECH = 5,
 
 	COUNT = 6 
 }
 
-const array<string> ARTIFACT_COMPONENT_SETTINGS_KEYS = [
-	"blade",
-	"theme",
-	"powerSource",
-	"deathbox",
-	"activationEmote",
-]
+const int LOADOUT_MELEE_SKIN_ITEM_TYPE_OVERRIDE = eItemType.artifact_component_blade
+const int LOADOUT_MELEE_SKIN_COMPONENT_TYPE_OVERRIDE = eArtifactComponentType.BLADE
+const int ULTIMATE_SET_INDEX = eArtifactSetIndex.CELES
+const int BASE_SET_INDEX = eArtifactSetIndex.MOB 
+
+const string BLADE_KEY = "blade"
+const string THEME_KEY = "theme"
+const string POWER_SOURCE_KEY = "powerSource"
+const string DEATHBOX_KEY = "deathbox"
+const string ACTIVATION_EMOTE_KEY = "activationEmote"
+global const table<string, int> ARTIFACT_COMPONENT_SETTINGS_KEYS = {
+	[BLADE_KEY] = eArtifactComponentType.BLADE,
+	[THEME_KEY] = eArtifactComponentType.THEME,
+	[POWER_SOURCE_KEY] = eArtifactComponentType.POWER_SOURCE,
+	[DEATHBOX_KEY] = eArtifactComponentType.DEATHBOX,
+	[ACTIVATION_EMOTE_KEY] = eArtifactComponentType.ACTIVATION_EMOTE,
+}
 
 
-const int ARTIFACT_MAX_LOADOUTS = 1
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const int ARTIFACT_MAX_LOADOUTS = 3
 const string ONE_P = "1P"
 const string THREE_P = "3P"
 const int BODY_GROUP_INVALID = -1
 
 const int THEME_BASE = 1 
 const int THEME_SHINY = 2 
+
+const float VFX_FLOURISH_3P_START_DELAY = 1.0 
+const float VFX_FLOURISH_ANIM_DURATION = 3.2 
+global const string VFX_SIGNAL = "ArtifactsFxSignal"
 
 
 const string LOADOUTS_ARTIFACT_INDEX_COMPONENT_TYPE = "artifact_%d_component_%s"
@@ -296,7 +374,6 @@ const string DEATHBOX_FX_NAME_KEY = "artifactDeathboxFXName"
 const string DEATHBOX_MDL_REF_KEY = "artifactDeathboxModel"
 const string DEATHBOX_SFX_SPAWN_KEY = "spawnSFX"
 
-const string FX_IMPACT_TABLE = "impactFXTable"
 const string FX_SMEAR_COLOR = "smearColor"
 const string FX_SKIN_INDEX = "skinIdx"
 const string FX_ASSET = "fxAsset"
@@ -332,6 +409,7 @@ const array<string> FX_CONTROL_POINT_PROPERTIES = [
 	FX_CONTROL_POINT_NUMBER,
 	FX_CONTROL_POINT_NAME,
 ]
+const vector FX_NULL_CAP_EMISSIVE = <0, 0, 0>
 
 
 
@@ -345,6 +423,7 @@ const asset VFX_MOB_IDLE_3P = $"P_art_MOB_power_idle_3P"
 const asset VFX_MOB_IDLE_BLADE_1P = $"P_art_MOB_blade_idle_FP"
 const asset VFX_MOB_IDLE_BLADE_3P = $"P_art_MOB_blade_idle_3P"
 const asset VFX_MOB_ATTACK_1P = $"P_art_MOB_blade_attack_FP"
+const asset VFX_MOB_ATTACK_1P_CP = $"P_art_MOB_blade_attack_FP_CP"
 const asset VFX_MOB_ATTACK_3P = $"P_art_MOB_blade_attack_3P"
 const asset VFX_MOB_FLOURISH_1P = $"P_art_MOB_blade_flourish_FP"
 const asset VFX_MOB_FLOURISH_3P = $"P_art_MOB_blade_flourish_3P"
@@ -358,11 +437,14 @@ const asset VFX_celes_IDLE_1P = $"P_art_celes_power_idle_FP"
 const asset VFX_celes_IDLE_3P = $"P_art_celes_power_idle_3P"
 const asset VFX_celes_IDLE_BLADE_1P = $"P_art_celes_blade_idle_FP"
 const asset VFX_celes_IDLE_BLADE_3P = $"P_art_celes_blade_idle_3P"
-const asset VFX_celes_ATTACK_1P = $"P_art_celes_blade_attack_FP"
-const asset VFX_celes_ATTACK_3P = $"P_art_celes_blade_attack_3P"
+const asset VFX_celes_ATTACK_1P = $"P_art_celes_power_attack_FP"
+const asset VFX_celes_ATTACK_3P = $"P_art_celes_power_attack_3P"
+const asset VFX_celes_ATTACK_BLADE_1P = $"P_art_celes_blade_attack_FP"
+const asset VFX_celes_ATTACK_BLADE_3P = $"P_art_celes_blade_attack_3P"
 const asset VFX_celes_FLOURISH_1P = $"P_art_celes_blade_flourish_FP"
 const asset VFX_celes_FLOURISH_3P = $"P_art_celes_blade_flourish_3P"
 const asset VFX_celes_INSPECT_1P = $"P_art_celes_power_inspect_FP"
+const asset VFX_celes_DEATHBOX = $"P_death_box_artifact_celes"
 
 const asset VFX_death_STARTUP_1P = $"P_art_death_power_start_FP"
 const asset VFX_death_STARTUP_3P = $"P_art_death_power_start_3P"
@@ -375,6 +457,7 @@ const asset VFX_death_ATTACK_3P = $"P_art_death_blade_attack_3P"
 const asset VFX_death_FLOURISH_1P = $"P_art_death_blade_flourish_FP"
 const asset VFX_death_FLOURISH_3P = $"P_art_death_blade_flourish_3P"
 const asset VFX_death_INSPECT_1P = $"P_art_death_power_idle_FP"
+const asset VFX_death_DEATHBOX = $"P_death_box_artifact_death_mdl"
 
 const asset VFX_hisoc_STARTUP_1P = $"P_art_hisoc_power_start_FP"
 const asset VFX_hisoc_STARTUP_3P = $"P_art_hisoc_power_start_3P"
@@ -431,13 +514,15 @@ void function ShArtifacts_LevelInit()
 
 
 	
-	Remote_RegisterServerFunction( "ClientCallback_ActivationEmote" )
-	Remote_RegisterClientFunction( "ServerCallback_Artifacts_SetPlayerArtifactViewmodelData", "entity", "int", 0, INT_MAX, "int", 0, INT_MAX )
+	Remote_RegisterServerFunction( "ClientCallback_ActivationEmote", "bool" )
 
 
 
 
 
+
+
+	RegisterSignal( VFX_SIGNAL )
 }
 
 void function RegisterArtifactComponentsForWeapon( ItemFlavor artifactWeapon )
@@ -460,10 +545,10 @@ void function RegisterArtifactComponentsForWeapon( ItemFlavor artifactWeapon )
 		array< ItemFlavor > componentsInSet = []
 		componentsInSet.resize( eArtifactComponentType.COUNT )
 
+		string setTheme = GetGlobalSettingsString( componentSet, THEME_NAME )
 
 		
-		string setTheme = GetGlobalSettingsString( componentSet, THEME_NAME )
-		if ( setTheme != EMPTY )
+		if ( setTheme != EMPTY && setTheme != RAGOLD )
 		{
 			Assert( setTheme in eArtifactSetIndex )
 
@@ -488,7 +573,23 @@ void function RegisterArtifactComponentsForWeapon( ItemFlavor artifactWeapon )
 		}
 
 
-		foreach ( string componentKey in ARTIFACT_COMPONENT_SETTINGS_KEYS )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		foreach ( string componentKey, int componentType in ARTIFACT_COMPONENT_SETTINGS_KEYS )
 		{
 			asset settingsAsset = GetGlobalSettingsAsset( componentSet, componentKey )
 			if ( settingsAsset != $"" )
@@ -500,17 +601,22 @@ void function RegisterArtifactComponentsForWeapon( ItemFlavor artifactWeapon )
 					fileLevel.componentListsByType[ Artifacts_GetComponentType( component ) ].append( component )
 					Assert( !fileLevel.allComponents.contains( component ) )
 					fileLevel.allComponents.append( component )
+					Assert( componentType == Artifacts_GetComponentType( component ) )
 					componentsInSet[ Artifacts_GetComponentType( component ) ] = component
 
 
 					if ( Artifacts_GetComponentType( component ) == eArtifactComponentType.POWER_SOURCE )
+					{
+						Artifact_PrecacheImpactTables( component )
 						Artifact_PrecachePowerSourceFX( component )
+					}
 					else if ( !IsLobby() && Artifacts_GetComponentType( component ) == eArtifactComponentType.DEATHBOX )
+					{
 						Artifact_PrecacheDeathboxModelAndFX( component )
+					}
 
 
 					string themeName = Artifacts_GetSetKey( component )
-					Assert( themeName in THEME_NAMES_TO_LOC_KEYS )
 					Assert( currentTheme == "" || themeName == currentTheme )
 					currentTheme = themeName
 
@@ -533,6 +639,12 @@ void function RegisterArtifactComponentsForWeapon( ItemFlavor artifactWeapon )
 
 #endif
 				}
+			}
+			else
+			{
+				Assert( setTheme == RAGOLD )
+				ItemFlavor invalidComponent
+				componentsInSet[ componentType ] = invalidComponent
 			}
 		}
 
@@ -573,26 +685,8 @@ void function BuildLoadoutEntries_ArtifactWeapons()
 				componentEntry.DEV_name = format( LOADOUTS_DEV_ARTIFACT_CONFIGURATION_VERBOSE, artifactIdx )
 #endif
 
-			
-			if ( componentCounter == eArtifactComponentType.DEATHBOX )
-			{
-				ItemFlavor ornull ghDeathbox = Deathbox_GetGoldenHorseDeathbox()
-				if ( ghDeathbox != null && !fileLevel.componentListsByType[ eArtifactComponentType.DEATHBOX ].contains( expect ItemFlavor( ghDeathbox ) ) )
-					fileLevel.componentListsByType[ eArtifactComponentType.DEATHBOX ].append( expect ItemFlavor( ghDeathbox ) )
-			}
-
 			componentEntry.defaultItemFlavor   = fileLevel.componentSets[ eArtifactSetIndex._EMPTY ][ componentCounter ] 
-
-			if ( componentCounter == eArtifactComponentType.ACTIVATION_EMOTE ) 
-			{
-				componentEntry.validItemFlavorList.clear()
-				componentEntry.validItemFlavorList.append( fileLevel.componentSets[ eArtifactSetIndex._EMPTY ][ componentCounter ] )
-			}
-			else
-
-			{
-				componentEntry.validItemFlavorList = fileLevel.componentListsByType[ componentCounter ]
-			}
+			componentEntry.validItemFlavorList = fileLevel.componentListsByType[ componentCounter ]
 
 			componentEntry.isSlotLocked              = bool function( EHI playerEHI ) { return !IsLobby() }
 			componentEntry.associatedCharacterOrNull = null
@@ -627,12 +721,55 @@ void function BuildLoadoutEntries_ArtifactWeapons()
 	componentEntry.networkTo                 = eLoadoutNetworking.PLAYER_EXCLUSIVE
 	componentEntry.stryderCharDataArrayIndex = ePlayerStryderCharDataArraySlots.INVALID
 	fileLevel.componentChangeSlot = componentEntry
+
+
+		RegisterBladesControlPoints()
+
 }
+
+
+void function RegisterBladesControlPoints()
+{
+	array< ItemFlavor > blades = fileLevel.componentListsByType[ eArtifactComponentType.BLADE ]
+
+	foreach ( ItemFlavor blade in blades )
+	{
+		array< ArtifactFXControlPoint > controlPoints = Artifacts_FX_GetBladeControlPoints( blade, false )
+
+		array< vector > controlPointPositions
+
+		foreach ( ArtifactFXControlPoint controlPoint in controlPoints )
+		{
+			controlPointPositions.append( controlPoint.controlPoint )
+		}
+
+		RegisterArtifactBladeControlPoints( blade.guid, controlPointPositions )
+	}
+}
+
 
 bool function Artifacts_IsEmptyComponent( ItemFlavor component )
 {
 	Assert( ItemFlavor_GetType( component ) > eItemType.artifact_component_START && ItemFlavor_GetType( component ) < eItemType.artifact_component_END )
 	return ( GetGlobalSettingsBool( ItemFlavor_GetAsset( component ), IS_EMPTY ) )
+}
+
+asset function Artifacts_GetComponentIcon( ItemFlavor component )
+{
+	Assert( ItemFlavor_GetType( component ) > eItemType.artifact_component_START && ItemFlavor_GetType( component ) < eItemType.artifact_component_END )
+	return GetGlobalSettingsAsset( ItemFlavor_GetAsset( component ), "componentIcon" )
+}
+
+vector function Artifacts_GetComponentMainColor( ItemFlavor component )
+{
+	Assert( ItemFlavor_GetType( component ) > eItemType.artifact_component_START && ItemFlavor_GetType( component ) < eItemType.artifact_component_END )
+	return GetGlobalSettingsVector( ItemFlavor_GetAsset( component ), "artifactMainColor" )
+}
+
+vector function Artifacts_GetComponentSecondaryColor( ItemFlavor component )
+{
+	Assert( ItemFlavor_GetType( component ) > eItemType.artifact_component_START && ItemFlavor_GetType( component ) < eItemType.artifact_component_END )
+	return GetGlobalSettingsVector( ItemFlavor_GetAsset( component ), "artifactSecondaryColor" )
 }
 
 int function Artifacts_GetConfigurationFramework( ItemFlavor weapon )
@@ -671,12 +808,16 @@ int function Artifacts_GetSetIndex( ItemFlavor component )
 	return eArtifactSetIndex[ themeName ]
 }
 
-string function Artifacts_GetSetNameLocalized( ItemFlavor component )
+bool function Artifacts_IsItemFlavorArtifact( ItemFlavor component )
 {
-	Assert( ItemFlavor_GetType( component ) > eItemType.artifact_component_START && ItemFlavor_GetType( component ) < eItemType.artifact_component_END )
-	return THEME_NAMES_TO_LOC_KEYS[ GetSettingsBlockString( ItemFlavor_GetSettingsBlock( component ), THEME_NAME ) ]
+	return ( ItemFlavor_GetType( component ) > eItemType.artifact_component_START && ItemFlavor_GetType( component ) < eItemType.artifact_component_END )
 }
 
+
+int function Artifacts_Loadouts_GetMeleeSkinNetVarOverrideType( bool getComponentType )
+{
+	return getComponentType ? LOADOUT_MELEE_SKIN_COMPONENT_TYPE_OVERRIDE : LOADOUT_MELEE_SKIN_ITEM_TYPE_OVERRIDE
+}
 
 bool function Artifacts_Loadouts_IsAnyArtifactUnlocked( EHI playerEHI, bool shouldIgnoreGRX )
 {
@@ -732,10 +873,17 @@ bool function Artifacts_Loadouts_CheckAndFixMisconfigurations( EHI playerEHI, It
 	
 	LoadoutEntry skinSlot = Loadout_MeleeSkin( character )
 	ItemFlavor meleeSkin  = LoadoutSlot_GetItemFlavor( playerEHI, skinSlot )
-	if ( Artifacts_Loadouts_IsConfigPointerItemFlavor( meleeSkin ) )
+
+	if ( !IsLobby() && !Artifacts_Loadouts_IsConfigPointerItemFlavor( meleeSkin ) )
+		return isMisconfigured
+
+	for ( int i = 0; i < ARTIFACT_MAX_LOADOUTS; i++ )
 	{
-		LoadoutEntry bladeSlot    = Artifacts_Loadouts_GetEntryForConfigIndexAndType( Artifacts_Loadouts_GetConfigIndex( meleeSkin ), eArtifactComponentType.BLADE )
-		ItemFlavor bladeComponent = LoadoutSlot_GetItemFlavor( playerEHI, bladeSlot )
+		if ( !IsLobby() && i != Artifacts_Loadouts_GetConfigIndex( meleeSkin ) )
+			continue 
+
+		LoadoutEntry bladeSlot    = Artifacts_Loadouts_GetEntryForConfigIndexAndType( i, eArtifactComponentType.BLADE )
+		ItemFlavor bladeComponent = LoadoutSlot_GetItemFlavor_ForValidation( playerEHI, bladeSlot )
 #if DEV
 			isMisconfigured = Artifacts_IsEmptyComponent( bladeComponent )
 #else
@@ -776,12 +924,89 @@ LoadoutEntry function Artifacts_Loadouts_ComponentChangeSlot()
 }
 
 
-void function Artifacts_StoreLoadoutDataOnPlayerEntityStruct( entity player )
+void function Artifacts_Loadouts_StorePreviewDataOnPlayerEntityStruct( int componentGUID )
 {
-#if !DEV
-		if ( player.p.artifactConfig != null ) 
+	Assert( IsLobby() )
+	Assert( IsValidItemFlavorGUID( componentGUID ) )
+	ItemFlavor component = GetItemFlavorByGUID( componentGUID )
+
+	entity player = GetLocalClientPlayer()
+	ArtifactConfig artifactConfig
+	if ( player.p.artifactConfig != null )
+		artifactConfig = expect ArtifactConfig( player.p.artifactConfig )
+
+	switch ( Artifacts_GetComponentType( component ) )
+	{
+		case eArtifactComponentType.BLADE:
+			artifactConfig.blade = Artifacts_IsEmptyComponent( component ) ? fileLevel.componentSets[ BASE_SET_INDEX ][ eArtifactComponentType.BLADE ] : component
+			break
+
+		case eArtifactComponentType.THEME:
+			artifactConfig.theme = component
+			break
+
+		case eArtifactComponentType.POWER_SOURCE:
+			artifactConfig.powerSource = component
+			break
+
+		case eArtifactComponentType.ACTIVATION_EMOTE:
+			artifactConfig.activationEmote = component
+			break
+
+		case eArtifactComponentType.DEATHBOX:
+			artifactConfig.deathbox = component
+			break
+
+		default:
+			Assert( false, "invalid Artifact component type" )
+	}
+
+	if ( Artifacts_IsEmptyComponent( artifactConfig.blade ) )
+	{
+		
+		LoadoutEntry slot = Artifacts_Loadouts_GetEntryForConfigIndexAndType( 0, eArtifactComponentType.BLADE )
+		artifactConfig.blade = slot.validItemFlavorList[1]
+	}
+
+	player.p.artifactConfig = artifactConfig
+}
+
+
+
+void function Artifacts_StoreLoadoutDataOnPlayerEntityStruct( entity player, entity weapon, bool forceClear )
+{
+
+		if ( player == null ) 
+		{
+			player = GetLocalClientPlayer()
+		}
+		else if ( player != GetLocalClientPlayer() )
+		{
+			Assert( IsValid( weapon ) && weapon.IsWeaponX() )
+			if ( !IsValid( weapon ) || !weapon.IsWeaponX() )
+				return
+
+			if ( IsValidItemFlavorGUID( weapon.GetItemFlavorGUID() ) )
+			{
+				ArtifactConfig artifactConfig
+				artifactConfig.powerSource = GetItemFlavorByGUID( weapon.GetItemFlavorGUID() )
+
+				
+				EHI ownerEHI = ToEHI( player )
+				ItemFlavor character = LoadoutSlot_GetItemFlavor( ownerEHI, Loadout_Character() )
+				artifactConfig.blade = LoadoutSlot_GetItemFlavor( ownerEHI, Loadout_MeleeSkin( character ) )
+				artifactConfig.character = character
+
+				Assert( ItemFlavor_GetType( artifactConfig.blade ) == eItemType.artifact_component_blade )
+				if ( ItemFlavor_GetType( artifactConfig.blade ) != eItemType.artifact_component_blade )
+					artifactConfig.blade = fileLevel.componentSets[ BASE_SET_INDEX ][ eArtifactComponentType.BLADE ] 
+
+				player.p.artifactConfig = artifactConfig
+			}
+
 			return
-#endif
+		}
+
 
 	if ( player.IsBot() )
 		return
@@ -789,14 +1014,25 @@ void function Artifacts_StoreLoadoutDataOnPlayerEntityStruct( entity player )
 	EHI playerEHI = ToEHI( player )
 
 	ItemFlavor character = LoadoutSlot_GetItemFlavor( playerEHI, Loadout_Character() )
+
+	if ( !forceClear && player.p.artifactConfig != null )
+	{
+		ArtifactConfig artifactConfig = expect ArtifactConfig( player.p.artifactConfig )
+		if ( artifactConfig.character == character ) 
+			return
+	}
+
 	ItemFlavor meleeSkin = LoadoutSlot_GetItemFlavor( playerEHI, Loadout_MeleeSkin( character ) )
 
-	Assert( Artifacts_Loadouts_IsConfigPointerItemFlavor( meleeSkin ) )
+	Assert( IsLobby() || Artifacts_Loadouts_IsConfigPointerItemFlavor( meleeSkin ) ) 
 
-	int configIdx = Artifacts_Loadouts_GetConfigIndex( meleeSkin )
+	int configIdx = 0
+	if ( Artifacts_Loadouts_IsConfigPointerItemFlavor( meleeSkin ) )
+		configIdx = Artifacts_Loadouts_GetConfigIndex( meleeSkin )
 
 	LoadoutEntry bladeEntry   = Artifacts_Loadouts_GetEntryForConfigIndexAndType( configIdx, eArtifactComponentType.BLADE )
 	ItemFlavor bladeComponent = LoadoutSlot_GetItemFlavor( playerEHI, bladeEntry )
+	bladeComponent = Artifacts_IsEmptyComponent( bladeComponent ) ? fileLevel.componentSets[ BASE_SET_INDEX ][ eArtifactComponentType.BLADE ] : bladeComponent
 
 	LoadoutEntry powerSourceEntry   = Artifacts_Loadouts_GetEntryForConfigIndexAndType( configIdx, eArtifactComponentType.POWER_SOURCE )
 	ItemFlavor powerSourceComponent = LoadoutSlot_GetItemFlavor( playerEHI, powerSourceEntry )
@@ -812,6 +1048,7 @@ void function Artifacts_StoreLoadoutDataOnPlayerEntityStruct( entity player )
 
 	ArtifactConfig artifactConfig
 
+	artifactConfig.character		   = character
 	artifactConfig.blade               = bladeComponent
 	artifactConfig.powerSource         = powerSourceComponent
 	artifactConfig.deathbox            = deathboxComponent
@@ -828,6 +1065,11 @@ void function Artifacts_OnWeaponOwnerChanged( entity weapon, entity owner )
 	Assert( owner.IsBot() || owner.p.artifactConfig != null )
 	if ( owner.p.artifactConfig == null )
 		return
+
+
+		if ( owner != GetLocalClientPlayer() )
+			return
+
 
 	
 
@@ -866,59 +1108,31 @@ void function Artifacts_OnWeaponOwnerChanged( entity weapon, entity owner )
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-void function ServerCallback_Artifacts_SetPlayerArtifactViewmodelData( entity player, int bladeGUID, int powerSourceGUID )
-{
-	if ( player.p.artifactConfig == null )
-	{
-		ArtifactConfig artifactConfig
-		artifactConfig.blade       = GetItemFlavorByGUID( bladeGUID )
-		artifactConfig.powerSource = GetItemFlavorByGUID( powerSourceGUID )
-		player.p.artifactConfig    = artifactConfig
-	}
-	else
-	{
-		ArtifactConfig artifactConfig = expect ArtifactConfig( player.p.artifactConfig )
-		artifactConfig.blade          = GetItemFlavorByGUID( bladeGUID )
-		artifactConfig.powerSource    = GetItemFlavorByGUID( powerSourceGUID )
-	}
-}
-
 ArtifactViewmodelData ornull function ClientCodeCallback_GetArtifactViewmodelDataForWeapon( entity weapon )
 {
 	if ( !weapon.GetWeaponSettingBool( eWeaponVar.is_artifact ) )
 		return null
 
 	entity owner = weapon.GetOwner()
-	if ( !IsValid(owner) )
+	if ( !IsValid( owner ) )
 	{
 		Warning( "Code called GetArtifactViewmodelDataForWeapon on a weapon that has no owner\n")
 		return null
 	}
 
-	Assert( owner.IsBot() || owner.p.artifactConfig != null )
-	if ( owner.p.artifactConfig == null )
+	if ( owner.IsBot() )
+		return null 
+
+	int powerGUID = weapon.GetItemFlavorGUID()
+	Assert( IsValidItemFlavorGUID( powerGUID ) )
+	if ( !IsValidItemFlavorGUID( powerGUID ) )
 		return null
 
-	ArtifactConfig artifactConfig = expect ArtifactConfig( owner.p.artifactConfig )
+	int bladeGUID = weapon.GetWeaponCharmOrArtifactBladeGUID()
 
 	ArtifactViewmodelData res
-	res.bladeGUID = ItemFlavor_GetGUID( artifactConfig.blade )
-	res.powerSourceGUID = ItemFlavor_GetGUID( artifactConfig.powerSource )
+	res.powerSourceGUID = powerGUID
+	res.bladeGUID = IsValidItemFlavorGUID( bladeGUID) ? bladeGUID : ASSET_SETTINGS_UNIQUE_ID_INVALID
 
 	return res
 }
@@ -938,7 +1152,7 @@ void function Artifacts_Loadouts_SetupWeaponComponents( entity weapon, entity ow
 
 	ArtifactConfig artifactConfig = expect ArtifactConfig( owner.p.artifactConfig )
 
-	weapon.kv.rendercolor = Artifacts_FX_GetSmearColor( artifactConfig.powerSource )
+	weapon.kv.rendercolor = Artifacts_FX_GetEmissiveAndSmearColor( artifactConfig.powerSource, true )
 
 
 
@@ -958,6 +1172,12 @@ void function Artifacts_Loadouts_SetupWeaponComponents( entity weapon, entity ow
 
 
 
+
+
+
+
+	if ( weapon.IsWeaponX() )
+		weapon.SetWeaponCharmOrArtifactBladeGUID( artifactConfig.blade.guid )
 }
 
 void function Artifacts_Loadouts_ApplyModelForSet( entity weapon, int setIndex )
@@ -1003,6 +1223,17 @@ void function _PreviewComponent( entity weapon, int previewIdx, string bodyGroup
 		weapon.SetBodygroupModelByIndex( bodygroupIdx, previewIdx )
 }
 
+void function Artifacts_ClearMenuEffects()
+{
+	foreach ( int fxHandle in fileLevel.lobbyFxHandles )
+	{
+		if ( EffectDoesExist( fxHandle ) )
+			EffectStop( fxHandle, true, false )
+	}
+
+	fileLevel.lobbyFxHandles.clear()
+}
+
 void function Artifacts_Loadouts_PreviewBladeAndPowerSource( entity weapon, ItemFlavor blade, ItemFlavor powerSource )
 {
 	Assert( IsLobby() )
@@ -1016,11 +1247,7 @@ void function Artifacts_Loadouts_PreviewBladeAndPowerSource( entity weapon, Item
 	int componentIdx = Artifacts_IsEmptyComponent( powerSource ) ? eArtifactSetIndex.COUNT : eArtifactSetIndex[ Artifacts_GetSetKey( powerSource ) ]
 	_PreviewComponent( weapon, componentIdx, POWER_SOURCE_BODY_GROUP_MOD_PREFIX )
 
-	foreach ( int fxHandle in fileLevel.lobbyFxHandles )
-	{
-		if ( EffectDoesExist( fxHandle ) )
-			EffectStop( fxHandle, false, true )
-	}
+	Artifacts_ClearMenuEffects()
 
 	Artifacts_FX_StartLobbyFX( weapon, powerSource, blade )
 }
@@ -1129,42 +1356,6 @@ int function Artifacts_Loadouts_GetConfigIndexForLoadoutSlot( LoadoutEntry slot 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 LoadoutEntry function Artifacts_Loadouts_GetEntryForConfigIndexAndType( int configIdx, int componentType )
 {
 	return fileLevel.loadoutConfigurationEntriesByIndexAndType[ configIdx ][ componentType ]
@@ -1221,7 +1412,7 @@ void function Artifacts_FX_StartLobbyFX( entity weapon, ItemFlavor powerSource, 
 			EffectAddTrackingForControlPoint( bladeFx, cp.controlPointNumber, weapon, FX_PATTACH_POINT_FOLLOW, bladeAttachIdx, cp.controlPoint )
 	}
 
-	weapon.kv.rendercolor = Artifacts_FX_GetSmearColor( powerSource )
+	weapon.kv.rendercolor = Artifacts_FX_GetEmissiveAndSmearColor( powerSource, true )
 }
 
 
@@ -1270,23 +1461,32 @@ ArtifactFX1PAnd3P function Artifacts_FX_Get1PAnd3PFXArraysFromPowerSource( ItemF
 		if ( fxPackageStruct.is1P )
 			fx1P3P.fx1P.append( fxPackageStruct )
 		else
-		fx1P3P.fx3P.append( fxPackageStruct )
+			fx1P3P.fx3P.append( fxPackageStruct )
 	}
 
 	return fx1P3P
 }
 
-ArtifactFX1PAnd3P function Artifacts_FX_Get1PAnd3PFXArraysFromPlayerLoadouts( entity player, int fxType )
+ArtifactFX1PAnd3P function Artifacts_FX_Get1PAnd3PFXArraysForWeapon( entity weapon, int fxType )
 {
-	if ( player.p.artifactConfig == null )
+	if ( !IsValidItemFlavorGUID( weapon.GetItemFlavorGUID() ) )
 	{
 		ArtifactFX1PAnd3P fx1P3P
 		return fx1P3P
 	}
 
-	ArtifactConfig artifactConfig = expect ArtifactConfig( player.p.artifactConfig )
+	return Artifacts_FX_Get1PAnd3PFXArraysFromPowerSource( GetItemFlavorByGUID( weapon.GetItemFlavorGUID() ), fxType )
+}
 
-	return Artifacts_FX_Get1PAnd3PFXArraysFromPowerSource( artifactConfig.powerSource, fxType )
+void function Artifact_PrecacheImpactTables( ItemFlavor powerSource )
+{
+	Assert( ItemFlavor_GetType( powerSource ) == eItemType.artifact_component_power_source )
+
+	if ( IsLobby() )
+		return
+
+	foreach ( string impactTable in GetSkinImpactTableAliases( ItemFlavor_GetGUID( powerSource ) ) )
+		PrecacheImpactEffectTable( impactTable )
 }
 
 void function Artifact_PrecachePowerSourceFX( ItemFlavor powerSource )
@@ -1309,10 +1509,6 @@ void function Artifact_PrecachePowerSourceFX( ItemFlavor powerSource )
 
 		foreach ( ArtifactFXPackage fxPackageStruct in Artifacts_FX_GetInspectFX( powerSource ) )
 			PrecacheParticleSystem( fxPackageStruct.fxAsset )
-
-		string impactTable = Artifacts_FX_GetImpactTable( powerSource ) 
-		if ( impactTable != "" )
-			PrecacheImpactEffectTable( impactTable )
 	}
 	else
 	{
@@ -1400,9 +1596,13 @@ array<ArtifactFXPackage> function Artifacts_FX_GetLobbyFX( ItemFlavor powerSourc
 	return Artifacts_FX_GetPackage( powerSource, FX_PACKAGE_LOBBY, eArtifactFXPackageType.LOBBY )
 }
 
-vector function Artifacts_FX_GetSmearColor( ItemFlavor powerSource )
+vector function Artifacts_FX_GetEmissiveAndSmearColor( ItemFlavor powerSource, bool checkEmptyForEmissive )
 {
 	Assert( ItemFlavor_GetType( powerSource ) == eItemType.artifact_component_power_source )
+
+	if ( checkEmptyForEmissive && Artifacts_IsEmptyComponent( powerSource ) )
+		return FX_NULL_CAP_EMISSIVE
+
 	var settingsBlock = ItemFlavor_GetSettingsBlock( powerSource )
 	return ( GetSettingsBlockVector( settingsBlock, FX_SMEAR_COLOR ) * 255 )
 }
@@ -1412,14 +1612,6 @@ int function Artifacts_FX_GetSkinIndex( ItemFlavor powerSource )
 	Assert( ItemFlavor_GetType( powerSource ) == eItemType.artifact_component_power_source )
 	var settingsBlock = ItemFlavor_GetSettingsBlock( powerSource )
 	return GetSettingsBlockInt( settingsBlock, FX_SKIN_INDEX )
-}
-
-string function Artifacts_FX_GetImpactTable( ItemFlavor powerSource )
-{
-	Assert( ItemFlavor_GetType( powerSource ) == eItemType.artifact_component_power_source )
-
-	string impactTable = GetSettingsBlockString( ItemFlavor_GetSettingsBlock( powerSource ), FX_IMPACT_TABLE )
-	return impactTable
 }
 
 asset function Artifacts_FX_GetDeathboxFX( ItemFlavor flav )
@@ -1474,70 +1666,26 @@ array< ArtifactFXControlPoint > function Artifacts_FX_GetBladeControlPoints( Ite
 }
 
 
-void function Artifact_Set1pFxControlPoints( entity weapon, int effectHandle )
-{
-	if ( IsValid( weapon && weapon.IsWeaponX() ) )
-	{
-		entity owner = weapon.GetOwner()
-
-		ArtifactFX1PAnd3P fx1P3P = Artifacts_FX_Get1PAnd3PFXArraysFromPlayerLoadouts( owner, eArtifactFXPackageType.IDLE )
-		int fxLen = maxint( fx1P3P.fx1P.len(), fx1P3P.fx1P.len() )
-		for ( int i = 0; i < fxLen; i++ )
-		{
-			asset onePAsset   = fx1P3P.fx1P.isvalidindex( i ) ? fx1P3P.fx1P[ i ].fxAsset : $""
-			string attachName = fx1P3P.fx1P.isvalidindex( i ) ? fx1P3P.fx1P[ i ].attachName : fx1P3P.fx3P[ i ].attachName
-			Assert( attachName != "" )
-			asset threePAsset = fx1P3P.fx3P.isvalidindex( i ) ? fx1P3P.fx3P[ i ].fxAsset : $""
-
-			entity viewmodel = null
-			if ( owner.GetActiveWeapon( eActiveInventorySlot.mainHand ) == weapon )
-				viewmodel = owner.GetViewModelEntity()
-
-			if ( IsValid( viewmodel ) && EffectDoesExist( effectHandle ) )
-			{
-				if ( owner.p.artifactConfig == null )
-					return
-
-				ArtifactConfig artifactConfig = expect ArtifactConfig( owner.p.artifactConfig )
-
-				array< ArtifactFXControlPoint > controlPoints = Artifacts_FX_GetBladeControlPoints( artifactConfig.blade, false )
-				foreach ( ArtifactFXControlPoint cp in controlPoints )
-					EffectAddTrackingForControlPoint( effectHandle, cp.controlPointNumber, viewmodel, FX_PATTACH_POINT_FOLLOW, viewmodel.LookupAttachment( attachName ), cp.controlPoint )
-			}
-
-		}
-	}
-}
-
-
-
 table< int, array< FXHandle > > s_fxHandles
 
 
-void function Artifacts_FX_StartWeaponFX( entity weapon, int fxPackageType, entity playerOwner )
+void function Artifacts_FX_StartWeaponFX( entity weapon, int fxPackageType )
 {
 	int weaponEffect		 = ARTIFACT_FX_HANDLE_INVALID
 	entity effectEntity		 = null
 	bool isWeaponEnt		 = weapon.IsWeaponX()
-	entity player            = playerOwner
-	if ( !IsValid( player ) )
-	{
-		Assert( isWeaponEnt )
-		player = weapon.GetWeaponOwner()
-	}
 
 	
 	if ( fxPackageType == eArtifactFXPackageType.BLADE_EMISSIVE )
 	{
-		if ( player.p.artifactConfig == null )
+		if ( !IsValidItemFlavorGUID( weapon.GetItemFlavorGUID() ) )
 			return
 
-		ArtifactConfig artifactConfig = expect ArtifactConfig( player.p.artifactConfig )
-		weapon.kv.rendercolor = Artifacts_FX_GetSmearColor( artifactConfig.powerSource )
+		weapon.kv.rendercolor = Artifacts_FX_GetEmissiveAndSmearColor( GetItemFlavorByGUID( weapon.GetItemFlavorGUID() ), true )
 		return
 	}
 
-	ArtifactFX1PAnd3P fx1P3P = Artifacts_FX_Get1PAnd3PFXArraysFromPlayerLoadouts( player, fxPackageType )
+	ArtifactFX1PAnd3P fx1P3P = Artifacts_FX_Get1PAnd3PFXArraysForWeapon( weapon, fxPackageType )
 	int fxLen = maxint( fx1P3P.fx1P.len(), fx1P3P.fx1P.len() )
 	for ( int i = 0; i < fxLen; i++ )
 	{
@@ -1575,7 +1723,10 @@ void function Artifacts_FX_StopWeaponFX( entity weapon, int fxPackageType )
 	
 	if ( fxPackageType == eArtifactFXPackageType.BLADE_EMISSIVE )
 	{
-		weapon.kv.rendercolor = "0 0 0"
+		if ( !IsValidItemFlavorGUID( weapon.GetItemFlavorGUID() ) )
+			return
+
+		weapon.kv.rendercolor = DEACTIVATED_EMISSIVE_FACTOR * Artifacts_FX_GetEmissiveAndSmearColor( GetItemFlavorByGUID( weapon.GetItemFlavorGUID() ), true )
 		return
 	}
 
@@ -1589,12 +1740,18 @@ void function Artifacts_FX_StopWeaponFX( entity weapon, int fxPackageType )
 					EffectStop( handle, false, true )
 			}
 			delete s_fxHandles[ fxPackageType ]
+			Remote_ServerCallFunction( "ClientCallback_ActivationEmote", false )
 			return
 		}
 
 
-	entity player            = weapon.GetWeaponOwner()
-	ArtifactFX1PAnd3P fx1P3P = Artifacts_FX_Get1PAnd3PFXArraysFromPlayerLoadouts( player, fxPackageType )
+
+
+
+
+
+
+	ArtifactFX1PAnd3P fx1P3P = Artifacts_FX_Get1PAnd3PFXArraysForWeapon( weapon, fxPackageType )
 	int fxLen = maxint( fx1P3P.fx1P.len(), fx1P3P.fx1P.len() )
 	for ( int i = 0; i < fxLen; i++ )
 	{
@@ -1606,18 +1763,15 @@ void function Artifacts_FX_StopWeaponFX( entity weapon, int fxPackageType )
 
 void function Artifacts_FX_ScriptAnimWindowCallback( entity weapon, string parameter, bool isWindowStart )
 {
-	entity owner = weapon.GetOwner()
-
-	Assert( owner.IsBot() || owner.p.artifactConfig != null )
-	if ( owner.p.artifactConfig == null )
+	if ( !IsValidItemFlavorGUID( weapon.GetItemFlavorGUID() ) )
 		return
 
-	ArtifactConfig artifactConfig = expect ArtifactConfig( owner.p.artifactConfig )
+	ItemFlavor powerSource = GetItemFlavorByGUID( weapon.GetItemFlavorGUID() )
 
-	if ( Artifacts_IsEmptyComponent( artifactConfig.powerSource ) )
+	if ( Artifacts_IsEmptyComponent( powerSource ) )
 		return
 
-	int setIndex = Artifacts_GetSetIndex( artifactConfig.powerSource )
+	int setIndex = Artifacts_GetSetIndex( powerSource )
 
 	ArtifactFX1PAnd3P fx1P3P
 	var scriptAnimBlock = ItemFlavor_GetSettingsBlock( GetItemFlavorByGUID( ARTIFACT_DAGGER_ITEM_FLAVOR_GUID ) )
@@ -1634,7 +1788,7 @@ void function Artifacts_FX_ScriptAnimWindowCallback( entity weapon, string param
 											( !isWindowStart && GetSettingsBlockString( fxBlock , SCRIPT_ANIM_WINDOW_ACTION ) == SCRIPT_ANIM_WINDOW_STOP )
 
 					if ( shouldStart )
-						Artifacts_FX_StartWeaponFX( weapon, fxPackageType, null )
+						Artifacts_FX_StartWeaponFX( weapon, fxPackageType )
 					else
 						Artifacts_FX_StopWeaponFX( weapon, fxPackageType )
 
@@ -1650,9 +1804,23 @@ void function Artifacts_FX_ScriptAnimWindowCallback( entity weapon, string param
 void function Artifacts_PlayActivationEmote( entity weapon )
 {
 
+	
+	Assert( IsValid( weapon ) && weapon.GetWeaponSettingBool( eWeaponVar.is_artifact ) )
+	weapon.StartCustomActivityDetailed( "ACT_VM_ARTIFACT_ACTIVATION_EMOTE", (WCAF_INTERRUPTIBLE_ALLOW_WHILE_SPRINTING | WCAF_INTERRUPTIBLE_ALLOW_START_WHILE_SPRINTING | WCAF_TOGGLE | WCAF_KEEPMELEESTATE | WCAF_ISINTERRUPTIBLE), -1.0, "ACT_MP_ARTIFACT_ACTIVATION_EMOTE" )
+	thread function() : ( weapon ) {
+		weapon.EndSignal( VFX_SIGNAL )
+		weapon.EndSignal( "OnDestroy" )
+		weapon.EndSignal( "WeaponDeactivateEvent" )
+		wait VFX_FLOURISH_3P_START_DELAY
+		if ( IsValid( weapon ) )
+			Artifacts_FX_StartWeaponFX( weapon, eArtifactFXPackageType.FLOURISH )
 
-
-
+		
+		float customActDuration = weapon.IsInCustomActivity() ? weapon.GetCustomActivityDuration() : VFX_FLOURISH_ANIM_DURATION
+		wait (customActDuration - VFX_FLOURISH_3P_START_DELAY)
+		if ( IsValid( weapon ) )
+			Artifacts_FX_StopWeaponFX( weapon, eArtifactFXPackageType.FLOURISH )
+	}()
 
 }
 
@@ -1661,6 +1829,84 @@ bool function Artifacts_PlayerHasArtifactActive( entity player )
 	entity activeWeapon = player.GetActiveWeapon( eActiveInventorySlot.mainHand )
 	return ( IsValid( activeWeapon ) && activeWeapon.IsWeaponX() && activeWeapon.GetWeaponSettingBool( eWeaponVar.is_artifact ) )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1693,6 +1939,139 @@ int function Artifacts_GetComponentChangeGUID( entity player )
 		return 0
 
 	return ItemFlavor_GetGUID( changedComponent )
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+array< ItemFlavor > function Artifacts_GetSetItems( int setIndex )
+{
+	return fileLevel.componentSets[ setIndex ]
+}
+
+bool function Artifacts_IsBaseArtifact( ItemFlavor component )
+{
+	return ItemFlavor_GetType( component ) == eItemType.artifact_component_blade && Artifacts_GetSetIndex( component ) == eArtifactSetIndex.MOB
+}
+
+bool function Artifacts_IsBaseArtifactOwned()
+{
+	array< ItemFlavor > baseSet = Artifacts_GetSetItems( eArtifactSetIndex.MOB )
+
+	if ( baseSet.len() == 0 )
+		return false
+
+	ItemFlavor baseArtifact = baseSet[0]
+	return GRX_IsItemOwnedByPlayer( baseArtifact )
+}
+
+asset function Artifacts_ActivationEmote_GetVideo( ItemFlavor emote )
+{
+	Assert( ItemFlavor_GetType( emote ) == eItemType.artifact_component_activation_emote )
+
+	return GetGlobalSettingsStringAsAsset( ItemFlavor_GetAsset( emote ), "video" )
 }
 
 
@@ -1733,7 +2112,7 @@ void function DEV_UpdatePlayerArtifactConfiguration( entity weapon, entity playe
 			return
 	}
 
-	Artifacts_StoreLoadoutDataOnPlayerEntityStruct( player )
+	Artifacts_StoreLoadoutDataOnPlayerEntityStruct( player, null, true )
 }
 
 
@@ -1957,15 +2336,91 @@ void function DEV_UpdatePlayerArtifactConfiguration( entity weapon, entity playe
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+void function Artifacts_DEV_PlayActivationEmote3PEffects()
+{
+	
+	entity player = GetLocalClientPlayer()
+	if ( !IsValid( player ) )
+		return
+
+	entity artifactWeap = player.GetActiveWeapon( eActiveInventorySlot.mainHand )
+	if ( !IsValid( artifactWeap ) || !artifactWeap.IsWeaponX() || !artifactWeap.GetWeaponSettingBool( eWeaponVar.is_artifact ) )
+		return
+
+	thread function() : ( artifactWeap ) {
+		artifactWeap.EndSignal( "OnDestroy" )
+		artifactWeap.EndSignal( "WeaponDeactivateEvent" )
+		wait VFX_FLOURISH_3P_START_DELAY
+		if ( IsValid( artifactWeap ) )
+		{
+			ArtifactFX1PAnd3P fx1P3P = Artifacts_FX_Get1PAnd3PFXArraysForWeapon( artifactWeap, eArtifactFXPackageType.FLOURISH )
+			int fxLen = fx1P3P.fx3P.len()
+			for ( int i = 0; i < fxLen; i++ )
+			{
+				string attachName = fx1P3P.fx1P.isvalidindex( i ) ? fx1P3P.fx1P[ i ].attachName : fx1P3P.fx3P[ i ].attachName
+				Assert( attachName != "" )
+				asset threePAsset = fx1P3P.fx3P.isvalidindex( i ) ? fx1P3P.fx3P[ i ].fxAsset : $""
+				artifactWeap.PlayWeaponEffect( $"", threePAsset, attachName, true )
+			}
+
+			float customActDuration = artifactWeap.IsInCustomActivity() ? artifactWeap.GetCustomActivityDuration() : VFX_FLOURISH_ANIM_DURATION
+			wait (customActDuration - VFX_FLOURISH_3P_START_DELAY)
+
+			for ( int i = 0; i < fxLen; i++ )
+			{
+				asset threePAsset = fx1P3P.fx3P.isvalidindex( i ) ? fx1P3P.fx3P[ i ].fxAsset : $""
+				artifactWeap.StopWeaponEffect( $"", threePAsset )
+			}
+		}
+	}()
+}
+
+
+
 void function Artifacts_DEV_UnitTest_PowerSource( ItemFlavor powerSource )
 {
 	Artifacts_FX_GetIdleFX( powerSource )
 	Artifacts_FX_GetFlourishFX( powerSource )
 	Artifacts_FX_GetAttackFX( powerSource )
 	Artifacts_FX_GetStartupFX( powerSource )
-	Artifacts_FX_GetSmearColor( powerSource )
+	Artifacts_FX_GetEmissiveAndSmearColor( powerSource, true )
+	Artifacts_FX_GetEmissiveAndSmearColor( powerSource, false )
 	Artifacts_FX_GetSkinIndex( powerSource )
-	Artifacts_FX_GetImpactTable( powerSource )
 }
 
 void function Artifacts_DEV_UnitTest_Deathbox( ItemFlavor deathbox )

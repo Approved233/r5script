@@ -220,14 +220,17 @@ void function SetupPurchaseMenu( int purchaseButtonStatus )
 	switch ( purchaseButtonStatus )
 	{
 		case eButtonDisplayStatus.BOTH:
-			Hud_SetNavUp( acPurchaseButton, lastPurchaseButton )
-			Hud_SetNavDown( acPurchaseButton, packPurchaseButton )
+			if ( lastPurchaseButton != null )
+			{
+				Hud_SetNavUp( acPurchaseButton, lastPurchaseButton )
+				Hud_SetNavDown( acPurchaseButton, packPurchaseButton )
 
-			Hud_SetNavUp( packPurchaseButton, acPurchaseButton )
-			Hud_SetNavDown( packPurchaseButton, cancelButton )
+				Hud_SetNavUp( packPurchaseButton, acPurchaseButton )
+				Hud_SetNavDown( packPurchaseButton, cancelButton )
 
-			Hud_SetNavUp( cancelButton, packPurchaseButton )
-			Hud_SetNavDown( cancelButton, null )
+				Hud_SetNavUp( cancelButton, packPurchaseButton )
+				Hud_SetNavDown( cancelButton, null )
+			}
 			break
 
 		case eButtonDisplayStatus.ONLY_PREMIUM:
@@ -247,33 +250,43 @@ void function SetupPurchaseMenu( int purchaseButtonStatus )
 				}
 				else
 				{
-					Hud_SetNavDown( lastPurchaseButton, file.giftButton )
-					Hud_SetNavUp( file.giftButton , lastPurchaseButton )
-					Hud_SetNavDown( file.giftButton , acPurchaseButton )
 
-					Hud_SetNavUp( acPurchaseButton, file.giftButton )
+					if ( lastPurchaseButton != null )
+					{
+						Hud_SetNavDown( lastPurchaseButton, file.giftButton )
+						Hud_SetNavUp( file.giftButton, lastPurchaseButton )
+						Hud_SetNavDown( file.giftButton, acPurchaseButton )
+
+						Hud_SetNavUp( acPurchaseButton, file.giftButton )
+						Hud_SetNavDown( acPurchaseButton, cancelButton )
+
+						Hud_SetNavUp( cancelButton, acPurchaseButton )
+						Hud_SetNavDown( cancelButton, null )
+					}
+				}
+			}
+			else
+			{
+				if ( lastPurchaseButton != null )
+				{
+					Hud_SetNavUp( acPurchaseButton, lastPurchaseButton )
 					Hud_SetNavDown( acPurchaseButton, cancelButton )
 
 					Hud_SetNavUp( cancelButton, acPurchaseButton )
 					Hud_SetNavDown( cancelButton, null )
 				}
 			}
-			else
-			{
-				Hud_SetNavUp( acPurchaseButton, lastPurchaseButton )
-				Hud_SetNavDown( acPurchaseButton, cancelButton )
-
-				Hud_SetNavUp( cancelButton, acPurchaseButton )
-				Hud_SetNavDown( cancelButton, null )
-			}
 			break
 
 		case eButtonDisplayStatus.ONLY_PACKS:
-			Hud_SetNavUp( packPurchaseButton, lastPurchaseButton  )
-			Hud_SetNavDown( packPurchaseButton, cancelButton )
+			if ( lastPurchaseButton != null )
+			{
+				Hud_SetNavUp( packPurchaseButton, lastPurchaseButton )
+				Hud_SetNavDown( packPurchaseButton, cancelButton )
 
-			Hud_SetNavUp( cancelButton, packPurchaseButton )
-			Hud_SetNavDown( cancelButton, null )
+				Hud_SetNavUp( cancelButton, packPurchaseButton )
+				Hud_SetNavDown( cancelButton, null )
+			}
 			break
 
 		case eButtonDisplayStatus.NONE:
@@ -293,19 +306,25 @@ void function SetupPurchaseMenu( int purchaseButtonStatus )
 				}
 				else
 				{
-					Hud_SetNavDown( lastPurchaseButton, file.giftButton )
+					if ( lastPurchaseButton != null )
+					{
+						Hud_SetNavDown( lastPurchaseButton, file.giftButton )
 
-					Hud_SetNavUp( file.giftButton, lastPurchaseButton )
-					Hud_SetNavDown( file.giftButton, cancelButton )
+						Hud_SetNavUp( file.giftButton, lastPurchaseButton )
+						Hud_SetNavDown( file.giftButton, cancelButton )
 
-					Hud_SetNavUp( cancelButton, file.giftButton )
-					Hud_SetNavDown( cancelButton, null )
+						Hud_SetNavUp( cancelButton, file.giftButton )
+						Hud_SetNavDown( cancelButton, null )
+					}
 				}
 			}
 			else
 			{
-				Hud_SetNavUp( cancelButton, lastPurchaseButton )
-				Hud_SetNavDown( cancelButton, null )
+				if ( lastPurchaseButton != null )
+				{
+					Hud_SetNavUp( cancelButton, lastPurchaseButton )
+					Hud_SetNavDown( cancelButton, null )
+				}
 			}
 			break
 	}
@@ -846,7 +865,7 @@ void function PurchaseButton_Activate( var button )
 {
 	Assert( file.status == ePurchaseDialogStatus.AWAITING_USER_CONFIRMATION )
 
-	if ( Hud_IsLocked( button ) )
+	if ( Hud_IsLocked( button ) || UI_OperationQueueHasGRXOperations() )
 		return
 
 	if ( file.state.cfg.isGiftPack && !IsPlayerWithinGiftingLimit() )
@@ -1026,8 +1045,6 @@ void function UpdateProcessingElements()
 {
 	bool isWorking = (file.status == ePurchaseDialogStatus.WORKING)
 
-	
-	
 	Hud_SetEnabled( file.cancelButton, !isWorking )
 	HudElem_SetRuiArg( file.cancelButton, "isProcessing", isWorking )
 	HudElem_SetRuiArg( file.cancelButton, "processingState", file.status )
@@ -1037,6 +1054,9 @@ void function UpdateProcessingElements()
 		Hud_SetEnabled( button, !isWorking )
 		HudElem_SetRuiArg( button, "isProcessing", false )
 	}
+
+	Hud_SetEnabled( file.giftButton, !isWorking )
+	HudElem_SetRuiArg( file.giftButton, "isProcessing", isWorking )
 
 	if ( file.activeDialog == file.packPurchaseDialog )
 	{
@@ -1317,7 +1337,10 @@ void function UpdatePurchaseDialog()
 				int remainingTime = endTime - GetUnixTimestamp()
 
 				HudElem_SetRuiArg( file.dialogContent, "qualityText", Localize("#TIME_REMAINING", RTKMutator_FormatTimeLong( remainingTime.tofloat() ) ) )
-				HudElem_SetRuiArg( file.dialogContent, "reRollsAmount", Localize( "#CUPS_REROLL_DIALOG_AMOUNT", assetData.maximumNumberOfReRolls - entry.reRollCount ) )
+
+
+
+					HudElem_SetRuiArg( file.dialogContent, "reRollsAmount", Localize( "#CUPS_REROLL_DIALOG_AMOUNT", assetData.maximumNumberOfReRolls - entry.reRollCount ) )
 
 			}
 		}
@@ -1836,6 +1859,9 @@ void function UpdateCollectionPackPurchaseButton( int quantity )
 
 void function GiftButton_Activate( var button )
 {
+	if ( file.blockInput )
+		return
+
 	if ( file.state.cfg.flav == null && file.state.cfg.offer == null )
 		return
 

@@ -93,10 +93,6 @@ global function ClientToUI_RestrictedLootConfirmDialog_Open
 
 
 
-
-
-
-
 struct FileStruct_LifetimeLevel
 {
 	table signalDummy
@@ -1871,6 +1867,25 @@ void function OpenSurvivalGroundListMenu()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function ClientToUI_RestrictedLootConfirmDialog_Open( bool isBlackMarketOwner, int restrictedLootType )
 {
 	ConfirmDialogData data
@@ -1897,14 +1912,6 @@ void function ClientToUI_RestrictedLootConfirmDialog_Open( bool isBlackMarketOwn
 		OpenOKDialogFromData( data )
 	}
 }
-
-
-
-
-
-
-
-
 
 
 

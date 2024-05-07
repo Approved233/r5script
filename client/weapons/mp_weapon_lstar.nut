@@ -4,6 +4,13 @@ global function MpWeaponLSTAR_Init
 global function OnWeaponPrimaryAttack_weapon_lstar
 global function OnWeaponCooldown_weapon_lstar
 global function OnWeaponActivate_weapon_lstar
+global function OnWeaponDeactivate_weapon_lstar
+
+
+
+
+
+
 
 
 
@@ -121,6 +128,23 @@ void function OnWeaponCooldown_weapon_lstar( entity weapon, bool isFirstTimeCool
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function OnWeaponActivate_weapon_lstar( entity weapon )
 {
 	entity owner = weapon.GetOwner()
@@ -132,6 +156,19 @@ void function OnWeaponActivate_weapon_lstar( entity weapon )
 
 
 
+
+
+
+
 		GoldenHorseGreen_OnWeaponActivate( weapon )
+
+}
+
+void function OnWeaponDeactivate_weapon_lstar( entity weapon )
+{
+
+
+
+
 
 }

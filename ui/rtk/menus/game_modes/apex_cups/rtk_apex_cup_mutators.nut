@@ -2,6 +2,12 @@ globalize_all_functions
 
 string function RTKMutator_ApexCupTierText( int input, int p0 )
 {
+	if( !Cups_IsValidCupID( input ) )
+	{
+		Warning( "Invalid tier text for cup {" + input + "}" )
+		return ""
+	}
+
 	CupBakeryAssetData assetData = Cups_GetCupBakeryAssetDataFromGUID( input )
 
 	if ( p0 < 0 || assetData.tiers.len() <= p0 )
@@ -28,9 +34,23 @@ string function RTKMutator_ApexCupTierText( int input, int p0 )
 	return ""
 }
 
-asset function RTKMutator_ApexCupTierIcon( int input, int p0 )
+asset function RTKMutator_ApexCupTierIcon( SettingsAssetGUID input, int teirIndex )
 {
-	switch ( p0 )
+	if( !Cups_IsValidCupID( input ) )
+	{
+		Warning( "Invalid tier icon for cup {" + input + "}" )
+		return $""
+	}
+
+	CupBakeryAssetData cupData = Cups_GetCupBakeryAssetDataFromGUID( input )
+
+	if (( teirIndex > -1  ) && (teirIndex < cupData.tiers.len() ))
+	{
+		if ( cupData.tiers[teirIndex].icon != $"" )
+			return cupData.tiers[teirIndex].icon
+	}
+
+	switch ( teirIndex )
 	{
 		case 0:
 			return $"ui_image/rui/menu/apex_rumble/cups_emblem_01.rpak"
@@ -43,7 +63,7 @@ asset function RTKMutator_ApexCupTierIcon( int input, int p0 )
 		case 4:
 			return $"ui_image/rui/menu/apex_rumble/cups_emblem_05.rpak"
 		default:
-			Warning( "Invalid tier icon index {" + p0 + "} for cup {" + input + "}" )
+			Warning( "Invalid tier icon index {" + teirIndex + "} for cup {" + input + "}" )
 			return $""
 	}
 	unreachable
@@ -51,6 +71,12 @@ asset function RTKMutator_ApexCupTierIcon( int input, int p0 )
 
 string function RTKMutator_ApexCupCurrentTierText( int input )
 {
+	if( !Cups_IsValidCupID( input ) )
+	{
+		Warning( "Invalid tier for cup {" + input + "}" )
+		return ""
+	}
+
 	CupBakeryAssetData assetData = Cups_GetCupBakeryAssetDataFromGUID( input )
 
 	int index = Cups_GetPlayerTierIndexForCup( input )

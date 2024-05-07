@@ -13,11 +13,20 @@ global struct RTKMilestoneEventCollectionPanel_Properties
 
 global struct RTKMilestoneEventCollectionPanelModel
 {
+	string eventDescription
 	vector color
 	vector titleBgColor
+	float fullscreenBgDarkeningOpacity
 	int totalItems
 	int collectedItems
 	asset collectionBoxBGImage
+	bool collectionBoxBlur
+	asset collectionBoxBlurImage
+	asset infoBoxBGImage
+	bool infoBoxBlur
+	asset infoBoxBlurImage
+	asset eventKeyArt
+	bool isRestricted
 }
 global struct RTKMilestoneCollectedCategoryInfo
 {
@@ -29,6 +38,7 @@ global struct RTKMilestoneCollectedCategoryInfo
 global struct RTKMilestoneCollectedItemInfoTooltip
 {
 	string titleText
+	string descText
 }
 
 global struct RTKMilestoneCollectedItemInfo
@@ -37,9 +47,23 @@ global struct RTKMilestoneCollectedItemInfo
 	int state
 	bool isOwned
 	bool isPurchasable
+	bool isChaseItem
+	int gridRowSpan
+	int gridColSpan
 	asset icon
 	int price
 	RTKMilestoneCollectedItemInfoTooltip& tooltipInfo
+	SettingsAssetGUID itemGuid
+}
+
+global struct RTKMilestoneProgressTrackerTierInfo
+{
+	int grantLevel
+	int tierStartLevel
+	int totalCollectedItems
+	int currentLevel
+	array<RTKMilestoneCollectedItemInfo> items
+	int prefabIndex
 }
 
 global struct RTKMilestoneChaseItemInfo
@@ -51,6 +75,20 @@ global struct RTKMilestoneChaseItemInfo
 	string name
 	string description
 	RTKMilestoneCollectedItemInfoTooltip& tooltipInfo
+}
+
+global struct RTKMilestoneTitleInfo
+{
+	string headerText
+	string subheaderText
+	asset eventIcon
+	int endTime
+	bool bgBlur
+	asset bgBlurImage
+	float bgDarkening
+	asset bgImage
+	vector headerTextColor
+	vector subheaderTextColor
 }
 
 struct PrivateData
@@ -113,10 +151,13 @@ void function RTKMilestoneEventCollectionPanel_OnInitialize( rtk_behavior self )
 		RTKCursorInteract_AutoSubscribeOnHoverLeaveListener( self, contentArea,
 			void function() : ( self, contentArea )
 			{
-				if ( EventsPanel_CanStartCarouselThreads() )
+				if ( MilestoneEvent_UseOriginalEventTabLayout() )
 				{
-					thread AutoAdvanceFeaturedItems_Collection()
-					thread AutoAdvanceFeaturedItems_Tracking()
+					if ( EventsPanel_CanStartCarouselThreads() )
+					{
+						thread AutoAdvanceFeaturedItems_Collection()
+						thread AutoAdvanceFeaturedItems_Tracking()
+					}
 				}
 			}
 		)
@@ -156,6 +197,11 @@ void function BuildMilestoneGeneralPanelInfo( rtk_behavior self, rtk_struct mile
 		generalModel.totalItems = file.isRestricted ? file.items.len() : file.items.len() + file.chaseItems.len()
 		generalModel.collectedItems = file.isRestricted ? GRX_GetNumberOfOwnedItemsByPlayer( file.items ) : GRX_GetNumberOfOwnedItemsByPlayer( file.items ) + GRX_GetNumberOfOwnedItemsByPlayer( file.chaseItems )
 		generalModel.collectionBoxBGImage = MilestoneEvent_GetCollectionBoxBGImage( event )
+		generalModel.collectionBoxBlur = MilestoneEvent_GetCollectionBoxBlur( event )
+		generalModel.collectionBoxBlurImage = MilestoneEvent_GetCollectionBoxBlurImage( event )
+		generalModel.infoBoxBGImage = MilestoneEvent_GetInfoBoxBGImage( event )
+		generalModel.infoBoxBlur = MilestoneEvent_GetInfoBoxBlur( event )
+		generalModel.infoBoxBlurImage = MilestoneEvent_GetInfoBoxBlurImage( event )
 		RTKStruct_SetValue( milestoneEventModel, generalModel )
 	}
 }
@@ -282,10 +328,13 @@ void function SetUpGridButtons( rtk_behavior self, rtk_struct milestoneEventMode
 				} )
 
 				self.AutoSubscribe( button, "onIdle", function( rtk_behavior button, int prevState ) : ( self, newChildIndex, milestoneEventModel ) {
-					if ( EventsPanel_CanStartCarouselThreads() )
+					if ( MilestoneEvent_UseOriginalEventTabLayout() )
 					{
-						thread AutoAdvanceFeaturedItems_Tracking()
-						thread AutoAdvanceFeaturedItems_Collection()
+						if ( EventsPanel_CanStartCarouselThreads() )
+						{
+							thread AutoAdvanceFeaturedItems_Tracking()
+							thread AutoAdvanceFeaturedItems_Collection()
+						}
 					}
 				} )
 
@@ -293,12 +342,14 @@ void function SetUpGridButtons( rtk_behavior self, rtk_struct milestoneEventMode
 				{
 					GRXScriptOffer offer = offers[0]
 					self.AutoSubscribe( button, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( self, newChildIndex, offer ) {
+						RTKEventsPanelController_SendPageViewEventOffer( self , newChildIndex, ItemFlavor_GetLongName( file.items[newChildIndex] ) )
 						StoreInspectMenu_AttemptOpenWithOffer( offer )
 					} )
 				}
 				else
 				{
 					self.AutoSubscribe( button, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( self, newChildIndex, event ) {
+						RTKEventsPanelController_SendPageViewEventOffer( self , newChildIndex, ItemFlavor_GetLongName( file.items[newChildIndex] ) )
 						string title = file.isRestricted ? "#MILESTONE_EVENT_LOCKED_PRESENTATION_BUTTON_TITLE" : "#MILESTONE_EVENT_PURCHASE_PRESENTATION_BUTTON_TITLE"
 						SetGenericItemPresentationModeActiveWithNavBack( file.items[newChildIndex], title, "#MILESTONE_EVENT_PURCHASE_PRESENTATION_BUTTON_DESC", void function() : ()
 						{
@@ -336,10 +387,13 @@ void function SetUpChaseButton( rtk_behavior self, rtk_struct milestoneEventMode
 		} )
 
 		self.AutoSubscribe( button, "onIdle", function( rtk_behavior button, int prevState ) : ( self , milestoneEventModel ) {
-			if ( EventsPanel_CanStartCarouselThreads() )
+			if ( MilestoneEvent_UseOriginalEventTabLayout() )
 			{
-				thread AutoAdvanceFeaturedItems_Tracking()
-				thread AutoAdvanceFeaturedItems_Collection()
+				if ( EventsPanel_CanStartCarouselThreads() )
+				{
+					thread AutoAdvanceFeaturedItems_Tracking()
+					thread AutoAdvanceFeaturedItems_Collection()
+				}
 			}
 		} )
 

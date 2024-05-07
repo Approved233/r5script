@@ -67,6 +67,7 @@ global function LoadoutSelection_Init
 
 
 
+
 global function LoadoutSelection_UpdateLoadoutInfo_UI
 global function LoadoutSelection_SetSelectedLoadoutSlotIndex_UI
 global function LoadoutSelection_GetSelectedLoadoutSlotIndex_UI
@@ -794,6 +795,24 @@ void function LoadoutSelection_OverrideSupportedWeaponAttachmentsForWeaponRef( s
 		Warning( "LoadoutSelection_OverrideSupportedWeaponAttachmentsForWeaponRef - weaponRef %s not found in the LootData table, failed to override supported attachments", weaponRef )
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

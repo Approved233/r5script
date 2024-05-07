@@ -227,7 +227,7 @@ void function FlightpathShared_Init()
 	level.spawnPointsInUse <- {}
 	level.disallowedTitanfalls <- {}
 
-	AddCallback_EntitiesDidLoad( EntitiesDidLoad )
+	AddCallback_EntitiesDidLoad( EntitiesDidLoad, eEntitiesDidLoadPriority.HIGH )
 }
 
 

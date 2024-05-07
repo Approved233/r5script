@@ -14,6 +14,7 @@ global function Cups_GetPointsForPlacement
 
 
 global function Cups_GetAllCupBakeryAssetData
+global function Cups_GetAllCupContainerBakeryAssetData
 global function Cups_GetCupBakeryAssetDataFromGUID
 global function Cups_GetVisibleCupIDsFromBakery
 
@@ -303,28 +304,8 @@ void function ShCups_LevelInit()
 		if ( ItemFlavor_GetType( currentRankedPeriod ) != eItemType.ranked_2pt0_period )
 			return
 
-		foreach ( var tierBlock in IterateSettingsAssetArray( ItemFlavor_GetAsset( currentRankedPeriod ), "tiers" ) )
-		{
-			string tierName = GetSettingsBlockString( tierBlock, "name" )
-			int tierDivisionScoreMin = -1
-			int tierDivisionScoreMax = -1
-			foreach ( var tierDivisionBlock in IterateSettingsArray( GetSettingsBlockArray( tierBlock, "divisions" ) ) )
-			{
-				string tierDivisionName = GetSettingsBlockString( tierDivisionBlock, "name" )
-				int tierDivisionScore = GetSettingsBlockInt( tierDivisionBlock, "scoreMin" )
-				if( tierDivisionScoreMin == -1 || tierDivisionScore < tierDivisionScoreMin )
-					tierDivisionScoreMin = tierDivisionScore
-				if( tierDivisionScoreMax == -1 || tierDivisionScore > tierDivisionScoreMax )
-					tierDivisionScoreMax = tierDivisionScore
-			}
-			foreach ( SettingsAssetGUID cupID, CupBakeryAssetData cup in fileLevel.cups )
-			{
-				if( cup.entryRestrictions.minRankString == tierName )
-					cup.entryRestrictions.minRankScore = tierDivisionScoreMin
-				else if( cup.entryRestrictions.maxRankString == tierName )
-					cup.entryRestrictions.maxRankScore = tierDivisionScoreMax
-			}
-		}
+		Cups_SetupCupTiers( currentRankedPeriod, "tiers" )
+		Cups_SetupCupTiers( currentRankedPeriod, "ladderOnlyTier" )
 
 		foreach ( SettingsAssetGUID cupID, CupBakeryAssetData cup in fileLevel.cups )
 		{
@@ -349,6 +330,10 @@ void function ShCups_LevelInit()
 		Cups_ValidateBakeryGamemodeParams()
 
 		fileLevel.cupsInitialised = true
+
+
+
+
 	})
 
 	AddCallback_OnItemFlavorRegistered( eItemType.calevent_apex_cup_container, void function(ItemFlavor cupItemFlavor) {
@@ -359,6 +344,32 @@ void function ShCups_LevelInit()
 
 		Cups_ParseContainerBakeryParams( cupItemFlavor )
 	} )
+}
+
+void function Cups_SetupCupTiers( ItemFlavor currentRankedPeriod, string tierClass )
+{
+	foreach ( var tierBlock in IterateSettingsAssetArray( ItemFlavor_GetAsset( currentRankedPeriod ), tierClass ) )
+	{
+		string tierName = GetSettingsBlockString( tierBlock, "name" )
+		int tierDivisionScoreMin = -1
+		int tierDivisionScoreMax = -1
+		foreach ( var tierDivisionBlock in IterateSettingsArray( GetSettingsBlockArray( tierBlock, "divisions" ) ) )
+		{
+			string tierDivisionName = GetSettingsBlockString( tierDivisionBlock, "name" )
+			int tierDivisionScore = GetSettingsBlockInt( tierDivisionBlock, "scoreMin" )
+			if( tierDivisionScoreMin == -1 || tierDivisionScore < tierDivisionScoreMin )
+				tierDivisionScoreMin = tierDivisionScore
+			if( tierDivisionScoreMax == -1 || tierDivisionScore > tierDivisionScoreMax )
+				tierDivisionScoreMax = tierDivisionScore
+		}
+		foreach ( SettingsAssetGUID cupID, CupBakeryAssetData cup in fileLevel.cups )
+		{
+			if( cup.entryRestrictions.minRankString == tierName )
+				cup.entryRestrictions.minRankScore = tierDivisionScoreMin
+			else if( cup.entryRestrictions.maxRankString == tierName )
+				cup.entryRestrictions.maxRankScore = tierDivisionScoreMax
+		}
+	}
 }
 
 void function Cups_ParseContainerBakeryParams( ItemFlavor cupItemFlavor )
@@ -383,8 +394,20 @@ void function Cups_ParseContainerBakeryParams( ItemFlavor cupItemFlavor )
 	Assert( cupContainer.numMatches > 0, "Invalid num matches specified for cup container " + cupContainerID )
 
 	
-	cupContainer.gameModePlaylistVar = LimitedTimeMode_GetPlaylistFlag( GetGlobalSettingsString( ItemFlavor_GetAsset( cupItemFlavor ), GAMEMODE_FIELD_NAME ) )
-	Assert( cupContainer.gameModePlaylistVar != "", "Invalid game mode specified for cup container " + cupContainerID )
+
+
+
+
+
+
+	if ( GetGlobalSettingsBool( ItemFlavor_GetAsset( cupItemFlavor ), "is_ranked_rumble" ) )
+		return
+
+	else
+	{
+		cupContainer.gameModePlaylistVar = LimitedTimeMode_GetPlaylistFlag( GetGlobalSettingsString( ItemFlavor_GetAsset( cupItemFlavor ), GAMEMODE_FIELD_NAME ) )
+		Assert( cupContainer.gameModePlaylistVar != "", "Invalid game mode specified for cup container " + cupContainerID )
+	}
 
 	
 	string gracePeriodString = GetGlobalSettingsString( ItemFlavor_GetAsset( cupItemFlavor ), GRACE_PERIOD_FIELD_NAME )
@@ -397,6 +420,12 @@ void function Cups_ParseContainerBakeryParams( ItemFlavor cupItemFlavor )
 
 	
 	cupContainer.maximumNumberOfReRolls = GetGlobalSettingsInt(ItemFlavor_GetAsset( cupItemFlavor ), MAX_REROLL_COUNT_FIELD_NAME )
+
+
+
+
+
+
 	if( cupContainer.maximumNumberOfReRolls > 0 )
 	{
 		cupContainer.reRollTokenAsset = GetGlobalSettingsAsset( ItemFlavor_GetAsset( cupItemFlavor ), REROLL_TOKEN_FIELD_NAME )
@@ -674,6 +703,18 @@ table< SettingsAssetGUID, CupBakeryAssetData > function Cups_GetAllCupBakeryAsse
 
 	Assert( fileLevel.cupsInitialised )
 	return fileLevel.cups
+}
+
+table< SettingsAssetGUID, CupContainerBakeryAssetData > function Cups_GetAllCupContainerBakeryAssetData()
+{
+	if( !GetConVarBool( "cups_enabled" ) )
+	{
+		table< SettingsAssetGUID, CupContainerBakeryAssetData > emptyTable
+		return emptyTable
+	}
+
+	Assert( fileLevel.cupsInitialised )
+	return fileLevel.cupContainers
 }
 
 CupBakeryAssetData function Cups_GetCupBakeryAssetDataFromGUID( SettingsAssetGUID guid )

@@ -27,6 +27,7 @@ global function TeslaTrap_OnPlayerTeamChanged
 global function OnCreateClientOnlyModel_weapon_tesla_trap
 
 
+const string TESLA_TRAP_WEAPON_NAME = "mp_weapon_tesla_trap"
 global const string TESLA_TRAP_NAME = "tesla_trap"
 const bool TESLA_TRAP_DAMAGE_DEBUG = false
 
@@ -1344,7 +1345,7 @@ int function TeslaTrap_GetPlacementMaxLinks( entity player )
 		return -1
 
 	string className = weapon.GetWeaponClassName()
-	if ( className != "mp_weapon_tesla_trap" )
+	if ( className != TESLA_TRAP_WEAPON_NAME )
 		return -1
 
 	if ( weapon.GetScriptFlags0() > 0 )
@@ -1717,6 +1718,18 @@ void function TeslaTrap_PlacementProxy( entity weapon, entity player, asset mode
 		WaitFrame()
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3342,6 +3355,11 @@ void function OnFocusTrapChanged( entity player, entity newEnt )
 
 
 
+
+
+
+
+
 int function TeslaTrap_LinkTrapSort( entity trapA, entity trapB )
 {
 	TeslaTrapSortingData trapASort = file.trapSortingData[ trapA ]
@@ -3569,6 +3587,9 @@ void function TeslaTrap_OnPropScriptCreated( entity ent )
 
 			CreateTrapMinimapData( ent )
 
+			SetAllowForKillreplayProjectileCam( ent )
+			SetCustomKillreplayChaseCamFromWeaponClass( ent, TESLA_TRAP_WEAPON_NAME )
+
 			file.allTraps.append( ent )
 			thread TeslaTrap_CreateHUDMarker( ent )
 			AddEntityCallback_GetUseEntOverrideText( ent, TeslaTrap_UseTextOverride )
@@ -3697,7 +3718,7 @@ void function TeslaTrap_UpdateHudMarkers( entity localClientPlayer )
 				continue
 
 			
-			if ( !IsValid( weapon ) || weapon.GetWeaponClassName() != "mp_weapon_tesla_trap" || trap.GetLinkEntArray().len() >= TESLA_TRAP_LINK_COUNT_MAX )
+			if ( !IsValid( weapon ) || weapon.GetWeaponClassName() != TESLA_TRAP_WEAPON_NAME || trap.GetLinkEntArray().len() >= TESLA_TRAP_LINK_COUNT_MAX )
 			{
 				
 				RuiSetImage( rui, "iconImage", icon )
@@ -3713,7 +3734,7 @@ void function TeslaTrap_UpdateHudMarkers( entity localClientPlayer )
 					RuiSetBool( rui, "shouldDraw", false )
 					RuiSetBool( rui, "extendMode", false )
 				}
-				else if ( weapon.GetWeaponClassName() == "mp_weapon_tesla_trap" )
+				else if ( weapon.GetWeaponClassName() == TESLA_TRAP_WEAPON_NAME )
 				{
 					
 					RuiSetImage( rui, "iconImage", icon )

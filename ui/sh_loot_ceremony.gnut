@@ -150,13 +150,36 @@ global function EquipButton_GetItemLoadoutEntries
 
 
 
-const array<int> INVALID_ITEM_TYPES_FOR_REWARD_CEREMONY = [
+const array<int> INVALID_ITEM_TYPES_FOR_REWARD_CEREMONY = [ eItemType.INVALID ]
 
-		eItemType.artifact_component_activation_emote,
-		eItemType.artifact_component_power_source,
-		eItemType.artifact_component_theme,
 
-]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -227,18 +250,8 @@ struct FileForeverStruct
 FileForeverStruct& fileForever
 
 
-
-enum eCeremonyPresentationMode
-{
-	APEX_PACK,
-	STORE_ITEM,
-	BATTLE_PASS,
-}
-
-
 struct FileLevelStruct
 {
-
 
 
 
@@ -329,64 +342,6 @@ void function LootBoxCeremony_SharedInit()
 	Remote_RegisterServerFunction( "Server_GrantLegendaryStickersIfCollectionCompleted" )
 	Remote_RegisterUIFunction( "ForceOpenRewardPacks" )
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -1790,12 +1745,217 @@ bool function IsInvalidTypeForRewardCeremony( int type )
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 const float REWARDS_DELAY_TIER5 = 1.1
 const float REWARDS_DELAY_TIER4 = 1.0
 const float REWARDS_DELAY_TIER3 = 0.4
 const float REWARDS_DELAY_TIER1 = 0.2
-
-
 
 
 
@@ -6202,7 +6362,12 @@ void function OnLootBoxMenu_Close()
 	GRX_SetOfferRefreshSuppressed( false )
 
 	fileLevel.forceParticularPackFlav = null
-	MilestoneEvent_LootBoxMenuOnClose()
+
+	if ( MilestoneEvent_UseOriginalEventTabLayout() )
+		MilestoneEvent_LootBoxMenuOnClose()
+	else
+		MilestoneEvent_LootBoxNewMenuOnClose()
+
 	if ( IsSpecialItemPresentationModeActive() )
 	{
 		fileLevel.specialItemPresentationModeActive = false
@@ -6371,6 +6536,7 @@ void function ClientToUI_EquipToWheelButtonShowDialog( SettingsAssetGUID itemGUI
 
 void function PurchaseButtonOnClick( var button )
 {
+	
 	ItemFlavor ornull milestoneEvent = GetActiveMilestoneEvent( GetUnixTimestamp() )
 	if ( milestoneEvent != null )
 	{
@@ -6378,8 +6544,18 @@ void function PurchaseButtonOnClick( var button )
 		bool isEventItem = MilestoneEvent_IsItemEventItem( milestoneEvent, fileLevel.specialItemPresentationModeItemFlav.grxIndex ) || MilestoneEvent_IsMilestoneGrantReward(  milestoneEvent, fileLevel.specialItemPresentationModeItemFlav.grxIndex )
 		if ( isEventItem )
 		{
-			EventsPanel_SetOpenPageIndex( 1 ) 
-			JumpToEventTab( "RTKEventsPanel" )
+			
+			if ( IsMilestoneEventStoreOnly( milestoneEvent ) )
+			{
+				string milestoneId = MilestoneEvent_GetEventId( milestoneEvent )
+				JumpToStoreMilestoneEventsMenu( milestoneId )
+			}
+			else
+			{
+				EventsPanel_SetOpenPageIndex( eEventsPanelPage.MILESTONES ) 
+				JumpToEventTab( "RTKEventsPanel" )
+			}
+
 			return
 		}
 	}
@@ -6636,6 +6812,7 @@ void function UpdateSpecialItemPresentationPurchaseButton()
 	Hud_SetEnabled( fileForever.purchaseButton, !fileLevel.specialItemLockPurchaseButton && !isOfferUnavailable )
 	Hud_SetLocked( fileForever.purchaseButton, fileLevel.specialItemLockPurchaseButton || isOfferUnavailable )
 
+	
 	ItemFlavor ornull milestoneEvent = GetActiveMilestoneEvent( GetUnixTimestamp() )
 	if ( milestoneEvent != null )
 	{

@@ -278,6 +278,7 @@ void function UiNewnessQueries_LevelInit()
 	Newness_ReverseQuery_Setup( gameCustomizationRQ, gameCustomizationRQList, [] )
 	NEWNESS_QUERIES.GameCustomizationButton = gameCustomizationRQ
 	ArmoryCategoryButtonRQList.append( gameCustomizationRQ )
+	ArmoryCategoryButtonRQList.extend( characterButtonRQList )
 	ArmoryMoreCategoryButtonRQList.append( gameCustomizationRQ )
 
 	Newness_ReverseQuery_Setup( NEWNESS_QUERIES.ArmoryTab, ArmoryCategoryButtonRQList, [] )

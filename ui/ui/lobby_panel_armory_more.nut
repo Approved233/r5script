@@ -42,6 +42,8 @@ void function InitArmoryMorePanel( var panel )
 
 void function ArmoryMorePanel_OnShow( var panel )
 {
+	UI_SetPresentationType( ePresentationType.WEAPON_CATEGORY )
+
 	foreach(var button in file.stickerSlotToButtonMap )
 	{
 		ArmoryMorePanel_SetUpStickerButton( button )

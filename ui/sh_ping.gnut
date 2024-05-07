@@ -951,6 +951,29 @@ global function PingFlavor_GetDrawHeightLine
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function ShPing_Init()
 {
 	AddCallback_RegisterRootItemFlavors( void function() {
@@ -1334,6 +1357,7 @@ void function ShPing_Init()
 
 
 
+
 asset function PingFlavor_GetInnerIcon( ItemFlavor flavor )
 {
 	Assert( ItemFlavor_GetType( flavor ) == eItemType.ping )
@@ -1390,6 +1414,45 @@ bool function PingFlavor_GetDrawHeightLine( ItemFlavor flavor )
 
 	return GetGlobalSettingsBool( ItemFlavor_GetAsset( flavor ), "drawHeightLine" )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

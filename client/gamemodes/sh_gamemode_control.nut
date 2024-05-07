@@ -1104,7 +1104,7 @@ void function Control_RegisterNetworking()
 	Remote_RegisterClientFunction( "ServerCallback_Control_DisplayIconAtPosition", "vector", -1.0, 1.0, 32, "int", 0, eControlIconIndex._count, "int", INT_MIN, INT_MAX, "float", 0.0, FLT_MAX, 32 )
 	Remote_RegisterClientFunction( "ServerCallback_Control_BountyActiveAlert", "entity" )
 	Remote_RegisterClientFunction( "ServerCallback_Control_BountyClaimedAlert", "entity", "int", INT_MIN, INT_MAX, "int",ALLIANCE_NONE, 2  )
-	Remote_RegisterClientFunction( "ServerCallback_Control_AirdropNotification", "bool" )
+	Remote_RegisterClientFunction( "ServerCallback_Control_AirdropNotification" )
 	Remote_RegisterClientFunction( "ServerCallback_Control_UpdateExtraScoreBoardInfo", "int", 0, 2, "int", INT_MIN, INT_MAX, "int", INT_MIN, INT_MAX )
 	Remote_RegisterClientFunction( "ServerCallback_Control_SetIsPlayerUsingLosingExpTiers", "bool" )
 	Remote_RegisterClientFunction( "ServerCallback_Control_DisplaySpawnAlertMessage", "int", 0, eControlSpawnAlertCode._count )
@@ -1439,6 +1439,7 @@ float function Control_GetMRBAirdropDelay()
 {
 	return GetCurrentPlaylistVarFloat("control_mrb_event_airdrop_delay", CONTROL_DEFAULT_MRB_AIRDROP_DELAY )
 }
+
 
 
 
@@ -5220,7 +5221,9 @@ void function ObjectiveWaypointThink( entity wp, var rui )
 	{
 		entity player = GetLocalViewPlayer()
 
-		if ( IsValid( player ) )
+		
+		
+		if ( IsValid( player ) && player.GetTeam() != TEAM_SPECTATOR )
 		{
 			int playerTeam = player.GetTeam()
 			int playerAlliance = AllianceProximity_GetAllianceFromTeam( playerTeam )
@@ -5248,13 +5251,13 @@ void function ObjectiveWaypointThink( entity wp, var rui )
 					iconToSet = CONTROL_OBJ_DIAMOND_ENEMY
 				}
 
-				if ( IsValid( minimapRui ) )
+				if ( RuiIsAlive( minimapRui ) )
 					RuiSetImage( minimapRui, "defaultIcon", iconToSet )
-				if ( IsValid( fullmapRui ) )
+				if ( RuiIsAlive( fullmapRui ) )
 					RuiSetImage( fullmapRui, "defaultIcon", iconToSet )
 			}
 
-			if ( IsValid( rui ) )
+			if ( RuiIsAlive( rui ) )
 			{
 				bool hasEmphasis = wp.GetWaypointFloat( FLOAT_BOUNTY_AMOUNT ) > 0
 				RuiSetBool( rui,"hasEmphasis", hasEmphasis )
@@ -10841,23 +10844,13 @@ void function ServerCallback_Control_NoVehiclesAvailable()
 
 
 
-void function ServerCallback_Control_AirdropNotification( bool areMultipleAirdropsIncoming )
+void function ServerCallback_Control_AirdropNotification()
 {
 	entity player = GetLocalClientPlayer()
 	if ( !IsValid( player ) )
 		return
 
-	string announcementText
-
-	if ( areMultipleAirdropsIncoming )
-	{
-		announcementText = Localize( "#CONTROL_INCOMING_AIRDROPS" )
-	}
-	else
-	{
-		announcementText = Localize( "#CONTROL_INCOMING_AIRDROP" )
-	}
-
+	string announcementText = Localize( "#CONTROL_INCOMING_AIRDROP" )
 	vector announcementColor = <0, 0, 0>
 	Obituary_Print_Localized( announcementText, announcementColor )
 	AnnouncementMessageRight( player, announcementText, "", SrgbToLinear( announcementColor / 255 ), $"", CONTROL_MESSAGE_DURATION, SFX_HUD_ANNOUNCE_QUICK, SrgbToLinear( announcementColor / 255 ) )
@@ -11596,24 +11589,30 @@ array< string > function Control_GetPlayerScores( entity player )
 
 
 
-array< entity > function Control_SortPlayersByScore( array< entity > teamPlayers, ScoreboardData gameData )
+array< TeamsScoreboardPlayer > function Control_SortPlayersByScore( array< TeamsScoreboardPlayer > players )
 {
-	teamPlayers.sort( int function( entity a, entity b )
+	players.sort( int function( TeamsScoreboardPlayer a, TeamsScoreboardPlayer b )
 		{
-			array< string > aScores = Control_GetPlayerScores( a )
-			array< string > bScores = Control_GetPlayerScores( b )
+			entity playerA = FromEHI( a.playerEHI )
+			entity playerB = FromEHI( b.playerEHI )
+
+			if( !IsValid( playerA ) || !IsValid( playerB ) )
+				return 0
+
+			array< string > aScores = Control_GetPlayerScores( playerA )
+			array< string > bScores = Control_GetPlayerScores( playerB )
 
 			if ( int (aScores[0] ) > int( bScores[0] ) ) return -1
 			else if ( int( aScores[0] ) < int( bScores[0] ) ) return 1
 
-			int aKills = a.GetPlayerNetInt( "kills" )
-			int bKills = b.GetPlayerNetInt( "kills" )
+			int aKills = playerA.GetPlayerNetInt( "kills" )
+			int bKills = playerB.GetPlayerNetInt( "kills" )
 
 			if ( aKills > bKills ) return -1
 			else if ( aKills < bKills ) return 1
 
-			int aDamage = a.GetPlayerNetInt( "damageDealt" )
-			int bDamage = b.GetPlayerNetInt( "damageDealt" )
+			int aDamage = playerA.GetPlayerNetInt( "damageDealt" )
+			int bDamage = playerB.GetPlayerNetInt( "damageDealt" )
 
 			if ( aDamage > bDamage ) return -1
 			else if ( aDamage < bDamage ) return 1
@@ -11622,7 +11621,7 @@ array< entity > function Control_SortPlayersByScore( array< entity > teamPlayers
 		}
 	)
 
-	return teamPlayers
+	return players
 }
 
 
@@ -13221,10 +13220,6 @@ void function ServerCallback_Control_DisplayLockoutUnavailableWarning()
 		RuiSetGameTime( mapScoreTrackerRui, "lastLockoutBlockedMessageDisplayTime", currentTime )
 	}
 }
-
-
-
-
 
 
 

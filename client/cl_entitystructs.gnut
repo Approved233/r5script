@@ -179,6 +179,8 @@ global struct ClientPlayerStruct
 	array<TitanCockpitRUI> titanCockpitRUIs
 	entity                 cryptoActiveCamera
 	bool                   isInExtendedUse = false
+	entity 				   lastExtededUseEnt = null
+	float 				   lastUseTime = 0
 	table<string, int>     requiredLootTypes = {}
 
 	string lastEventNotificationText

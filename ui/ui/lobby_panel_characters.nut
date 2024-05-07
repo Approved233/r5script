@@ -75,6 +75,7 @@ void function InitCharactersPanel( var panel )
 	SetPanelTabTitle( panel, "#LEGENDS" )
 	AddPanelEventHandler( panel, eUIEvent.PANEL_SHOW, CharactersPanel_OnShow )
 	AddPanelEventHandler( panel, eUIEvent.PANEL_HIDE, CharactersPanel_OnHide )
+	AddPanelEventHandler( Hud_GetParent( panel ), eUIEvent.PANEL_HIDE, CharactersPanel_OnParentHide )
 	AddPanelEventHandler_FocusChanged( panel, CharactersPanel_OnFocusChanged )
 
 	foreach ( button in file.buttons )
@@ -304,7 +305,7 @@ void function OpenPurchaseCharacterDialogFromButton( var button )
 			pdc.quantity = 1
 			pdc.onPurchaseResultCallback = void function( bool wasPurchaseSuccessful ) : ( button ) {
 
-					CharacterClassButton_Init( button, file.buttonToCharacter[button] , false )
+					CharacterClassButton_Init( button, file.buttonToCharacter[button] , false, wasPurchaseSuccessful )
 
 			}
 
@@ -536,7 +537,7 @@ void function InitCharacterButtons()
 	Hud_SetX( file.supportShelf, (botListOffset1 -buttonWidth/2) * scaleFrac)
 	Hud_SetX( file.controllerShelf, (botListOffset2 -buttonWidth/2) * scaleFrac)
 
-	SetPerkLayoutNav ( orderedCharacters )
+	SetPerkLayoutNav( orderedCharacters )
 
 
 
@@ -597,13 +598,13 @@ void function SetPerkLayoutNav (array<ItemFlavor> orderedCharacters)
 		
 		if (index != 0)
 			Hud_SetNavLeft(button, file.roleButtons_Skirmisher[index - 1])
-		else
-			Hud_SetNavLeft(button, file.roleButtons_Assault[assaultLegendsAmount -1])
+		else if( assaultLegendsAmount > 0 )
+			Hud_SetNavLeft(button, file.roleButtons_Assault[assaultLegendsAmount - 1])
 
 		
 		if ( index >= skirmisherLegendsAmount - defenderLegendsAmount )
 			Hud_SetNavDown(button, file.roleButtons_Defense[0])
-		else
+		else if( supportLegendsAmount > 0 )
 			Hud_SetNavDown(button, file.roleButtons_Support[supportLegendsAmount - 1])
 	}
 
@@ -614,7 +615,7 @@ void function SetPerkLayoutNav (array<ItemFlavor> orderedCharacters)
 		
 		if (reconLegendsAmount <= assaultLegendsAmount)
 			Hud_SetNavUp(button, file.roleButtons_Assault[0])
-		else
+		else if( assaultLegendsAmount > 0 )
 			Hud_SetNavUp(button, file.roleButtons_Assault[assaultLegendsAmount - 1])
 
 		
@@ -633,7 +634,7 @@ void function SetPerkLayoutNav (array<ItemFlavor> orderedCharacters)
 	{
 		var button = file.roleButtons_Support[index]
 		
-		if (index <= (supportLegendsAmount-1)/2)
+		if (index <= (supportLegendsAmount-1)/2 && assaultLegendsAmount > 0)
 			Hud_SetNavUp(button, file.roleButtons_Assault[assaultLegendsAmount -1])
 		else
 			Hud_SetNavUp(button, file.roleButtons_Skirmisher[0])
@@ -647,8 +648,8 @@ void function SetPerkLayoutNav (array<ItemFlavor> orderedCharacters)
 		
 		if (index != 0)
 			Hud_SetNavLeft(button, file.roleButtons_Support[index - 1])
-		else
-			Hud_SetNavLeft(button, file.roleButtons_Recon[reconLegendsAmount -1])
+		else if( reconLegendsAmount > 0 )
+			Hud_SetNavLeft(button, file.roleButtons_Recon[reconLegendsAmount - 1])
 	}
 
 	
@@ -668,8 +669,8 @@ void function SetPerkLayoutNav (array<ItemFlavor> orderedCharacters)
 		
 		if (index != 0)
 			Hud_SetNavLeft(button, file.roleButtons_Defense[index - 1])
-		else
-			Hud_SetNavLeft(button, file.roleButtons_Support[supportLegendsAmount -1])
+		else if( supportLegendsAmount > 0 )
+			Hud_SetNavLeft(button, file.roleButtons_Support[supportLegendsAmount - 1])
 	}
 }
 
@@ -719,7 +720,7 @@ void function CharacterButton_Init( var button, ItemFlavor character )
 }
 
 
-void function CharacterClassButton_Init( var button, ItemFlavor character, bool addNewness = true)
+void function CharacterClassButton_Init( var button, ItemFlavor character, bool addNewness = true, bool forceOwned = false)
 {
 	Hud_SetVisible( button, true )
 	file.buttonToCharacter[button] <- character
@@ -728,7 +729,12 @@ void function CharacterClassButton_Init( var button, ItemFlavor character, bool 
 	bool isSelected = LoadoutSlot_GetItemFlavor( LocalClientEHI(), Loadout_Character() ) == character
 
 	Hud_SetVisible( button, true )
-	Hud_SetLocked( button, !IsItemFlavorUnlockedForLoadoutSlot( LocalClientEHI(), Loadout_Character(), character ) )
+
+	if( forceOwned )
+		Hud_SetLocked( button, false )
+	else
+		Hud_SetLocked( button, !IsItemFlavorUnlockedForLoadoutSlot( LocalClientEHI(), Loadout_Character(), character ) )
+
 	Hud_SetSelected( button, isSelected )
 
 	
@@ -738,7 +744,19 @@ void function CharacterClassButton_Init( var button, ItemFlavor character, bool 
 	RuiSetString( buttonRui, "portraitName", Localize( ItemFlavor_GetLongName( character ) ) )
 	RuiSetImage( buttonRui, "roleImage", CharacterClass_GetCharacterRoleImage( character ) )
 
-	ItemFlavor ornull characterChallenge = ChallengeCollection_GetCharacterUnlockChallenge( character )
+	
+	ItemFlavor ornull activeRewardCampaignFlav = RewardCampaign_GetActiveRewardCampaign()
+	ItemFlavor ornull characterChallenge
+	if ( activeRewardCampaignFlav != null )
+	{
+		expect ItemFlavor( activeRewardCampaignFlav )
+		array<ItemFlavor> collectionFlavs = RewardCampaign_GetChallengeCollections( activeRewardCampaignFlav )
+		if ( collectionFlavs.len() > 0 )
+		{
+			ChallengeCollection collection = ChallengeCollection_GetByGUID( collectionFlavs[0].guid )
+			characterChallenge = ChallengeCollection_GetCharacterUnlockChallenge( character, collection )
+		}
+	}
 
 	bool tempBoostedCompleted = false
 	if ( characterChallenge != null )
@@ -851,6 +869,20 @@ void function CharactersPanel_OnRightClick( var button )
 
 void function CharactersPanel_OnHide( var panel )
 {
+	CharactersPanel_ShutDown( panel )
+}
+
+void function CharactersPanel_OnParentHide( var panel )
+{
+	TabData tabData = GetTabDataForPanel( panel )
+	if( tabData.tabDefs[tabData.activeTabIdx].panel == Hud_GetChild( panel, "CharactersPanel" ) )
+	{
+		CharactersPanel_ShutDown( panel )
+	}
+}
+
+void function CharactersPanel_ShutDown( var panel )
+{
 	if ( NEWNESS_QUERIES.isValid )
 		foreach ( var button, ItemFlavor character in file.buttonToCharacter )
 			if ( character in NEWNESS_QUERIES.CharacterButton ) 
@@ -858,7 +890,6 @@ void function CharactersPanel_OnHide( var panel )
 
 	SetTopLevelCustomizeContext( null )
 	RunMenuClientFunction( "ClearAllCharacterPreview" )
-
 	file.buttonToCharacter.clear()
 	file.characterToButton.clear()
 
@@ -1173,7 +1204,7 @@ void function JumpToCharactersTab()
 		CloseActiveMenu()
 
 	TabData lobbyTabData = GetTabDataForPanel( GetMenu( "LobbyMenu" ) )
-	ActivateTab( lobbyTabData, Tab_GetTabIndexByBodyName( lobbyTabData, "CharactersPanel" ) )
+	ActivateTab( lobbyTabData, Tab_GetTabIndexByBodyName( lobbyTabData, "ArmoryPanel" ) )
 }
 
 void function JumpToCharacterCustomize( ItemFlavor character )

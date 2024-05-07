@@ -81,7 +81,7 @@ void function MusicPacksPanel_Update( var panel )
 	if ( IsPanelActive( file.panel ) )
 	{
 		LoadoutEntry entry = Loadout_MusicPack()
-		file.musicPackList = GetLoadoutItemsSortedForMenu( [entry], MusicPack_GetSortOrdinal )
+		file.musicPackList = GetLoadoutItemsSortedForMenu( [entry], MusicPack_GetSortOrdinal, null, [] )
 
 		Hud_InitGridButtons( file.listPanel, file.musicPackList.len() )
 		foreach ( int flavIdx, ItemFlavor flav in file.musicPackList )

@@ -371,17 +371,10 @@ void function RTKWeaponMasteryScreen_InitializeDataModel()
 			RTKStruct_SetInt( statsStruct, "hits", hits )
 			RTKStruct_SetInt( statsStruct, "shots", shots )
 			RTKStruct_SetFloat( statsStruct, "accuracy", accuracy )
-
 			RTKStruct_SetInt( statsStruct, "kills", GetStat_Int( GetLocalClientPlayer(), ResolveStatEntry( CAREER_STATS.weapon_kills_all_modes, bakeryID ), eStatGetWhen.CURRENT ) )
 			RTKStruct_SetInt( statsStruct, "damageDone", GetStat_Int( GetLocalClientPlayer(), ResolveStatEntry( CAREER_STATS.weapon_damage_done_all_modes, bakeryID ), eStatGetWhen.CURRENT ) )
 			RTKStruct_SetInt( statsStruct, "headshots", GetStat_Int( GetLocalClientPlayer(), ResolveStatEntry( CAREER_STATS.weapon_headshots_all_modes, bakeryID ), eStatGetWhen.CURRENT ) )
 			RTKStruct_SetInt( statsStruct, "knocks", GetStat_Int( GetLocalClientPlayer(), ResolveStatEntry( CAREER_STATS.weapon_dooms_all_modes, bakeryID ), eStatGetWhen.CURRENT ) )
-
-
-
-
-
-
 		}
 	}
 

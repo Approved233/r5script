@@ -2,21 +2,11 @@
 global function EventAbilities_PopulateAboutText
 global function EventAbilities_GetAboutHeader
 
-string function GetPlaylist()
-{
-	if ( IsLobby() )
-		return LobbyPlaylist_GetSelectedPlaylist()
-	else
-		return GetCurrentPlaylistName()
-
-	unreachable
-}
-
-
 string function EventAbilities_GetAboutHeader()
 {
 	return "#UPRISE_EVENT_ABOUT_HEADER"
 }
+
 
 array< featureTutorialTab > function EventAbilities_PopulateAboutText()
 {

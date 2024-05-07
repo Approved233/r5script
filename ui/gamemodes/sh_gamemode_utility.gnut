@@ -74,6 +74,18 @@ global function GamemodeUtility_GetIsTeamIndexValidPlayerTeam
 
 
 
+
+
+
+global function GamemodeUtility_GetPlaylist	
+
+
+
+
+
+
+
+
 const float UNSET_PLAYLIST_VAR_FLOAT = -1
 const int UNSET_PLAYLIST_VAR_INT = -1
 global const int EXPECTED_PARSED_CIRCLE_VALUE_COUNT = 4
@@ -435,6 +447,21 @@ bool function GamemodeUtility_GetShouldTweakDVSForGamemode()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 bool function GamemodeUtility_ShouldPingVictimSquadLocationOnDown()
 {
 	return GetCurrentPlaylistVarBool( "map_ping_victim_squad_on_down", false )
@@ -464,6 +491,79 @@ bool function GamemodeUtility_GetKillReplayActive()
 {
 	return GetCurrentPlaylistVarBool( "killreplay_enabled", false )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2647,10 +2747,126 @@ bool function GamemodeUtility_GetMixtapeAbandonPenaltyActive()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 int function GamemodeUtility_GetMaxDroppedGrenadesOnDeath()
 {
 	return GetCurrentPlaylistVarInt( "grenade_ondeath_max_spawncount", 1 )
 }
+
+
+
+
 
 
 
@@ -2801,6 +3017,19 @@ bool function GamemodeUtility_GetIsTeamIndexValidPlayerTeam( int teamIndex )
 {
 	return TEAM_MULTITEAM_FIRST <= teamIndex && teamIndex < MAX_TEAMS + TEAM_MULTITEAM_FIRST
 }
+
+
+
+string function GamemodeUtility_GetPlaylist()
+{
+	if ( IsLobby() )
+		return LobbyPlaylist_GetSelectedPlaylist()
+	else
+		return GetCurrentPlaylistName()
+
+	unreachable
+}
+
 
 
 

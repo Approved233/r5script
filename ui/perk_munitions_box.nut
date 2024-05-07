@@ -1,9 +1,5 @@
 const string MUNITIONS_BOX_SCRIPT_NAME = "assault_perk_loot_bin"
-
-global const string MUNITIONS_BOX_LOOT_BIN_SKIN_NAME = "MunitionsBox_Turbo"
-
-
-
+global const string MUNITIONS_BOX_LOOT_BIN_SKIN_NAME = "MunitionsBox"
 
 const int HOP_UP_DROP_CHANCE = 20
 const int MAG_DROP_CHANCE = 65
@@ -192,6 +188,8 @@ bool function MunitionsBox_BoostOpenerLoot()
 {
 	return GetCurrentPlaylistVarBool( "munitions_box_boost_opener_loot", false )
 }
+
+
 
 
 

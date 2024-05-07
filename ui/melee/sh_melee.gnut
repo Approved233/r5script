@@ -11,6 +11,7 @@ global function Loadout_MeleeSkin
 global function Loadout_Deathbox
 global function Deathbox_GetDefaultItemFlavor
 global function Deathbox_GetGoldenHorseDeathbox
+global function MeleeWeapon_GetWeaponType
 
 
 global function MeleeWeapon_GetMainWeaponClassname
@@ -32,11 +33,16 @@ global function MeleeCustomization_ShouldHideIfLocked
 
 
 
+global function MeleeSkin_IsRewardForActiveEvent
+
+
 global function ArtifactsCallback_AddArtifactDeathboxesToCharacterLoadouts
 
 global function Deathbox_GetVideo
 global function RequestSetDeathboxEquipForMeleeSkin
 global function Deathbox_GetEquipped
+
+
 
 
 
@@ -113,6 +119,7 @@ global const GH_DEATHBOX_FX = $"P_death_box_fx_gh"
 
 
 
+global const int DEFAULT_MELEE_WEAPON_SKIN_GUID = 519356259
 const int DEFAULT_MELEE_WEAPON_GUID = 1222621873
 const int GOLDEN_HORSE_DEATHBOX_GUID = 705533011
 const int DEFAULT_DEATHBOX_GUID = 989815244
@@ -532,11 +539,6 @@ bool function MeleeSkin_ShouldHideIfLocked( ItemFlavor meleeSkin )
 	if ( ItemFlavor_GetType( meleeSkin ) != eItemType.melee_skin )
 		return false
 
-
-	if ( Artifacts_Loadouts_IsConfigPointerItemFlavor( meleeSkin ) )
-		return true
-
-
 	return GetGlobalSettingsBool( ItemFlavor_GetAsset( meleeSkin ), "shouldHideIfLocked" )
 }
 
@@ -550,6 +552,38 @@ bool function MeleeSkin_IsItemFlavorUnlocked( EHI playerEHI, ItemFlavor meleeSki
 
 
 	return IsItemFlavorGRXUnlockedForLoadoutSlot( playerEHI, meleeSkin, shouldIgnoreGRX, shouldIgnoreOtherSlots )
+}
+
+
+
+bool function MeleeSkin_IsRewardForActiveEvent( ItemFlavor itemFlav )
+{
+	if ( ItemFlavor_GetGRXMode( itemFlav ) == eItemFlavorGRXMode.NONE )
+		return false
+
+	array<ItemFlavor> activeEvents = GetAllActiveMilestoneEvents( GetUnixTimestamp() )
+	if ( activeEvents.len() > 0 )
+	{
+		foreach ( activeEvent in activeEvents )
+		{
+
+			if ( ItemFlavor_GetType( itemFlav ) == eItemType.melee_skin && Artifacts_Loadouts_IsConfigPointerItemFlavor( itemFlav ) )
+				return MilestoneEvent_EventAwardsArtifact( activeEvent )
+			else
+
+				return MilestoneEvent_IsMythicEventItem( activeEvent, ItemFlavor_GetGRXIndex( itemFlav ) )
+		}
+	}
+
+	ItemFlavor ornull activeCollectionEvent = GetActiveCollectionEvent( GetUnixTimestamp() )
+	if ( activeCollectionEvent != null )
+	{
+		expect ItemFlavor( activeCollectionEvent )
+		ItemFlavor reward = HeirloomEvent_GetPrimaryCompletionRewardItem( activeCollectionEvent )
+		return ( reward == itemFlav )
+	}
+
+	return false
 }
 
 
@@ -634,6 +668,16 @@ void function RequestSetDeathboxEquipForMeleeSkin( EHI playerEHI, LoadoutEntry e
 ItemFlavor function Deathbox_GetEquipped( ItemFlavor character, ItemFlavor meleeSkin )
 {
 	EHI playerEHI = LocalClientEHI()
+
+
+	if ( Artifacts_Loadouts_IsConfigPointerItemFlavor( meleeSkin ) )
+	{
+		int configIdx = Artifacts_Loadouts_GetConfigIndex( meleeSkin )
+		LoadoutEntry loadoutSlot = Artifacts_Loadouts_GetEntryForConfigIndexAndType( configIdx, eArtifactComponentType.DEATHBOX )
+		return LoadoutSlot_GetItemFlavor( playerEHI, loadoutSlot )
+	}
+
+
 	LoadoutEntry skinSlot = Loadout_MeleeSkin( character )
 	LoadoutEntry boxSlot  = Loadout_Deathbox( character )
 	array<ItemFlavor> skinBackups = LoadoutSlot_GetBackups( playerEHI, skinSlot )
@@ -647,16 +691,6 @@ ItemFlavor function Deathbox_GetEquipped( ItemFlavor character, ItemFlavor melee
 
 	return GetDefaultItemFlavorForLoadoutSlot( playerEHI, boxSlot )
 }
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -1106,6 +1140,12 @@ ItemFlavor function MeleeSkin_GetCharacterFlavor( ItemFlavor meleeSkin )
 
 	return GetItemFlavorByAsset( character )
 }
+
+
+
+
+
+
 
 
 

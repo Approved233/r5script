@@ -3,6 +3,10 @@ global function EventShop_Init
 
 
 
+global function EventShop_IsPlaylistVarEnabled
+
+
+
 global function EventShop_GetCurrentActiveEventShop
 global function EventShop_CurrentActiveEventShopHasDailyChallenges
 global function EventShop_GetCurrentActiveEventShopDailyChallenges
@@ -22,9 +26,6 @@ global function EventShop_GetGridToolTipCounterDailyLimitText
 global function EventShop_GetGridToolTipBodySweepstakesText
 global function EventShop_GetGridToolTipBody2Text
 global function EventShop_GetEventMainIcon
-global function EventShop_GetLeftCornerHeaderBackground
-global function EventShop_GetRightPanelBackground
-global function EventShop_GetRightPanelBackgroundColor
 global function EventShop_GetShopPageItemsBackground
 global function EventShop_GetSweepstakesPrizeImage
 global function EventShop_GetLobbyButtonImage
@@ -51,7 +52,6 @@ global function EventShop_GetLeftPanelTitleColor
 global function EventShop_GetLeftPanelEventNameColor
 global function EventShop_GetLeftPanelTimeRemainingColor
 global function EventShop_GeTooltipsColor
-global function EventShop_GetBackgroundDarkeningOpacity
 global function EventShop_GetRightPanelOpacity
 global function EventShop_GetLeftPanelOpacity
 global function EventShop_GetCurrencyRewardSequence
@@ -72,11 +72,6 @@ global function EventShop_GetItemPrice
 global function EventShop_GetCoreItemQuantity
 global function EventShop_GetChallengeHeaderImage
 global function EventShop_HasMilestoneEventPack
-global function EventShop_GetGlobalSettingsBool
-global function EventShop_GetGlobalSettingsString
-global function EventShop_GetGlobalSettingsFloat
-global function EventShop_GetGlobalSettingsVector
-global function EventShop_GetGlobalSettingsAsset
 
 
 
@@ -199,18 +194,6 @@ void function EventShop_Init()
 				expired = CalEvent_GetFinishUnixTime( event ) < GetUnixTimestamp()
 			}
 
-		if ( expired )
-		{
-			printt( "EventShop_Init: skipping registration of subassets for expired event ", ItemFlavor_GetGUIDString( event ) )
-			return 
-		}
-
-		eventShopData.mainChallengeFlav = RegisterItemFlavorFromSettingsAsset( GetGlobalSettingsAsset( ItemFlavor_GetAsset( event ), "mainChallengeFlav" ) )
-		if ( eventShopData.mainChallengeFlav != null )
-			RegisterChallengeSource( expect ItemFlavor( eventShopData.mainChallengeFlav ), event, 0 )
-		else
-			Warning( "Event Shop '%s' refers to bad challenge asset: %s", string(ItemFlavor_GetAsset( event )), string( GetGlobalSettingsAsset( ItemFlavor_GetAsset( event ), "mainChallengeFlav" ) ) )
-
 		foreach ( int index, var badgeBlock in IterateSettingsAssetArray( ItemFlavor_GetAsset( event ), "badgeFlavs" ) )
 		{
 			ItemFlavor ornull badgeFlav = RegisterItemFlavorFromSettingsAsset( GetSettingsBlockAsset( badgeBlock, "badgeFlav" ) )
@@ -275,6 +258,18 @@ void function EventShop_Init()
 			}
 		}
 
+		asset eventCurrencyAsset = GetGlobalSettingsAsset( ItemFlavor_GetAsset( event ), "eventShopCurrencyFlav" )
+		if ( eventCurrencyAsset != $"" )
+		{
+			eventShopData.eventCurrency = expect ItemFlavor( RegisterItemFlavorFromSettingsAsset( eventCurrencyAsset ) )
+		}
+
+		if ( expired )
+		{
+			printt( "EventShop_Init: skipping registration of nonessential subassets for expired event ", ItemFlavor_GetGUIDString( event ) )
+			return 
+		}
+
 		foreach ( int index, var tutorialBlock in IterateSettingsAssetArray( ItemFlavor_GetAsset( event ), "tutorialItems" ) )
 		{
 			EventShopTutorialData tutorial
@@ -285,11 +280,11 @@ void function EventShop_Init()
 			eventShopData.tutorials.append( tutorial )
 		}
 
-		asset eventCurrencyAsset = GetGlobalSettingsAsset( ItemFlavor_GetAsset( event ), "eventShopCurrencyFlav" )
-		if ( eventCurrencyAsset != $"" )
-		{
-			eventShopData.eventCurrency = expect ItemFlavor( RegisterItemFlavorFromSettingsAsset( eventCurrencyAsset ) )
-		}
+		eventShopData.mainChallengeFlav = RegisterItemFlavorFromSettingsAsset( GetGlobalSettingsAsset( ItemFlavor_GetAsset( event ), "mainChallengeFlav" ) )
+		if ( eventShopData.mainChallengeFlav != null )
+			RegisterChallengeSource( expect ItemFlavor( eventShopData.mainChallengeFlav ), event, 0 )
+		else
+			Warning( "Event Shop '%s' refers to bad challenge asset: %s", string(ItemFlavor_GetAsset( event )), string( GetGlobalSettingsAsset( ItemFlavor_GetAsset( event ), "mainChallengeFlav" ) ) )
 
 		foreach ( int index, var challengeBlock in IterateSettingsAssetArray( ItemFlavor_GetAsset( event ), "dailyChallengeFlavs" ) )
 		{
@@ -425,6 +420,13 @@ void function EventShop_Init()
 
 
 
+
+
+
+bool function EventShop_IsPlaylistVarEnabled()
+{
+	return GetCurrentPlaylistVarBool( "enable_event_shop", true )
+}
 
 
 
@@ -657,30 +659,6 @@ asset function EventShop_GetChallengeHeaderImage( ItemFlavor event )
 
 
 
-asset function EventShop_GetLeftCornerHeaderBackground( ItemFlavor event )
-{
-	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_event_shop )
-	return GetGlobalSettingsAsset( ItemFlavor_GetAsset( event ), "leftCornerHeaderBg" )
-}
-
-
-
-asset function EventShop_GetRightPanelBackground( ItemFlavor event )
-{
-	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_event_shop )
-	return GetGlobalSettingsAsset( ItemFlavor_GetAsset( event ), "rightPanelBg" )
-}
-
-
-
-vector function EventShop_GetRightPanelBackgroundColor( ItemFlavor event )
-{
-	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_event_shop )
-	return GetGlobalSettingsVector( ItemFlavor_GetAsset( event ), "rightPanelBgColor" )
-}
-
-
-
 asset function EventShop_GetShopPageItemsBackground( ItemFlavor event )
 {
 	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_event_shop )
@@ -771,7 +749,20 @@ EventShopOfferData function EventShop_GetOfferByCoreItem( ItemFlavor event, Item
 		}
 	}
 
-	Assert( false, "Attempted to find offer for core item without an event shop offer." )
+	
+	if ( !( event in fileLevel.eventShopDataMap ) )
+	{
+		Assert( false, format( "No event_shop could be found for event '%s1'. Ensure an event_shop Bakery Asset exists for the event.", event.guid ) )
+	}
+	else if ( fileLevel.eventShopDataMap[event].offers.len() == 0 )
+	{
+		Assert( false, format( "No event_shop offers have been created in the event_shop Bakery Asset for event '%s1'.", event.guid ) )
+	}
+	else
+	{
+		Assert( false, format( "No event_shop offer could be found for item '%s1' in event '%s2'. Make sure the item has an entry in the event_shop's Offers array in Bakery.", flavor.guid, event.guid ) )
+	}
+
 	return fileLevel.eventShopDataMap[event].offers[0]
 }
 
@@ -975,14 +966,6 @@ vector function EventShop_GeTooltipsColor( ItemFlavor event )
 
 
 
-float function EventShop_GetBackgroundDarkeningOpacity( ItemFlavor event )
-{
-	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_event_shop )
-	return GetGlobalSettingsFloat( ItemFlavor_GetAsset( event ), "backgroundDarkeningOpacity" )
-}
-
-
-
 float function EventShop_GetRightPanelOpacity( ItemFlavor event )
 {
 	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_event_shop )
@@ -1019,38 +1002,6 @@ string function EventShop_GetTotalCurrencyStat( ItemFlavor event )
 {
 	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_event_shop )
 	return GetGlobalSettingsString( ItemFlavor_GetAsset( event ), "eventShopTotalCurrencyStat" )
-}
-
-
-
-bool function EventShop_GetGlobalSettingsBool( ItemFlavor event, string settingName )
-{
-	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_event_shop )
-	return GetGlobalSettingsBool( ItemFlavor_GetAsset( event ), settingName )
-}
-
-string function EventShop_GetGlobalSettingsString( ItemFlavor event, string settingName )
-{
-	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_event_shop )
-	return GetGlobalSettingsString( ItemFlavor_GetAsset( event ), settingName )
-}
-
-float function EventShop_GetGlobalSettingsFloat( ItemFlavor event, string settingName )
-{
-	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_event_shop )
-	return GetGlobalSettingsFloat( ItemFlavor_GetAsset( event ), settingName )
-}
-
-vector function EventShop_GetGlobalSettingsVector( ItemFlavor event, string settingName )
-{
-	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_event_shop )
-	return GetGlobalSettingsVector( ItemFlavor_GetAsset( event ), settingName )
-}
-
-asset function EventShop_GetGlobalSettingsAsset( ItemFlavor event, string settingName )
-{
-	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_event_shop )
-	return GetGlobalSettingsAsset( ItemFlavor_GetAsset( event ), settingName )
 }
 
 

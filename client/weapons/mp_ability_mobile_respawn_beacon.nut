@@ -31,9 +31,14 @@ global function MobileRespawn_SetDeployPositionValidationFunc
 
 
 
+
+
+
+
 global const string MOBILE_RESPAWN_BEACON_WEAPON_REF = "mp_ability_mobile_respawn_beacon"
 
 const string MOBILE_RESPAWN_BEACON_STARTUP_SOUND = "Survival_MobileRespawnBeacon_Startup"
+const string MOBILE_RESPAWN_INTERACT_PULSATE_SOUND = "Survival_RespawnEquippedBeacon_Full_Extended" 
 
 const asset MOBILE_RESPAWN_BEACON_MODEL = $"mdl/props/mobile_respawn_beacon/mobile_respawn_beacon_animated.rmdl"
 const asset MOBILE_RESPAWN_BEACON_EFFECT = $"P_mrb_holo"
@@ -124,7 +129,10 @@ void function OnWeaponActivate_mobile_respawn( entity weapon )
 
 
 
-		RunUIScript( "CloseSurvivalInventoryMenu" )
+		if ( ownerPlayer == GetLocalViewPlayer() )
+		{
+			RunUIScript( "CloseSurvivalInventoryMenu" )
+		}
 
 		string name = weapon.GetWeaponClassName()
 
@@ -768,6 +776,9 @@ bool function MobileRespawn_ConditionalCheck( string ref, entity player )
 
 
 
+
+
+
 void function MobileRespawnPlacement( entity weapon, entity player, asset modelName )
 {
 	weapon.EndSignal( "OnDestroy" )
@@ -821,6 +832,19 @@ void function OnBeginPlacingMobileRespawn( entity weapon, entity player )
 
 	thread MobileRespawnPlacement( weapon, player, MOBILE_RESPAWN_BEACON_MODEL )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

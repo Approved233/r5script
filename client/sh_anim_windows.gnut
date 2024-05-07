@@ -642,6 +642,13 @@ void function AnimWindow_PlayFX_Start( ScriptAnimWindow window, var settingsBloc
 		}
 	}
 
+
+		if ( GetCurrentPlaylistVarBool( "anim_fx_window_sound", true ) && fxHandleOrNull )
+		{
+			EffectSetSoundEnabled( expect int( fxHandleOrNull ), true )
+		}
+
+
 #if DEV
 		disableoverwrite( windowFXHandleMap )
 #endif
@@ -1556,14 +1563,14 @@ void function AnimWindow_SetSmearPropColour( ScriptAnimWindow window, var settin
 	if ( IsValid( owner ) && owner.IsPlayer() )
 	{
 		if ( owner == GetLocalClientPlayer() && owner.p.artifactConfig == null ) 
-			Artifacts_StoreLoadoutDataOnPlayerEntityStruct( owner )
+			Artifacts_StoreLoadoutDataOnPlayerEntityStruct( owner, null, false )
 
 		if ( owner.p.artifactConfig == null )
 			return
 
 		ArtifactConfig artifactConfig = expect ArtifactConfig( owner.p.artifactConfig )
 
-		prop.kv.rendercolor = Artifacts_FX_GetSmearColor( artifactConfig.powerSource )
+		prop.kv.rendercolor = Artifacts_FX_GetEmissiveAndSmearColor( artifactConfig.powerSource, false )
 	}
 }
 

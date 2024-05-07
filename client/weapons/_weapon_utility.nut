@@ -105,6 +105,7 @@ global function ServerCallback_SetWeaponPreviewState
 global function ServerCallback_KineticLoaderReloadedThroughSlide
 global function ServerCallback_KineticLoaderReloadedThroughSlideEnd
 global function ApplyKineticLoaderFunctionality
+global function ServerToClient_Activate_Smart_Reload
 
 
 global function OnWeaponTryEnergize
@@ -112,6 +113,7 @@ global function OnWeaponTryEnergize
 global function OnWeaponAttemptOffhandSwitch_Never
 
 #if DEV
+global function DEV_DumpStickinessTable
 global function DevPrintAllStatusEffectsOnEnt
 #endif
 
@@ -525,6 +527,7 @@ void function WeaponUtility_Init()
 	Remote_RegisterClientFunction( "ServerCallback_KineticLoaderReloadedThroughSlide", "entity", "int", 0, 32 )
 	Remote_RegisterClientFunction( "ServerCallback_KineticLoaderReloadedThroughSlideEnd", "entity" )
 	Remote_RegisterClientFunction( "ApplyKineticLoaderFunctionality", "entity" , "entity" )
+	Remote_RegisterClientFunction( "ServerToClient_Activate_Smart_Reload", "entity" , "int", 0, 64, "float", 0.0, 1.0, 32 )
 
 
 
@@ -547,7 +550,6 @@ void function WeaponUtility_Init()
 	PrecacheImpactEffectTable( CLUSTER_ROCKET_FX_TABLE )
 
 
-		PrecacheImpactEffectTable( LIGHT_AMMO_FX_TABLE )
 
 
 
@@ -589,7 +591,7 @@ void function WeaponUtility_Init()
 }
 
 const asset THROWABLE_ITEM_STICKINESS_DATATABLE = $"datatable/throwable_item_stickiness.rpak"
-const int ENT_NAME_COL = 1
+const int ENT_NAME_COL = 0
 
 void function InitThrowableItemStickinessDatatable()
 {
@@ -598,7 +600,11 @@ void function InitThrowableItemStickinessDatatable()
 		"mp_weapon_jump_pad", "mp_ability_space_elevator_tac", CAUSTIC_DIRTY_BOMB_WEAPON_CLASS_NAME,
 		GRENADE_EMP_WEAPON_NAME, GUNGAME_THROWING_KNIFE_WEAPON_NAME, RIOT_DRILL_SCRIPT_NAME,
 		"mp_weapon_cluster_bomb_launcher", "mp_ability_debuff_zone", SPIKE_STRIP_WEAPON_NAME
+
+		TRANSPORT_PORTAL_WEAPON_NAME
+
 	]
+
 	var dataTable = GetDataTable( THROWABLE_ITEM_STICKINESS_DATATABLE )
 	int numRows = GetDataTableRowCount( dataTable )
 
@@ -609,10 +615,17 @@ void function InitThrowableItemStickinessDatatable()
 
 		Assert( col >= 0 )
 
+
+
+
+
 		for ( int j = 0; j < numRows; j++ )
 		{
 			string entName = GetDataTableString( dataTable, j, ENT_NAME_COL )
 			int value = int( GetDataTableString( dataTable, j, col ) )
+
+			Assert( !(entName in columnTable), "Ent " + entName +" already in stickiness table! There is a duplicate row" )
+
 			columnTable[ entName ] <- value
 		}
 
@@ -2011,6 +2024,28 @@ bool function EntityCanHaveStickyEnts( entity stickyEnt, entity ent )
 
 	return true
 }
+
+#if DEV
+void function DEV_DumpStickinessTable()
+{
+	bool dumpedEnts = false
+	foreach( string throwable, table<string, int> ent in file.throwableItemStickinessTable )
+	{
+		if ( !dumpedEnts )
+		{
+			printf("Ents: ")
+			foreach( string name, int tmp in file.throwableItemStickinessTable[throwable] )
+			{
+				printf("-> " + name)
+			}
+			printf("Throwables: ")
+			dumpedEnts = true
+		}
+
+		printf("-> " + throwable)
+	}
+}
+#endif
 
 int function GetThrowableEntStickinessToEntity( string stickyThrowableName, string entScriptName )
 {
@@ -4983,14 +5018,6 @@ void function PlayDelayedShellEject( entity weapon, float time, int count = 1, b
 
 
 
-
-
-
-
-
-
-
-
 void function UICallback_UpdateLaserSightColor()
 {
 	Remote_ServerCallFunction( "ClientCallback_UpdateLaserSightColor" )
@@ -5936,8 +5963,19 @@ void function ShatterRounds_RemoveShatterRounds( entity weapon )
 
 
 
+void function ServerToClient_Activate_Smart_Reload( entity weapon, int overloadAmmo, float lowAmmoFrac )
+{
+	SmartReloadSettings settings
+	settings.OverloadedAmmo = overloadAmmo
+	settings.LowAmmoFrac = lowAmmoFrac
 
-void function OnWeaponActivate_Smart_Reload ( entity weapon, SmartReloadSettings settings )
+	OnWeaponActivate_Smart_Reload( weapon, settings )
+}
+
+
+
+
+void function OnWeaponActivate_Smart_Reload( entity weapon, SmartReloadSettings settings )
 {
 	if ( !IsValid( weapon ) )
 		return
@@ -5957,7 +5995,7 @@ void function OnWeaponActivate_Smart_Reload ( entity weapon, SmartReloadSettings
 	}
 }
 
-void function ApplySmartReloadFunctionality ( entity player, entity weapon, SmartReloadSettings settings )
+void function ApplySmartReloadFunctionality( entity player, entity weapon, SmartReloadSettings settings )
 {
 
 
@@ -5967,7 +6005,7 @@ void function ApplySmartReloadFunctionality ( entity player, entity weapon, Smar
 
 }
 
-void function OnWeaponReload_Smart_Reload ( entity weapon, int milestoneIndex )
+void function OnWeaponReload_Smart_Reload( entity weapon, int milestoneIndex )
 {
 	LootData weaponLootData = SURVIVAL_Loot_GetLootDataByRef( weapon.GetWeaponClassName() )
 
@@ -6041,6 +6079,7 @@ void function OnWeaponReload_Smart_Reload ( entity weapon, int milestoneIndex )
 		weapon.RemoveMod( LMG_OVERLOADED_AMMO_MOD )
 	}
 }
+
 
 
 
@@ -6992,5 +7031,5 @@ bool function GetInfiniteAmmo( entity weapon )
 
 bool function CodeCallback_GetIsModOptic( entity weapon, string modName )
 {
-	return SURVIVAL_Loot_IsRefValid( modName ) && GetAttachPointForAttachmentOnWeapon( weapon.GetWeaponClassName(), modName ) == "sight"
+	return SURVIVAL_Loot_IsRefValid( weapon.GetWeaponClassName() ) && SURVIVAL_Loot_IsRefValid( modName ) && GetAttachPointForAttachmentOnWeapon( weapon.GetWeaponClassName(), modName ) == "sight"
 }

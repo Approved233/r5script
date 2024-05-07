@@ -1,8 +1,12 @@
 global function CollectionEventAboutPage_Init
 global function OpenCollectionEventAboutPage
+global function OpenCollectionEventAboutPageWithEventTabTelemetry
+global function OpenCollectionEventAboutPageWithMilestoneStoreTelemetry
+global function SetCollectionEventAboutPageEvent
 struct {
 	var menu
 	var infoPanel
+	ItemFlavor ornull event
 } file
 
 void function CollectionEventAboutPage_Init( var menu )
@@ -20,11 +24,25 @@ void function CollectionEventAboutPage_Init( var menu )
 
 void function CollectionEventAboutPage_OnOpen()
 {
-	ItemFlavor ornull activeCollectionEvent = GetActiveCollectionEvent( GetUnixTimestamp() )
-	ItemFlavor ornull milestoneEvent = GetActiveMilestoneEvent( GetUnixTimestamp() )
+	ItemFlavor ornull eventToUse
+	if ( file.event != null )
+	{
+		eventToUse = file.event
+	}
+	else
+	{
+		ItemFlavor ornull activeCollectionEvent = GetActiveCollectionEvent( GetUnixTimestamp() )
+		ItemFlavor ornull milestoneEvent = GetActiveMilestoneEvent( GetUnixTimestamp() )
+		eventToUse = activeCollectionEvent != null ? activeCollectionEvent : milestoneEvent
+	}
 
-	if ( activeCollectionEvent == null && milestoneEvent == null )
+	if ( eventToUse == null )
 		return
+
+	expect ItemFlavor( eventToUse )
+
+	bool isCollectionEvent = eventToUse.typeIndex == eItemType.calevent_collection
+	bool isMilestoneEvent = eventToUse.typeIndex == eItemType.calevent_milestone
 
 	string eventName = ""
 	asset bgPatternImage
@@ -32,26 +50,23 @@ void function CollectionEventAboutPage_OnOpen()
 	vector specialTextCol
 	array<string> aboutLines
 
-	if( activeCollectionEvent != null )
+	if ( isCollectionEvent )
 	{
-		expect ItemFlavor( activeCollectionEvent )
-		eventName = ItemFlavor_GetLongName( activeCollectionEvent )
-		bgPatternImage = CollectionEvent_GetBGPatternImage( activeCollectionEvent )
-		headerIcon = CollectionEvent_GetHeaderIcon( activeCollectionEvent )
-		specialTextCol = SrgbToLinear( CollectionEvent_GetAboutPageSpecialTextCol( activeCollectionEvent ) )
-		aboutLines = CollectionEvent_GetAboutText( activeCollectionEvent, GRX_IsOfferRestricted() )
+		eventName = ItemFlavor_GetLongName( eventToUse )
+		bgPatternImage = CollectionEvent_GetBGPatternImage( eventToUse )
+		headerIcon = CollectionEvent_GetHeaderIcon( eventToUse )
+		specialTextCol = SrgbToLinear( CollectionEvent_GetAboutPageSpecialTextCol( eventToUse ) )
+		aboutLines = CollectionEvent_GetAboutText( eventToUse, GRX_IsOfferRestricted() )
 	}
-	else if( milestoneEvent != null )
+	else if ( isMilestoneEvent )
 	{
-		expect ItemFlavor( milestoneEvent )
-
-		eventName = ItemFlavor_GetLongName( milestoneEvent )
-		headerIcon = MilestoneEvent_GetEventIcon( milestoneEvent )
-		specialTextCol = SrgbToLinear( MilestoneEvent_GetDisclaimerBoxColor( milestoneEvent ) )
-		aboutLines = MilestoneEvent_GetAboutText( milestoneEvent, GRX_IsOfferRestricted() )
+		eventName = ItemFlavor_GetLongName( eventToUse )
+		headerIcon = MilestoneEvent_GetEventIcon( eventToUse )
+		specialTextCol = SrgbToLinear( MilestoneEvent_GetDisclaimerBoxColor( eventToUse ) )
+		aboutLines = MilestoneEvent_GetAboutText( eventToUse, GRX_IsOfferRestricted() )
 	}
 
-	Assert( aboutLines.len() < 8, "Rui about_collection_event does not support more than 6 lines." )
+	Assert( aboutLines.len() < 8, "Rui about_collection_event does not support more than 8 lines." )
 	HudElem_SetRuiArg( file.infoPanel, "eventName", eventName )
 	HudElem_SetRuiArg( file.infoPanel, "bgPatternImage", bgPatternImage )
 	HudElem_SetRuiArg( file.infoPanel, "headerIcon", headerIcon )
@@ -79,4 +94,21 @@ void function OpenCollectionEventAboutPage( var button )
 		return
 
 	AdvanceMenu( GetMenu( "CollectionEventAboutPage" ) )
+}
+
+void function OpenCollectionEventAboutPageWithEventTabTelemetry( var button )
+{
+	RTKEventsPanelController_SendPageViewInfoPage( "aboutMilestoneDialog" )
+	OpenCollectionEventAboutPage( button )
+}
+
+void function OpenCollectionEventAboutPageWithMilestoneStoreTelemetry( var button )
+{
+	StoreMilestoneEvents_SendPageViewInfoPage( "aboutMilestoneDialog" )
+	OpenCollectionEventAboutPage( button )
+}
+
+void function SetCollectionEventAboutPageEvent( ItemFlavor ornull event )
+{
+	file.event = event
 }

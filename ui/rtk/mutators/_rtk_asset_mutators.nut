@@ -11,9 +11,7 @@ asset function RTKMutator_PlatformIcon( int input )
 		switch ( input )
 		{
 			case HARDWARE_PC:
-
 			case HARDWARE_PC_STEAM:
-
 				return $"ui_image/rui/menu/crossplatform/pc.rpak"
 
 			case HARDWARE_PS4:
@@ -36,9 +34,7 @@ asset function RTKMutator_PlatformIcon( int input )
 		switch ( input )
 		{
 			case HARDWARE_PC:
-
 			case HARDWARE_PC_STEAM:
-
 				return $"ui_image/rui/menu/crossplatform/pc.rpak"
 
 			case HARDWARE_PS4:

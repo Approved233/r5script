@@ -64,10 +64,10 @@ struct
 	var                 redeemButton
 	var                 activeButton
 	var  				giftingInfo
-	GRXScriptInboxMessage ornull activeInfo
+	GRXContainerInfo ornull activeInfo
 
-	array<GRXScriptInboxMessage> gifts
-	table<var, GRXScriptInboxMessage>  inboxItemButtons = {}
+	array<GRXContainerInfo> gifts
+	table<var, GRXContainerInfo>  inboxItemButtons = {}
 
 	TabDef& inboxTab
 }inbox
@@ -452,7 +452,7 @@ void function UpdateInboxButtons()
 			var button = Hud_GetChild( scrollPanel, "GridButton" + string( indicatorIndex ) )
 			var title = Localize( "#INBOX_GIFT_TITLE" )
 			HudElem_SetRuiArg( button, "title", title )
-			HudElem_SetRuiArg( button, "desc", Localize( "#INBOX_GIFT_DESC_N" , inbox.gifts[indicatorIndex].gifterName ) )
+			HudElem_SetRuiArg( button, "desc", Localize( "#INBOX_GIFT_DESC_N" , inbox.gifts[indicatorIndex].senderName ) )
 			HudElem_SetRuiArg( button, "date", GetDateTimeStringDayMonthYear( inbox.gifts[indicatorIndex].timestamp, 0 ) )
 			HudElem_SetRuiArg( button, "isNew", inbox.gifts[indicatorIndex].isNew )
 			RuiSetColorAlpha( Hud_GetRui( button ), "seasonColor",  GetSeasonStyle().seasonNewColor , 1.0 )
@@ -466,13 +466,13 @@ void function UpdateInboxButtons()
 		Hud_SetFocused( inbox.activeButton )
 		Hud_SetSelected( inbox.activeButton, true )
 
-		GRXScriptInboxMessage info = inbox.inboxItemButtons[inbox.activeButton]
+		GRXContainerInfo info = inbox.inboxItemButtons[inbox.activeButton]
 		info.isNew = false
 		inbox.activeInfo = info
 
 		var panel = Hud_GetChild( inbox.inboxNestedPanel,  "GiftDisplayPanel" )
 
-		RuiSetString( Hud_GetRui( panel ), "desc1", Localize( "#INBOX_PANEL_DESC", info.gifterName ).toupper() )
+		RuiSetString( Hud_GetRui( panel ), "desc1", Localize( "#INBOX_PANEL_DESC", info.senderName ).toupper() )
 		RuiSetString( Hud_GetRui( panel ), "title", Localize( "#INBOX_PANEL_TITLE" ).toupper() )
 		RuiSetImage( Hud_GetRui( panel ), "boxImg", gift_top )
 	}
@@ -494,7 +494,7 @@ void function UpdateInboxButtons()
 	Hud_SetNavLeft( inbox.redeemButton, inbox.activeButton )
 }
 
-void function InboxSetupItemButton( var button, GRXScriptInboxMessage details )
+void function InboxSetupItemButton( var button, GRXContainerInfo details )
 {
 	if ( button in inbox.inboxItemButtons )
 		return
@@ -580,7 +580,7 @@ void function ListButton_OnClick( var button )
 
 	var panel = Hud_GetChild( inbox.inboxNestedPanel, "GiftDisplayPanel" )
 
-	RuiSetString( Hud_GetRui( panel ), "desc1", Localize( "#INBOX_PANEL_DESC", inbox.inboxItemButtons[button].gifterName ).toupper() )
+	RuiSetString( Hud_GetRui( panel ), "desc1", Localize( "#INBOX_PANEL_DESC", inbox.inboxItemButtons[button].senderName ).toupper() )
 	RuiSetString( Hud_GetRui( panel ), "title", Localize( "#INBOX_PANEL_TITLE" ).toupper() )
 
 	Hud_SetNavLeft( inbox.redeemButton, inbox.activeButton )
@@ -598,11 +598,11 @@ void function Redeem_OnClick( var button )
 
 void function GiftRedemption()
 {
-	GRXScriptInboxMessage info = expect GRXScriptInboxMessage ( inbox.activeInfo )
+	GRXContainerInfo info = expect GRXContainerInfo ( inbox.activeInfo )
 
 	array<ItemFlavor> items
 
-	foreach( int index in info.itemIndex )
+	foreach( int index in info.itemIndices )
 	{
 		items.append( GetItemFlavorByGRXIndex( index ) )
 	}
@@ -615,7 +615,7 @@ void function GiftRedemption()
 		BattlePassReward tempReward
 		tempReward.flav = items[i]
 		tempReward.isPremium = false
-		tempReward.quantity = info.itemCount[i]
+		tempReward.quantity = info.itemCounts[i]
 		tempReward.level = -1
 
 		RewardInput.append( tempReward )
@@ -1170,14 +1170,14 @@ void function UICodeCallback_UMRequestFinished( int result )
 	SetNewsButtonTooltip( result )
 }
 
-array<GRXScriptInboxMessage> function PromoDialog_GetAllGifts()
+array<GRXContainerInfo> function PromoDialog_GetAllGifts()
 {
-	array<GRXScriptInboxMessage> list
+	array<GRXContainerInfo> list
 
 	if( inbox.gifts.len() <= 0 )
 		return list
 
-	GRXScriptInboxMessage active
+	GRXContainerInfo active
 
 	if ( inbox.activeInfo == null )
 	{
@@ -1186,13 +1186,13 @@ array<GRXScriptInboxMessage> function PromoDialog_GetAllGifts()
 	}
 	else
 	{
-		active = expect GRXScriptInboxMessage ( inbox.activeInfo )
+		active = expect GRXContainerInfo ( inbox.activeInfo )
 		list.append( active )
 	}
 
 	for ( int i = 0; i < inbox.gifts.len(); i++ )
 	{
-		if ( active.itemIndex == inbox.gifts[i].itemIndex && active.timestamp == inbox.gifts[i].timestamp )
+		if ( active.itemIndices == inbox.gifts[i].itemIndices && active.timestamp == inbox.gifts[i].timestamp )
 			continue
 
 		list.append( inbox.gifts[i] )
@@ -1203,7 +1203,7 @@ array<GRXScriptInboxMessage> function PromoDialog_GetAllGifts()
 
 void function PromoDialog_RemoveFromCache( int viewedGifts )
 {
-	array<GRXScriptInboxMessage> sortedGifts = PromoDialog_GetAllGifts()
+	array<GRXContainerInfo> sortedGifts = PromoDialog_GetAllGifts()
 
 	for ( int i = 0; i <= viewedGifts; i++ )
 	{

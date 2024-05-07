@@ -42,6 +42,8 @@ global function GamemodeUtility_GetIsTeamIndexValidPlayerTeam
 
 
 
+
+
 global function GamemodeUtility_GetTeamOrAllianceScore 
 global function GamemodeUtility_GetAllianceScoreFromTeam 
 global function GamemodeUtility_GetScoreDifference	
@@ -49,6 +51,9 @@ global function GamemodeUtility_GetScoreDifferenceBetweenTeams
 global function GamemodeUtility_GetWinningTeamOrAlliance	
 global function GamemodeUtility_GetWinningAlliance	
 global function GamemodeUtility_GetWinningTeamOrAllianceScore	
+global function GamemodeUtility_GetAlliancesOrTeamsSortedByScore 
+global function GamemodeUtility_GetAlliancesOrTeamsSortedByEliminationAndScore 
+global function GamemodeUtility_IsTeamOrAllianceEliminated 
 global function GamemodeUtility_IsJIPEnabled	
 global function GamemodeUtility_IsJIPPlayerSpawnBonusPending 
 global function GamemodeUtility_IsPlayerAbandoning  
@@ -56,6 +61,9 @@ global function GamemodeUtility_GetAbandonPenaltyLength
 global function GamemodeUtility_AddCallback_OnPlayerJoinedMatchInProgress 
 global function GamemodeUtility_GetMatchTimeLimit 
 global function GamemodeUtility_GetMatchTimeLimitWarning 
+global function GamemodeUtility_GetMaxPlayersToShowOnPodium 
+global function GamemodeUtility_IsSpectatorEnabled 
+global function GamemodeUtility_IsPlacementPopupEnabled 
 
 
 
@@ -66,6 +74,10 @@ global function GamemodeUtility_IsPlayerOnTeamObserver
 global function GamemodeUtility_GetLocalTeamPlayers 
 global function GamemodeUtility_ServerCallback_PlayerJoinedMatchInProgress 
 global function GamemodeUtility_ServerCallback_TriggerScanOfVictimTeam 
+
+
+
+
 
 
 
@@ -359,6 +371,21 @@ float function GamemodeUtility_GetMatchTimeLimit()
 float function GamemodeUtility_GetMatchTimeLimitWarning()
 {
 	return GetCurrentPlaylistVarFloat ( "match_time_remaining_warning", GAMEMODEUTILITY_MATCH_TIME_LIMIT_WARNING_TIME )
+}
+
+int function GamemodeUtility_GetMaxPlayersToShowOnPodium()
+{
+	return GetCurrentPlaylistVarInt( "podium_max_players_to_show", GetExpectedSquadSize() )
+}
+
+bool function GamemodeUtility_IsSpectatorEnabled()
+{
+	return GetCurrentPlaylistVarBool( "spectator_enabled", true )
+}
+
+bool function GamemodeUtility_IsPlacementPopupEnabled()
+{
+	return GetCurrentPlaylistVarBool( "placement_popup", false )
 }
 
 
@@ -1573,20 +1600,6 @@ void function RunVictimSquadMapScan_Thread( int victimTeam )
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 void function GamemodeUtility_ServerCallback_DisplayMatchTimeLimitWarning( bool isFinalWarning )
 {
 	entity player = GetLocalViewPlayer()
@@ -1912,13 +1925,9 @@ int function GamemodeUtility_GetTeamOrAllianceScore( int teamOrAlliance )
 	if ( teamOrAlliance != TEAM_INVALID )
 	{
 		if ( AllianceProximity_IsUsingAlliances() )
-		{
 			teamScore = GetAllianceTeamsScore( teamOrAlliance )
-		}
 		else
-		{
 			teamScore = GameRules_GetTeamScore( teamOrAlliance )
-		}
 	}
 
 	return teamScore
@@ -1931,6 +1940,97 @@ int function GamemodeUtility_GetAllianceScoreFromTeam( int team )
 {
 	int allianceIndex = AllianceProximity_GetAllianceFromTeam( team )
 	return GetAllianceTeamsScore( allianceIndex )
+}
+
+
+
+
+
+array < int > function GamemodeUtility_GetAlliancesOrTeamsSortedByScore( bool shouldExcludeEliminated )
+{
+	array < int > teamsOrAlliances = AllianceProximity_IsUsingAlliances() ? AllianceProximity_GetAllAlliances() : GetAllValidPlayerTeams()
+
+	if ( shouldExcludeEliminated )
+	{
+		array < int >  nonEliminatedTeamsOrAlliances = []
+
+		foreach( teamOrAlliance in teamsOrAlliances )
+		{
+			if ( !GamemodeUtility_IsTeamOrAllianceEliminated( teamOrAlliance ) )
+				nonEliminatedTeamsOrAlliances.append( teamOrAlliance )
+		}
+
+		teamsOrAlliances = nonEliminatedTeamsOrAlliances
+	}
+
+	teamsOrAlliances.sort( int function( int a, int b )
+	{
+		int aScore = GamemodeUtility_GetTeamOrAllianceScore( a )
+		int bScore = GamemodeUtility_GetTeamOrAllianceScore( b )
+
+		if ( aScore > bScore )
+			return -1
+		else if ( aScore < bScore )
+			return 1
+
+		return 0
+	}
+	)
+
+	return teamsOrAlliances
+}
+
+
+
+
+array < int > function GamemodeUtility_GetAlliancesOrTeamsSortedByEliminationAndScore()
+{
+	array < int > teamsOrAlliances = AllianceProximity_IsUsingAlliances() ? AllianceProximity_GetAllAlliances() : GetAllValidPlayerTeams()
+
+	teamsOrAlliances.sort( int function( int a, int b )
+	{
+		int aScore = GamemodeUtility_GetTeamOrAllianceScore( a )
+		int bScore = GamemodeUtility_GetTeamOrAllianceScore( b )
+		bool aIsEliminated = GamemodeUtility_IsTeamOrAllianceEliminated( a )
+		bool bIsEliminated = GamemodeUtility_IsTeamOrAllianceEliminated( b )
+
+		
+		if ( bIsEliminated && !aIsEliminated )
+			return -1
+		else if ( aIsEliminated && !bIsEliminated )
+			return 1
+
+		
+		if ( aScore > bScore )
+			return -1
+		else if ( aScore < bScore )
+			return 1
+
+		return 0
+	}
+	)
+
+	return teamsOrAlliances
+}
+
+
+
+
+bool function GamemodeUtility_IsTeamOrAllianceEliminated( int teamOrAlliance )
+{
+	array < entity > teamOrAlliancePlayers = AllianceProximity_IsUsingAlliances() ? AllianceProximity_GetAllPlayersInAlliance( teamOrAlliance, false ) : GetPlayerArrayOfTeam( teamOrAlliance )
+
+	foreach ( player in teamOrAlliancePlayers )
+	{
+		if ( !IsValid( player ) )
+			continue
+
+		
+		if ( player.GetPlayerNetInt( "respawnStatus" ) != eRespawnStatus.PLAYER_ELIMINATED )
+			return false
+	}
+
+	return true
 }
 
 
@@ -2647,10 +2747,126 @@ bool function GamemodeUtility_GetMixtapeAbandonPenaltyActive()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 int function GamemodeUtility_GetMaxDroppedGrenadesOnDeath()
 {
 	return GetCurrentPlaylistVarInt( "grenade_ondeath_max_spawncount", 1 )
 }
+
+
+
+
 
 
 
@@ -2801,6 +3017,19 @@ bool function GamemodeUtility_GetIsTeamIndexValidPlayerTeam( int teamIndex )
 {
 	return TEAM_MULTITEAM_FIRST <= teamIndex && teamIndex < MAX_TEAMS + TEAM_MULTITEAM_FIRST
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

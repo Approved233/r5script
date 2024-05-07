@@ -20,10 +20,6 @@ global struct RTKSummaryBreakdownRowModel
 	string	leftText
 	string	rightText
 	string	textArgs
-	float	rowBGAlpha = 0.6
-	float	rowSize = 400
-	int		textSize = 30
-	vector  textColor = <0.8, 0.8, 0.8>
 }
 
 global struct RTKApexCupsModel
@@ -77,6 +73,21 @@ array<featureTutorialTab> function RTKGameModeSelectApexCups_PopulateAboutText()
 
 	tab1.rules = tab1Rules
 	tabs.append( tab1 )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 	return tabs
 }

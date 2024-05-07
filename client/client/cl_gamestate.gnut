@@ -255,7 +255,8 @@ void function SetCommonScoreRUIVars( var rui )
 
 
 
-	if ( IsSoloMode() )
+
+	if ( IsSoloMode()  )
 	{
 		RuiSetBool( rui, "shouldDisplayLivingPlayerCount", false )
 		RuiSetString( rui, "squadsRemainingTextSingular", "#SURVIVAL_PLAYERS_REMAIN" )

@@ -11,6 +11,7 @@ global function Loadout_MeleeSkin
 global function Loadout_Deathbox
 global function Deathbox_GetDefaultItemFlavor
 global function Deathbox_GetGoldenHorseDeathbox
+global function MeleeWeapon_GetWeaponType
 
 
 global function MeleeWeapon_GetMainWeaponClassname
@@ -29,6 +30,9 @@ global function MeleeSkin_GetItemInspectOffset
 global function MeleeSkin_ShouldHideIfLocked
 global function MeleeSkin_IsItemFlavorUnlocked
 global function MeleeCustomization_ShouldHideIfLocked
+
+
+
 
 
 
@@ -79,10 +83,12 @@ global function Melee_Attack
 
 
 
-
-
-
 global function ClientCodeCallback_ShowMeleePrompt
+
+
+
+global function Melee_SetModsForLegendAbilities
+global function Melee_RemoveModsForLegendAbilities
 
 
 
@@ -113,6 +119,7 @@ global const GH_DEATHBOX_FX = $"P_death_box_fx_gh"
 
 
 
+global const int DEFAULT_MELEE_WEAPON_SKIN_GUID = 519356259
 const int DEFAULT_MELEE_WEAPON_GUID = 1222621873
 const int GOLDEN_HORSE_DEATHBOX_GUID = 705533011
 const int DEFAULT_DEATHBOX_GUID = 989815244
@@ -377,7 +384,7 @@ void function MeleeWeaponCosmetics_ApplyForWeapon( entity player, entity weapon 
 
 	if ( Artifacts_Loadouts_IsConfigPointerItemFlavor( meleeSkin ) )
 	{
-		Artifacts_StoreLoadoutDataOnPlayerEntityStruct( player )
+		Artifacts_StoreLoadoutDataOnPlayerEntityStruct( player, weapon, false )
 		Artifacts_Loadouts_SetupWeaponComponents( weapon, player )
 
 		return
@@ -415,7 +422,7 @@ void function MeleeWeaponCosmetics_Apply_Internal( entity weapon, ItemFlavor mel
 string function MeleeSkin_GetSkinName( ItemFlavor meleeSkin )
 {
 
-	if ( Artifacts_Loadouts_IsConfigPointerItemFlavor( meleeSkin ) )
+	if ( ItemFlavor_GetType( meleeSkin ) == Artifacts_Loadouts_GetMeleeSkinNetVarOverrideType( false ) || Artifacts_Loadouts_IsConfigPointerItemFlavor( meleeSkin ) )
 		return ""
 
 
@@ -425,7 +432,7 @@ string function MeleeSkin_GetSkinName( ItemFlavor meleeSkin )
 int function MeleeSkin_GetCamoIndex( ItemFlavor meleeSkin )
 {
 
-	if ( Artifacts_Loadouts_IsConfigPointerItemFlavor( meleeSkin ) )
+		if ( ItemFlavor_GetType( meleeSkin ) == Artifacts_Loadouts_GetMeleeSkinNetVarOverrideType( false ) || Artifacts_Loadouts_IsConfigPointerItemFlavor( meleeSkin ) )
 		return 0
 
 
@@ -532,11 +539,6 @@ bool function MeleeSkin_ShouldHideIfLocked( ItemFlavor meleeSkin )
 	if ( ItemFlavor_GetType( meleeSkin ) != eItemType.melee_skin )
 		return false
 
-
-	if ( Artifacts_Loadouts_IsConfigPointerItemFlavor( meleeSkin ) )
-		return true
-
-
 	return GetGlobalSettingsBool( ItemFlavor_GetAsset( meleeSkin ), "shouldHideIfLocked" )
 }
 
@@ -551,6 +553,38 @@ bool function MeleeSkin_IsItemFlavorUnlocked( EHI playerEHI, ItemFlavor meleeSki
 
 	return IsItemFlavorGRXUnlockedForLoadoutSlot( playerEHI, meleeSkin, shouldIgnoreGRX, shouldIgnoreOtherSlots )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -634,6 +668,16 @@ void function RequestSetDeathboxEquipForMeleeSkin( EHI playerEHI, LoadoutEntry e
 ItemFlavor function Deathbox_GetEquipped( ItemFlavor character, ItemFlavor meleeSkin )
 {
 	EHI playerEHI = LocalClientEHI()
+
+
+	if ( Artifacts_Loadouts_IsConfigPointerItemFlavor( meleeSkin ) )
+	{
+		int configIdx = Artifacts_Loadouts_GetConfigIndex( meleeSkin )
+		LoadoutEntry loadoutSlot = Artifacts_Loadouts_GetEntryForConfigIndexAndType( configIdx, eArtifactComponentType.DEATHBOX )
+		return LoadoutSlot_GetItemFlavor( playerEHI, loadoutSlot )
+	}
+
+
 	LoadoutEntry skinSlot = Loadout_MeleeSkin( character )
 	LoadoutEntry boxSlot  = Loadout_Deathbox( character )
 	array<ItemFlavor> skinBackups = LoadoutSlot_GetBackups( playerEHI, skinSlot )
@@ -662,16 +706,6 @@ void function ServerCallback_Loadouts_DeathboxEquipForMeleeSkinToggled( int char
 	
 	RunUIScript( "MeleeCustomizationScreen_ClientToUI_UpdateDeathboxEquipState", characterGUID, skinGUID, deathboxGUID )
 }
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -1127,31 +1161,37 @@ ItemFlavor function MeleeSkin_GetCharacterFlavor( ItemFlavor meleeSkin )
 
 
 
+void function Melee_SetModsForLegendAbilities( entity player )
+{
+
+		if ( !InPrediction() )
+			return
 
 
+	
+	if ( IsValid( player ) )
+	{
+		entity offhand = player.GetOffhandWeapon( OFFHAND_EQUIPMENT )
+		if ( IsValid( offhand ) && offhand.GetWeaponClassName() == HEARTBEAT_SENSOR_WEAPON_NAME && !offhand.HasMod( ARTIFACT_EQUIPPED_MOD ) )
+			offhand.AddMod( ARTIFACT_EQUIPPED_MOD )
+	}
+}
+
+void function Melee_RemoveModsForLegendAbilities( entity player )
+{
+
+	if ( !InPrediction() )
+		return
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	
+	if ( IsValid( player ) )
+	{
+		entity offhand = player.GetOffhandWeapon( OFFHAND_EQUIPMENT )
+		if ( IsValid( offhand ) && offhand.GetWeaponClassName() == HEARTBEAT_SENSOR_WEAPON_NAME && offhand.HasMod( ARTIFACT_EQUIPPED_MOD ) )
+			offhand.RemoveMod( ARTIFACT_EQUIPPED_MOD )
+	}
+}
 
 
 

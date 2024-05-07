@@ -74,7 +74,7 @@ void function SkydiveTrailPanel_Update( var panel )
 	if ( IsPanelActive( file.panel ) )
 	{
 		LoadoutEntry entry   = Loadout_SkydiveTrail()
-		file.skydiveTrailsList = GetLoadoutItemsSortedForMenu( [entry], SkydiveTrail_GetSortOrdinal )
+		file.skydiveTrailsList = GetLoadoutItemsSortedForMenu( [entry], SkydiveTrail_GetSortOrdinal, null, [] )
 
 		Hud_InitGridButtons( file.listPanel, file.skydiveTrailsList.len() )
 		foreach ( int flavIdx, ItemFlavor flav in file.skydiveTrailsList )

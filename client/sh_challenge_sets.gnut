@@ -3,7 +3,6 @@ global function ChallengeCollection_IsEnabled
 global function ChallengeCollection_IsActive
 global function ChallengeCollection_GetRegisteredCollections
 global function ChallengeCollection_GetActiveCollections
-global function ChallengeCollection_GetActiveCollection
 global function ChallengeCollection_GetByGUID
 global function ChallengeCollection_GetAllChallengeSets
 global function ChallengeCollection_GetMainChallenge
@@ -186,17 +185,6 @@ array< ChallengeCollection > function ChallengeCollection_GetActiveCollections()
 	return activeChallengeCollections
 }
 
-ChallengeCollection ornull function ChallengeCollection_GetActiveCollection()
-{
-	ChallengeCollection ornull collection = null
-	array< ChallengeCollection > collections = ChallengeCollection_GetActiveCollections()
-	if ( collections.len() > 0 )
-	{
-		collection = collections[0]
-	}
-	return collection
-}
-
 
 ChallengeCollection function ChallengeCollection_GetByGUID( SettingsAssetGUID guid )
 {
@@ -277,19 +265,12 @@ bool function ChallengeCollection_HasChallenges( ChallengeCollection challengeCo
 }
 
 
-ItemFlavor ornull function ChallengeCollection_GetCharacterUnlockChallenge( ItemFlavor characterFlav )
+
+ItemFlavor ornull function ChallengeCollection_GetCharacterUnlockChallenge( ItemFlavor characterFlav, ChallengeCollection challengeCollection )
 {
 	Assert( ItemFlavor_GetType( characterFlav ) == eItemType.character )
 
-	
-	ChallengeCollection ornull activeCollection = ChallengeCollection_GetActiveCollection()
-	if ( activeCollection == null )
-	{
-		return null
-	}
-
-	expect ChallengeCollection( activeCollection )
-	array< ItemFlavor > challenges = ChallengeCollection_GetAllChallenges( activeCollection )
+	array< ItemFlavor > challenges = ChallengeCollection_GetAllChallenges( challengeCollection )
 	foreach ( ItemFlavor challenge in challenges )
 	{
 		ItemFlavorBag rewards = Challenge_GetRewards( challenge, 0 ) 

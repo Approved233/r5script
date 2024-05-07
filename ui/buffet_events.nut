@@ -48,6 +48,7 @@ global function BuffetEvent_GetCategoryButtonTint
 
 global function BuffetEvent_GetChallengeHeaderImage
 global function BuffetEvent_GetChallengeButtonImage
+global function BuffetEvent_GetChallengeButtonText
 global function BuffetEvent_GetChallengeButtonTextCol
 
 global function BuffetEvent_OnLobbyPlayPanelSpecialChallengeClicked
@@ -406,6 +407,14 @@ asset function BuffetEvent_GetChallengeButtonImage( ItemFlavor event )
 {
 	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_buffet )
 	return GetGlobalSettingsAsset( ItemFlavor_GetAsset( event ), "eventChallengeButtonImage" )
+}
+
+
+
+string function BuffetEvent_GetChallengeButtonText( ItemFlavor event )
+{
+	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_buffet )
+	return GetGlobalSettingsString( ItemFlavor_GetAsset( event ), "eventChallengeButtonText" )
 }
 
 

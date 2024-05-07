@@ -57,6 +57,7 @@ global function CryptoDrone_GetPlayerDrone
 
 
 
+
 const asset CAMERA_MODEL = $"mdl/props/crypto_drone/crypto_drone.rmdl"
 
 const asset CAMERA_FX = $"P_drone_camera"
@@ -67,6 +68,8 @@ const asset SCREEN_FX = $"P_crypto_hud_boot"
 const asset SCREEN_FAST_FX = $"P_crypto_hud_boot_fast"
 const string DRONE_PROPULSION_1P = "Char_11_TacticalA_E"
 const string DRONE_PROPULSION_3P = "Char_11_TacticalA_E_3P"
+const string DRONE_PROPULSION_1P_UPGRADE = "Char_11_TacticalA_E_Upgraded"
+const string DRONE_PROPULSION_3P_UPGRADE = "Char_11_TacticalA_E_Upgraded_3p"
 const string DRONE_EXPLOSION_3P = "Char_11_TacticalA_F_3p"
 const string DRONE_EXPLOSION_1P = "Char_11_TacticalA_F"
 
@@ -265,7 +268,27 @@ void function MpAbilityCryptoDrone_Init()
 
 
 
+
+
+
+
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -437,6 +460,9 @@ var function OnWeaponToss_ability_crypto_drone( entity weapon, WeaponPrimaryAtta
 
 
 
+
+
+
 			return -1
 		}
 		else
@@ -467,8 +493,8 @@ float function Drone_GetDeployableCameraThrowPower( entity player )
 {
 	float throwPower = DEPLOYABLE_CAMERA_THROW_POWER
 
-	if( IsValid( player ) && player.HasPassive( ePassives.PAS_TAC_UPGRADE_TWO ) ) 
-		throwPower *= 1.5
+	
+	
 
 
 	return throwPower
@@ -571,6 +597,10 @@ var function OnWeaponTossReleaseAnimEvent_ability_crypto_drone( entity weapon, W
 
 
 
+
+
+
+
 		return 0
 	}
 
@@ -578,6 +608,10 @@ var function OnWeaponTossReleaseAnimEvent_ability_crypto_drone( entity weapon, W
 	if ( !weapon.HasMod( "crypto_has_camera" ) )
 	{
 		weapon.EmitWeaponSound_1p3p( "null_remove_soundhook", "null_remove_soundhook" )
+
+
+
+
 
 
 
@@ -971,6 +1005,22 @@ void function CryptoDrone_CameraImpact_Thread( entity projectile, DeployableColl
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 
 
@@ -1020,6 +1070,73 @@ void function CryptoDrone_WeaponInputThink( entity player, entity weapon )
 			weapon.RemoveMod( "crypto_drone_access" )
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3377,6 +3494,27 @@ bool function PlayerCanUseCamera( entity ownerPlayer, bool needsValidCamera )
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function CryptoDrone_TestSendPoint_Think( entity player )
 {
 	EndSignal( player, "OnDestroy", "Crypto_StopSendPointThink" )
@@ -3434,14 +3572,30 @@ void function CryptoDrone_OnPropScriptCreated( entity ent )
 			thread CryptoDrone_CreateHUDMarker( ent )
 
 		file.allDrones.append( ent )
+
+		entity localViewPlayer = GetLocalViewPlayer()
+		if ( !IsValid( localViewPlayer ) )
+			return
+		if( !PlayerHasPassive( localViewPlayer, ePassives.PAS_CRYPTO ) )
+			return
+		if ( ent.GetOwner() == GetLocalViewPlayer() )
+			localViewPlayer.p.cryptoActiveCamera = ent
 	}
 }
 
 void function CryptoDrone_OnPropScriptDestroyed( entity ent )
 {
-	if ( ent.GetScriptName() == CRYPTO_DRONE_SCRIPTNAME )
+	if ( ent.GetTargetName() == CRYPTO_DRONE_TARGETNAME ) 
 	{
 		file.allDrones.fastremovebyvalue( ent )
+
+		entity localViewPlayer = GetLocalViewPlayer()
+		if ( !IsValid( localViewPlayer ) )
+			return
+		if( !PlayerHasPassive( localViewPlayer, ePassives.PAS_CRYPTO ) )
+			return
+		if ( ent.GetOwner() == GetLocalViewPlayer() )
+			localViewPlayer.p.cryptoActiveCamera = null
 	}
 }
 

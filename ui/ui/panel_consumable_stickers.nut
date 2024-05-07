@@ -201,13 +201,7 @@ void function ConsumableStickersPanel_Update( var panel )
 
 		}
 
-		pd.stickerItemList = GetLoadoutItemsSortedForMenu( entries, Sticker_GetSortOrdinal )
-
-		for ( int i = pd.stickerItemList.len() - 1; i >= 0; i-- )
-		{
-			if ( Sticker_IsTheEmpty( pd.stickerItemList[i] ) )
-				pd.stickerItemList.remove( i )
-		}
+		pd.stickerItemList = GetLoadoutItemsSortedForMenu( entries, Sticker_GetSortOrdinal, Sticker_IsTheEmpty, [] )
 
 		bool ignoreDefaultItemForCount = true
 		bool shouldIgnoreOtherSlots = true
@@ -259,8 +253,11 @@ void function ConsumableStickersPanel_Update( var panel )
 
 void function UnregisterAllLoadoutChangeCallbacks()
 {
-	foreach ( entry, loadoutChangeCallback in file.registeredLoadoutChangeCallbacks )
-		RemoveCallback_ItemFlavorLoadoutSlotDidChange_SpecificPlayer( LocalClientEHI(), entry, loadoutChangeCallback )
+	if ( IsConnected() && IsLobby() && IsLocalClientEHIValid() )
+	{
+		foreach ( entry, loadoutChangeCallback in file.registeredLoadoutChangeCallbacks )
+			RemoveCallback_ItemFlavorLoadoutSlotDidChange_SpecificPlayer( LocalClientEHI(), entry, loadoutChangeCallback )
+	}
 	file.registeredLoadoutChangeCallbacks.clear()
 }
 

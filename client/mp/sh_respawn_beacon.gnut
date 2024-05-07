@@ -66,6 +66,8 @@ global function ShouldRestoreKittedWeapons
 
 
 
+
+
 global function ServerCallback_RespawnPodStarted
 global function ServerCallback_DisplayWaitingForRespawn
 global function ServerCallback_RespawnDNAHint
@@ -86,6 +88,8 @@ global function GetRespawnStatus
 global function CountTeammatesWaitingToBeRespawned
 global function HasTeammatesToRespawn
 global function ShouldFastBannerPickup
+global function HasInterruptableBannerPickup
+
 
 
 
@@ -119,6 +123,8 @@ global const float RESPAWN_DNA_LIFETIME = 90.0
 const float RESPAWN_DROP_TIME = 10.0
 global const float RESPAWN_BEACON_RESPAWN_TIME = 5.0
 global const int RESPAWN_BEACON_MAX_NUM_POSITIONS_ON_DROPSHIP = 4
+
+global const int DROPSHIP_ANIM_HEIGHT_OFFSET = 2897
 
 global const string RESPAWN_BEACON_SUCCESS_SOUND = "Survival_RespawnChamber_Activate"
 global const string RESPAWN_BEACON_LOOP_SOUND = "Survival_RespawnBeacon_Linking_loop"
@@ -268,6 +274,11 @@ void function Sh_RespawnBeacon_Init()
 		Remote_RegisterServerFunction( "ClientCallback_PingNearestRespawn", "vector", -FLT_MAX, FLT_MAX, 32 )
 		Remote_RegisterServerFunction( FUNCNAME_PingBeaconFromMap, "typed_entity", "prop_script" )
 
+		if ( HasInterruptableBannerPickup() )
+		{
+			Remote_RegisterServerFunction( "ClientToServer_CancelBannerPickupAnim" )
+		}
+
 
 
 		RegisterSignal( "ReviveRuiThread" )
@@ -283,6 +294,14 @@ void function Sh_RespawnBeacon_Init()
 
 		AddCreateCallback( PLAYER_WAYPOINT_CLASSNAME, PlayerWaypoint_CreateCallback )
 		AddDestroyCallback( PLAYER_WAYPOINT_CLASSNAME, PlayerWaypoint_DestroyCallback )
+
+		if ( HasInterruptableBannerPickup() )
+		{
+			RegisterConCommandTriggeredCallback( "+attack", AttemptCancelBannerPickup )
+			RegisterConCommandTriggeredCallback( "+melee", AttemptCancelBannerPickup )
+
+			RegisterConCommandTriggeredCallback( "+speed", AttemptCancelBannerPickup )
+		}
 
 
 			if ( !IsShadowArmyGamemode() )
@@ -548,6 +567,11 @@ bool function ShouldFastBannerPickup()
 	return GetCurrentPlaylistVarBool( "fast_banner_pickup", true )
 }
 
+bool function HasInterruptableBannerPickup()
+{
+	return GetCurrentPlaylistVarBool( "cancelable_banner_pickup_enabled", true )
+}
+
 bool function ShouldRestoreKittedWeapons()
 {
 	bool isKittedWeaponsGameMode = false
@@ -558,6 +582,10 @@ bool function ShouldRestoreKittedWeapons()
 
 
 		isKittedWeaponsGameMode = isKittedWeaponsGameMode || IsShadowArmyGamemode()
+
+
+
+
 
 
 	return isKittedWeaponsGameMode
@@ -641,6 +669,27 @@ void function AddBeaconEntToRespawnBeaconsArray( entity beacon )
 	if ( IsValid( beacon ) )
 		file.allStations.append( beacon )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1895,6 +1944,9 @@ void function RespawnChamberOnUse_Common( entity pickup, entity player, float st
 	ExtendedUseSettings settings
 	settings.successSound = RESPAWN_BEACON_SUCCESS_SOUND
 
+	
+	settings.serverStartTime = startTime
+
 
 		settings.loopSound = RESPAWN_BEACON_LOOP_SOUND
 		settings.displayRui = $"ui/health_use_progress.rpak"
@@ -1917,7 +1969,6 @@ void function RespawnChamberOnUse_Common( entity pickup, entity player, float st
 
 		settings.hint = "#HINT_RESPAWNING"
 		settings.icon = RESPAWN_BEACON_ICON
-		settings.serverStartTime = startTime
 
 		if ( pickup.GetTargetName() == MOBILE_RESPAWN_BEACON_TARGETNAME )
 		{
@@ -2006,6 +2057,25 @@ void function DisplayRuiForRespawnChamber_Internal( var rui, asset icon, float s
 	RuiSetString( rui, "hintKeyboardMouse", hint )
 	RuiSetString( rui, "hintController", hint )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2322,6 +2392,47 @@ void function ServerCallback_RespawnDNAHint()
 
 
 }
+
+void function AttemptCancelBannerPickup( entity player )
+{
+	if ( !HasInterruptableBannerPickup() )
+		return
+
+	if ( !IsValid( player ) || !player.IsPlayer() )
+		return
+
+	if ( !IsPlayingBannerPickupAnim( player ) )
+		return
+
+	Remote_ServerCallFunction( "ClientToServer_CancelBannerPickupAnim" )
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

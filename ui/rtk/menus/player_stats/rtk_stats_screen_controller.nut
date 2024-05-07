@@ -374,6 +374,7 @@ void function SetStatsData( rtk_struct dataModelStruct, int gameMode, string sea
 			}
 
 			RTKStruct_SetString( badge1, "badgeLabel", GetRankEmblemText( badge1Division, badge1Rank.score, badge1Rank.ladderPosition ) )
+			RTKStruct_SetInt( badge1, "emblemDisplayMode", badge1Division.emblemDisplayMode )
 
 			string split2RankedPeriodGUID = rankedPeriodGUID
 			if ( isPassedRankV2FirstSplit )
@@ -413,6 +414,7 @@ void function SetStatsData( rtk_struct dataModelStruct, int gameMode, string sea
 				}
 
 				RTKStruct_SetString( badge2, "badgeLabel", GetRankEmblemText( badge2Division, badge2Rank.score, badge2Rank.ladderPosition ) )
+				RTKStruct_SetInt( badge2, "emblemDisplayMode", badge2Division.emblemDisplayMode )
 
 				RTKStruct_SetString( badge1, "splitLabel", Localize( "#RANKED_SPLIT_1" ) )
 				RTKStruct_SetString( badge2, "splitLabel", Localize( "#RANKED_SPLIT_2" ) )

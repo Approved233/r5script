@@ -9,6 +9,7 @@ global function GetBloodhoundColorCorrectionID
 
 const float HUNT_MODE_DURATION = 30.0
 const float HUNT_MODE_KNOCKDOWN_TIME_BONUS = 5.0
+const int HUNT_MODE_KNOCKDOWN_HEAL_BONUS = 50 
 const asset HUNT_MODE_ACTIVATION_SCREEN_FX = $"P_hunt_screen"
 const asset HUNT_MODE_BODY_FX = $"P_hunt_body"
 
@@ -71,6 +72,18 @@ float function HuntMode_GetDuration( entity player )
 
 	return result
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

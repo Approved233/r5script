@@ -228,9 +228,12 @@ global enum eDamageSourceId
 	melee_revenant_scythe_rt01
 	mp_weapon_revenant_scythe_rt01
 
-
 	melee_fuse_heirloom
 	mp_weapon_fuse_heirloom_primary
+
+
+
+
 
 
 
@@ -559,6 +562,7 @@ global enum eDamageSourceId
 
 
 
+
 	mp_ability_void_ring
 	mp_weapon_3030
 	mp_weapon_dragon_lmg
@@ -634,6 +638,13 @@ global enum eDamageSourceId
 
 	melee_octane_knife_rt01
 	mp_weapon_octane_knife_rt01_primary
+
+
+
+
+
+
+
 
 
 
@@ -873,10 +884,8 @@ void function DamageTypes_Init()
 		[ eDamageSourceId.melee_revenant_scythe_rt01 ] = "#DEATH_MELEE_REVENANT_SCYTHE_RT01",
 		[ eDamageSourceId.mp_weapon_revenant_scythe_rt01] = "#DEATH_MELEE_REVENANT_SCYTHE_RT01",
 
-
-			[ eDamageSourceId.melee_fuse_heirloom ] = "#DEATH_MELEE_FUSE_HEIRLOOM",
-			[ eDamageSourceId.mp_weapon_fuse_heirloom_primary] = "#DEATH_MELEE_FUSE_HEIRLOOM",
-
+		[ eDamageSourceId.melee_fuse_heirloom ] = "#DEATH_MELEE_FUSE_HEIRLOOM",
+		[ eDamageSourceId.mp_weapon_fuse_heirloom_primary] = "#DEATH_MELEE_FUSE_HEIRLOOM",
 
 
 			[ eDamageSourceId.melee_artifact_sword] = "#DEATH_MELEE_ARTIFACT_SWORD",
@@ -891,6 +900,11 @@ void function DamageTypes_Init()
 
 			[ eDamageSourceId.melee_octane_knife_rt01 ] = "#DEATH_MELEE_OCTANE_KNIFE_RT01",
 			[ eDamageSourceId.mp_weapon_octane_knife_rt01_primary ] = "#DEATH_MELEE_OCTANE_KNIFE_RT01",
+
+
+
+
+
 
 
 
@@ -917,6 +931,10 @@ void function DamageTypes_Init()
 
 
 			[ eDamageSourceId.mp_ability_conduit_shield_mines ] = "#ABL_CONDUIT_ULTIMATE",
+
+
+
+
 
 
 

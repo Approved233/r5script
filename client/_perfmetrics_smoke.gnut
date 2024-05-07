@@ -1,13 +1,11 @@
-global function PerfMetrics_SmokeTestInit
+global function SkinMetrics_Init
 
 
 
 
 
 
-
-
-global function PerfMetrics_ClientStartRecordingMetrics
+global function SkinMetrics_ClientStartRecordingMetrics
 
 
 
@@ -17,7 +15,7 @@ struct
 	string metricsDataBuffer
 	array<string> metricsDataCategories
 	bool oldDVSEnable
-} perfMetrics
+} skinMetrics
 
 
 
@@ -35,24 +33,36 @@ struct
 
 
 
+const int SINGLE_TEST_TIME_SECONDS = 10
+const string BLOODHOUND_GUID_STRING = "SAID00898565421"
+const string BLOODHOUND_CLASSIC_GUID_STRING = "SAID00845551255"
+const string AUTOPISTOL_GUID_STRING = "SAID00686444189"
+const string AUTOPISTOL_FACTORY_ISSUE_GUID_STRING = "SAID01309064329"
 
-const int SINGLE_PERF_TEST_TIME_SECONDS = 10
-
-void function PerfMetrics_SmokeTestInit()
+void function SkinMetrics_Init()
 {
-	PerfMetrics_RegisterNetworking()
+	SkinMetrics_RegisterNetworking()
+
+
+
+
+
 
 
 
 
 }
 
-void function PerfMetrics_RegisterNetworking()
+void function SkinMetrics_RegisterNetworking()
 {
-	Remote_RegisterClientFunction( "PerfMetrics_ClientStartRecordingMetrics",
+	Remote_RegisterClientFunction( "SkinMetrics_ClientStartRecordingMetrics",
 		"int", -INT_MAX, INT_MAX, "int", -INT_MAX, INT_MAX, "int", -INT_MAX, INT_MAX, "int", -INT_MAX, INT_MAX )
-	Remote_RegisterServerFunction( "PerfMetrics_OnClientEndRecordingPerfMetrics" )
+	Remote_RegisterServerFunction( "SkinMetrics_OnClientEndRecordingSkinMetrics" )
 }
+
+
+
+
 
 
 
@@ -264,16 +274,16 @@ void function PerfMetrics_RegisterNetworking()
 
 
 const string METRICS_FPS = "FPS"
-const int SAMPLE_COUNT = SINGLE_PERF_TEST_TIME_SECONDS * 30
+const int SAMPLE_COUNT = SINGLE_TEST_TIME_SECONDS * 30
 
-void function PerfMetrics_ClientStartRecordingMetrics( int legendGUID, int legendSkinGUID, int weaponGUID, int weaponSkinGUID )
+void function SkinMetrics_ClientStartRecordingMetrics( int legendGUID, int legendSkinGUID, int weaponGUID, int weaponSkinGUID )
 {
-	perfMetrics.oldDVSEnable = GetConVarBool( "dvs_enable" )
+	skinMetrics.oldDVSEnable = GetConVarBool( "dvs_enable" )
 	SetConVarBool( "dvs_enable", false )
-	thread PerfMetrics_ClientStartRecordingMetrics_Thread( legendGUID, legendSkinGUID, weaponGUID, weaponSkinGUID )
+	thread SkinMetrics_ClientStartRecordingMetrics_Thread( legendGUID, legendSkinGUID, weaponGUID, weaponSkinGUID )
 }
 
-void function PerfMetrics_ClientStartRecordingMetrics_Thread( int legendGUID, int legendSkinGUID, int weaponGUID, int weaponSkinGUID )
+void function SkinMetrics_ClientStartRecordingMetrics_Thread( int legendGUID, int legendSkinGUID, int weaponGUID, int weaponSkinGUID )
 {
 	string mapName = GetMapName()
 	string hardware = GetConsoleName()
@@ -281,46 +291,38 @@ void function PerfMetrics_ClientStartRecordingMetrics_Thread( int legendGUID, in
 
 	int buildNum = buildString.slice( buildString.find( "#" ) + 1 ).tointeger()
 
-	string functionref( int, string ) getAssetName = string function( int GUID, string defaultValue ) : ()
-	{
-		if ( IsValidItemFlavorGUID( GUID ) )
-		{
-			return ItemFlavor_GetAssetName( GetItemFlavorByGUID( GUID ) )
-		}
+	string legendName = ItemFlavor_GetAssetName( GetItemFlavorByGUID( legendGUID ) )
+	string legendSkinName = ItemFlavor_GetAssetName( GetItemFlavorByGUID( legendSkinGUID ) )
+	string weaponName = ItemFlavor_GetAssetName( GetItemFlavorByGUID( weaponGUID ) )
+	string weaponSkinName = ItemFlavor_GetAssetName( GetItemFlavorByGUID( weaponSkinGUID ) )
 
-		return defaultValue
-	}
+	string legendFriendlyName = Localize( ItemFlavor_GetShortName( GetItemFlavorByGUID( legendGUID ) ) )
+	string legendSkinFriendlyName = Localize( ItemFlavor_GetLongName( GetItemFlavorByGUID( legendSkinGUID ) ) )
+	string weaponFriendlyName = Localize( ItemFlavor_GetShortName( GetItemFlavorByGUID( weaponGUID ) ) )
+	string weaponSkinFriendlyName = Localize( ItemFlavor_GetLongName( GetItemFlavorByGUID( weaponSkinGUID ) ) )
 
-	string legendName = getAssetName( legendGUID, "bloodhound" )
-	string legendSkinName = getAssetName( legendSkinGUID, "classic" )
-	string weaponSkinName = getAssetName( weaponSkinGUID, "factory_issue" )
+	skinMetrics.metricsFileName = format( "skin_metrics_%s_%s_%s_%s_%s_CL#%i.csv", hardware, legendName, legendSkinName, weaponName, weaponSkinName, buildNum )
 
-	string weaponName = "mp_weapon_autopistol"
-	if ( IsValidItemFlavorGUID( weaponGUID ) )
-	{
-		weaponName = WeaponItemFlavor_GetClassname( GetItemFlavorByGUID( weaponGUID ) )
-	}
-
-	perfMetrics.metricsFileName = format( "perf_metrics_%s_%s_%s_%s_%s_CL#%i.csv", hardware, legendName, legendSkinName, weaponName, weaponSkinName, buildNum )
-
-	perfMetrics.metricsDataBuffer = "Hardware,Build ID,Map,Legend,Legend Skin,Weapon,Weapon Skin,FPS\n"
-	perfMetrics.metricsDataBuffer += format( "%s,%s,%s,%s,%s,%s,%s", hardware, buildString, mapName, legendName, legendSkinName, weaponName, weaponSkinName )
-	perfMetrics.metricsDataBuffer += "\n"
+	skinMetrics.metricsDataBuffer = "Hardware,Build ID,Map,Legend,Legend Skin,Weapon,Weapon Skin,FPS\n"
+	skinMetrics.metricsDataBuffer += format( "%s,%s,%s,%s(%s),%s(%s),%s(%s),%s(%s)",
+		hardware, buildString, mapName, legendFriendlyName, legendName, legendSkinFriendlyName, legendSkinName,
+		weaponFriendlyName, weaponName, weaponSkinFriendlyName, weaponSkinName )
+	skinMetrics.metricsDataBuffer += "\n"
 
 	for( int i = 0; i < SAMPLE_COUNT; i++ )
 	{
 		int fps = int( RoundToNearestInt( 1.0 / RenderFrameTime() ) )
-		perfMetrics.metricsDataBuffer += format( ",,,,,,,%i\n", fps )
+		skinMetrics.metricsDataBuffer += format( ",,,,,,,%i\n", fps )
 		wait RenderFrameTime()
 	}
 
-	PerfMetrics_ClientEndRecordingPerfMetrics()
+	SkinMetrics_ClientEndRecordingSkinMetrics()
 }
 
-void function PerfMetrics_ClientEndRecordingPerfMetrics()
+void function SkinMetrics_ClientEndRecordingSkinMetrics()
 {
-	SetConVarBool( "dvs_enable", perfMetrics.oldDVSEnable )
-	Remote_ServerCallFunction( "PerfMetrics_OnClientEndRecordingPerfMetrics" )
-	WriteMetricsDataToFile( perfMetrics.metricsFileName, "perf_metrics", perfMetrics.metricsDataBuffer, true )
+	SetConVarBool( "dvs_enable", skinMetrics.oldDVSEnable )
+	Remote_ServerCallFunction( "SkinMetrics_OnClientEndRecordingSkinMetrics" )
+	WriteMetricsDataToFile( skinMetrics.metricsFileName, "skin_metrics", skinMetrics.metricsDataBuffer, true )
 }
 

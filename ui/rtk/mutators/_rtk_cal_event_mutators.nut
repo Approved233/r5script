@@ -66,3 +66,63 @@ int function RTKMutator_CalEventNextTime( int input )
 
 	return CalEvent_GetHideUnixTime( flav )
 }
+
+bool function RTKMutator_GetCalEventGlobalSettingBool( int input, string settingName )
+{
+	if ( input <= ASSET_SETTINGS_UNIQUE_ID_INVALID )
+	{
+		Warning("RTKMutator_GetCalEventGlobalSettingBool - invalid itemflavor")
+		return false
+	}
+
+	ItemFlavor event = GetItemFlavorByGUID( input )
+	return GetGlobalSettingsBool( ItemFlavor_GetAsset( event ), settingName )
+}
+
+string function RTKMutator_GetCalEventGlobalSettingString( int input, string settingName )
+{
+	if ( input <= ASSET_SETTINGS_UNIQUE_ID_INVALID )
+	{
+		Warning("RTKMutator_GetCalEventGlobalSettingString - invalid itemflavor")
+		return ""
+	}
+
+	ItemFlavor event = GetItemFlavorByGUID( input )
+	return GetGlobalSettingsString( ItemFlavor_GetAsset( event ), settingName )
+}
+
+float function RTKMutator_GetCalEventGlobalSettingFloat( int input, string settingName )
+{
+	if ( input <= ASSET_SETTINGS_UNIQUE_ID_INVALID )
+	{
+		Warning("RTKMutator_GetCalEventGlobalSettingFloat - invalid itemflavor")
+		return 0.0
+	}
+
+	ItemFlavor event = GetItemFlavorByGUID( input )
+	return GetGlobalSettingsFloat( ItemFlavor_GetAsset( event ), settingName )
+}
+
+vector function RTKMutator_GetCalEventGlobalSettingVector( int input, string settingName )
+{
+	if ( input <= ASSET_SETTINGS_UNIQUE_ID_INVALID )
+	{
+		Warning("RTKMutator_GetCalEventGlobalSettingVector - invalid itemflavor")
+		return <0, 0, 0>
+	}
+
+	ItemFlavor event = GetItemFlavorByGUID( input )
+	return GetGlobalSettingsVector( ItemFlavor_GetAsset( event ), settingName )
+}
+
+asset function RTKMutator_GetCalEventGlobalSettingAsset( int input, string settingName )
+{
+	if ( input <= ASSET_SETTINGS_UNIQUE_ID_INVALID )
+	{
+		Warning("RTKMutator_GetCalEventGlobalSettingAsset - invalid itemflavor")
+		return $""
+	}
+
+	ItemFlavor event = GetItemFlavorByGUID( input )
+	return GetGlobalSettingsAsset( ItemFlavor_GetAsset( event ), settingName )
+}

@@ -238,9 +238,18 @@ void function BuildPostGameXpBreakdownModel( rtk_struct postGameXpModel )
 	const int LIST_QUANTITY = 2
 	UpdateXPEvents()
 	entity player = GetLocalClientPlayer()
+
 	string lastGameMode = expect string( GetPersistentVar( "lastGameMode" ) )
-	if (!( lastGameMode in xpDisplayGroups ))
+	string lastGameUIRules = expect string( GetPersistentVar( "lastGameUIRules" ) )
+
+	if ( lastGameUIRules in xpDisplayGroups )
+	{
+		lastGameMode = lastGameUIRules
+	}
+	else if (!( lastGameMode in xpDisplayGroups ))
+	{
 		lastGameMode = SURVIVAL
+	}
 
 	array< array<RTKPostGameXpBreakdownModel> > xpLists
 	for ( int listIndex = 0; listIndex < LIST_QUANTITY; listIndex++ )
@@ -371,7 +380,7 @@ void function SetFinalLevelUpAccountProgressData()
 
 	accountProgress.startXP = 0
 	accountProgress.endXP = currentBoostedAccountData.accountXP - currentBoostedAccountData.startLevelXP
-	accountProgress.maxLevelXP = GetTotalXPToCompleteAccountLevel( currentBoostedAccountData.level )
+	accountProgress.maxLevelXP = GetTotalXPToCompleteAccountLevel( currentBoostedAccountData.level ) - GetTotalXPToCompleteAccountLevel( currentBoostedAccountData.level - 1 )
 
 	accountProgress.progressFracStart = 0
 	accountProgress.boostFracStart = 0

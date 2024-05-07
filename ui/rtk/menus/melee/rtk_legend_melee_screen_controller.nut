@@ -1,9 +1,9 @@
-global function RTKLegendMeleeScreen_InitMetaData
 global function RTKLegendMeleeScreen_OnInitialize
 global function RTKLegendMeleeScreen_OnDestroy
 
 global function InitRTKLegendMeleePanel
 global function GetLegendMeleeCustomizeItem
+global function FillLegendMeleeEquippedIcons
 global function OnMeleeCustomizationClosed
 
 global struct RTKLegendMeleeScreen_Properties
@@ -11,10 +11,10 @@ global struct RTKLegendMeleeScreen_Properties
 	rtk_panel itemList
 	rtk_behavior equipButton
 	rtk_behavior customizeButton
-	rtk_behavior deathboxSlotButton
+	rtk_panel equippedItems
 }
 
-global struct MeleeItemModel
+global struct RTKMeleeItemModel
 {
 	string name
 	int quality
@@ -25,10 +25,10 @@ global struct MeleeItemModel
 	string actionText
 }
 
-global struct MeleeModel
+global struct RTKMeleeModel
 {
-	array<MeleeItemModel> listItems
-	MeleeItemModel& previewItem
+	array<RTKMeleeItemModel> listItems
+	RTKMeleeItemModel& previewItem
 	string listHeader
 	bool inCustomization
 
@@ -37,6 +37,9 @@ global struct MeleeModel
 	asset deathboxImage
 	string deathboxName
 	string deathboxDesc
+	RTKMeleeCustomizationSetModel& equippedItems
+	bool showEquippedItems
+	array<asset> equippedToLegendIcons
 }
 
 struct
@@ -48,11 +51,6 @@ struct
 	int customizeIndex = -1
 } file
 
-void function RTKLegendMeleeScreen_InitMetaData( string behaviorType, string structType )
-{
-	RTKMetaData_BehaviorIsRuiBehavior( behaviorType, true )
-}
-
 void function RTKLegendMeleeScreen_OnInitialize( rtk_behavior self )
 {
 	RunClientScript( "EnableModelTurn" )
@@ -63,44 +61,38 @@ void function RTKLegendMeleeScreen_OnInitialize( rtk_behavior self )
 	file.meleeSkins = GetSelectableMeleeSkins()
 
 	
-	rtk_struct rtkModel = RTKDataModelType_CreateStruct( RTK_MODELTYPE_MENUS, "melee", "MeleeModel", ["legend"] )
-	rtk_array listItems = RTKStruct_GetArray( rtkModel, "listItems" )
+	rtk_struct rtkModel = RTKDataModelType_CreateStruct( RTK_MODELTYPE_MENUS, "melee", "RTKMeleeModel", ["legend"] )
+	rtk_array meleeSkinItems = RTKStruct_GetArray( rtkModel, "listItems" )
 	ItemFlavor equippedSkin = LoadoutSlot_GetItemFlavor( LocalClientEHI(), Loadout_MeleeSkin( GetTopLevelCustomizeContext() ) )
 	int ownedCount = 0
-	foreach (int index, ItemFlavor itemFlav in file.meleeSkins)
+	foreach (int index, ItemFlavor meleeSkinItemFlav in file.meleeSkins)
 	{
-		rtk_struct listItemEntry = RTKArray_PushNewStruct( listItems )
+		rtk_struct meleeSkinItemStruct = RTKArray_PushNewStruct( meleeSkinItems )
 
-		MeleeItemModel listItem
-		listItem.name = Localize( ItemFlavor_GetLongName( itemFlav ) )
-		listItem.quality = ItemFlavor_GetQuality( itemFlav )
-		listItem.eventIcon = ItemFlavor_GetSourceIcon( itemFlav )
-		listItem.equipped = itemFlav == equippedSkin
-		listItem.locked = !IsItemFlavorUnlockedForLoadoutSlot( LocalClientEHI(), Loadout_MeleeSkin( GetTopLevelCustomizeContext() ), itemFlav )
-		listItem.selected = false
+		RTKMeleeItemModel meleeSkinItemModel
+		meleeSkinItemModel.name = Localize( ItemFlavor_GetLongName( meleeSkinItemFlav ) )
+		meleeSkinItemModel.quality = ItemFlavor_GetQuality( meleeSkinItemFlav )
+		meleeSkinItemModel.eventIcon = ItemFlavor_GetSourceIcon( meleeSkinItemFlav )
+		meleeSkinItemModel.equipped = meleeSkinItemFlav == equippedSkin
+		meleeSkinItemModel.locked = !IsItemFlavorUnlockedForLoadoutSlot( LocalClientEHI(), Loadout_MeleeSkin( GetTopLevelCustomizeContext() ), meleeSkinItemFlav )
+		meleeSkinItemModel.selected = false
 
-		if ( !listItem.locked )
+		if ( !meleeSkinItemModel.locked )
 		{
 			ownedCount++
-			listItem.actionText = "#EQUIP"
+			meleeSkinItemModel.actionText = "#EQUIP"
 		}
 		else
 		{
-			listItem.actionText = IsRewardForActiveEvent( itemFlav ) ? "#MENU_STORE_PANEL_EVENT_SHOP" : "#UNLOCK"
+			meleeSkinItemModel.actionText = MeleeSkin_IsRewardForActiveEvent( meleeSkinItemFlav ) ? "#MENU_STORE_PANEL_EVENT_SHOP" : "#UNLOCK"
 		}
 
+		if ( Artifacts_Loadouts_IsConfigPointerItemFlavor( meleeSkinItemFlav ) )
+		{
+			meleeSkinItemModel.name = !meleeSkinItemModel.locked ? Localize( ItemFlavor_GetLongName( meleeSkinItemFlav ), Artifacts_Loadouts_GetConfigIndex( meleeSkinItemFlav ) + 1 ) :  Localize( "#MELEE_SKIN_ARTIFACT_DAGGER_NAME" )
+		}
 
-			if ( Artifacts_Loadouts_IsConfigPointerItemFlavor( itemFlav ) )
-			{
-
-
-
-					listItem.name = Localize( "#MELEE_SKIN_ARTIFACT_DAGGER_MOBSTER_NAME" )
-
-			}
-
-
-		RTKStruct_SetValue( listItemEntry, listItem )
+		RTKStruct_SetValue( meleeSkinItemStruct, meleeSkinItemModel )
 	}
 
 	RTKStruct_SetString( rtkModel, "listHeader", Localize( "#OWNED_COLLECTED", ownedCount, file.meleeSkins.len() ) )
@@ -165,26 +157,38 @@ void function RTKLegendMeleeScreen_OnInitialize( rtk_behavior self )
 	}
 
 	
-	rtk_behavior ornull deathboxSlotButton = self.PropGetBehavior( "deathboxSlotButton" )
-	if ( deathboxSlotButton != null )
-	{
-		expect rtk_behavior( deathboxSlotButton )
-		self.AutoSubscribe( deathboxSlotButton, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( self ) {
-			CustomizeItemAtIndex( file.previewIndex )
-		} )
-	}
-
-	
 	rtk_behavior ornull customizeButton = self.PropGetBehavior( "customizeButton" )
 	if ( customizeButton != null )
 	{
 		expect rtk_behavior( customizeButton )
 		self.AutoSubscribe( customizeButton, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( self ) {
-			CustomizeItemAtIndex( file.previewIndex )
+			CustomizeItem( file.previewIndex )
 		} )
 	}
 
+	
+	rtk_panel ornull equippedItems = self.PropGetPanel( "equippedItems" )
+	if ( equippedItems != null )
+	{
+		expect rtk_panel( equippedItems )
+
+		array< rtk_panel > components = equippedItems.FindChildByName( "Set" ).GetChildren()
+		foreach( rtk_panel component in components )
+		{
+			rtk_behavior ornull button = component.FindBehaviorByTypeName( "Button" )
+
+			if ( button != null )
+			{
+				expect rtk_behavior( customizeButton )
+				self.AutoSubscribe( button, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( self ) {
+					CustomizeItem( file.previewIndex )
+				} )
+			}
+		}
+	}
+
 	file.isVisible = true
+	RTKLegendMeleeScreen_SetEquippedItems()
 }
 
 void function RTKLegendMeleeScreen_OnDestroy( rtk_behavior self )
@@ -194,8 +198,6 @@ void function RTKLegendMeleeScreen_OnDestroy( rtk_behavior self )
 	UI_SetPresentationType( ePresentationType.INACTIVE )
 
 	RTKDataModelType_DestroyStruct( RTK_MODELTYPE_MENUS, "melee", ["legend"] )
-
-	file.meleeSkins.clear()
 }
 
 void function InitRTKLegendMeleePanel( var panel )
@@ -214,10 +216,6 @@ void function InitRTKLegendMeleePanel( var panel )
 	AddPanelFooterOption( panel, LEFT, BUTTON_X, false, "#X_BUTTON_UNLOCK", "#X_BUTTON_UNLOCK", EquipFocusedItem, CanUnlockFocused )
 	AddPanelFooterOption( panel, LEFT, BUTTON_X, false, "#X_BUTTON_EVENT_SHOP", "#X_BUTTON_EVENT_SHOP", EquipFocusedItem, CanUnlockFocusedEventShop )
 	AddPanelFooterOption( panel, LEFT, BUTTON_X, false, "#X_BUTTON_EQUIP", "#X_BUTTON_EQUIP", EquipFocusedItem, CanEquipFocused )
-
-
-	AddPanelFooterOption( panel, LEFT, BUTTON_Y, false, "#Y_BUTTON_DEATHBOX", "#Y_BUTTON_DEATHBOX", CustomizeFocusedItem, CanCustomizeFocused )
-
 }
 
 void function LegendMeleePanel_OnShow( var panel )
@@ -230,13 +228,12 @@ void function LegendMeleePanel_OnShow( var panel )
 	AddCallback_ItemFlavorLoadoutSlotDidChange_SpecificPlayer( LocalClientEHI(), Loadout_MeleeSkin( GetTopLevelCustomizeContext() ), OnMeleeSkinChanged )
 }
 
-
 void function LegendMeleePanel_OnHide( var panel )
 {
 	var parentMenu = Hud_GetParent( panel )
 	Hud_SetVisible( Hud_GetChild( parentMenu, "LegendMeleePanelModelRotateMouseCapture"), false )
-
-	RemoveCallback_ItemFlavorLoadoutSlotDidChange_SpecificPlayer( LocalClientEHI(), Loadout_MeleeSkin( GetTopLevelCustomizeContext() ), OnMeleeSkinChanged )
+	if ( IsConnected() && IsLobby() && IsLocalClientEHIValid() && IsTopLevelCustomizeContextValid() )
+		RemoveCallback_ItemFlavorLoadoutSlotDidChange_SpecificPlayer( LocalClientEHI(), Loadout_MeleeSkin( GetTopLevelCustomizeContext() ), OnMeleeSkinChanged )
 }
 
 bool function CanUnlockFocused()
@@ -244,7 +241,7 @@ bool function CanUnlockFocused()
 	if ( file.focusedIndex < 0 || file.focusedIndex >= file.meleeSkins.len() )
 		return false
 
-	return !IsItemFlavorUnlockedForLoadoutSlot( LocalClientEHI(), Loadout_MeleeSkin( GetTopLevelCustomizeContext() ), file.meleeSkins[ file.focusedIndex ] ) && !IsRewardForActiveEvent( file.meleeSkins[ file.focusedIndex ] )
+	return !IsItemFlavorUnlockedForLoadoutSlot( LocalClientEHI(), Loadout_MeleeSkin( GetTopLevelCustomizeContext() ), file.meleeSkins[ file.focusedIndex ] ) && !MeleeSkin_IsRewardForActiveEvent( file.meleeSkins[ file.focusedIndex ] )
 }
 
 bool function CanUnlockFocusedEventShop()
@@ -252,7 +249,7 @@ bool function CanUnlockFocusedEventShop()
 	if ( file.focusedIndex < 0 || file.focusedIndex >= file.meleeSkins.len() )
 		return false
 
-	return !IsItemFlavorUnlockedForLoadoutSlot( LocalClientEHI(), Loadout_MeleeSkin( GetTopLevelCustomizeContext() ), file.meleeSkins[ file.focusedIndex ] ) && IsRewardForActiveEvent( file.meleeSkins[ file.focusedIndex ] )
+	return !IsItemFlavorUnlockedForLoadoutSlot( LocalClientEHI(), Loadout_MeleeSkin( GetTopLevelCustomizeContext() ), file.meleeSkins[ file.focusedIndex ] ) && MeleeSkin_IsRewardForActiveEvent( file.meleeSkins[ file.focusedIndex ] )
 }
 
 bool function CanEquipFocused()
@@ -301,7 +298,7 @@ array<ItemFlavor> function GetSelectableMeleeSkins()
 	foreach ( ItemFlavor meleeSkin in allMeleeSkins )
 	{
 		
-		if ( !IsItemFlavorUnlockedForLoadoutSlot( playerEHI, entry, meleeSkin ) && !IsRewardForActiveEvent( meleeSkin ) )
+		if ( !IsItemFlavorUnlockedForLoadoutSlot( playerEHI, entry, meleeSkin ) && !MeleeSkin_IsRewardForActiveEvent( meleeSkin ) )
 		{
 			
 			if ( MeleeSkin_ShouldHideIfLocked( meleeSkin ) )
@@ -344,35 +341,19 @@ array<ItemFlavor> function GetSelectableMeleeSkins()
 			return 1
 
 		
+		int aConfigIndex = Artifacts_Loadouts_IsConfigPointerItemFlavor( a ) ? Artifacts_Loadouts_GetConfigIndex( a ) : -1
+		int bConfigIndex = Artifacts_Loadouts_IsConfigPointerItemFlavor( b ) ? Artifacts_Loadouts_GetConfigIndex( b ) : -1
+
+		if ( aConfigIndex < bConfigIndex )
+			return -1
+		else if ( aConfigIndex > bConfigIndex )
+			return 1
+
+		
 		return SortStringAlphabetize( Localize( ItemFlavor_GetLongName( a ) ), Localize( ItemFlavor_GetLongName( b ) ) )
 	} )
 
 	return selectableMeleeSkins
-}
-
-bool function IsRewardForActiveEvent( ItemFlavor item )
-{
-	ItemFlavor ornull activeEvent = GetActiveMilestoneEvent( GetUnixTimestamp() )
-	if ( activeEvent != null )
-	{
-		expect ItemFlavor( activeEvent )
-
-		if ( ItemFlavor_GetType( item ) == eItemType.melee_skin && Artifacts_Loadouts_IsConfigPointerItemFlavor( item ) )
-			return MilestoneEvent_EventAwardsArtifact( activeEvent )
-		else
-
-			return MilestoneEvent_IsMythicEventItem( activeEvent, ItemFlavor_GetGRXIndex( item ) )
-	}
-
-	activeEvent = GetActiveCollectionEvent( GetUnixTimestamp() )
-	if ( activeEvent != null )
-	{
-		expect ItemFlavor( activeEvent )
-		ItemFlavor reward = HeirloomEvent_GetPrimaryCompletionRewardItem( activeEvent )
-		return ( reward == item )
-	}
-
-	return false
 }
 
 void function RefreshList()
@@ -413,6 +394,10 @@ void function PreviewItem( int index, bool playFX )
 
 	file.previewIndex = index
 
+	string meleePath = RTKDataModelType_GetDataPath( RTK_MODELTYPE_MENUS, "melee", true, [ "legend" ] )
+	if ( !RTKDataModel_HasDataModel( meleePath ) )
+		return
+
 	rtk_struct rtkModel = expect rtk_struct( RTKDataModelType_GetStruct( RTK_MODELTYPE_MENUS, "melee", true, [ "legend" ] ) )
 
 	ItemFlavor defaultMeleeSkin = GetDefaultItemFlavorForLoadoutSlot(  LocalClientEHI(), Loadout_MeleeSkin( GetTopLevelCustomizeContext() ) )
@@ -424,6 +409,19 @@ void function PreviewItem( int index, bool playFX )
 	else if ( IsItemFlavorStructValid( file.meleeSkins[ index ].guid, eValidation.DONT_ASSERT ) )
 	{
 		RTKStruct_SetBool( rtkModel, "isDefault", false )
+
+		if ( Artifacts_Loadouts_IsConfigPointerItemFlavor( file.meleeSkins[ index ] ) )
+		{
+			Artifacts_Loadouts_CheckAndFixMisconfigurations( LocalClientEHI(), GetTopLevelCustomizeContext() )
+			array< ItemFlavor > equippedItems = Artifacts_GetEquippedSet( file.meleeSkins[ index ] )
+
+			foreach ( ItemFlavor item in equippedItems )
+			{
+				RunClientScript( "Artifacts_Loadouts_StorePreviewDataOnPlayerEntityStruct", item.guid )
+			}
+			RunClientScript("Artifacts_StoreLoadoutDataOnPlayerEntityStruct", null, null, false )
+		}
+
 		RunClientScript( "UIToClient_PreviewMeleeSkin", ItemFlavor_GetGUID( file.meleeSkins[ index ] ) )
 	}
 
@@ -443,6 +441,12 @@ void function PreviewItem( int index, bool playFX )
 	ItemFlavor equippedDeathbox = Deathbox_GetEquipped( GetTopLevelCustomizeContext(), file.meleeSkins[ index ] )
 	RTKStruct_SetAssetPath( rtkModel, "deathboxImage", ItemFlavor_GetIcon( equippedDeathbox ) )
 	RTKStruct_SetString( rtkModel, "deathboxName", ItemFlavor_GetLongName( equippedDeathbox ) )
+
+	
+	rtk_array equippedToLegendIcons = RTKStruct_GetArray( rtkModel, "equippedToLegendIcons" )
+	FillLegendMeleeEquippedIcons( equippedToLegendIcons, file.meleeSkins[ index ] )
+
+	RTKLegendMeleeScreen_SetEquippedItems()
 }
 
 bool function EquipItem( int index )
@@ -466,32 +470,57 @@ bool function EquipItem( int index )
 
 	if ( !IsItemFlavorUnlockedForLoadoutSlot( playerEHI, entry, meleeSkinToEquip ) )
 	{
+		bool isConfigPointer = Artifacts_Loadouts_IsConfigPointerItemFlavor( meleeSkinToEquip )
+
 		bool inspectOffer = false
-		array<GRXScriptOffer> offers = GRX_GetLocationOffers( "heirloom_set_shop" )
-		foreach ( offerIndex, offer in offers )
+
+		
+		if ( isConfigPointer )
 		{
-			ItemFlavor offerSkin = ItemFlavorBag_GetMeleeSkinItem( offer.output )
-			if ( offerSkin == meleeSkinToEquip )
+			array<GRXScriptOffer> offers = GRX_GetItemDedicatedStoreOffers( Artifacts_GetSetItems( eArtifactSetIndex.MOB )[0], "artifact_set_shop" )
+			foreach ( offerIndex, offer in offers )
 			{
-				StoreInspectMenu_AttemptOpenWithOffer( offer )
-				EmitUISound( "ui_menu_accept" )
-				inspectOffer = true
-				break
+				foreach( flav in offer.output.flavors )
+				{
+					if ( Artifacts_IsBaseArtifact( flav ) )
+					{
+						ArtifactsInspectMenu_AttemptOpenWithOffer( offer )
+						EmitUISound( "ui_menu_accept" )
+						inspectOffer = true
+						break
+					}
+				}
 			}
 		}
-
-		if ( !inspectOffer )
+		else
 		{
-			
-			if ( IsRewardForActiveEvent( meleeSkinToEquip ) )
+			array<GRXScriptOffer> offers = GRX_GetLocationOffers( "heirloom_set_shop" )
+			foreach ( offerIndex, offer in offers )
 			{
-				EmitUISound( "ui_menu_accept" )
-				EventsPanel_SetOpenPageIndex( eEventsPanelPage.COLLECTION )
-				JumpToEventTab( "RTKEventsPanel" )
+				DEV_GRX_DescribeOffer( offer )
+				ItemFlavor offerSkin = ItemFlavorBag_GetMeleeSkinItem( offer.output )
+				if ( offerSkin == meleeSkinToEquip )
+				{
+					StoreInspectMenu_AttemptOpenWithOffer( offer )
+					EmitUISound( "ui_menu_accept" )
+					inspectOffer = true
+					break
+				}
 			}
-			else
+
+			if ( !inspectOffer )
 			{
-				EmitUISound( "menu_deny" )
+				
+				if ( MeleeSkin_IsRewardForActiveEvent( meleeSkinToEquip ) )
+				{
+					EmitUISound( "ui_menu_accept" )
+					EventsPanel_SetOpenPageIndex( eEventsPanelPage.COLLECTION )
+					JumpToEventTab( "RTKEventsPanel" )
+				}
+				else
+				{
+					EmitUISound( "menu_deny" )
+				}
 			}
 		}
 
@@ -522,25 +551,7 @@ void function CustomizeItem( int index )
 	var menu = GetMenu( "MeleeCustomizationMenu" )
 	AdvanceMenu( menu )
 
-
-
-
-
-
-
-
-
-
-
-
-
-		ShowPanel( Hud_GetChild( menu, "MeleeCustomizationPanel" ) )
-
-
 	EmitUISound( "ui_menu_accept" )
-
-	rtk_struct rtkModel = expect rtk_struct( RTKDataModelType_GetStruct( RTK_MODELTYPE_MENUS, "melee", true, [ "legend" ] ) )
-	RTKStruct_SetBool( rtkModel, "inCustomization", true )
 }
 
 void function EquipItemAtIndex( int index )
@@ -553,14 +564,6 @@ void function EquipItemAtIndex( int index )
 		PreviewItem( index, true )
 }
 
-void function CustomizeItemAtIndex( int index )
-{
-	if ( index < 0 )
-		return
-
-	CustomizeItem( index )
-}
-
 void function EquipFocusedItem( var button )
 {
 	EquipItemAtIndex( file.focusedIndex )
@@ -568,7 +571,7 @@ void function EquipFocusedItem( var button )
 
 void function CustomizeFocusedItem( var button )
 {
-	CustomizeItemAtIndex( file.focusedIndex )
+	CustomizeItem( file.focusedIndex )
 }
 
 ItemFlavor ornull function GetLegendMeleeCustomizeItem()
@@ -579,13 +582,54 @@ ItemFlavor ornull function GetLegendMeleeCustomizeItem()
 	return file.meleeSkins[ file.customizeIndex ]
 }
 
+void function FillLegendMeleeEquippedIcons( rtk_array equippedToLegendIcons, ItemFlavor selectedMeleeSkin )
+{
+	RTKArray_Clear( equippedToLegendIcons )
+
+	
+	if ( !Artifacts_Loadouts_IsConfigPointerItemFlavor( selectedMeleeSkin ) )
+		return
+
+	
+	array<ItemFlavor> allCharacters = clone Loadout_Character().validItemFlavorList
+	RemoveNonShippingCharacters( allCharacters )
+	allCharacters.sort( int function( ItemFlavor a, ItemFlavor b ) : () {
+		string characterRefA = ItemFlavor_GetGUIDString( a )
+		int charAGames       = GetStat_Int( GetLocalClientPlayer(), ResolveStatEntry( CAREER_STATS.character_games_played, characterRefA ) )
+
+		string characterRefB = ItemFlavor_GetGUIDString( b )
+		int charBGames       = GetStat_Int( GetLocalClientPlayer(), ResolveStatEntry( CAREER_STATS.character_games_played, characterRefB ) )
+
+		return charBGames - charAGames  
+	} )
+
+	
+	foreach ( ItemFlavor character in allCharacters )
+	{
+		if ( !Character_IsCharacterOwnedByPlayer( character ) )
+			continue
+
+		if ( character.guid == GetTopLevelCustomizeContext().guid )
+			continue
+
+		if ( selectedMeleeSkin.guid == LoadoutSlot_GetItemFlavor( LocalClientEHI(), Loadout_MeleeSkin( character ) ).guid )
+		{
+			asset icon = ItemFlavor_GetIcon( character )
+			RTKArray_PushAssetPath( equippedToLegendIcons, icon )
+		}
+
+		
+		if ( RTKArray_GetCount( equippedToLegendIcons ) == 6 )
+			break
+	}
+}
+
 void function OnMeleeCustomizationClosed()
 {
 	if ( !file.isVisible )
 		return
 
 	rtk_struct rtkModel = expect rtk_struct( RTKDataModelType_GetStruct( RTK_MODELTYPE_MENUS, "melee", true, [ "legend" ] ) )
-	RTKStruct_SetBool( rtkModel, "inCustomization", false )
 
 	if ( file.previewIndex >= 0 && file.previewIndex < file.meleeSkins.len() )
 	{
@@ -593,4 +637,61 @@ void function OnMeleeCustomizationClosed()
 		RTKStruct_SetAssetPath( rtkModel, "deathboxImage", ItemFlavor_GetIcon( equippedDeathbox ) )
 		RTKStruct_SetString( rtkModel, "deathboxName", ItemFlavor_GetLongName( equippedDeathbox ) )
 	}
+
+	PreviewItem( file.previewIndex, true )
+}
+
+void function RTKLegendMeleeScreen_SetEquippedItems()
+{
+	ItemFlavor previewItem = file.meleeSkins[ file.previewIndex ]
+
+	array< ItemFlavor > equippedFlavs = []
+
+	if ( Artifacts_Loadouts_IsConfigPointerItemFlavor( previewItem ) )
+	{
+		equippedFlavs = Artifacts_GetEquippedSet( previewItem )
+	}
+	else
+	{
+		equippedFlavs.push( Deathbox_GetEquipped( GetTopLevelCustomizeContext(), previewItem ) )
+	}
+
+	rtk_struct meleeStruct = expect rtk_struct( RTKDataModelType_GetStruct( RTK_MODELTYPE_MENUS, "melee", true, [ "legend" ] ) )
+	rtk_struct equippedStruct = RTKStruct_GetStruct( meleeStruct, "equippedItems" )
+	RTKStruct_SetBool( meleeStruct, "showEquippedItems", IsItemFlavorUnlockedForLoadoutSlot( LocalClientEHI(), Loadout_MeleeSkin( GetTopLevelCustomizeContext() ), previewItem ) )
+
+	RTKMeleeCustomizationSetModel equippedItemsModel
+	foreach ( int index, ItemFlavor component in equippedFlavs )
+	{
+		int type = Artifacts_GetComponentType( component )
+
+		switch ( type )
+		{
+			case eArtifactComponentType.BLADE:
+				equippedItemsModel.blade = GetMeleeCustomizationItemModel( component, type )
+				equippedItemsModel.blade.state = eMeleeCustomizationItemState.SELECTED
+				break
+
+			case eArtifactComponentType.THEME:
+				equippedItemsModel.theme = GetMeleeCustomizationItemModel( component, type )
+				equippedItemsModel.theme.state = eMeleeCustomizationItemState.SELECTED
+				break
+
+			case eArtifactComponentType.POWER_SOURCE:
+				equippedItemsModel.powerSource = GetMeleeCustomizationItemModel( component, type )
+				equippedItemsModel.powerSource.state = eMeleeCustomizationItemState.SELECTED
+				break
+
+			case eArtifactComponentType.ACTIVATION_EMOTE:
+				equippedItemsModel.activationEmote = GetMeleeCustomizationItemModel( component, type )
+				equippedItemsModel.activationEmote.state = eMeleeCustomizationItemState.SELECTED
+				break
+
+			case eArtifactComponentType.DEATHBOX:
+				equippedItemsModel.deathbox = GetMeleeCustomizationItemModel( component, type )
+				equippedItemsModel.deathbox.state = eMeleeCustomizationItemState.SELECTED
+				break
+		}
+	}
+	RTKStruct_SetValue( equippedStruct, equippedItemsModel )
 }

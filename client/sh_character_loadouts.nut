@@ -662,6 +662,10 @@ void function Init_CharacterClassToLoadoutNameTable()
 
 
 
+
+
+
+
 void function Callback_OnCharacterSelectOpened()
 {
 	file.is16x10 = GetNearestAspectRatio( GetScreenSize().width, GetScreenSize().height ) == 1.6

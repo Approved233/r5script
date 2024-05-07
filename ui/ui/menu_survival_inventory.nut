@@ -206,10 +206,7 @@ void function OnSurvivalInventoryMenu_Open()
 
 	TabData squadData = GetTabDataForPanel( file.menu )
 	TabDef squadDef   = Tab_GetTabDefByBodyName( squadData, "SquadPanel" )
-	if ( IsSoloMode() )
-		squadDef.title = "#STATS"
-	else
-		squadDef.title = "#SQUAD"
+	squadDef.title = "#SQUAD"
 
 	SetTabBackground( tabData, Hud_GetChild( file.menu, "TabsBackground" ), eTabBackground.STANDARD )
 	SetTabNavigationEnabled( file.menu, true )

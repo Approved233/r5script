@@ -22,9 +22,12 @@ global function SpawnGroupSkydive_ShouldTeamHavePoolOfRespawns
 
 
 
+const int RESPAWN_ALL_DEAD_PLAYERS_TOGETHER_SPAWNGROUP_IDX = TEAM_INVALID
+
 struct
 {
 	float functionref( int ) GetSquadSpawnDelay_Callback
+
 
 
 
@@ -38,6 +41,12 @@ void function ShSpawnSquadSkyDive_Init()
 	if ( GetRespawnStyle() != eRespawnStyle.SPAWN_GROUP_SKYDIVE )
 		return
 	print( "Respawn style is SPAWN_GROUP_SKYDIVE\n" )
+
+
+
+
+
+
 
 
 
@@ -112,6 +121,90 @@ int function SpawnSquadSkyDive_GetRemainingRespawnsForAllPlayersInSquad( int tea
 
 	return teamRespawnsCount
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

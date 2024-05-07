@@ -70,8 +70,6 @@ void function InitStoreMythicInspectMenu( var newMenuArg )
 	Hud_AddEventHandler( skydiveTrailInspectButton, UIE_GET_FOCUS, MythicInspectButtonHover )
 	file.mythicSkydiveTrailButton = skydiveTrailInspectButton
 
-	Hud_AddEventHandler( Hud_GetChild( newMenuArg, "CoinsPopUpButton" ), UIE_CLICK, OpenVCPopUp )
-
 	AddMenuFooterOption( newMenuArg, LEFT, BUTTON_B, true, "#B_BUTTON_BACK", "#B_BUTTON_BACK" )
 }
 
@@ -87,8 +85,13 @@ void function StoreMythicInspectMenu_OnShow()
 	AddCallbackAndCallNow_OnGRXInventoryStateChanged( StoreMythicInspectMenu_OnGRXUpdated )
 	AddCallback_OnGRXOffersRefreshed( StoreMythicInspectMenu_OnGRXUpdated )
 
-	RegisterButtonPressedCallback( KEY_TAB, ToggleVCPopUp )
-	RegisterButtonPressedCallback( BUTTON_BACK, ToggleVCPopUp )
+	RegisterButtonPressedCallback( KEY_TAB, ToggleApexCoinsWalletModal )
+	RegisterButtonPressedCallback( BUTTON_BACK, ToggleApexCoinsWalletModal )
+	RegisterButtonPressedCallback( KEY_Q, ToggleExoticShardsWalletModal )
+	RegisterButtonPressedCallback( BUTTON_STICK_LEFT, ToggleExoticShardsWalletModal )
+
+	Hud_AddEventHandler( Hud_GetChild( file.menu, "CoinsPopUpButton" ), UIE_CLICK, OpenVCPopUp )
+	Hud_AddEventHandler( Hud_GetChild( file.menu, "ExoticShardsPopUpButton" ), UIE_CLICK, OpenExoticShardsModal )
 
 	file.lastItemIndex = -1
 	if( file.mythicInspectButtons.len() > 0 && IsValid( file.mythicInspectButtons[0] ) )
@@ -104,8 +107,13 @@ void function StoreMythicInspectMenu_OnClose()
 
 void function StoreMythicInspectMenu_OnHide()
 {
-	DeregisterButtonPressedCallback( KEY_TAB, ToggleVCPopUp )
-	DeregisterButtonPressedCallback( BUTTON_BACK, ToggleVCPopUp )
+	DeregisterButtonPressedCallback( KEY_TAB, ToggleApexCoinsWalletModal )
+	DeregisterButtonPressedCallback( BUTTON_BACK, ToggleApexCoinsWalletModal )
+	DeregisterButtonPressedCallback( KEY_Q, ToggleExoticShardsWalletModal )
+	DeregisterButtonPressedCallback( BUTTON_STICK_LEFT, ToggleExoticShardsWalletModal )
+
+	Hud_RemoveEventHandler( Hud_GetChild( file.menu, "CoinsPopUpButton" ), UIE_CLICK, OpenVCPopUp )
+	Hud_RemoveEventHandler( Hud_GetChild( file.menu, "ExoticShardsPopUpButton" ), UIE_CLICK, OpenExoticShardsModal )
 
 	RemoveCallback_OnGRXInventoryStateChanged( StoreMythicInspectMenu_OnGRXUpdated )
 	RemoveCallback_OnGRXOffersRefreshed( StoreMythicInspectMenu_OnGRXUpdated )

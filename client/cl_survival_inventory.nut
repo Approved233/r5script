@@ -576,12 +576,12 @@ void function UIToClient_GroundlistOpened()
 	if ( IsAlive( player ) && GetGameState() >= eGameState.Prematch )
 	{
 
-
-
-
-
-
-
+		entity deathbox = Survival_GetDeathBox()
+		if ( IsValid( deathbox ) && deathbox.GetNetworkedClassName() == "prop_death_box" && !IsPlayerWithinStandardDeathBoxUseDistance( player, deathbox ) )
+		{
+			Remote_ServerCallFunction( "ClientCallback_DeathboxOpenedRemotely", deathbox )
+		}
+		else
 
 		{
 			Remote_ServerCallFunction( "ClientCallback_DeathboxOpened" )
@@ -1240,6 +1240,7 @@ int function GetWeaponCurrentAmmo( entity weapon )
 
 
 
+
 			ammoCount = weapon.GetWeaponPrimaryClipCount()
 
 
@@ -1421,9 +1422,9 @@ void function UICallback_UpdateEquipmentButton( var button )
 					}
 				}
 
-				if ( IsValidItemFlavorGUID( weapon.GetWeaponCharmGUID(), eValidation.DONT_ASSERT ) )
+				if ( IsValidItemFlavorGUID( weapon.GetWeaponCharmOrArtifactBladeGUID(), eValidation.DONT_ASSERT ) )
 				{
-					ItemFlavor weaponCharm              = GetItemFlavorByGUID( weapon.GetWeaponCharmGUID() )
+					ItemFlavor weaponCharm              = GetItemFlavorByGUID( weapon.GetWeaponCharmOrArtifactBladeGUID() )
 					ItemFlavor ornull weaponCharmOrNull = LoadoutSlot_GetItemFlavor( ToEHI( player ), Loadout_WeaponCharm( weaponItemOrNull ) )
 					if ( weaponCharmOrNull != null && weaponCharmOrNull != weaponCharm )
 					{
@@ -3510,6 +3511,13 @@ void function TEMP_UpdateTeammateRui( var elem, bool isCompact )
 			if( UpgradeCore_IsEnabled() )
 			{
 				RuiSetBool( rui, "showProgressMeter",  UpgradeCore_ArmorTiedToUpgrades() && UpgradeCore_ShowUpgradesUnitframe() )
+
+
+
+
+
+
+
 				RuiSetBool( rui, "showProgressBar", true )
 				UpgradeCore_UpdateXpRui( rui, ent )
 

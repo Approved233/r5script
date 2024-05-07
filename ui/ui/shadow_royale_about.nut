@@ -1,15 +1,6 @@
 
 global function ShadowRoyale_PopulateAboutText
 
-string function GetPlaylist()
-{
-	if ( IsLobby() )
-		return LobbyPlaylist_GetSelectedPlaylist()
-	else
-		return GetCurrentPlaylistName()
-
-	unreachable
-}
 
 array< featureTutorialTab > function ShadowRoyale_PopulateAboutText()
 {

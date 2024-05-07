@@ -434,6 +434,7 @@ void function ShowChallengeProgression( ItemFlavor battlePass )
 			}
 		}
 	}
+
 	if ( instantUpdate )
 	{
 		RuiSetBool( matchSummaryRui, "supressAnimation", false )

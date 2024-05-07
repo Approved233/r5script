@@ -7,6 +7,10 @@ void function SV_CL_Shared_Init()
 		ClMinimap_Pre_Init()
 
 
+#if DEV
+		PrintDebugTimeDetails()
+#endif
+
 
 
 
@@ -44,7 +48,7 @@ void function SV_CL_Shared_Init()
 
 
 
-}
+} 
 
 
 void function SV_CL_Init()
@@ -139,7 +143,6 @@ void function SV_CL_Init()
 		Perk_BeaconScan_Init()
 		Perk_ExtraBinLoot_Init()
 		Perk_CarePackageInsight_Init()
-		Perk_DefensiveEvoBoost_Init()
 		Perk_ExtraFirepower_Init()
 		Perk_KillBoostUlt_Init()
 		Perk_MunitionsDrop_Init()
@@ -210,6 +213,9 @@ void function SV_CL_Init()
 	ShCups_LevelInit()
 
 
+
+
+
 	VendingMachine_LevelInit()
 
 
@@ -217,7 +223,7 @@ void function SV_CL_Init()
 
 
 
-
+		ShPassiveBattleSense_Init()
 
 
 
@@ -242,6 +248,9 @@ void function SV_CL_Init()
 	ShQuickchat_Init()
 	ShChallenges_LevelInit_PreStats()
 	Sh_Challenge_Sets_Init()
+
+
+
 	AutogenStats_Init()
 
 	Sh_Kepler_Init()
@@ -274,6 +283,19 @@ void function SV_CL_Init()
 	SURVIVAL_Loot_InitShared()
 	SURVIVAL_LootActions_InitShared()
 	SURVIVAL_LootTypes_InitShared()
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -413,6 +435,14 @@ void function SV_CL_Init()
 
 
 
+		Sh_Survival_Solos_Init()
+
+
+
+
+
+
+
 
 
 
@@ -512,6 +542,10 @@ void function SV_CL_Init()
 
 
 
+
+
+
+
 		ShLootMarvin_Init()
 
 
@@ -532,15 +566,15 @@ void function SV_CL_Init()
 
 
 
-		AprilFools_S12_Mode_Init()
 
 
 
-		AprilFools_S16_Init()
 
 
 
-		AprilFools_S20_Init()
+
+
+
 
 
 
@@ -659,15 +693,49 @@ void function SV_CL_Init()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
 	Odl_SmokeTestInit()
-	PerfMetrics_SmokeTestInit()
+	SkinMetrics_Init()
 
 	ThunderdomeSkull_Init()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #if DEV
 		SpawnDebugger_Init()
 #endif
-}
+} 
 
 
 
@@ -1007,7 +1075,7 @@ void function Client_Init()
 	CL_Staging_Area_EE_Init()
 
 	ReleaseAllTempMutes()
-}
+} 
 
 
 void function Shared_Lobby_Init()
@@ -1063,12 +1131,24 @@ void function Shared_Lobby_Init()
 		Perks_Init()
 		Perk_BeaconScan_Init()
 		Perk_ExtraBinLoot_Init()
-		Perk_DefensiveEvoBoost_Init()
 		Perk_CarePackageInsight_Init()
 		Perk_ExtraFirepower_Init()
 		Perk_KillBoostUlt_Init()
 		Perk_SupportLootbin_Init()
 		Perk_MunitionsBox_Init()
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 	ShCharacterCosmetics_LevelInit()
 	ShCalEvent_LevelInit()
@@ -1114,6 +1194,9 @@ void function Shared_Lobby_Init()
 
 
 
+
+
+
 	TreasureBox_SharedInit()
 	SeasonQuest_SharedInit()
 	EventRefresh_SharedInit()
@@ -1129,6 +1212,9 @@ void function Shared_Lobby_Init()
 	ShQuickchat_Init()
 	ShChallenges_LevelInit_PreStats()
 	Sh_Challenge_Sets_Init()
+
+
+
 	AutogenStats_Init()
 
 
@@ -1194,7 +1280,7 @@ void function Shared_Lobby_Init()
 
 
 	Sh_Mastery_Init()
-}
+} 
 
 
 
@@ -1226,5 +1312,5 @@ void function Client_Lobby_Init()
 	ClLoadscreensInit()
 	ClImagePakLoadInit()
 	Sh_InitToolTips()
-}
+} 
 

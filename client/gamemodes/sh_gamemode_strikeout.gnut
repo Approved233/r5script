@@ -101,6 +101,7 @@ void function Sh_Survival_Strikeout_Init()
 
 
 
+
 }
 
 
@@ -259,10 +260,19 @@ void function __EntitiesDidLoad()
 
 
 
+
+
 bool function Strikeout_IsPlayerRespawnDisabled( entity player )
 {
 	return player.GetPlayerNetBool( STRIKEOUT_RESPAWN_DISABLED )
 }
+
+
+
+
+
+
+
 
 
 

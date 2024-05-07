@@ -879,6 +879,10 @@ void function PopulateCharacterLoadouts()
 
 
 
+
+
+
+
 array<string> function CharacterLoadouts_GetDefaultWeaponLoadoutArray()
 {
 	return file.weaponLoadoutDefault

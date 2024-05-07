@@ -69,7 +69,7 @@ void function CardFramesPanel_Update( var panel )
 	if ( IsPanelActive( file.panel ) )
 	{
 		LoadoutEntry entry = Loadout_GladiatorCardFrame( GetTopLevelCustomizeContext() )
-		file.cardFrameList = GetLoadoutItemsSortedForMenu( [entry], GladiatorCardFrame_GetSortOrdinal )
+		file.cardFrameList = GetLoadoutItemsSortedForMenu( [entry], GladiatorCardFrame_GetSortOrdinal, null, [] )
 		FilterFrameList( file.cardFrameList )
 
 		Hud_InitGridButtons( file.listPanel, file.cardFrameList.len() )

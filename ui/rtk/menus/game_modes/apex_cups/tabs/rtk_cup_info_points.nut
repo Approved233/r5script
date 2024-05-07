@@ -9,9 +9,6 @@ global struct RTKCupInfoPoints
 	array< RTKSummaryBreakdownRowModel > additionalList
 }
 
-
-const int ADDITIONAL_ROW_WIDTH = 460
-
 void function RTKCupInfoPoints_OnInitialize( rtk_behavior self )
 {
 	rtk_struct apexCups = RTKDataModelType_CreateStruct( RTK_MODELTYPE_MENUS, "apexCupsDialog", "RTKCupInfoPoints" )
@@ -51,7 +48,6 @@ void function RTKCupInfoPoints_OnInitialize( rtk_behavior self )
 		RTKSummaryBreakdownRowModel summaryBreakdownModel
 
 		summaryBreakdownModel.index = index
-		summaryBreakdownModel.rowSize = ADDITIONAL_ROW_WIDTH
 
 		if( statPointData.hasStatLimit )
 		{

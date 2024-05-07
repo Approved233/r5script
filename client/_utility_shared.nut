@@ -113,6 +113,7 @@ global enum eEntitiesDidLoadPriority
 {
 	
 	LOW,
+	MEDIUM,
 	HIGH
 }
 
@@ -308,10 +309,8 @@ void function InitWeaponScripts()
 	
 	MeleeRevenantScythe_rt01_Init()
 	MpWeaponRevenantScythePrimary_rt01_Init()
-
-		MeleeFuseHeirloom_Init()
-		MpWeaponFuseHeirloomPrimary_Init()
-
+	MeleeFuseHeirloom_Init()
+	MpWeaponFuseHeirloomPrimary_Init()
 
 
 		MeleeArtifactDagger_Init()
@@ -334,6 +333,10 @@ void function InitWeaponScripts()
 
 		MeleeOctaneKnifeRt01_Init()
 		MpWeaponOctaneKnifePrimaryRt01_Init()
+
+
+
+
 
 	MeleeGibraltarClub_Init()
 	MpWeaponGibraltarClubPrimary_Init()
@@ -421,6 +424,18 @@ void function InitWeaponScripts()
 
 	MpWeaponBasicBolt_Init()
 	MpWeaponLmg_Init()
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -577,64 +592,6 @@ void function InitAbilityScripts()
 
 
 
-	
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -707,6 +664,7 @@ void function InitAbilityScripts()
 
 
 
+	
 
 
 
@@ -739,6 +697,73 @@ void function InitAbilityScripts()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		AlterExtraScript_Init()
+		MpAbilityPhaseDoor_Init()
+		MpAbilityTransportPortal_Init()
+		MpAbilityTransportPortalDatapad_Init()
+
+
+
+
+
+		PassiveRemoteDeathboxInteract_Init()
+
+
+		PassiveVoidVision_Init()
 
 
 
@@ -1308,6 +1333,25 @@ bool function ArePlayersAllies( entity playerA, entity playerB )
 
 
 	return false
+}
+
+array<entity> function GetArrayOfPossibleAlliesForPlayer( entity player, bool includeAlliance = true )
+{
+	array<entity> allyArray
+	int team = player.GetTeam()
+
+	if ( includeAlliance && AllianceProximity_IsUsingAlliances() )
+	{
+		int alliance = AllianceProximity_GetAllianceFromTeam( team )
+		allyArray = AllianceProximity_GetAllPlayersInAlliance( alliance, true )
+	}
+	else
+	{
+		allyArray = GetPlayerArrayOfTeam_Alive( team )
+	}
+	allyArray.removebyvalue( player )
+
+	return allyArray
 }
 
 table<int, int> function GetPlayerTeamCountTable()
@@ -3464,13 +3508,13 @@ int function GetWinningTeam( bool shouldReturnInvalidInCaseOfTie = true )
 }
 
 
-void function EmitSkyboxSoundAtPosition( vector positionInSkybox, string sound, float skyboxScale = 0.001, bool clamp = false )
-{
-	if ( IsServer() )
-		clamp = true 
-	vector position = SkyboxToWorldPosition( positionInSkybox, skyboxScale, clamp )
-	EmitSoundAtPosition( TEAM_UNASSIGNED, position, sound )
-}
+
+
+
+
+
+
+
 
 
 vector function SkyboxToWorldPosition( vector positionInSkybox, float skyboxScale = 0.001, bool clamp = true )
@@ -3613,7 +3657,7 @@ bool function IsPilotEliminationBased()
 }
 
 
-void function __WarpInEffectShared( vector origin, vector angles, string sfx, float preWaitOverride = -1.0, entity ornull vehicle = null )
+void function __WarpInEffectShared( vector origin, vector angles, string sfx, entity vehicle, float preWaitOverride = -1.0 )
 {
 	float preWait   = 2.0
 	float sfxWait   = 0.1
@@ -3642,7 +3686,13 @@ void function __WarpInEffectShared( vector origin, vector angles, string sfx, fl
 
 
 	wait sfxWait
+
 	EmitSoundAtPosition( TEAM_UNASSIGNED, origin, sfx )
+
+
+
+
+
 
 	wait totalTime - preWait - sfxWait
 }
@@ -3668,7 +3718,12 @@ void function __WarpOutEffectShared( entity dropship )
 
 
 
-	EmitSoundAtPosition( TEAM_UNASSIGNED, origin, "dropship_warpout" )
+
+		EmitSoundAtPosition( TEAM_UNASSIGNED, origin, "dropship_warpout" )
+
+
+
+
 }
 
 
@@ -4937,6 +4992,29 @@ array< vector > function GetPointsAlongLine( vector start, vector end, int count
 }
 
 
+int function Location_Score_ByDistance( vector loc, array< vector > testLocs, float testRadius, int outsideScoreAdd, int insideScoreAdd, bool test2D = true )
+{
+	float testRadiusSqr = pow( testRadius, 2 )
+
+	int score = 0
+	foreach( testLoc in testLocs )
+	{
+		float testDistSqr = test2D ? Distance2DSqr( loc, testLoc ) : DistanceSqr( loc, testLoc )
+
+		if( testDistSqr > testRadiusSqr )
+		{
+			score += outsideScoreAdd
+		}
+		else
+		{
+			score += insideScoreAdd
+		}
+	}
+
+	return score
+}
+
+
 
 
 
@@ -5032,6 +5110,13 @@ bool function IsSpectre( entity ent )
 {
 	return ent.IsNPC() && ent.GetAIClass() == AIC_SPECTRE
 }
+
+
+
+
+
+
+
 
 
 bool function IsWorldSpawn( entity ent )
@@ -5186,6 +5271,12 @@ bool function CanNPCDoDamageOnBehalfOfPlayer( entity ent )
 
 	if ( IsNessie( ent ) )
 		return true
+
+
+
+
+
+
 
 
 

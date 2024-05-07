@@ -7,6 +7,8 @@ struct
 
 void function InitDeathScreenKillreplayPanel( var panel )
 {
+	RegisterSignal( "KillreplayPanelClosed" )
+
 	file.panel = panel
 
 	AddPanelEventHandler( panel, eUIEvent.PANEL_SHOW, KillreplayOnOpenPanel )
@@ -35,10 +37,13 @@ void function KillreplayOnOpenPanel( var panel )
 	UpdateFooterOptions()
 
 	DeathScreenUpdateCursor()
+	thread Killreplay_ShowGameCursor_Thread()
 }
 
 void function KillreplayOnClosePanel( var panel )
 {
+	Signal( uiGlobal.signalDummy, "KillreplayPanelClosed" )
+
 	DeathScreenSkipDeathCam( null )
 
 	DeregisterButtonPressedCallback( KEY_LSHIFT, DeathScreenTryToggleGladCard )
@@ -50,4 +55,23 @@ void function KillreplayOnClosePanel( var panel )
 	DeregisterButtonPressedCallback( KEY_SPACE, DeathScreenPingRespawn )
 	DeregisterButtonPressedCallback( GetPCReportKey(), DeathScreenOnReportButtonClick )
 	DeregisterButtonPressedCallback( KEY_TAB, DeathScreenSkipDeathCam )
+}
+
+void function Killreplay_ShowGameCursor_Thread()
+{
+	EndSignal( uiGlobal.signalDummy, "KillreplayPanelClosed" )
+
+	
+	vector oldPos = GetCursorPosition()
+	while ( true )
+	{
+		if ( GetCursorPosition() != oldPos )
+			break
+
+		WaitFrame()
+	}
+
+	ShowGameCursor()
+	SetCursorPosition( <1920.0 * 0.5, 1080.0 * 0.5, 0> )
+	SetGamepadCursorEnabled( GetActiveMenu(), true )
 }

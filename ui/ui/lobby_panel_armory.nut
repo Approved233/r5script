@@ -14,11 +14,16 @@ void function InitArmoryPanel( var panel )
 {
 	file.panel = panel
 
-	SetPanelTabTitle( panel, "#LOADOUT" )
+	SetPanelTabTitle( panel, "#TAB_CUSTOMIZE" )
 
 	AddPanelEventHandler( panel, eUIEvent.PANEL_SHOW, ArmoryPanel_OnShow )
 	AddPanelEventHandler( panel, eUIEvent.PANEL_HIDE, ArmoryPanel_OnHide )
 
+	{
+		var childPanel = Hud_GetChild( file.panel, "CharactersPanel" )
+		TabDef tab = AddTab( file.panel, childPanel, "#LEGENDS" )
+		SetTabBaseWidth( tab, 205 )
+	}
 	{
 		var childPanel = Hud_GetChild( file.panel, "ArmoryWeaponsPanel" )
 		TabDef tab = AddTab( file.panel, childPanel, "#LOOT_CAT_MAINWEAPON" )
@@ -69,9 +74,10 @@ void function ArmoryPanel_OnShow( var panel )
 	{
 		ActivateTab( tabData, file.activeTabIndex )
 	}
-
-	UI_SetPresentationType( ePresentationType.WEAPON_CATEGORY )
-
+	{
+		var childPanel = Hud_GetChild( file.panel, "CharactersPanel" )
+		Newness_AddCallbackAndCallNow_OnRerverseQueryUpdated( NEWNESS_QUERIES.GladiatorTab, OnNewnessQueryChangedUpdatePanelTab, childPanel )
+	}
 	{
 		var childPanel = Hud_GetChild( file.panel, "ArmoryWeaponsPanel" )
 		Newness_AddCallbackAndCallNow_OnRerverseQueryUpdated( NEWNESS_QUERIES.ArmoryWeaponsTab, OnNewnessQueryChangedUpdatePanelTab, childPanel )
@@ -85,9 +91,12 @@ void function ArmoryPanel_OnShow( var panel )
 
 void function ArmoryPanel_OnHide( var panel )
 {
-
 	file.activeTabIndex = GetMenuActiveTabIndex( panel )
 
+	{
+		var childPanel = Hud_GetChild( file.panel, "CharactersPanel" )
+		Newness_RemoveCallback_OnRerverseQueryUpdated( NEWNESS_QUERIES.GladiatorTab, OnNewnessQueryChangedUpdatePanelTab, childPanel )
+	}
 	{
 		var childPanel = Hud_GetChild( file.panel, "ArmoryWeaponsPanel" )
 		Newness_RemoveCallback_OnRerverseQueryUpdated( NEWNESS_QUERIES.ArmoryWeaponsTab, OnNewnessQueryChangedUpdatePanelTab, childPanel )

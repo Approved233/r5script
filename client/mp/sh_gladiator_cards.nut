@@ -3493,6 +3493,21 @@ asset function GladiatorCardStance_GetLightingRigMovingAnimSeq( ItemFlavor flavo
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 bool function GladiatorCardBadge_IsGRXWithStat( ItemFlavor flavor )
 {
 	Assert( ItemFlavor_GetType( flavor ) == eItemType.gladiator_card_badge )

@@ -2322,14 +2322,20 @@ array< string > function TreasureHunt_GetPlayerScores( entity player )
 
 
 
-array< entity > function TreasureHunt_SortPlayersByScore( array< entity > teamPlayers, ScoreboardData gameData )
+array< TeamsScoreboardPlayer > function TreasureHunt_SortPlayersByScore( array< TeamsScoreboardPlayer > players )
 {
-	teamPlayers.sort( int function( entity a, entity b )
+	players.sort( int function( TeamsScoreboardPlayer a, TeamsScoreboardPlayer b )
 	{
-		float aTimeOnObjective = a.GetPlayerNetTime( "treasureHunt_PlayerTimeOnObjectives" )
-		float bTimeOnObjective = b.GetPlayerNetTime( "treasureHunt_PlayerTimeOnObjectives" )
-		int aKills = a.GetPlayerNetInt( "kills" )
-		int bKills = b.GetPlayerNetInt( "kills" )
+		entity playerA = FromEHI( a.playerEHI )
+		entity playerB = FromEHI( b.playerEHI )
+
+		if( !IsValid( playerA ) || !IsValid( playerB ) )
+			return 0
+
+		float aTimeOnObjective = playerA.GetPlayerNetTime( "treasureHunt_PlayerTimeOnObjectives" )
+		float bTimeOnObjective = playerB.GetPlayerNetTime( "treasureHunt_PlayerTimeOnObjectives" )
+		int aKills = playerA.GetPlayerNetInt( "kills" )
+		int bKills = playerB.GetPlayerNetInt( "kills" )
 
 		if ( aTimeOnObjective > bTimeOnObjective ) return -1
 		else if ( aTimeOnObjective < bTimeOnObjective ) return 1
@@ -2342,7 +2348,7 @@ array< entity > function TreasureHunt_SortPlayersByScore( array< entity > teamPl
 	}
 	)
 
-	return teamPlayers
+	return players
 }
 
 

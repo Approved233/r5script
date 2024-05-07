@@ -47,7 +47,10 @@ global function PlayerIsMarkedAsCanBeRespawned
 
 global function IsSurvivalMode
 
-global function Survival_ClampToRing
+global function Survival_IsDropshipClampedToRing
+global function Survival_GetPlaneMoveSpeed
+global function Survival_GetPlaneJumpDelay
+global function Survival_GetPlaneLeaveMapDurationMultiplier
 
 
 
@@ -216,8 +219,7 @@ global enum ePodiumBanner
 	SR_REV,
 
 
-	S20_ANNIVERSARY,
-	TURBO
+	TURBO,
 
 	_COUNT
 }
@@ -319,6 +321,10 @@ void function GamemodeSurvivalShared_Init()
 
 		MobileRespawnBeacon_Init()
 		Sh_Airdrops_Init()
+
+
+
+
 
 
 
@@ -945,9 +951,24 @@ void function Sur_SetPlaneEnt( entity ent )
 
 
 
-bool function Survival_ClampToRing()
+bool function Survival_IsDropshipClampedToRing()
 {
 	return GetCurrentPlaylistVarBool( "dropship_bounds_clamp_to_ring", false )
+}
+
+float function Survival_GetPlaneMoveSpeed()
+{
+	return GetCurrentPlaylistVarFloat( "survival_plane_move_speed", 2000.0 )
+}
+
+float function Survival_GetPlaneJumpDelay()
+{
+	return GetCurrentPlaylistVarFloat( "survival_plane_jump_delay", 9.0 )
+}
+
+float function Survival_GetPlaneLeaveMapDurationMultiplier()
+{
+	return GetCurrentPlaylistVarFloat( "survival_plane_leave_map_duration_multiplier", 3.0 )
 }
 
 
@@ -1053,9 +1074,6 @@ bool function CanWeaponInspect( entity player, int activity )
 
 	return GetCurrentPlaylistVarBool( "enable_weapon_inspect", true )
 }
-
-
-
 
 
 

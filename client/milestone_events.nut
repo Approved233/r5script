@@ -4,8 +4,18 @@ global function MilestoneEvents_Init
 
 
 global function GetActiveMilestoneEvent
+global function SetStoreOnlyEventsFilter
+global function GetActiveEventTabMilestoneEvent
+global function GetActiveStoreOnlyMilestoneEvents
+global function GetAllMilestoneEvents
+global function IsMilestoneEventStoreOnly
+global function GetAllActiveMilestoneEvents
+global function MilestoneEvent_GetEventId
+global function MilestoneEvent_GetEventById
+global function MilestoneEvent_IsEventStoreOnly
 global function MilestoneEvent_GetFrontPageRewardBoxTitle
 global function MilestoneEvent_GetMainPackFlav
+global function MilestoneEvent_IsMilestonePackFlav
 global function MilestoneEvent_GetMainPackImage
 global function MilestoneEvent_GetFrontPageGRXOfferLocation
 global function MilestoneEvent_GetAboutText
@@ -14,11 +24,38 @@ global function MilestoneEvent_GetMilestoneGrantRewards
 global function MilestoneEvent_GetStoreEventSectionMainImage
 global function MilestoneEvent_GetStoreEventSectionMainText
 global function MilestoneEvent_GetStoreEventSectionSubText
+global function MilestoneEvent_IsChaseItem
+global function MilestoneEvent_IsItemInPool
 global function MilestoneEvent_GetEventItems
+global function MilestoneEvent_GetEventItemsInPool
 global function MilestoneEvent_GetMythicEventItems
 global function MilestoneEvent_GetRewardGroups
 global function MilestoneEvent_GetGuaranteedPackFlav
 global function MilestoneEvent_IsItemEventItem
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -137,10 +174,38 @@ global struct MilestoneEventGrantReward
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 struct FileStruct_LifetimeLevel
 {
 	EntitySet chasePackGrantQueued
-	bool milestoneEvents_MilestoneRewardCeremonyDue = false
+	int milestoneEvents_MilestoneRewardCount = 0
+	bool storeOnlyEvents = false
 }
 
 
@@ -173,10 +238,45 @@ void function MilestoneEvents_Init()
 ItemFlavor ornull function GetActiveMilestoneEvent( int t )
 {
 	Assert( IsItemFlavorRegistrationFinished() )
+	if ( fileLevel.storeOnlyEvents )
+	{
+		array<ItemFlavor> activeStoreOnlyMilestoneEvents = GetActiveStoreOnlyMilestoneEvents( t )
+		if ( activeStoreOnlyMilestoneEvents.len() > 0 )
+		{
+			ItemFlavor ornull event = activeStoreOnlyMilestoneEvents[0]
+			return event
+		}
+		else
+			return null
+	}
+	else
+	{
+		return GetActiveEventTabMilestoneEvent( t )
+	}
+
+	unreachable
+}
+
+
+
+void function SetStoreOnlyEventsFilter( bool storeOnlyEvents )
+{
+	fileLevel.storeOnlyEvents = storeOnlyEvents
+}
+
+
+
+ItemFlavor ornull function GetActiveEventTabMilestoneEvent( int t )
+{
+	Assert( IsItemFlavorRegistrationFinished() )
 	ItemFlavor ornull event = null
 	foreach ( ItemFlavor ev in GetAllItemFlavorsOfType( eItemType.calevent_milestone ) )
 	{
 		if ( !CalEvent_IsActive( ev, t ) )
+			continue
+
+		bool isStoreOnly = GetGlobalSettingsBool( ItemFlavor_GetAsset( ev ), "isStoreOnlyMilestoneEvent" )
+		if ( isStoreOnly )
 			continue
 
 		Assert( event == null, format( "Multiple collection events are active!! (%s, %s)", string(ItemFlavor_GetAsset( expect ItemFlavor(event) )), string(ItemFlavor_GetAsset( ev )) ) )
@@ -185,6 +285,117 @@ ItemFlavor ornull function GetActiveMilestoneEvent( int t )
 	return event
 }
 
+
+
+array<ItemFlavor> function GetActiveStoreOnlyMilestoneEvents( int t )
+{
+	Assert( IsItemFlavorRegistrationFinished() )
+	array<ItemFlavor> activeStoreOnlyMilestoneEvents
+	foreach ( ItemFlavor ev in GetAllItemFlavorsOfType( eItemType.calevent_milestone ) )
+	{
+		if ( !CalEvent_IsActive( ev, t ) )
+			continue
+
+		bool isStoreOnly = GetGlobalSettingsBool( ItemFlavor_GetAsset( ev ), "isStoreOnlyMilestoneEvent" )
+		if ( !isStoreOnly )
+			continue
+
+		activeStoreOnlyMilestoneEvents.append( ev )
+	}
+	return activeStoreOnlyMilestoneEvents
+}
+
+
+
+array<ItemFlavor> function GetAllMilestoneEvents( bool includeEventTab = true, bool includeStoreOnly = false )
+{
+	Assert( IsItemFlavorRegistrationFinished() )
+	array<ItemFlavor> storeOnlyMilestoneEvents
+	foreach ( ItemFlavor ev in GetAllItemFlavorsOfType( eItemType.calevent_milestone ) )
+	{
+		bool isStoreOnly = GetGlobalSettingsBool( ItemFlavor_GetAsset( ev ), "isStoreOnlyMilestoneEvent" )
+
+		if ( !includeEventTab && !isStoreOnly )
+			continue
+
+		if ( !includeStoreOnly && isStoreOnly )
+			continue
+
+		storeOnlyMilestoneEvents.append( ev )
+	}
+	return storeOnlyMilestoneEvents
+}
+
+
+
+bool function IsMilestoneEventStoreOnly( ItemFlavor ornull event )
+{
+	if ( event == null )
+		return false
+
+	expect ItemFlavor( event )
+
+	Assert( IsItemFlavorRegistrationFinished() )
+	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_milestone )
+	return GetGlobalSettingsBool( ItemFlavor_GetAsset( event ), "isStoreOnlyMilestoneEvent" )
+}
+
+
+
+array<ItemFlavor> function GetAllActiveMilestoneEvents( int t )
+{
+	Assert( IsItemFlavorRegistrationFinished() )
+	array<ItemFlavor> activeMilestoneEvents
+
+	ItemFlavor ornull activeEvent = GetActiveMilestoneEvent( t )
+	if ( activeEvent != null )
+	{
+		expect ItemFlavor( activeEvent )
+		activeMilestoneEvents.append( activeEvent )
+	}
+
+	foreach ( ItemFlavor event in GetActiveStoreOnlyMilestoneEvents( t ) )
+	{
+		activeMilestoneEvents.append( event )
+	}
+
+	return activeMilestoneEvents
+}
+
+
+
+string function MilestoneEvent_GetEventId( ItemFlavor event )
+{
+	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_milestone )
+	return ItemFlavor_GetGUIDString( event )
+}
+
+
+
+ItemFlavor ornull function MilestoneEvent_GetEventById( string id, bool activeOnly = false )
+{
+	Assert( IsItemFlavorRegistrationFinished() )
+	Assert( id != "" )
+	ItemFlavor ornull event = null
+	int unixTimeNow = GetUnixTimestamp()
+	foreach ( ItemFlavor ev in GetAllItemFlavorsOfType( eItemType.calevent_milestone ) )
+	{
+		if ( activeOnly && !CalEvent_IsActive( ev, unixTimeNow ) )
+			continue
+
+		if ( MilestoneEvent_GetEventId( ev ) == id )
+			return ev
+	}
+	return null
+}
+
+
+
+bool function MilestoneEvent_IsEventStoreOnly(  ItemFlavor event )
+{
+	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_milestone )
+	return GetGlobalSettingsBool( ItemFlavor_GetAsset( event ), "isStoreOnlyMilestoneEvent" )
+}
 
 
 
@@ -247,6 +458,29 @@ ItemFlavor function MilestoneEvent_GetMainPackFlav( ItemFlavor event )
 
 
 
+bool function MilestoneEvent_IsMilestonePackFlav( ItemFlavor pack, bool checkEventTab, bool checkStoreOnly )
+{
+	array<ItemFlavor> milstoneEvents = GetAllMilestoneEvents( checkEventTab, checkStoreOnly )
+
+	foreach ( ItemFlavor event in milstoneEvents )
+	{
+		ItemFlavor packFlav = MilestoneEvent_GetMainPackFlav( event )
+		if ( packFlav == pack )
+			return true
+	}
+	return false
+}
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -290,6 +524,75 @@ ItemFlavor function MilestoneEvent_GetGuaranteedPackFlav( ItemFlavor event )
 	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_milestone )
 	return GetItemFlavorByAsset( GetGlobalSettingsAsset( ItemFlavor_GetAsset( event ), "guaranteedPackFlav" ) )
 }
+
+
+
+bool function MilestoneEvent_IsChaseItem( ItemFlavor event, int grxIdx, bool isRestricted = false )
+{
+	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_milestone )
+
+	string rewardPath = isRestricted ? "restrictedRewardGroups" : "rewardGroups"
+	foreach ( var groupBlock in IterateSettingsAssetArray( ItemFlavor_GetAsset( event ), rewardPath ) )
+	{
+		foreach ( var rewardBlock in IterateSettingsArray( GetSettingsBlockArray( groupBlock, "rewards" ) ) )
+		{
+			ItemFlavor item = GetItemFlavorByAsset( GetSettingsBlockAsset( rewardBlock, "flavor" ) )
+			if ( item.grxIndex == grxIdx )
+			{
+				return GetSettingsBlockBool( rewardBlock, "milestoneItemIsChaseItem" )
+			}
+		}
+	}
+	unreachable
+}
+
+
+
+bool function MilestoneEvent_IsItemInPool( ItemFlavor event, int grxIdx, bool isRestricted = false )
+{
+	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_milestone )
+
+	string rewardPath = isRestricted ? "restrictedRewardGroups" : "rewardGroups"
+	foreach ( var groupBlock in IterateSettingsAssetArray( ItemFlavor_GetAsset( event ), rewardPath ) )
+	{
+		foreach ( var rewardBlock in IterateSettingsArray( GetSettingsBlockArray( groupBlock, "rewards" ) ) )
+		{
+			ItemFlavor item = GetItemFlavorByAsset( GetSettingsBlockAsset( rewardBlock, "flavor" ) )
+			if ( item.grxIndex == grxIdx )
+			{
+				return GetSettingsBlockBool( rewardBlock, "milestoneItemIsInItemPool" )
+			}
+		}
+	}
+	unreachable
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -484,8 +787,99 @@ string function MilestoneEvent_GetStoreEventSectionSubText( ItemFlavor event )
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 array<ItemFlavor> function MilestoneEvent_GetEventItems( ItemFlavor event, bool isRestricted = false )
 {
+	array<ItemFlavor> chaseItems
 	array<ItemFlavor> eventItems
 	if ( ItemFlavor_GetType( event ) == eItemType.calevent_milestone )
 	{
@@ -493,16 +887,57 @@ array<ItemFlavor> function MilestoneEvent_GetEventItems( ItemFlavor event, bool 
 		foreach ( CollectionEventRewardGroup rewardGroup in rewardGroups )
 		{
 			
-			if ( rewardGroup.quality == eRarityTier.MYTHIC && rewardGroup.rewards.len() == 1 )
-			{
-				continue
-			}
-
+			rewardGroup.rewards.reverse()
 			foreach ( ItemFlavor reward in rewardGroup.rewards )
 			{
-				eventItems.append( reward )
+				
+				if ( MilestoneEvent_IsChaseItem( event, reward.grxIndex, isRestricted ) )
+					chaseItems.append( reward )
+				else
+					eventItems.append( reward )
 			}
 		}
+
+		foreach ( ItemFlavor chaseItem in chaseItems )
+		{
+			eventItems.append( chaseItem )
+		}
+		chaseItems.clear()
+	}
+	return eventItems
+}
+
+
+
+array<ItemFlavor> function MilestoneEvent_GetEventItemsInPool( ItemFlavor event, bool isRestricted = false )
+{
+	array<ItemFlavor> chaseItems
+	array<ItemFlavor> eventItems
+	if ( ItemFlavor_GetType( event ) == eItemType.calevent_milestone )
+	{
+		array<CollectionEventRewardGroup> rewardGroups = MilestoneEvent_GetRewardGroups( event, isRestricted )
+		foreach ( CollectionEventRewardGroup rewardGroup in rewardGroups )
+		{
+			
+			rewardGroup.rewards.reverse()
+			foreach ( ItemFlavor reward in rewardGroup.rewards )
+			{
+				if ( !MilestoneEvent_IsItemInPool( event, reward.grxIndex, isRestricted ) )
+					continue
+
+				
+				if ( MilestoneEvent_IsChaseItem( event, reward.grxIndex, isRestricted ) )
+					chaseItems.append( reward )
+				else
+					eventItems.append( reward )
+			}
+		}
+
+		foreach ( ItemFlavor chaseItem in chaseItems )
+		{
+			eventItems.append( chaseItem )
+		}
+		chaseItems.clear()
 	}
 	return eventItems
 }
@@ -565,6 +1000,133 @@ bool function MilestoneEvent_IsItemEventItem( ItemFlavor event, int itemIdx )
 	}
 	return false
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -52,9 +52,6 @@ struct
 	string mapPreviewSlotKey = ""
 	string mapPreviewPlaylistName = ""
 
-
-	var highlightButton = null
-
 } file
 
 const int DRAW_NONE = 0
@@ -84,6 +81,9 @@ void function InitGameModeSelectPublicPanel( var panel )
 
 	file.slotToButtonMap = {
 		training = Hud_GetChild( panel, "GamemodeButton0" ),
+
+
+
 		firing_range = Hud_GetChild( panel, "GamemodeButton1" ),
 		regular_1 = Hud_GetChild( panel, "GamemodeButton2" ),
 		regular_2 = Hud_GetChild( panel, "GamemodeButton3" ),
@@ -170,8 +170,6 @@ void function ModeSelectorHighlight()
 			bool shouldShowHighlight = HasGamemodeSelector() && file.selectButtonPlaylistNameMap[button] == selectedPlaylist
 			var rui = Hud_GetRui( button )
 			RuiSetBool( rui, "isNew", shouldShowHighlight )
-			if ( shouldShowHighlight )
-				file.highlightButton = button
 		}
 	}
 }
@@ -216,14 +214,22 @@ void function GamemodeButton_Activate( var button )
 	}
 
 	string playlistName = file.selectButtonPlaylistNameMap[button]
-	if ( IsPrivateMatchLobby() )
-		PrivateMatch_SetSelectedPlaylist( playlistName )
-	else
-		LobbyPlaylist_SetSelectedPlaylist( playlistName )
 
-	DismissGamemodeSelectorAndRefresh()
 
-	CloseAllDialogs()
+
+
+
+
+	{
+		if ( IsPrivateMatchLobby() )
+			PrivateMatch_SetSelectedPlaylist( playlistName )
+		else
+			LobbyPlaylist_SetSelectedPlaylist( playlistName )
+
+			DismissGamemodeSelectorAndRefresh()
+
+		CloseAllDialogs()
+	}
 }
 
 bool function HasModeFocused()
@@ -454,6 +460,14 @@ void function UpdateGameModes()
 					RuiSetBool( rui, "showLockedIcon", true )
 					RuiSetBool( rui, "isLocked", true )
 				}
+
+
+
+
+
+
+
+
 			}
 
 			Hud_SetEnabled( button, isEnabled )
@@ -580,6 +594,9 @@ void function AnimateIn()
 		
 		Hud_SetNavRight( file.slotToButtonMap["mixtape"], file.slotToButtonMap["ltm"] )
 		Hud_SetNavLeft( file.slotToButtonMap["training"], file.slotToButtonMap["ltm"] )
+
+
+
 		Hud_SetNavLeft( file.slotToButtonMap["firing_range"], file.slotToButtonMap["ltm"] )
 
 	}else{
@@ -587,11 +604,17 @@ void function AnimateIn()
 		
 		Hud_SetNavRight( file.slotToButtonMap["mixtape"], file.slotToButtonMap["training"] )
 		Hud_SetNavLeft( file.slotToButtonMap["training"], file.slotToButtonMap["mixtape"] )
+
+
+
 		Hud_SetNavLeft( file.slotToButtonMap["firing_range"], file.slotToButtonMap["mixtape"] )
 	}
 	
 	SetElementAnimations(Hud_GetChild(file.panel,"PracticeCategory" ), 0.35, 0.07)
 	SetElementAnimations(file.slotToButtonMap["training"], 0.35,  0.07)
+
+
+
 	SetElementAnimations(file.slotToButtonMap["firing_range"], 0.35, 0.07)
 	SetElementAnimations(file.slotToButtonMap["event"], 0.35, 0.07)
 
@@ -690,17 +713,20 @@ table<string, string> function GameModeSelect_GetPlaylists()
 		if ( uiSlot == "story" )
 			continue
 
-		if( slotToPlaylistNameMap[uiSlot] != "" )
+		if(  uiSlot in slotToPlaylistNameMap )
 		{
-			
-			bool currPlaylistIsAvailable = Lobby_IsPlaylistAvailable( plName )
-			bool currSlotPlaylistIsAvailable = Lobby_IsPlaylistAvailable( slotToPlaylistNameMap[uiSlot] )
-			if( !currSlotPlaylistIsAvailable && currPlaylistIsAvailable )
+			if ( slotToPlaylistNameMap[uiSlot] != "" )
+			{
+				
+				bool currPlaylistIsAvailable     = Lobby_IsPlaylistAvailable( plName )
+				bool currSlotPlaylistIsAvailable = Lobby_IsPlaylistAvailable( slotToPlaylistNameMap[uiSlot] )
+				if ( !currSlotPlaylistIsAvailable && currPlaylistIsAvailable )
+					slotToPlaylistNameMap[uiSlot] = plName
+			}
+			else
+			{
 				slotToPlaylistNameMap[uiSlot] = plName
-		}
-		else
-		{
-			slotToPlaylistNameMap[uiSlot] = plName
+			}
 		}
 	}
 	return slotToPlaylistNameMap
@@ -719,7 +745,7 @@ void function GamemodeSelect_UpdateSelectButton( var button, string playlistName
 	int mapIdx = playlistName != "" ? GetPlaylistActiveMapRotationIndex( playlistName ) : -1
 
 	bool doDebug = (InputIsButtonDown( KEY_LSHIFT ) && InputIsButtonDown( KEY_LCONTROL )) || (InputIsButtonDown( BUTTON_TRIGGER_LEFT_FULL ) && InputIsButtonDown( BUTTON_B ))
-	RuiSetString( rui, "modeNameText", GetPlaylistMapVarString( playlistName, mapIdx, "name", "#PLAYLIST_UNAVAILABLE" ) )
+	RuiSetString( rui, "modeNameText", GamemodeSelect_GetModeName( playlistName, mapIdx, "#PLAYLIST_UNAVAILABLE" ) )
 	RuiSetString( rui, "playlistName", playlistName )
 	RuiSetString( rui, "playlistTypeText", "" )
 
@@ -761,16 +787,12 @@ void function GamemodeSelect_UpdateSelectButton( var button, string playlistName
 	int playlistState = LobbyPlaylist_GetPlaylistState( playlistName )
 	string playlistStateString = LobbyPlaylist_GetPlaylistStateString( playlistState )
 
-	if ( playlistState == ePlaylistState.ACCOUNT_LEVEL_REQUIRED )
-	{
-		int level = GetPlaylistVarInt( playlistName, "account_level_required", 0 )
-		playlistStateString = Localize( playlistStateString, level )
-	}
-	else if ( playlistState == ePlaylistState.RANKED_LEVEL_REQUIRED )
-	{
-		int level = Ranked_GetRankedLevelRequirement() + 1
-		playlistStateString = Localize( playlistStateString, level )
-	}
+
+
+
+
+
+
 
 	RuiSetString( rui, "modeLockedReason", playlistStateString )
 
@@ -854,6 +876,38 @@ void function GamemodeSelect_UpdateSelectButton( var button, string playlistName
 		RuiSetGameTime( rui, "rotationGroupNextTime", ClientTime() + RotationTimeLeft - 1) 
 	}
 
+	for ( int i = 1; i <= 2; i++ )
+	{
+		if ( slot == "regular_" + i )
+		{
+			RTKPlayMenuTakeoverModelStruct takeoverStruct
+			if ( RotationTimeLeft > 0
+					&& GetPlaylistVarBool( playlistName, "ui_slot_regular_" + i + "_timer", true )
+					&& GetPlaylistVarString( playlistName, "ui_slot", "" ) == "regular_" + i
+					&& GetPlaylistVarBool( playlistName, "show_regular_mode_button_timer", false ) )
+			{
+				PlaylistScheduleData scheduleData = Playlist_GetScheduleData( playlistName )
+				if ( scheduleData.currentBlock != null )
+				{
+					TimestampRange currentBlock = expect TimestampRange(scheduleData.currentBlock)
+					int remainingDuration       = currentBlock.endUnixTime - GetUnixTimestamp()
+					takeoverStruct.endTime = currentBlock.endUnixTime
+				}
+				else
+				{
+					takeoverStruct.endTime = RotationTimeLeft + GetUnixTimestamp()
+				}
+			}
+			else
+			{
+				takeoverStruct.endTime = 0
+			}
+
+			rtk_struct playMenuModel = RTKDataModelType_GetOrCreateStruct( RTK_MODELTYPE_MENUS, "play", "RTKPlayMenuModelStruct" )
+			rtk_struct takeoverSlotModelStruct = RTKStruct_GetOrCreateScriptStruct( playMenuModel, "takeoverSlot" + i, "RTKPlayMenuTakeoverModelStruct" )
+			RTKStruct_SetValue( takeoverSlotModelStruct, takeoverStruct )
+		}
+	}
 }
 
 void function GamemodeSelect_UpdateMixtapePreview( string playlistName, string slotKey )
@@ -888,7 +942,7 @@ void function GamemodeSelect_UpdateMixtapePreview( string playlistName, string s
 			nextName = GetNextPlaylistFromRotationAndUISlotAndSkip( rotationID, slotKey, mapNumber - 1 )
 
 		string mapName = GetPlaylistMapVarString( nextName, 0, "map_name", "" )
-		string modeName = GetPlaylistMapVarString( nextName, 0, "name", "" )
+		string modeName = GamemodeSelect_GetModeName( nextName, 0 )
 		asset thumbnailAsset
 
 		if( slotKey == "regular_1" || slotKey == "regular_2" )
@@ -908,6 +962,17 @@ void function GamemodeSelect_UpdateMixtapePreview( string playlistName, string s
 
 		mapNumber++
 	}
+}
+
+string function GamemodeSelect_GetModeName( string playlistName, int index, string defaultName = "" )
+{
+
+
+
+
+
+	return GetPlaylistMapVarString( playlistName, index, "name", defaultName )
+	unreachable
 }
 
 

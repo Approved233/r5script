@@ -136,7 +136,7 @@ void function WeaponSkinsPanel_Update( var panel )
 
 
 		entry = Loadout_WeaponSkin( file.currentWeapon )
-		pd.weaponSkinList = GetLoadoutItemsSortedForMenu( [entry], WeaponSkin_GetSortOrdinal )
+		pd.weaponSkinList = GetLoadoutItemsSortedForMenu( [entry], WeaponSkin_GetSortOrdinal, null, [] )
 		FilterWeaponSkinList( pd.weaponSkinList )
 		itemList = pd.weaponSkinList
 		previewFunc = PreviewWeaponSkin

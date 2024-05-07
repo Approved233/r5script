@@ -416,7 +416,7 @@ void function WeaponArcPreviewThread_Client( entity owner, entity weapon )
 	
 	
 
-	var overlayRui = CreateCockpitPostFXRui( $"ui/shield_mines_placement.rpak", HUD_Z_BASE )
+	var overlayRui = CreateCockpitPostFXRui( $"ui/ult_deployment.rpak", HUD_Z_BASE )
 	RuiSetVisible( overlayRui, true )
 
 	OnThreadEnd(

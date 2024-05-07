@@ -242,15 +242,21 @@ array< string > function Survival_GetPlayerScores( entity player )
 
 
 
-array< entity > function Survival_SortPlayersByScore( array< entity > teamPlayers, ScoreboardData gameData )
+array< TeamsScoreboardPlayer > function Survival_SortPlayersByScore( array< TeamsScoreboardPlayer > players )
 {
-	teamPlayers.sort( int function( entity a, entity b )
+	players.sort( int function( TeamsScoreboardPlayer a, TeamsScoreboardPlayer b )
 	{
+		entity playerA = FromEHI( a.playerEHI )
+		entity playerB = FromEHI( b.playerEHI )
+
+		if( !IsValid( playerA ) || !IsValid( playerB ) )
+			return 0
+
 		
 		int aScore
 		int bScore
-		aScore = a.GetPlayerNetInt( "kills" )
-		bScore = b.GetPlayerNetInt( "kills" )
+		aScore = playerA.GetPlayerNetInt( "kills" )
+		bScore = playerB.GetPlayerNetInt( "kills" )
 
 		if ( aScore > bScore ) return -1
 		else if ( aScore < bScore ) return 1
@@ -258,7 +264,7 @@ array< entity > function Survival_SortPlayersByScore( array< entity > teamPlayer
 	}
 	)
 
-	return teamPlayers
+	return players
 }
 
 
@@ -633,15 +639,15 @@ var function FullMap_Ping_( float radius, vector color, float pulseDuration, flo
 }
 
 
-var function FullMap_AddEnemyLocation( entity enemy )
+var function FullMap_AddEnemyLocation( entity enemy, asset enemyIconOverride = $"", float sizeOverride = -1.0 )
 {
 	var rui = FullMap_CommonAdd( $"ui/in_world_minimap_square_simple.rpak" )
 
 	RuiSetFloat3( rui, "objectPos", enemy.GetOrigin() )
 	RuiSetFloat3( rui, "objectAngles", ( enemy.GetAngles() + <0, -90, 0> ) )
-	RuiSetFloat( rui, "objectSize", 5.0 )
+	RuiSetFloat( rui, "objectSize", sizeOverride <= 0 ? 5.0 : sizeOverride )
 	RuiSetBool( rui, "doAnnounceEffect", true )
-	RuiSetImage( rui, "iconImage", $"rui/hud/minimap/compass_icon_player" )
+	RuiSetImage( rui, "iconImage", enemyIconOverride == $"" ? $"rui/hud/minimap/compass_icon_player" : enemyIconOverride )
 
 	
 	RuiSetFloat3( rui, "objColor", GetKeyColor( COLORID_MINIMAP_ENEMY_REF ) * ( 1.0 / 255.0 ) )
@@ -1559,7 +1565,8 @@ void function AddToFullMapCustom( entity ent, var topo, GenericFullmapSetupStruc
 	if ( topo == file.mapTopo )
 		drawMode = FULLMAP_RUI_DRAW_LAYER
 
-	var rui = RuiCreate( data.ruiAsset, topo, drawMode, FULLMAP_Z_BASE )
+	int zOrder = ent.Minimap_GetZOrder()
+	var rui = RuiCreate( data.ruiAsset, topo, drawMode, FULLMAP_Z_BASE + zOrder )
 	RuiSetFloat3( rui, "mapCorner", <file.mapCornerX, file.mapCornerY, 0> )
 	RuiSetFloat( rui, "mapScale", file.mapScale )
 	RuiSetFloat( rui, "displayDist", max( file.threatMaxDist, 2200 ) )

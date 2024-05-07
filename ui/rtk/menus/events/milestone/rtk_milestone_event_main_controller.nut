@@ -5,10 +5,13 @@ global function AutoAdvanceFeaturedItems_Tracking
 global function BuildMilestoneCarouselInfo
 global function SetIsAutoOpeningMilestonePacks
 global function MilestoneEvent_LootBoxMenuOnClose
+global function IsItemFlavorRewardItem
 
 global function RTKMutator_GetGiftingButtonTitle
 global function RTKMutator_GetGiftingButtonDescription
 global function RTKMutator_IsGiftingButtonInteractable
+global function RTKMutator_IsMilestonePackPurchaseButtonInteractable
+global function RTKMutator_GetMilestonePackPurchaseButtonTitle
 
 global struct RTKMilestoneEventMainPanel_Properties
 {
@@ -26,6 +29,7 @@ global struct RTKMilestonePackPricingModel
 	int quantity
 	string price
 	bool isPaidPack = true
+	bool doesOfferExist = false
 }
 
 global struct RTKMilestoneEventPanelModel
@@ -34,12 +38,15 @@ global struct RTKMilestoneEventPanelModel
 	vector titleBgColor
 	vector subtitleColor
 	vector disclaimerBoxColor
+	string completionPercentage
 	string nextMilestoneText
 	int totalItems
 	int currentCollectedItems
 	int endtime
 	bool isRestricted
 	asset trackerBoxBGImage
+	bool trackerBoxBlurBg
+	asset trackerBoxBlurImage
 	vector trackerProgressBarColor
 	vector trackerProgressBarBGColor
 	bool eventShopHasMilestonePack
@@ -58,15 +65,8 @@ global struct RTKMilestoneCarouselPanelInfo
 	int price
 
 	array<float> progress
-}
-
-global enum eGiftingButtonState
-{
-	AVAILABLE,
-	UNAVAILABLE,
-	GIFTING_EXCEEDED,
-	NOT_ENOUGH_LEVEL,
-	TWO_FACTOR_DISABLED
+	float eventOverviewPanelAlpha
+	float itemViewerPanelAlpha
 }
 
 global struct RTKMilestoneGiftButtonData
@@ -74,10 +74,9 @@ global struct RTKMilestoneGiftButtonData
 	int state = 0
 }
 
-global enum eMilestonePackPurchaseButtonState
+global struct RTKMilestonePurchaseButtonData
 {
-	AVAILABLE,
-	UNAVAILABLE
+	int state = 0
 }
 
 struct PrivateData
@@ -99,9 +98,10 @@ struct
 	array<MilestoneEventGrantReward> milestones
 	rtk_struct trackingModel
 	rtk_behavior self
+
 	
 	bool isAutoOpeningMilestonePacks = false
-	bool willTriggerMilestonePackOpen = true
+	bool willTriggerMilestonePackOpen = false
 } file
 
 const int SINGLE_BUTTON_PACK_QUANTITY = 1
@@ -126,7 +126,10 @@ void function RTKMilestoneEventMainPanel_OnInitialize( rtk_behavior self )
 	BuildPackPricingDataModel( trackingPanel )
 	ResetCarouselVars()
 
-	thread AutoAdvanceFeaturedItems_Tracking()
+
+	if ( MilestoneEvent_UseOriginalEventTabLayout() )
+		thread AutoAdvanceFeaturedItems_Tracking()
+
 	if ( file.activeEvent == null )
 		return
 
@@ -182,6 +185,8 @@ void function BuildMilestoneGeneralPanelInfo( rtk_struct trackingPanelModel )
 		generalModel.currentCollectedItems = file.isRestricted ? GRX_GetNumberOfOwnedItemsByPlayer( items ) : GRX_GetNumberOfOwnedItemsByPlayer( items ) + GRX_GetNumberOfOwnedItemsByPlayer( chaseItems )
 		generalModel.isRestricted = file.isRestricted
 		generalModel.trackerBoxBGImage = MilestoneEvent_GetTrackerBoxBGImage( event )
+		generalModel.trackerBoxBlurBg = MilestoneEvent_GetTrackerBoxBlur( event )
+		generalModel.trackerBoxBlurImage = MilestoneEvent_GetTrackerBoxBlurImage( event )
 		generalModel.trackerProgressBarColor = MilestoneEvent_GetMilestoneTrackerProgressBarColor( event )
 		generalModel.trackerProgressBarBGColor = MilestoneEvent_GetMilestoneTrackerProgressBarBGColor( event )
 		generalModel.eventShopHasMilestonePack = EventShop_HasMilestoneEventPack()
@@ -218,7 +223,7 @@ void function SetUpButtons( rtk_behavior self )
 		{
 			return
 		}
-		OpenMilestonePackInfoDialog( null )
+		OpenMilestonePackInfoDialog( null, file.activeEvent )
 	} )
 }
 
@@ -235,29 +240,33 @@ void function SetUpPurchaseButtons( rtk_behavior self, rtk_struct trackingPanelM
 	array<GRXScriptOffer> singlePurchaseOffers = MilestoneEvent_GetSinglePackOffers( event )
 
 	self.AutoSubscribe( giftButton, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( singlePurchaseOffers ) {
-		int state = GetMilestoneGiftButtonState( singlePurchaseOffers )
+		int state = GetEventGiftButtonState( singlePurchaseOffers )
 		switch ( state )
 		{
-			case eGiftingButtonState.AVAILABLE:
+			case eEventGiftingButtonState.AVAILABLE:
 				OpenPurchasePackSelectionDialog( true )
 				break
-			case eGiftingButtonState.TWO_FACTOR_DISABLED:
+			case eEventGiftingButtonState.TWO_FACTOR_DISABLED:
 				OpenTwoFactorInfoDialog( null )
 				break
-			case eGiftingButtonState.GIFTING_EXCEEDED:
-			case eGiftingButtonState.NOT_ENOUGH_LEVEL:
-			case eGiftingButtonState.UNAVAILABLE:
+			case eEventGiftingButtonState.GIFTING_EXCEEDED:
+			case eEventGiftingButtonState.NOT_ENOUGH_LEVEL:
+			case eEventGiftingButtonState.UNAVAILABLE:
 				return
 		}
 	} )
 
 	self.AutoSubscribe( purchaseButton, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( singlePurchaseOffers ) {
-		int state = GetMilestonePurchaseButtonState( singlePurchaseOffers )
+		int state = GetEventPurchaseButtonState( singlePurchaseOffers )
+
 		switch ( state )
 		{
-			case eMilestonePackPurchaseButtonState.AVAILABLE:
+			case eEventPackPurchaseButtonState.AVAILABLE:
 				OpenPurchasePackSelectionDialog( false )
+				break
+
 			default:
+				EmitUISound( "menu_deny" )
 				return
 		}
 	} )
@@ -289,10 +298,13 @@ void function SetUpRewardButtons( rtk_behavior self, rtk_struct trackingPanelMod
 			} )
 
 			self.AutoSubscribe( button, "onIdle", function( rtk_behavior button, int prevState ) : ( self, index, trackingPanelModel ) {
-				if ( EventsPanel_CanStartCarouselThreads() )
+				if ( MilestoneEvent_UseOriginalEventTabLayout() )
 				{
-					thread AutoAdvanceFeaturedItems_Tracking()
-					thread AutoAdvanceFeaturedItems_Collection()
+					if ( EventsPanel_CanStartCarouselThreads() )
+					{
+						thread AutoAdvanceFeaturedItems_Tracking()
+						thread AutoAdvanceFeaturedItems_Collection()
+					}
 				}
 			} )
 
@@ -317,9 +329,25 @@ void function BuildPurchaseButtonDataModel( rtk_struct trackingPanelModel )
 	array<GRXScriptOffer> singlePurchaseOffers = MilestoneEvent_GetSinglePackOffers( event )
 
 	RTKMilestoneGiftButtonData giftButtonModel
-	giftButtonModel.state = GetMilestoneGiftButtonState( singlePurchaseOffers )
+	giftButtonModel.state = GetEventGiftButtonState( singlePurchaseOffers )
+
+	
+	if ( file.willTriggerMilestonePackOpen || file.isAutoOpeningMilestonePacks )
+		giftButtonModel.state = eEventGiftingButtonState.UNAVAILABLE
+
 	rtk_struct giftButtonData = RTKStruct_GetOrCreateScriptStruct( trackingPanelModel, "giftButtonData", "RTKMilestoneGiftButtonData" )
 	RTKStruct_SetValue( giftButtonData, giftButtonModel )
+
+	RTKMilestonePurchaseButtonData purchaseButtonModel
+	purchaseButtonModel.state = GetEventPurchaseButtonState( singlePurchaseOffers )
+
+	
+	if ( file.willTriggerMilestonePackOpen || file.isAutoOpeningMilestonePacks )
+		purchaseButtonModel.state = eEventPackPurchaseButtonState.UNAVAILABLE
+
+	rtk_struct purchaseButtonData = RTKStruct_GetOrCreateScriptStruct( trackingPanelModel, "purchaseButtonData", "RTKMilestonePurchaseButtonData" )
+
+	RTKStruct_SetValue( purchaseButtonData, purchaseButtonModel )
 }
 
 void function BuildPackPricingDataModel( rtk_struct trackingPanelModel )
@@ -490,7 +518,7 @@ void function BuildMilestoneCarouselInfo( rtk_struct milestoneEventModel, ItemFl
 		RTKStruct_SetValue( carouselInfo, itemInfo )
 		if ( IsValidItemFlavorGUID( ItemFlavor_GetGUID( item ) ) )
 		{
-			RunClientScript( "UIToClient_ItemPresentation",ItemFlavor_GetGUID( item ) , -1, 1.19, false, null, true, "collection_event_ref", false, true, false, false )
+			RunClientScript( "UIToClient_ItemPresentation", ItemFlavor_GetGUID( item ) , -1, 1.19, Battlepass_ShouldShowLow( item ), null, true, "collection_event_ref", false, true, false, false )
 		}
 	}
 }
@@ -525,6 +553,7 @@ void function MilestoneEvent_LootBoxMenuOnClose()
 
 	if ( !Remote_ServerCallFunctionAllowed() )
 		return
+
 	Remote_ServerCallFunction( "UICallback_AutoOpenMilestonePacks" )
 
 	MilestoneEvent_TryDisplayMilestoneRewardCeremony()
@@ -535,7 +564,6 @@ void function TryOpenMilestoneRewardPack()
 	
 	
 	
-	file.willTriggerMilestonePackOpen = false
 	if ( !GRX_IsInventoryReady() || !GRX_AreOffersReady() )
 	{
 		return
@@ -586,44 +614,17 @@ void function OnGRXStateChanged()
 	SetUpPurchaseButtons( file.self, file.trackingModel )
 }
 
-int function GetMilestonePurchaseButtonState( array<GRXScriptOffer> offers )
-{
-	return offers.len() == 0 ? eMilestonePackPurchaseButtonState.UNAVAILABLE : eMilestonePackPurchaseButtonState.AVAILABLE
-}
-
-int function GetMilestoneGiftButtonState( array<GRXScriptOffer> offers )
-{
-	if ( offers.len() < 1 )
-	{
-		return eGiftingButtonState.UNAVAILABLE
-	}
-
-	if ( !IsPlayerLeveledForGifting() )
-	{
-		return eGiftingButtonState.NOT_ENOUGH_LEVEL
-	}
-	else if ( !IsTwoFactorAuthenticationEnabled() )
-	{
-		return eGiftingButtonState.TWO_FACTOR_DISABLED
-	}
-	else if ( !IsPlayerWithinGiftingLimit() )
-	{
-		return eGiftingButtonState.GIFTING_EXCEEDED
-	}
-	return eGiftingButtonState.AVAILABLE
-}
-
 string function RTKMutator_GetGiftingButtonTitle( int state )
 {
 	switch ( state )
 	{
-		case eGiftingButtonState.UNAVAILABLE:
+		case eEventGiftingButtonState.UNAVAILABLE:
 			return Localize( "#UNAVAILABLE" )
-		case eGiftingButtonState.NOT_ENOUGH_LEVEL:
-		case eGiftingButtonState.TWO_FACTOR_DISABLED:
-		case eGiftingButtonState.GIFTING_EXCEEDED:
+		case eEventGiftingButtonState.NOT_ENOUGH_LEVEL:
+		case eEventGiftingButtonState.TWO_FACTOR_DISABLED:
+		case eEventGiftingButtonState.GIFTING_EXCEEDED:
 			return Localize( "#LOCKED_GIFT" )
-		case eGiftingButtonState.AVAILABLE:
+		case eEventGiftingButtonState.AVAILABLE:
 			return Localize( "#BUY_GIFT" )
 	}
 	return Localize( "#UNAVAILABLE" )
@@ -633,14 +634,14 @@ string function RTKMutator_GetGiftingButtonDescription( int state )
 {
 	switch ( state )
 	{
-		case eGiftingButtonState.UNAVAILABLE:
+		case eEventGiftingButtonState.UNAVAILABLE:
 			return ""
-		case eGiftingButtonState.NOT_ENOUGH_LEVEL:
+		case eEventGiftingButtonState.NOT_ENOUGH_LEVEL:
 			return Localize( "#LEVEL_REQUIRED", GetConVarInt( "mtx_giftingMinAccountLevel" ) )
-		case eGiftingButtonState.TWO_FACTOR_DISABLED:
+		case eEventGiftingButtonState.TWO_FACTOR_DISABLED:
 			return  Localize( "#TWO_FACTOR_NEEDED" )
-		case eGiftingButtonState.GIFTING_EXCEEDED:
-		case eGiftingButtonState.AVAILABLE:
+		case eEventGiftingButtonState.GIFTING_EXCEEDED:
+		case eEventGiftingButtonState.AVAILABLE:
 		int giftsLeft = Gifting_GetRemainingDailyGifts()
 			return Localize( "#GIFTS_LEFT_FRACTION", giftsLeft )
 	}
@@ -651,13 +652,32 @@ bool function RTKMutator_IsGiftingButtonInteractable( int state )
 {
 	switch ( state )
 	{
-		case eGiftingButtonState.UNAVAILABLE:
-		case eGiftingButtonState.NOT_ENOUGH_LEVEL:
-		case eGiftingButtonState.GIFTING_EXCEEDED:
+		case eEventGiftingButtonState.UNAVAILABLE:
+		case eEventGiftingButtonState.NOT_ENOUGH_LEVEL:
+		case eEventGiftingButtonState.GIFTING_EXCEEDED:
 			return false
-		case eGiftingButtonState.TWO_FACTOR_DISABLED:
-		case eGiftingButtonState.AVAILABLE:
+		case eEventGiftingButtonState.TWO_FACTOR_DISABLED:
+		case eEventGiftingButtonState.AVAILABLE:
 			return true
 	}
 	return false
+}
+
+bool function RTKMutator_IsMilestonePackPurchaseButtonInteractable( int state )
+{
+	return state == eEventPackPurchaseButtonState.AVAILABLE
+}
+
+string function RTKMutator_GetMilestonePackPurchaseButtonTitle( int state )
+{
+	switch ( state )
+	{
+		case eEventPackPurchaseButtonState.UNAVAILABLE:
+			return Localize( "#UNAVAILABLE" )
+		case eEventPackPurchaseButtonState.AVAILABLE:
+			return Localize( "#PURCHASE" )
+		case eEventPackPurchaseButtonState.COMPLETED:
+			return Localize( "#COMPLETED" )
+	}
+	return Localize( "#UNAVAILABLE" )
 }

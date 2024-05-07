@@ -253,9 +253,14 @@ int function Cups_GetSquadEligibility( SettingsAssetGUID cupID )
 
 	CupBakeryAssetData cupBakeryData = Cups_GetCupBakeryAssetDataFromGUID( cupID )
 
-	Party party = GetParty()
-	if( party.members.len() != cupBakeryData.squadSize )
-		return eCupSquadEligibility.INVALID_SQUAD_SIZE
+
+
+
+	{
+		Party party = GetParty()
+		if( party.members.len() != cupBakeryData.squadSize )
+			return eCupSquadEligibility.INVALID_SQUAD_SIZE
+	}
 
 	CommunityUserInfo ornull userInfoOrNull = GetUserInfo( GetPlayerHardware(), GetPlayerUID() )
 	UserFullCupData ornull userFullCupDataOrNull = Cups_GetUserFullCupData()

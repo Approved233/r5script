@@ -40,6 +40,8 @@ void function InitArmoryWeaponsPanel( var panel )
 
 void function ArmoryWeaponsPanel_OnShow( var panel )
 {
+	UI_SetPresentationType( ePresentationType.WEAPON_CATEGORY )
+
 	array<ItemFlavor> categories = GetAllWeaponCategories()
 
 	foreach ( index, button in file.weaponCategoryButtons )

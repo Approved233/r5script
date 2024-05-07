@@ -5,6 +5,7 @@ global struct RTKDeepLinkButton_Properties
 	rtk_behavior buttonBehavior
 	string link = ""
 	string linkType = ""
+	string fromPageId = ""
 }
 
 void function RTKDeepLinkButton_OnInitialize( rtk_behavior self )
@@ -22,8 +23,9 @@ void function GoToLink( rtk_behavior self )
 {
 	string link = self.PropGetString( "link" )
 	string linkType = self.PropGetString( "linkType" )
+	string fromPageId = self.PropGetString( "fromPageId" )
 	if ( linkType == "" )
 		return
 
-	OpenPromoLink( linkType, link )
+	OpenPromoLink( linkType, link, fromPageId )
 }

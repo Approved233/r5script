@@ -106,7 +106,7 @@ void function InitCharacterSkinsPanel( var panel )
 
 void function ChallengeLinkButton_OnActivate( var button )
 {
-	JumpToSeasonTab( "ChallengesPanel" )
+	JumpToChallenges( "" )
 	AllChallengesMenu_ForceClickSpecialEventButton( eChallengeTimeSpanKind.REWARD_CAMPAIGN )
 }
 
@@ -171,7 +171,7 @@ void function CharacterSkinsPanel_Update( var panel )
 	if ( IsPanelActive( file.panel ) && IsTopLevelCustomizeContextValid() )
 	{
 		LoadoutEntry entry = Loadout_CharacterSkin( GetTopLevelCustomizeContext() )
-		file.characterSkinList = GetLoadoutItemsSortedForMenu( [entry], CharacterSkin_GetSortOrdinal )
+		file.characterSkinList = GetLoadoutItemsSortedForMenu( [entry], CharacterSkin_GetSortOrdinal, null, [] )
 		FilterCharacterSkinList( file.characterSkinList )
 
 		Hud_InitGridButtons( file.listPanel, file.characterSkinList.len() )
@@ -301,7 +301,7 @@ void function UpdateMythicSkinInfo()
 			ownedEvolvedSkinCount++
 	}
 
-	if ( DoesPlayerHaveChallenge( player, challenge ) && ownedEvolvedSkinCount != challengeTierCount )
+	if ( Challenge_IsAssigned( player, challenge ) && ownedEvolvedSkinCount != challengeTierCount )
 	{
 		currentTier = Challenge_GetCurrentTier( player, challenge )
 

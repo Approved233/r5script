@@ -386,8 +386,12 @@ void function UpdateRequeueUI_Thread( int clientPlayerTeam )
 		RuiSetBool( requeueRui, "fullPartyConnected", fullPartyConnected )
 		RuiSetBool( requeueRui, "playlistHidden", playlistHidden )
 		RuiSetBool( requeueRui, "isMatchmaking", IsMyPartyMatchmaking() )
-		RuiSetString( requeueRui, "matchmakingStatus", GetMyMatchmakingStatus() )
 
+		string matchmakingStatus = GetMyMatchmakingStatus()
+		if ( matchmakingStatus == "#MATCHMAKING_QUEUED" )
+			matchmakingStatus = Localize( "#MATCHMAKING_REQUEUED", Localize( GetCurrentPlaylistVarString( "name", "" ) ) )
+
+		RuiSetString( requeueRui, "matchmakingStatus", matchmakingStatus )
 		RunUIScript( "UI_RequeueStatusChanged", fullPartyConnected )
 
 		WaitFrame()
@@ -424,19 +428,12 @@ void function DeathScreen_OnPlayerLifeStateChanged( entity player, int oldState,
 
 	if ( player.GetTeam() == clientPlayer.GetTeam() )
 	{
-		if ( IsSoloMode() )
+		if ( IsFallLTM() )
 		{
-			if ( IsFallLTM() )
-			{
-				
-				
-				if ( GetGameState() > eGameState.Playing )
-					RunUIScript( "UI_SetIsEliminiated", true )
-			}
-			else
-			{
-				RunUIScript( "UI_SetIsEliminiated", !IsAlive( clientPlayer ) )
-			}
+			
+			
+			if ( GetGameState() > eGameState.Playing )
+				RunUIScript( "UI_SetIsEliminiated", true )
 		}
 		else
 		{
@@ -473,6 +470,12 @@ void function DeathScreen_OnPlaying()
 
 void function DeathScreen_OnGameStateChanged()
 {
+	if ( !IsSurvivalMode() && GetGameState() == eGameState.WinnerDetermined )
+	{
+		DeathScreen_Destroy()
+		return
+	}
+
 	
 	
 	thread UpdateMenuFooter()
@@ -505,8 +508,6 @@ void function DeathScreen_OnKillReplayBegin()
 	if ( IsReplayRoundWinning() )
 		return
 
-	RuiSetBool( file.deathScreenHeaderRui , "isKillReplay", true )
-
 	SwitchDeathScreenTab( eDeathScreenPanel.KILLREPLAY )
 	SetCurrentTabIndex( eDeathScreenPanel.KILLREPLAY )
 }
@@ -524,8 +525,6 @@ void function DeathScreen_OnKillReplayEnd()
 	if ( IsViewingKillreplayTab() )
 	{
 		SwitchDeathScreenTab( GetCurrentPlaylistVarInt( "death_screen_default_tab", GetCurrentPlaylistVarBool( "enable_inventory_scoreboard", false ) ? eDeathScreenPanel.SCOREBOARD : eDeathScreenPanel.SQUAD_SUMMARY ) )
-		if ( file.deathScreenHeaderRui != null )
-			RuiSetBool( file.deathScreenHeaderRui , "isKillReplay", false )
 	}
 }
 
@@ -591,10 +590,6 @@ bool function ShouldSwitchToSummary()
 bool function ShouldSwitchToRecap()
 {
 	bool tabSwitchedSinceDeath = file.lastTabSwitchTime > file.playerDeathTime
-
-	if ( IsSoloMode() )
-		return !tabSwitchedSinceDeath && !HasShownDeathRecap() && IsViewingSpectateTab() && GetGameState() < eGameState.WinnerDetermined
-
 	return !tabSwitchedSinceDeath && !Flag( "SquadEliminated" ) && !HasShownDeathRecap() && IsViewingSpectateTab() && GetGameState() < eGameState.WinnerDetermined
 }
 
@@ -687,7 +682,20 @@ void function UpdateEnabledTabs()
 	
 	if ( !IsLocalPlayerAlive_NonReplay() )
 	{
-		EnableDeathScreenTab( eDeathScreenPanel.SPECTATE, GetCurrentPlaylistVarBool( "spectator_enabled", true ) )
+
+			if ( IsSoloMode() && Survival_Solos_CanLocalPlayerRespawnOrIsRespawning() )
+			{
+				EnableDeathScreenTab( eDeathScreenPanel.DEATH_RECAP, file.deathRecapDataUpdated )
+				
+				EnableDeathScreenTab( eDeathScreenPanel.SQUAD, true )
+				EnableDeathScreenTab( eDeathScreenPanel.SPECTATE, false)
+				EnableDeathScreenTab( eDeathScreenPanel.SCOREBOARD, false )
+				EnableDeathScreenTab( eDeathScreenPanel.SQUAD_SUMMARY, false )
+				return
+			}
+
+
+		EnableDeathScreenTab( eDeathScreenPanel.SPECTATE, GamemodeUtility_IsSpectatorEnabled())
 		EnableDeathScreenTab( eDeathScreenPanel.SQUAD, !gameIsOver )
 	}
 
@@ -994,11 +1002,19 @@ void function DeathScreenUpdateHeader( var headerElem )
 	
 	bool isPlayerWaitingForRespawn = file.isPlayerWaitingForRespawnFunc != null ? file.isPlayerWaitingForRespawnFunc( clientPlayer ) : false
 
-	RuiSetInt( headerRui, "placement", -1  )
-	if ( GetCurrentPlaylistVarBool( "placement_popup", true ) && IsSurvivalMode() && !IsFiringRangeGameMode() && !isPlayerWaitingForRespawn && IsViewingSpectateTab() && GetLocalViewPlayer() == clientPlayer )
+#if DEV
+		printt( FUNC_NAME() + "(): isPlayerWaitingForRespawn == " + isPlayerWaitingForRespawn )
+#endif
+
+	
+	if ( !IsWatchingKillReplay() )
+	{
+		RuiSetInt( headerRui, "placement", -1  )
+	}
+	bool shouldRequestPlayerLastRank = GamemodeUtility_IsPlacementPopupEnabled() && !isPlayerWaitingForRespawn && IsViewingSpectateTab() && GetLocalViewPlayer() == clientPlayer
+	if ( shouldRequestPlayerLastRank )
 		Remote_ServerCallFunction( "ClientCallback_RequestPlayerLastRank" )
 
-	RuiSetBool( headerRui, "isSoloMode", IsSoloMode() )
 
 
 
@@ -1009,9 +1025,7 @@ void function DeathScreenUpdateHeader( var headerElem )
 
 		RuiSetBool( headerRui, "isStrikeOutMode", IsStrikeoutGamemode())
 
-
-
-
+	RuiSetBool( headerRui, "isSoloMode", IsSoloMode() )
 
 	RuiSetBool( headerRui, "isPlayerWaitingForRespawn", isPlayerWaitingForRespawn )
 
@@ -1037,7 +1051,6 @@ void function DeathScreenUpdateHeader( var headerElem )
 			RuiSetString( headerRui, "playerObfuscatedID", "" )
 
 		RuiSetBool( headerRui, "spectatingEnemy", IsEnemyTeam( viewPlayer.GetTeam(), clientPlayer.GetTeam() ) )
-		RuiSetBool( headerRui, "isKillReplay", GetCurrentTabIndex() == eDeathScreenPanel.KILLREPLAY || IsWatchingKillReplay() )
 		RuiSetInt( headerRui, "teamMemberIndex", EEH_GetTeamMemberIndex( playerEHI ) )
 	}
 	else
@@ -1475,6 +1488,8 @@ void function UICallback_ShowSpectateTab( var headerElem )
 	Signal( clientPlayer, "SwitchedTab" )
 
 	SetCurrentTabIndex( eDeathScreenPanel.SPECTATE )
+
+	ClKillReplayFX_StopPreRespawnDuck()
 
 	UpdateMenuBackground()
 	DeathScreenUpdateHeader( headerElem )
@@ -1942,8 +1957,17 @@ void function PopulatePlayerStatsRui( var gladCardRui, int index, bool connected
 		RuiSetString( gladCardRui, "value1", string( data.kills ) )
 
 		
-		RuiSetString( gladCardRui, "title1a", data.modeSpecificSummaryData[1].displayString )
-		RuiSetString( gladCardRui, "value1a", string( data.assists ) )
+		
+		if ( data.modeSpecificSummaryData[1].displayString != "" )
+		{
+			RuiSetString( gladCardRui, "title1a", data.modeSpecificSummaryData[1].displayString )
+			RuiSetString( gladCardRui, "value1a", string( data.assists ) )
+		}
+		else
+		{
+			RuiSetString( gladCardRui, "title1a", "" )
+			RuiSetString( gladCardRui, "value1a", "" )
+		}
 
 		
 		

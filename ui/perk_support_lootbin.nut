@@ -35,10 +35,6 @@ global function SupportBin_UseBasicLootConfiguration
 
 
 
-
-
-
-
 const string LOOT_ITEM_MEDKIT_NAME = "health_pickup_health_large"
 const string LOOT_ITEM_BATTERY_NAME = "health_pickup_combo_large"
 const string LOOT_ITEM_PHEONIX_NAME = "health_pickup_combo_full"
@@ -97,6 +93,7 @@ enum SurvivalStatusType
 {
 	SURIVIAL_LOOT_HAS_MRB,
 	SURIVIAL_LOOT_HAS_HS,
+	SURIVIAL_LOOT_HAS_EVAC,
 	SURIVIAL_LOOT_HAS_NONE
 }
 
@@ -335,6 +332,30 @@ bool function SupportBin_ValidateSurvivalNeedAgainstTeamInvetory( )
 {
 	return ( GetCurrentPlaylistVarBool("supportbin_validate_survival_using_team_inventory", false ) )
 }
+
+bool function SupportBin_RemoveSurvivalItemsFromBaseRoll()
+{
+	return ( GetCurrentPlaylistVarBool("supportbin_remove_survival_items", true ) )
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

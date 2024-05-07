@@ -1,11 +1,4 @@
-
-
-
 global function CollectionEvents_Init
-
-
-
-
 global function GetActiveCollectionEvent
 global function CollectionEvent_GetChallenges 
 global function CollectionEvent_GetFrontPageRewardBoxTitle
@@ -47,8 +40,6 @@ global function CollectionEvent_GetAboutPageSpecialTextCol
 global function CollectionEvent_GetHeaderIcon 
 
 
-
-
 global function HeirloomEvent_GetItemCount
 global function HeirloomEvent_GetCurrentRemainingItemCount
 global function HeirloomEvent_GetPrimaryCompletionRewardItem
@@ -58,7 +49,6 @@ global function HeirloomEvent_AwardHeirloomShards
 global function HeirloomEvent_IsRewardMythicSkin
 
 
-
 global function HeirloomEvent_GetHeirloomButtonImage
 global function HeirloomEvent_GetMythicButtonImage
 global function HeirloomEvent_GetHeirloomHeaderText
@@ -66,18 +56,15 @@ global function HeirloomEvent_GetHeirloomUnlockDesc
 global function HeirloomEvent_IsCompletionRewardOwned
 global function HeirloomEvent_IsRewardHeirloom
 
+global function CollectionEvent_IsV2PlaylistVarEnabled
 
-
-
-
-
-
-
-
-
-
-
-
+global function CollectionEvent_GetPackOffers
+global function CollectionEvent_GetLobbyButtonImage 
+global function CollectionEvent_HasLobbyTheme 
+global function CollectionEvent_IsItemFlavorFromEvent
+global function CollectionEvent_GetEventItems
+global function CollectionEvent_GetCustomIconForItemIdx
+global function CollectionEvent_GetSinglePackOffers
 
 
 
@@ -86,14 +73,6 @@ global function CollectionEvent_GetFrontTabText
 
 
 global function CollectionEvent_GetCurrentMaxEventPackPurchaseCount
-
-
-
-
-global function CollectionEvent_GetPackOffers
-global function CollectionEvent_GetLobbyButtonImage 
-global function CollectionEvent_HasLobbyTheme 
-global function CollectionEvent_IsItemFlavorFromEvent
 
 
 
@@ -187,8 +166,6 @@ void function CollectionEvents_Init()
 
 
 
-
-
 ItemFlavor ornull function GetActiveCollectionEvent( int t )
 {
 	Assert( IsItemFlavorRegistrationFinished() )
@@ -238,6 +215,26 @@ string function CollectionEvent_GetFrontPageRewardBoxTitle( ItemFlavor event )
 {
 	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_collection )
 	return GetGlobalSettingsString( ItemFlavor_GetAsset( event ), "frontPageRewardBoxTitle" )
+}
+
+
+
+array<GRXScriptOffer> function CollectionEvent_GetSinglePackOffers( ItemFlavor event )
+{
+	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_collection )
+	array<GRXScriptOffer> offers = GRX_GetItemDedicatedStoreOffers( CollectionEvent_GetMainPackFlav( event ), CollectionEvent_GetFrontPageGRXOfferLocation( event, GRX_IsOfferRestricted() ) )
+
+	int index = 0
+	foreach( offer in offers )
+	{
+		if ( offer.items.len() > 1 )
+		{
+			offers.remove( index )
+		}
+		index++
+	}
+
+	return offers
 }
 
 
@@ -329,12 +326,11 @@ string function HeirloomEvent_GetCompletionSequenceName( ItemFlavor event )
 
 
 
-string function CollectionEvent_GetFrontPageGRXOfferLocation( ItemFlavor event )
+string function CollectionEvent_GetFrontPageGRXOfferLocation( ItemFlavor event, bool isRestricted = false )
 {
 	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_collection )
-	return GetGlobalSettingsString( ItemFlavor_GetAsset( event ), "frontGRXOfferLocation" )
+	return GetGlobalSettingsString( ItemFlavor_GetAsset( event ), isRestricted ? "restrictedGRXOfferLocation" : "frontGRXOfferLocation" )
 }
-
 
 
 
@@ -361,7 +357,6 @@ array<CollectionEventRewardGroup> function CollectionEvent_GetRewardGroups( Item
 	}
 	return groups
 }
-
 
 
 
@@ -618,9 +613,6 @@ vector function CollectionEvent_GetAboutPageSpecialTextCol( ItemFlavor event )
 
 
 
-
-
-
 asset function CollectionEvent_GetBGPatternImage( ItemFlavor event )
 {
 	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_collection )
@@ -747,7 +739,6 @@ bool function CollectionEvent_HasLobbyTheme( ItemFlavor event )
 
 
 
-
 asset function CollectionEvent_GetLobbyButtonImage( ItemFlavor event )
 {
 	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_collection )
@@ -757,45 +748,10 @@ asset function CollectionEvent_GetLobbyButtonImage( ItemFlavor event )
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+bool function CollectionEvent_IsV2PlaylistVarEnabled()
+{
+	return GetCurrentPlaylistVarBool( "enable_collection_event_v2", true )
+}
 
 
 
@@ -868,6 +824,30 @@ array<ItemFlavor> function CollectionEvent_GetEventItems( ItemFlavor event )
 		}
 	}
 	return eventItems
+}
+
+asset function CollectionEvent_GetCustomIconForItemIdx( ItemFlavor event, int grxIdx, bool isRestricted = false )
+{
+	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_collection )
+
+	array<CollectionEventRewardGroup> groups = []
+	string rewardPath = isRestricted ? "restrictedRewardGroups" : "rewardGroups"
+	foreach ( var groupBlock in IterateSettingsAssetArray( ItemFlavor_GetAsset( event ), rewardPath ) )
+	{
+		CollectionEventRewardGroup group
+		group.ref = GetSettingsBlockString( groupBlock, "ref" )
+		group.quality = eRarityTier[GetSettingsBlockString( groupBlock, "quality" )]
+		foreach ( var rewardBlock in IterateSettingsArray( GetSettingsBlockArray( groupBlock, "rewards" ) ) )
+		{
+			ItemFlavor item = GetItemFlavorByAsset( GetSettingsBlockAsset( rewardBlock, "flavor" ) )
+			if ( item.grxIndex == grxIdx )
+			{
+				return GetSettingsBlockAsset( rewardBlock, "collectionItemCustomImage" )
+			}
+		}
+	}
+	Assert( false )
+	unreachable
 }
 
 bool function CollectionEvent_IsItemFlavorFromEvent( ItemFlavor event, int itemIdx )

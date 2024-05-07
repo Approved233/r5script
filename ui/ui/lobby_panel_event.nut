@@ -56,7 +56,7 @@ void function EventPanel_OnShow( var panel )
 	if ( GetLastMenuNavDirection() == MENU_NAV_FORWARD )
 		thread AnimateInSmallTabBar( tabData )
 
-	ItemFlavor ornull milestoneEvent = GetActiveMilestoneEvent( GetUnixTimestamp() )
+	ItemFlavor ornull milestoneEvent = GetActiveEventTabMilestoneEvent( GetUnixTimestamp() )
 	if ( milestoneEvent != null )
 	{
 		var parentPanel = Hud_GetParent( file.panel )
@@ -152,11 +152,17 @@ void function OnGRXEventUpdate()
 			array<var> nestedPanels = GetAllMenuPanelsSorted( file.panel )
 			foreach ( nestedPanel in nestedPanels )
 			{
-				if ( Hud_GetHudName( nestedPanel ) == "CollectionEventPanel" && !haveActiveCollectionEvent )
-					continue
 
-				if ( Hud_GetHudName( nestedPanel ) == "RTKEventsPanel" && (!haveActiveEventShop && !haveActiveBaseEvent) )
-					continue
+
+
+
+
+					if ( Hud_GetHudName( nestedPanel ) == "CollectionEventPanel" && !haveActiveCollectionEvent )
+						continue
+
+					if ( Hud_GetHudName( nestedPanel ) == "RTKEventsPanel" && (!haveActiveEventShop && !haveActiveBaseEvent) )
+						continue
+
 
 				switch ( Hud_GetHudName( nestedPanel ) )
 				{
@@ -192,7 +198,12 @@ void function OnGRXEventUpdate()
 
 			if ( Hud_GetHudName( tabDef.panel ) == "CollectionEventPanel" )
 			{
-				showTab = haveActiveCollectionEvent
+
+
+
+					showTab = haveActiveCollectionEvent
+
+
 				enableTab = haveActiveCollectionEvent
 				if ( haveActiveCollectionEvent )
 				{
@@ -212,7 +223,11 @@ void function OnGRXEventUpdate()
 			}
 			else if ( Hud_GetHudName( tabDef.panel ) == "RTKEventsPanel" )
 			{
-				showTab = haveActiveEventShop || haveActiveBaseEvent
+
+
+
+					showTab = haveActiveEventShop || haveActiveBaseEvent
+
 
 				if ( haveActiveBaseEvent )
 				{
@@ -229,7 +244,16 @@ void function OnGRXEventUpdate()
 					tabDef.title = "#EVENTS_EVENT_SHOP"
 				}
 
-				if ( !MilestoneEvent_IsEnabled() )
+
+
+
+
+
+
+
+
+
+				if ( !MilestoneEvent_IsPlaylistVarEnabled() )
 				{
 					showTab = false
 					enableTab = false
@@ -285,6 +309,8 @@ bool function EventPanel_GetLastMenuNavDirectionTopLevel()
 
 void function JumpToEventTab( string activateSubPanel = "" )
 {
+	EventsPanel_SaveDeepLink( activateSubPanel )
+
 	while ( GetActiveMenu() != GetMenu( "LobbyMenu" ) )
 		CloseActiveMenu()
 

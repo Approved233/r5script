@@ -7,6 +7,7 @@ global function GetActiveBaseEvent
 
 
 
+global function BaseEvent_IsEnabled
 global function BaseEvent_GetLandingPageImage
 global function BaseEvent_GetLandingPageBGButtonImage
 global function BaseEvent_GetLandingPageButtonData
@@ -57,7 +58,6 @@ global struct BaseEventLandingPageButtonData
 struct FileStruct_LifetimeLevel
 {
 	EntitySet chasePackGrantQueued
-	bool milestoneEvents_MilestoneRewardCeremonyDue = false
 }
 
 
@@ -70,6 +70,12 @@ struct {
 	
 } fileVM 
 
+
+
+bool function BaseEvent_IsEnabled()
+{
+	return GetCurrentPlaylistVarBool( "enable_base_event", true )
+}
 
 
 

@@ -203,6 +203,8 @@ struct
 
 		var 	panel
 
+		int openedAtTime = 0
+
 
 } file
 
@@ -821,6 +823,8 @@ void function BattlePass_PageForward( var button )
 			ForceVGUIFocusUpdate()
 		}
 		EmitUISound( "UI_Menu_BattlePass_LevelTab" )
+
+		PIN_UIInteraction_OnBattlepassPageChange( button != null, Hud_GetHudName( file.panel ) + "_pg" + file.currentPage, Hud_GetHudName( file.panel ) + "_pg" + oldPage, int( UITime() ) - file.openedAtTime )
 	}
 }
 
@@ -845,6 +849,8 @@ void function BattlePass_PageBackward( var button )
 			ForceVGUIFocusUpdate()
 		}
 		EmitUISound( "UI_Menu_BattlePass_LevelTab" )
+
+		PIN_UIInteraction_OnBattlepassPageChange( button != null, Hud_GetHudName( file.panel ) + "_pg" + file.currentPage, Hud_GetHudName( file.panel ) + "_pg" + oldPage, int( UITime() ) - file.openedAtTime  )
 	}
 }
 
@@ -1244,6 +1250,7 @@ void function BattlePass_RewardButton_OnActivate( var button )
 		RunClientScript( "ClearBattlePassItem" )
 		SetBattlePassItemPresentationModeActive( reward )
 	}
+	PIN_UIInteraction_OnBattlepassItemSelected( Hud_GetHudName( file.panel ) + "_pg" + file.currentPage, Hud_GetHudName( file.panel ), ItemFlavor_GetAssetName(reward.flav), int( UITime() ) - file.openedAtTime  )
 }
 
 
@@ -1415,8 +1422,10 @@ string function GetBattlePassRewardItemDesc( BattlePassReward reward )
 	string itemDesc = ItemFlavor_GetLongDescription( reward.flav )
 	if ( ItemFlavor_GetType( reward.flav ) == eItemType.account_currency )
 	{
-		if ( reward.flav == GetItemFlavorByAsset( $"settings/itemflav/grx_currency/crafting.rpak" ) )
+		if ( reward.flav == GRX_CURRENCIES[GRX_CURRENCY_CRAFTING] )
 			itemDesc = GetFormattedValueForCurrency( reward.quantity, GRX_CURRENCY_CRAFTING )
+		else if ( reward.flav == GRX_CURRENCIES[GRX_CURRENCY_EXOTIC] )
+			itemDesc = GetFormattedValueForCurrency( reward.quantity, GRX_CURRENCY_EXOTIC )
 		else
 			itemDesc = GetFormattedValueForCurrency( reward.quantity, GRX_CURRENCY_PREMIUM )
 	}
@@ -1803,6 +1812,7 @@ void function OnPanelShow( var panel )
 
 	HudElem_SetRuiArg( file.detailBox, "useSmallFont", ShouldUseSmallFont() )
 	HudElem_SetRuiArg( file.statusBox, "timeRemainingOffsetY", GetTimeRemainingOffsetY() )
+	file.openedAtTime = int( UITime() )
 	
 }
 
@@ -2949,6 +2959,54 @@ int function SortByAwardLevel( BattlePassReward a, BattlePassReward b )
 
 	return 0
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

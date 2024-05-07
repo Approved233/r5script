@@ -472,6 +472,9 @@ void function EntitiesDidLoad()
 
 
 
+
+
+
 void function ClOnMarvinSpawned( entity marvin )
 {
 	if ( marvin.GetScriptName() != LOOT_MARVIN_SCRIPTNAME )
@@ -820,11 +823,17 @@ bool function IsPlayerPathfinder( entity player )
 
 
 
+
+
+
+
 void function InstanceMarvinCooldownCreatedWP( entity wp )
 {
 	entity marvin = wp.GetWaypointEntity( 0 )
 	marvin.ai.secondaryWaypoint = wp
 }
+
+
 
 
 

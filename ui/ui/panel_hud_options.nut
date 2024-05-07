@@ -74,6 +74,7 @@ void function InitHudOptionsPanel( var panel )
 	SetupSettingsButton( Hud_GetChild( contentPanel, "SwitchRotateMinimap" ), "#HUD_ROTATE_MINIMAP", "#HUD_ROTATE_MINIMAP_DESC", $"rui/menu/settings/settings_hud" )
 	SetupSettingsButton( Hud_GetChild( contentPanel, "SwitchWeaponAutoCycle" ), "#SETTING_WEAPON_AUTOCYCLE", "#SETTING_WEAPON_AUTOCYCLE_DESC", $"rui/menu/settings/settings_hud" )
 	SetupSettingsButton( Hud_GetChild( contentPanel, "SwitchAutoSprint" ), "#SETTING_AUTOSPRINT", "#SETTING_AUTOSPRINT_DESC", $"rui/menu/settings/settings_hud" )
+	SetupSettingsButton( Hud_GetChild( contentPanel, "SwitchHoldToSprint" ), "#SETTING_HOLDTOSPRINT", "#SETTING_HOLDTOSPRINT_DESC", $"rui/menu/settings/settings_hud" )
 	SetupSettingsButton( Hud_GetChild( contentPanel, "SwitchStickySprintForward" ), "#SETTING_STICKYSPRINTFORWARD", "#SETTING_STICKYSPRINTFORWARD_DESC", $"rui/menu/settings/settings_hud" )
 	SetupSettingsButton( Hud_GetChild( contentPanel, "SwitchJetpackControl" ), "#SETTING_JETPACKCONTROL", "#SETTING_JETPACKCONTROL_DESC", $"rui/menu/settings/settings_hud" )
 	SetupSettingsButton( Hud_GetChild( contentPanel, "SwitchPilotDamageIndicators" ), "#HUD_PILOT_DAMAGE_INDICATOR_STYLE", "#HUD_PILOT_DAMAGE_INDICATOR_STYLE_DESC", $"rui/menu/settings/settings_hud" )
@@ -104,6 +105,11 @@ void function InitHudOptionsPanel( var panel )
 	AddButtonEventHandler( laserSight, UIE_CHANGE, OnLaserSightSettingChanged )
 
 
+
+
+
+
+
 		SetConVarBool( "CrossPlay_user_optin", true )
 
 
@@ -122,6 +128,9 @@ void function InitHudOptionsPanel( var panel )
 		}
 		AddButtonEventHandler( file.crossplayButton, UIE_CHANGE, CrossplayButton_OnChanged )
 
+
+	var autoSprint = Hud_GetChild( contentPanel, "SwitchAutoSprint" )
+	AddButtonEventHandler( autoSprint, UIE_CHANGE, OnAutoSprintChanged )
 
 	SetupSettingsButton( Hud_GetChild( contentPanel, "SwchColorBlindMode" ), "#COLORBLIND_MODE", "#OPTIONS_MENU_COLORBLIND_TYPE_DESC", $"rui/menu/settings/settings_hud", true )
 	SetupSettingsButton( Hud_GetChild( contentPanel, "SwchSubtitles" ), "#SUBTITLES", "#OPTIONS_MENU_SUBTITLES_DESC", $"rui/menu/settings/settings_hud" )
@@ -244,6 +253,7 @@ void function RestoreHUDDefaults()
 
 	SetConVarToDefault( "weapon_setting_autocycle_on_empty" )
 	SetConVarToDefault( "player_setting_autosprint" )
+	SetConVarToDefault( "player_setting_holdtosprint" )
 	SetConVarToDefault( "player_setting_stickysprintforward" )
 	SetConVarToDefault( "player_setting_damage_closes_deathbox_menu" )
 	SetConVarToDefault( "hud_setting_showOffscreenPortrait" )
@@ -344,6 +354,12 @@ void function OnHudOptionsPanel_Show( var panel )
 
 
 
+
+
+
+
+
+
 	HudOptionsShowButton( contentPanel, "LaserSightOptions", "SwitchFirstPersonReticleOptions", "SwchColorBlindMode" )
 
 	
@@ -351,10 +367,18 @@ void function OnHudOptionsPanel_Show( var panel )
 	Hud_SetPinSibling( Hud_GetChild( contentPanel, "AccessibilityHeader" ), "LaserSightOptions" )
 
 
+
 	CheckVoiceChatVolumeSetting()
 
 
 	RefreshSwchChatSpeechToTextHint()
+
+	
+	bool autoSprintEnabled = GetConVarBool( "player_setting_autosprint" )
+	var holdToSprint = Hud_GetChild( contentPanel, "SwitchHoldToSprint" )
+	Hud_SetLocked( holdToSprint, autoSprintEnabled )
+	Hud_SetLocked( Hud_GetChild( holdToSprint, "LeftButton" ), autoSprintEnabled )
+	Hud_SetLocked( Hud_GetChild( holdToSprint, "RightButton" ), autoSprintEnabled )
 
 	SettingsPanel_SetContentPanelHeight( contentPanel )
 	ScrollPanel_Refresh( panel )
@@ -493,6 +517,29 @@ void function OnLaserSightSettingChanged( var btn )
 
 		AdvanceMenu( GetMenu( "LaserSightOptionsMenu" ) )
 	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+void function OnAutoSprintChanged( var btn )
+{
+	var contentPanel = Hud_GetChild( file.panel, "ContentPanel" )
+	var holdToSprint = Hud_GetChild( contentPanel, "SwitchHoldToSprint" )
+
+	bool autoSprintEnabled = Hud_GetDialogListSelectionIndex( btn ) == 1
+	Hud_SetLocked( holdToSprint, autoSprintEnabled )
 }
 
 

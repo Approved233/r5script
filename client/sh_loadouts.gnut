@@ -32,6 +32,10 @@ global function LoadoutSlot_GetBackups
 
 global function LoadoutSlot_GetRawStorageContents
 
+
+
+
+
 global function AddCallback_ItemFlavorLoadoutSlotDidChange_AnyPlayer
 global function AddCallback_IntegerLoadoutSlotDidChange_AnyPlayer
 global function RemoveCallback_ItemFlavorLoadoutSlotDidChange_AnyPlayer
@@ -66,6 +70,7 @@ global function GetUnlockedItemFlavorsForLoadoutSlot
 global function GetRandomGoodItemFlavorForLoadoutSlot
 global function GetMostPlayedCharacterItemFlavor
 global function GetDefaultItemFlavorForLoadoutSlot
+global function RemoveNonShippingCharacters
 global function ConvertItemFlavorToLoadoutSlotContentsIndex
 global function IsValidLoadoutSlotContentsIndexForItemFlavor
 global function ConvertLoadoutSlotContentsIndexToItemFlavor
@@ -135,7 +140,7 @@ global typedef LoadoutEntry_IsSlotLocked bool functionref( EHI playerEHI )
 
 
 global typedef LoadoutEntry_IsItemFlavorUnlockedFuncType bool functionref( EHI playerEHI, ItemFlavor itemFlavor, bool shouldIgnoreGRX = false, bool shouldIgnoreOtherSlots = false )
-global typedef ItemFlavorLoadoutSlotDidChangeFuncType void functionref( EHI playerEHI, ItemFlavor flavor )
+global typedef ItemFlavorLoadoutSlotDidChangeFuncType void functionref( EHI playerEHI, ItemFlavor flavor ) 
 global typedef IntegerLoadoutSlotDidChangeFuncType void functionref( EHI playerEHI, int value )
 
 global enum eLoadoutNetworking
@@ -221,6 +226,26 @@ global enum eTristate
 	TRUE,
 	FALSE,
 	UNKNOWN,
+}
+
+global enum eLoadoutSortPriority
+{
+	HAS_SOURCE_ICON = ( 1 << 0 ),
+
+	COMMON = ( 1 << 1 ),
+	RARE = ( 1 << 2 ),
+	EPIC = ( 1 << 3 ),
+	LEGENDARY = ( 1 << 4 ),
+	ICONIC = ( 1 << 5 ),
+	MYTHIC = ( 1 << 6 ),
+
+	WEAPON_REACTIVE = ( 1 << 7 ),
+	RANDOM = ( 1 << 8 ),
+	DEFAULT = ( 1 << 9 ),
+	SENTINEL = ( 1 << 10 ),
+	FAVORITE = ( 1 << 11 ),
+
+	EQUIPPED = ( 1 << 12 ),
 }
 
 
@@ -1188,6 +1213,11 @@ void function RequestSetItemFlavorLoadoutSlot( EHI playerEHI, LoadoutEntry entry
 		DEV_LoadoutsDebug( entry )
 #endif
 
+
+
+
+
+
 	Assert( playerEHI == LocalClientEHI(), "Tried to use RequestSetLoadoutSlot on a different player" )
 
 	int seqNum            = 0
@@ -1211,13 +1241,17 @@ void function RequestSetItemFlavorFavoritesSlot( EHI playerEHI, LoadoutEntry ent
 	printf( "loadout favorites change request: %s = %s (%s)", entry.id, string(ItemFlavor_GetAsset( itemFlavor )), ItemFlavor_GetGUIDString( itemFlavor ) )
 }
 
-void function RequestClearItemFlavorFavoritesSlot( EHI playerEHI, LoadoutEntry entry, int favIndex )
+void function RequestClearItemFlavorFavoritesSlot( EHI playerEHI, LoadoutEntry entry, int favIndex, ItemFlavor flavor )
 {
 #if LOADOUTS_DBG
 		DEV_LoadoutsDebug( entry )
 #endif
 
 	Assert( playerEHI == LocalClientEHI(), "Tried to use RequestClearItemFlavorFavoritesSlot on a different player" )
+
+
+
+
 
 	Remote_ServerCallFunction( "ClientCallback_favorites_clear", favIndex, entry.entryIndex )
 
@@ -1255,6 +1289,10 @@ void function RequestClearFavoredQuip( ItemFlavor quipToClear )
 
 
 		character = LoadoutSlot_GetItemFlavor( playerEHI, Loadout_Character() )
+
+
+
+
 
 
 
@@ -1484,8 +1522,9 @@ array<ItemFlavor> function GetUnlockedItemFlavorsForLoadoutSlot( EHI playerEHI, 
 
 void function RemoveNonShippingCharacters( array<ItemFlavor> characterList )
 {
-	foreach( ItemFlavor character in characterList )
+	foreach( ItemFlavor character in clone characterList )
 	{
+		int shippingStatus = eItemFlavorShippingStatus[GetGlobalSettingsString( ItemFlavor_GetAsset( character ), "shippingStatus" )]
 		if ( !CharacterClass_GetIsShippingCharacter( character ) )
 		{
 			characterList.fastremovebyvalue( character )
@@ -1979,6 +2018,13 @@ int function GetLoadoutSlotContentsIndexInternal( EHI playerEHI, LoadoutEntry en
 
 
 
+
+
+			if ( !IsLobby() && entry.defaultItemFlavor.guid == DEFAULT_MELEE_WEAPON_SKIN_GUID && IsValidItemFlavorGUID( slotContentsIndex ) && ItemFlavor_GetType( GetItemFlavorByGUID( slotContentsIndex ) ) == Artifacts_Loadouts_GetMeleeSkinNetVarOverrideType( false ) )
+			{
+				return slotContentsIndex 
+			}
+
 		}
 		else
 		{
@@ -2363,12 +2409,6 @@ int function GetLoadoutSlotContentsIndexFromNetworkVar( EHI playerEHI, LoadoutEn
 
 
 
-
-
-
-
-
-
 void function RefreshLoadoutSlotInternal( EHI playerEHI, LoadoutEntry entry, table<LoadoutEntry, bool> ornull refreshedSlotsSet, array<int> ornull queuedSlotsIndicesForRpc, bool isDependent )
 {
 #if LOADOUTS_DBG
@@ -2393,6 +2433,19 @@ void function RefreshLoadoutSlotInternal( EHI playerEHI, LoadoutEntry entry, tab
 
 
 	int slotContentsIndex = GetLoadoutSlotContentsIndexInternal( playerEHI, entry )
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2541,6 +2594,64 @@ void function ServerToClient_LoadoutSlotSetFailed()
 	RunUIScript( "ClientToUI_PlayLootCeremonySound", "menu_deny" )
 	return
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

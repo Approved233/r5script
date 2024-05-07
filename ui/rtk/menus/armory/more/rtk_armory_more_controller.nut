@@ -152,9 +152,16 @@ void function MarkAllArmoryWeaponItemsAsViewed( var button )
 
 void function InitRTKArmoryMorePanel( var panel )
 {
+	AddPanelEventHandler( panel, eUIEvent.PANEL_SHOW, RTKArmoryMorePanel_OnShow )
+
 	AddPanelFooterOption( panel, LEFT, BUTTON_B, true, "#B_BUTTON_BACK", "#B_BUTTON_BACK" )
 	AddPanelFooterOption( panel, LEFT, BUTTON_A, false, "#A_BUTTON_SELECT", "", null, IsButtonFocused )
 	AddPanelFooterOption( panel, LEFT, BUTTON_Y, true, "#BUTTON_MARK_ALL_AS_SEEN_GAMEPAD", "#BUTTON_MARK_ALL_AS_SEEN_MOUSE", MarkAllArmoryWeaponItemsAsViewed )
+}
+
+void function RTKArmoryMorePanel_OnShow( var panel )
+{
+	UI_SetPresentationType( ePresentationType.WEAPON_CATEGORY )
 }
 
 bool function IsButtonFocused()

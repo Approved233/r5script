@@ -67,7 +67,7 @@ void function KillQuipsPanel_Update( var panel )
 	if ( IsPanelActive( file.panel ) )
 	{
 		LoadoutEntry entry = Loadout_CharacterKillQuip( GetTopLevelCustomizeContext() )
-		file.quipList = GetLoadoutItemsSortedForMenu( [entry], CharacterIntroQuip_GetSortOrdinal )
+		file.quipList = GetLoadoutItemsSortedForMenu( [entry], CharacterIntroQuip_GetSortOrdinal, null, [] )
 
 		Hud_InitGridButtons( file.listPanel, file.quipList.len() )
 		foreach ( int flavIdx, ItemFlavor flav in file.quipList )

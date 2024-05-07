@@ -1,15 +1,10 @@
 
 global function TDM_PopulateAboutText
 global function SWAT_PopulateAboutText
-string function GetPlaylist()
-{
-	if ( IsLobby() )
-		return LobbyPlaylist_GetSelectedPlaylist()
-	else
-		return GetCurrentPlaylistName()
 
-	unreachable
-}
+
+
+
 
 array< featureTutorialTab > function TDM_PopulateAboutText()
 {
@@ -28,7 +23,7 @@ array< featureTutorialTab > function TDM_PopulateAboutText()
 	tabs.append( tab1 )
 
 
-		AprilFools_S20_LTM_PopulateAboutText( tabs, "#APRILFOOLS_S20_ABOUT_TAB", "#APRILFOOLS_S20_ABOUT_TDM_HEADER", "#APRILFOOLS_S20_ABOUT_TDM_BODY" )
+
 
 
 	return tabs
@@ -51,5 +46,26 @@ array< featureTutorialTab > function SWAT_PopulateAboutText()
 
 	return tabs
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

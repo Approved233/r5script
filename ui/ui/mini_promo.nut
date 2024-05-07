@@ -187,8 +187,10 @@ void function UpdateValidityOfPages( array<MiniPromoPageData> pages )
 			case "monthlystoreoffer":
 			case "personalizedstore":
 			case "milestoneevent":
+			case "storemilestoneevent":
 			case "storeOfferShop":
 			case "rumble":
+			case "rankedrumble":
 			page.isValid = true
 				break
 
@@ -308,6 +310,8 @@ bool function IsLinkFormatValid( string linkType, array<string> linkData )
 		return true
 	else if ( linkType == "milestoneevent" )
 		return true
+	else if ( linkType == "storemilestoneevent" )
+		return true
 	else if ( linkType == "rumble" )
 		return true
 
@@ -334,7 +338,7 @@ void function AutoAdvancePages()
 }
 
 
-void function ChangePage( bool direction )
+void function ChangePage( bool direction, bool sendTelemetry = false )
 {
 	Assert( direction == MINIPROMO_NAV_LEFT || direction == MINIPROMO_NAV_RIGHT )
 	Assert( file.activePageIndex != -1 )
@@ -359,7 +363,11 @@ void function ChangePage( bool direction )
 	}
 
 	if ( nextPageIndex != file.activePageIndex )
+	{
 		SetPage( nextPageIndex )
+		if( sendTelemetry )
+			PIN_UIInteraction_OnScroll( Hud_GetHudName( GetActiveMenu() ), Hud_GetHudName( file.button ) )
+	}
 	
 	
 }
@@ -439,7 +447,11 @@ void function SetPage( int pageIndex, bool instant = false )
 
 		if ( ItemFlavor_GetAccountPackType( pack ) == eAccountPackType.EVENT || ItemFlavor_GetAccountPackType( pack ) == eAccountPackType.SIRNGE )
 		{
-			nextPackDescription = "#PACK_BUNDLE_EVENT_TEXT"
+			
+			if ( MilestoneEvent_IsMilestonePackFlav( pack, false, true ) )
+				nextPackDescription = "#PACK_BUNDLE_MILESTONE_TEXT"
+			else
+				nextPackDescription = "#PACK_BUNDLE_EVENT_TEXT"
 		}
 		else if ( ItemFlavor_GetAccountPackType( pack ) == eAccountPackType.EVENT_THEMATIC )
 		{
@@ -666,14 +678,14 @@ void function OnStickMoved( ... )
 		{
 			
 			EmitUISound( "UI_Menu_BattlePass_LevelTab" )
-			ChangePage( MINIPROMO_NAV_RIGHT )
+			ChangePage( MINIPROMO_NAV_RIGHT, true )
 			thread AutoAdvancePages()
 		}
 		else if ( stickState == eStickState.LEFT )
 		{
 			
 			EmitUISound( "UI_Menu_BattlePass_LevelTab" )
-			ChangePage( MINIPROMO_NAV_LEFT )
+			ChangePage( MINIPROMO_NAV_LEFT, true )
 			thread AutoAdvancePages()
 		}
 	}
@@ -688,7 +700,7 @@ void function ChangePromoPageToLeft()
 		return
 
 	EmitUISound( "UI_Menu_BattlePass_LevelTab" )
-	ChangePage( MINIPROMO_NAV_LEFT )
+	ChangePage( MINIPROMO_NAV_LEFT, true )
 	thread AutoAdvancePages()
 }
 
@@ -699,6 +711,6 @@ void function ChangePromoPageToRight()
 		return
 
 	EmitUISound( "UI_Menu_BattlePass_LevelTab" )
-	ChangePage( MINIPROMO_NAV_RIGHT )
+	ChangePage( MINIPROMO_NAV_RIGHT, true )
 	thread AutoAdvancePages()
 }

@@ -95,7 +95,6 @@ global function GetRingTuningOverrideVar
 
 
 
-
 global function Cl_Deathfield_GetRadiusScale
 global function Cl_Deathfield_GetFXIDForRadius
 #if DEV
@@ -117,6 +116,7 @@ global function SurveyBeacon_ShowSquadInfo
 
 
 global function HasDeathFieldImmunity
+global function Deathfield_GetDoesDeathfieldStartEnabled
 global function SURVIVAL_GetCurrentDeathFieldStage
 global function SURVIVAL_GetCurrentRoundString
 global function SURVIVAL_IsFinalDeathFieldStage
@@ -329,7 +329,6 @@ void function Sh_ArenaDeathField_Init()
 
 	RegisterSignal( "NewDeathFieldStarting" )
 	RegisterSignal( "UpdateSurveyBeaconVisibility" )
-
 
 
 
@@ -590,6 +589,13 @@ float function SURVIVAL_Deathfield_GetStartRadius()
 	return startRadius
 }
 
+float function SURVIVAL_Deathfield_GetStartDamage()
+{
+	int startStage = maxint( file.deathFieldStartStage - 1, 0 )
+
+	return file.deathFieldStageData[startStage].percentDamagePerTick
+}
+
 bool function TeamShouldSeeBeaconMarker( int team, entity beacon )
 {
 	array<entity> players = GetPlayerArrayOfTeam( team )
@@ -773,6 +779,11 @@ bool function TeamShouldSeeBeaconMarker( int team, entity beacon )
 
 
 
+
+bool function Deathfield_GetDoesDeathfieldStartEnabled()
+{
+	return GetCurrentPlaylistVarBool( "deathfield_start_enabled", false )
+}
 
 
 
@@ -4371,6 +4382,13 @@ bool function ShouldShowDeathFieldEffects( entity player )
 
 
 	}
+
+
+		if ( Deathfield_GetDoesDeathfieldStartEnabled() && player.GetPlayerNetBool( "playerInPlane" ) )
+		{
+			shouldShow = false
+		}
+
 
 	if ( IsViewingSquadSummary() || IsViewingDeathRecap() )
 		shouldShow = false

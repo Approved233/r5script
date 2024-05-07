@@ -65,7 +65,7 @@ void function CardPosesPanel_Update( var panel )
 	if ( IsPanelActive( file.panel ) )
 	{
 		LoadoutEntry entry = Loadout_GladiatorCardStance( GetTopLevelCustomizeContext() )
-		file.cardPoseList = GetLoadoutItemsSortedForMenu( [entry], GladiatorCardStance_GetSortOrdinal )
+		file.cardPoseList = GetLoadoutItemsSortedForMenu( [entry], GladiatorCardStance_GetSortOrdinal, null, [] )
 
 		Hud_InitGridButtons( file.listPanel, file.cardPoseList.len() )
 		foreach ( int flavIdx, ItemFlavor flav in file.cardPoseList )

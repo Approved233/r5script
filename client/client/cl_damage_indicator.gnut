@@ -683,8 +683,16 @@ void function GrenadeArrowThink( entity player, entity grenade, float damageRadi
 
 			vector damageArrowAngles = AnglesInverse( player.EyeAngles() )
 			vector vecToDamage       = ( grenade.GetOrigin() + visualOffset ) - (player.EyePosition() + (player.GetViewVector() * 20.0))
+			vector arrowOffsetAngles = AnglesCompose(damageArrowAngles, VectorToAngles(vecToDamage) )
+			arrow.SetAttachOffsetAngles( arrowOffsetAngles )
 
-			arrow.SetAttachOffsetAngles( damageArrowAngles.AnglesCompose( vecToDamage.VectorToAngles() ) )
+
+			if ( grenadeModel == GRENADE_INDICATOR_PHASE_DOOR )
+			{
+				
+				mdl.SetAttachOffsetAngles( AnglesCompose(<0,180,0>, <0, -arrowOffsetAngles.y, -arrowOffsetAngles.x > ) )
+			}
+
 
 
 
@@ -797,8 +805,8 @@ asset function GetIndicatorModel( entity grenade )
 
 
 
-
-
+		if ( grenade.GetScriptName() == PHASE_DOOR_THREAT_INDICATOR_SCRIPTNAME )
+			return GRENADE_INDICATOR_PHASE_DOOR
 
 
 
@@ -844,6 +852,12 @@ asset function GetIndicatorModel( entity grenade )
 			case eThreatIndicatorID.GRENADE_INDICATOR_ONLY_ARROW:
 				return EMPTY_MODEL
 				break
+
+
+			case eThreatIndicatorID.GRENADE_INDICATOR_PHASE_DOOR:
+				return GRENADE_INDICATOR_PHASE_DOOR
+				break
+
 
 			default:
 				return GRENADE_INDICATOR_FRAG_MODEL

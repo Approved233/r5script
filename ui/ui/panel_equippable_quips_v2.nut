@@ -147,8 +147,7 @@ void function QuipsPanel_Update( var panel )
 			entries.append( entry )
 		}
 
-		file.quipList = clone GetLoadoutItemsSortedForMenu( [entry], ( int function( ItemFlavor a ) : () { return 0 } ) )
-		SortQuipsAndFilter( character, file.quipList )
+		file.quipList = clone GetLoadoutItemsSortedForMenu( entries, null, CharacterQuip_IsTheEmpty, file.filterTypes )
 
 		array<LoadoutEntry> auxEntries
 		for ( int i = 0; i < MAX_FAVORED_QUIPS; i++ )
@@ -301,74 +300,6 @@ void function StopLastPlayedQuip()
 {
 	if ( file.lastSoundPlayed != "" )
 		StopUISoundByName( file.lastSoundPlayed )
-}
-
-
-void function SortQuipsAndFilter( ItemFlavor character, array<ItemFlavor> emoteList )
-{
-	table<ItemFlavor, int> equippedQuipSet
-	for ( int i = 0; i < MAX_QUIPS_EQUIPPED; i++ )
-	{
-		LoadoutEntry emoteSlot = Loadout_CharacterQuip( character, i )
-		if ( LoadoutSlot_IsReady( LocalClientEHI(), emoteSlot ) )
-		{
-			ItemFlavor quip = LoadoutSlot_GetItemFlavor( LocalClientEHI(), emoteSlot )
-			equippedQuipSet[quip] <- i
-		}
-	}
-
-	for ( int i = emoteList.len() - 1; i >= 0; i-- )
-	{
-		if ( file.filterTypes.len() > 0 )
-		{
-			int type = ItemFlavor_GetType( emoteList[i] )
-			if ( !file.filterTypes.contains(type) )
-			{
-				emoteList.remove( i )
-				continue
-			}
-		}
-
-		if ( CharacterQuip_IsTheEmpty( emoteList[i] ) )
-			emoteList.remove( i )
-	}
-
-	emoteList.sort( int function( ItemFlavor a, ItemFlavor b ) : ( equippedQuipSet ) {
-		bool a_isEquipped = (a in equippedQuipSet)
-		bool b_isEquipped = (b in equippedQuipSet)
-		if ( a_isEquipped != b_isEquipped )
-			return (a_isEquipped ? -1 : 1)
-
-		bool aIsQuip = ItemFlavor_GetType( a ) == eItemType.gladiator_card_kill_quip || ItemFlavor_GetType( a ) == eItemType.gladiator_card_intro_quip
-		bool bIsQuip = ItemFlavor_GetType( b ) == eItemType.gladiator_card_kill_quip || ItemFlavor_GetType( b ) == eItemType.gladiator_card_intro_quip
-		bool bothAreQuips = aIsQuip && bIsQuip
-
-		if ( ItemFlavor_GetType( a ) != ItemFlavor_GetType( b ) && bothAreQuips == false )
-		{
-			int diff = ItemFlavor_GetType( a ) - ItemFlavor_GetType( b )
-			return diff / abs( diff )
-		}
-		else
-		{
-			array<ItemFlavor> favs = ItemFlavor_GetFavoredQuipArrayForCharacter( GetTopLevelCustomizeContext() )
-			bool aInFavs           = favs.contains( a )
-			bool bInFavs           = favs.contains( b )
-			if ( aInFavs && !bInFavs )
-				return -1
-			else if ( !aInFavs && bInFavs )
-				return 1
-
-			int aQuality = ItemFlavor_HasQuality( a ) ? ItemFlavor_GetQuality( a ) : -1
-			int bQuality = ItemFlavor_HasQuality( b ) ? ItemFlavor_GetQuality( b ) : -1
-			if ( aQuality > bQuality )
-				return -1
-			else if ( aQuality < bQuality )
-				return 1
-
-			return SortStringAlphabetize( Localize( ItemFlavor_GetLongName( a ) ), Localize( ItemFlavor_GetLongName( b ) ) )
-		}
-		unreachable
-	} )
 }
 
 

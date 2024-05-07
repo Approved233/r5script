@@ -140,7 +140,7 @@ void function OnWeaponActivate_ability_sniper_ult( entity weapon )
 
 
 
-		AprilFools_S20_ApplyWeaponGravityMod( weapon )
+
 
 }
 

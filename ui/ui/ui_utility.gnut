@@ -761,19 +761,6 @@ int function GetPCBlockKey()
 	return KEY_B
 }
 
-string function GetDebugTimeString()
-{
-	Assert( GetDeveloperLevel() != 0 )
-	if ( GetDeveloperLevel() == 0 )
-		return ""
-
-	bool dst 		  = GetIsDSTActive()
-	int utTime        = dst ? GetUnixTimePDT() : GetUnixTimePST()
-	string timeString = GetDateTimeString( utTime, 0 )
-	string dayName    = GetDayOfWeekName( GetDayOfWeek( utTime ) )
-	return format( "%s, %s %s", Localize( dayName ), timeString, dst ? "PDT" : "PST" )
-}
-
 bool function IsPreloadingMap()
 {
 	string compareSting = "#MATCHMAKING_LOADING"

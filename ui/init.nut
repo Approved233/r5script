@@ -322,9 +322,30 @@ global struct GRXScriptInboxMessage
 }
 
 
+global struct GRXContainerInfo
+{
+	int type
+	string containerId
+	array< int > itemIndices
+	array< int > itemCounts
+	bool isNew
+	int timestamp
+	string senderNucleusPid
+	string senderName
+}
+
+global struct GRXUserInfoBalances
+{
+	int balance
+	int nextCurrencyExpirationAmt
+	int nextCurrencyExpirationTime
+}
+
 global struct GRXUserInfo
 {
 	int inventoryState
+
+	array<GRXUserInfoBalances> currencies
 
 	int queryGoal
 	int queryOwner
@@ -334,6 +355,8 @@ global struct GRXUserInfo
 	array< int > balances
 	int nextCurrencyExpirationAmt
 	int nextCurrencyExpirationTime
+
+	array< GRXContainerInfo > containers
 
 	int sparkleLimitCounter
 	int sparkleLimitResetDate

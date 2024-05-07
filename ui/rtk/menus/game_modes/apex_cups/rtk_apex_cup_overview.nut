@@ -24,8 +24,6 @@ global struct RTKCupRulesModel
 global struct RTKGameTagModel
 {
 	string	tagText
-	vector	textColor
-	vector	bgColor
 }
 
 global struct RTKOptInDataToolTipModel
@@ -91,9 +89,6 @@ void function RTKApexCupsOverview_OnInitialize( rtk_behavior self )
 	RTKCupOverviewInit()
 	RTKRewardTiersInit()
 	RTKOptInDataInit( self )
-
-	if ( UI_GetPresentationType() != ePresentationType.BATTLE_PASS )
-		UI_SetPresentationType( ePresentationType.BATTLE_PASS )
 
 	rtk_behavior ornull optInButton = self.PropGetBehavior( "optInButton" )
 	rtk_behavior ornull reRollButton = self.PropGetBehavior( "reRollButton" )
@@ -186,11 +181,16 @@ void function RTKOptInDataInit( rtk_behavior self )
 					RTKApexCupsOverview_ToolTip( true, "#CUP_REQUIREMENTS_NOT_MET", "#CUP_REQUIREMENTS_NOT_MET_DESC" )
 				}
 
-				
-				if ( GetPartySize() != cupData.squadSize )
+
+
+
 				{
-					RTKApexCupsOverview_ButtonState( true, false, "#APEX_CUPS_ENTER_CUP" )
-					RTKApexCupsOverview_ToolTip( true, "#CUP_SQUAD_AMOUNT_INCORRECT", "#CUP_SQUAD_AMOUNT_INCORRECT_DESC" )
+					
+					if ( GetPartySize() != cupData.squadSize )
+					{
+						RTKApexCupsOverview_ButtonState( true, false, "#APEX_CUPS_ENTER_CUP" )
+						RTKApexCupsOverview_ToolTip( true, "#CUP_SQUAD_AMOUNT_INCORRECT", "#CUP_SQUAD_AMOUNT_INCORRECT_DESC" )
+					}
 				}
 
 				
@@ -432,8 +432,6 @@ void function RTKApexCupsOverview_OnDestroy( rtk_behavior self )
 {
 	Signal( self, RTK_ON_DESTROY_SIGNAL )
 	RTKDataModelType_DestroyStruct( RTK_MODELTYPE_MENUS, "optInData")
-	Cups_UnRegisterOnServerMessageRecievedCallback( CupsServerMessageType.CUP_MESSAGE_TYPE_REROLL, RTKApexCupsOverview_OnCupsServerMessage )
-	Cups_UnRegisterOnServerMessageRecievedCallback( CupsServerMessageType.CUP_MESSAGE_TYPE_REGISTRATION, RTKApexCupsOverview_OnCupsServerMessage )
 }
 
 void function InitRTKApexCupsOverview( var panel )

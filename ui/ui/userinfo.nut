@@ -1,5 +1,6 @@
 global function UserInfoPanels_LevelInit
 global function UpdateActiveUserInfoPanels
+global function SetUpAccessToTheCurrenciesWallet
 
 
 
@@ -21,40 +22,18 @@ void function UserInfoPanels_LevelInit()
 	FileStruct_LifetimeLevel newFileLevel
 	fileLevel = newFileLevel
 
-	
 	AddCallbackOrMaybeCallNow_OnAllItemFlavorsRegistered( SetupUserInfoPanels )
 }
 
-
-
-
-
-
-
-void function SetupUserInfoPanelToolTips( int currency1, int currency2, int currency3 )
+struct
 {
-	ToolTipData ttd
-	ttd.tooltipStyle = eTooltipStyle.CURRENCY
-	ttd.actionHint1 = FormatAndLocalizeNumber( "1", float( currency1 ), true )
-	ttd.actionHint2 = FormatAndLocalizeNumber( "1", float( currency2 ), true )
-	ttd.actionHint3 = FormatAndLocalizeNumber( "1", float( currency3 ), true )
+	bool accessToWalletSetUp = false
+} file
 
-	ttd.currencyToolTipData.premiumCurrencyIsNegative = ( currency1 < 0 )
 
-	int nextExpirationAmount = GRX_GetNextCurrencyExpirationAmt()
-	if( nextExpirationAmount > 0 )
-		ttd.descText = Localize( "#CURRENCIES_TOOLTIP_EXPIRATION", nextExpirationAmount, ( GRX_GetNextCurrencyExpirationTime() - GetUnixTimestamp() ) / SECONDS_PER_DAY )
-	else
-		ttd.descText = ""
 
-	foreach ( var menu in uiGlobal.allMenus )
-	{
-		array<var> userInfoElemList = GetElementsByClassname( menu, "UserInfo" )
 
-		foreach ( var elem in userInfoElemList )
-			Hud_SetToolTipData( elem, ttd )
-	}
-}
+
 
 
 void function SetupUserInfoPanels()
@@ -71,6 +50,7 @@ void function SetupUserInfoPanels()
 				RuiSetImage( rui, "symbol1", ItemFlavor_GetIcon( GRX_CURRENCIES[GRX_CURRENCY_PREMIUM] ) )
 				RuiSetImage( rui, "symbol2", ItemFlavor_GetIcon( GRX_CURRENCIES[GRX_CURRENCY_CREDITS] ) )
 				RuiSetImage( rui, "symbol3", ItemFlavor_GetIcon( GRX_CURRENCIES[GRX_CURRENCY_CRAFTING] ) )
+				RuiSetImage( rui, "symbol4", ItemFlavor_GetIcon( GRX_CURRENCIES[GRX_CURRENCY_EXOTIC] ) )
 
 				fileLevel.activeUserInfoPanelSet[elem] <- true 
 			}
@@ -91,6 +71,7 @@ void function SetupUserInfoPanels()
 		["PremiumBalance"] = GRX_CURRENCY_PREMIUM,
 		["CreditBalance"] = GRX_CURRENCY_CREDITS,
 		["CraftingBalance"] = GRX_CURRENCY_CRAFTING,
+		["ExoticBalance"] = GRX_CURRENCY_EXOTIC,
 	}
 	foreach( string classname, int currencyIndex in singleCurrencyElementTypesTable )
 	{
@@ -115,7 +96,7 @@ void function SetupUserInfoPanels()
 void function UpdateActiveUserInfoPanels()
 {
 	bool isReady = GRX_IsInventoryReady() && GRX_AreOffersReady()
-	int premiumBalance, creditsBalance, craftingBalance
+	int premiumBalance, creditsBalance, craftingBalance, exoticBalance
 
 	printt("UpdateActiveUserInfoPanels Offers:" + GRX_AreOffersReady() + " Inventory:" + GRX_IsInventoryReady()  + " isReady:" +isReady + " " + FUNC_NAME( 1 ) );
 
@@ -124,6 +105,7 @@ void function UpdateActiveUserInfoPanels()
 		premiumBalance = GRXCurrency_GetPlayerBalance( GetLocalClientPlayer(), GRX_CURRENCIES[GRX_CURRENCY_PREMIUM] )
 		creditsBalance = GRXCurrency_GetPlayerBalance( GetLocalClientPlayer(), GRX_CURRENCIES[GRX_CURRENCY_CREDITS] )
 		craftingBalance = GRXCurrency_GetPlayerBalance( GetLocalClientPlayer(), GRX_CURRENCIES[GRX_CURRENCY_CRAFTING] )
+		exoticBalance = GRXCurrency_GetPlayerBalance( GetLocalClientPlayer(), GRX_CURRENCIES[GRX_CURRENCY_EXOTIC] )
 	}
 
 	foreach( var elem, bool unused in fileLevel.activeUserInfoPanelSet )
@@ -135,6 +117,7 @@ void function UpdateActiveUserInfoPanels()
 		RuiSetBool( rui, "count1isNegative", premiumBalance < 0 )
 		RuiSetBool( rui, "count2isNegative", creditsBalance < 0 )
 		RuiSetBool( rui, "count3isNegative", craftingBalance < 0 )
+		RuiSetBool( rui, "count4isNegative", exoticBalance < 0 )
 		if ( isReady )
 		{
 #if DEV
@@ -143,6 +126,7 @@ void function UpdateActiveUserInfoPanels()
 			RuiSetString( rui, "count1",  FormatAndLocalizeNumber( "1", float( premiumBalance ), true ) )
 			RuiSetString( rui, "count2", LocalizeAndShortenNumber_Int( creditsBalance ) )
 			RuiSetString( rui, "count3", LocalizeAndShortenNumber_Int( craftingBalance ) )
+			RuiSetString( rui, "count4", FormatAndLocalizeNumber( "1", float( exoticBalance ), true ) )
 		}
 	}
 
@@ -155,7 +139,6 @@ void function UpdateActiveUserInfoPanels()
 			RuiSetInt( rui, "count", GRXCurrency_GetPlayerBalance( GetLocalClientPlayer(), scbe.currency ) )
 	}
 
-	SetupUserInfoPanelToolTips( premiumBalance, creditsBalance, craftingBalance )
 }
 
 
@@ -186,3 +169,26 @@ void function UpdateActiveUserInfoPanels()
 
 
 
+
+void function SetUpAccessToTheCurrenciesWallet()
+{
+	if ( file.accessToWalletSetUp )
+		return
+
+	ToolTipData ttd
+	ttd.tooltipStyle = eTooltipStyle.BUTTON_PROMPT
+	ttd.actionHint1 = "#A_BUTTON_VIEW_WALLET"
+
+	foreach ( var menu in uiGlobal.allMenus )
+	{
+		array<var> userInfoElemList = GetElementsByClassname( menu, "UserInfo" )
+
+		foreach ( var elem in userInfoElemList )
+		{
+			Hud_AddEventHandler( elem, UIE_CLICK, OpenWalletInventoryModal )
+			Hud_SetToolTipData( elem, ttd )
+		}
+	}
+
+	file.accessToWalletSetUp = true
+}

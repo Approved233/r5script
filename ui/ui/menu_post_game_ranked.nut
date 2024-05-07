@@ -427,6 +427,11 @@ void function CloseRankedSummary( var button )
 
 void function OpenRankedSummary( bool firstTime )
 {
+
+
+
+
+
 	file.isFirstTime = firstTime
 	AdvanceMenu( file.menu )
 }

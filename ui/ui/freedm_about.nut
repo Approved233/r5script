@@ -5,19 +5,9 @@ global function TreasureHunt_PopulateAboutText
 
 
 
-global function AprilFools_S20_LTM_PopulateAboutText
-global function AprilFools_S20_BR_PopulateAboutText
 
 
-string function GetPlaylist()
-{
-	if ( IsLobby() )
-		return LobbyPlaylist_GetSelectedPlaylist()
-	else
-		return GetCurrentPlaylistName()
 
-	unreachable
-}
 
 array< featureTutorialTab > function FreeDM_PopulateAboutText()
 {
@@ -26,7 +16,7 @@ array< featureTutorialTab > function FreeDM_PopulateAboutText()
 	if ( playlistUiRules != GAMEMODE_FREEDM )
 		return tabs
 
-	if( GetPlaylistVarBool( GetPlaylist(), "freedm_gun_game_active", false ) )
+	if( GetPlaylistVarBool( GamemodeUtility_GetPlaylist(), "freedm_gun_game_active", false ) )
 		return GunGame_PopulateAboutText()
 
 	return tabs
@@ -47,7 +37,7 @@ array< featureTutorialTab > function GunGame_PopulateAboutText()
 	tabs.append( tab1 )
 
 
-		AprilFools_S20_LTM_PopulateAboutText( tabs, "#APRILFOOLS_S20_ABOUT_TAB", "#APRILFOOLS_S20_ABOUT_GUNRUN_HEADER", "#APRILFOOLS_S20_ABOUT_GUNRUN_BODY" )
+
 
 
 	return tabs
@@ -59,7 +49,7 @@ array< featureTutorialTab > function TreasureHunt_PopulateAboutText()
 	featureTutorialTab tab1
 
 	array< featureTutorialData > tab1Rules
-	string currentPlaylist = GetPlaylist()
+	string currentPlaylist = GamemodeUtility_GetPlaylist()
 
 	
 	tab1.tabName = 	"#GAMEMODE_RULES_OVERVIEW_TAB_NAME"
@@ -85,33 +75,33 @@ array< featureTutorialTab > function TreasureHunt_PopulateAboutText()
 
 
 
-array< featureTutorialTab > function AprilFools_S20_BR_PopulateAboutText()
-{
-	array< featureTutorialTab > tabs
 
-	AprilFools_S20_LTM_PopulateAboutText( tabs, "#APRILFOOLS_S20_ABOUT_TAB", "#APRILFOOLS_S20_ABOUT_TRIOS_HEADER", "#APRILFOOLS_S20_ABOUT_TRIOS_BODY" )
 
-	return tabs
-}
 
-bool function AprilFools_S20_LTM_PopulateAboutText( array< featureTutorialTab > tabs, string tabName, string header, string body )
-{
-	if ( GetPlaylistVarBool( GetPlaylist(), "is_april_fools_s20", false ) && GetPlaylistVarBool( GetPlaylist(), "is_limited_mode", false ) )
-	{
-		featureTutorialTab tab2
-		array< featureTutorialData > tab2Rules
 
-		tab2.tabName = tabName
 
-		tab2Rules.append( UI_FeatureTutorialDialog_BuildDetailsData( header, body, $"" ) )
-		tab2.rules = tab2Rules
-		tabs.append( tab2 )
 
-		return true
-	}
 
-	return false
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

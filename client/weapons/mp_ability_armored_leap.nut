@@ -49,6 +49,10 @@ global function ServerToClient_RemoveClient_BleedoutWaypoint
 
 const bool VISOR_THREAT_DETECTION							= true
 
+
+const bool CASTLE_WALL_STOPS_GRENADES						= true
+
+
 #if DEV
 const bool DEBUG_ARMORED_LEAP_TARGETING_DRAW 				= false
 const bool DEBUG_SNAKE_DRAW 								= false
@@ -59,23 +63,15 @@ const bool DEBUG_DRAW_DAMAGE_BARRIERS						= false
 const bool DEBUG_CAMERA_LERP								= false
 const bool DEBUG_PHASE_CHANGES								= false
 const bool DEBUG_BETTER_AIR_POS								= false
+const bool DEBUG_DRAW_ANTI_GRENADE_DEBUG					= false
 #endif
 
 
 const float ARMORED_LEAP_DISTANCE_MIN 						= 50.0
-
 const float ARMORED_LEAP_DISTANCE 							= 40 * METERS_TO_INCHES 
 const float ARMORED_LEAP_MAX_ALLY_RANGE 					= 80 * METERS_TO_INCHES 
-
-
-
-
 const float ARMORED_LEAP_MAX_SLAM_FOLLOW_DISTANCE 			= 1500
-
 const float ARMORED_LEAP_MAX_LEAP_HEIGHT 					= 25 * METERS_TO_INCHES 
-
-
-
 const float ARMORED_LEAP_MAX_LEAP_HEIGHT_ALLY 				= 50 * METERS_TO_INCHES 
 const float ARMORED_LEAP_MIN_AIR_HEIGHT 					= 100 
 const float ARMORED_LEAP_CLOSE_AIR_HEIGHT 					= 200		
@@ -141,18 +137,9 @@ const bool  ARMORED_LEAP_ALLOW_END_ON_MOVERS_DEFAULT 		= true
 const float ARMORED_LEAP_MOVERS_MAX_SPEED_FOR_END_DEFAULT 	= 12.0
 
 const float ARMORED_LEAP_WARNING_DURATION 					= 1.5
-
 const float ARMORED_LEAP_RECOVERY_TIME						= 0.75 		
 const float ARMORED_LEAP_CAM_RECOVERY_TIME					= 0.5		
-
-
-
-
-
 const float ARMORED_LEAP_RECOVERY_MOVESLOW_DURATION 		= 1.0
-
-
-
 const float ARMORED_LEAP_ABOVE_LEDGE_DEGREE_CHECK_OFFSET 	= 8 		
 const float ARMORED_LEAP_LEDGE_INSET_AMOUNT			 		= 100
 const float ARMORED_LEAP_LEDGE_INSET_DOWN_TRACE 			= -100 		
@@ -202,7 +189,7 @@ const float CASTLE_WALL_OVERLAP_CLEANUP_RADIUS_ANCHOR			= 180
 const int CASTLE_WALL_BARRIER_DAMAGE 							= 20
 const float CASTLE_WALL_BARRIER_DAMAGE_INTERVAL 				= 2.5	
 const float CASTLE_WALL_BARRIER_DELAY_TIME 						= 3.0	
-const float CASTLE_WALL_BARRIER_DURATION 						= 30.0
+const float CASTLE_WALL_BARRIER_DURATION 						= 60.0
 const float CASTLE_WALL_BARRIER_WARNING_DURATION 				= 2.0
 
 const float CASTLE_WALL_WARNING_RADIUS 							= 150
@@ -306,6 +293,16 @@ const asset CASTLE_WALL_ELEC_PANEL_SM_FX_LEFT_03				= $"P_armored_leap_elec_pane
 const asset CASTLE_WALL_ELEC_PANEL_SM_FX_RIGHT					= $"P_armored_leap_elec_panel_sm_r_01"
 const asset CASTLE_WALL_ELEC_PANEL_SM_FX_RIGHT_02				= $"P_armored_leap_elec_panel_sm_r_02"
 const asset CASTLE_WALL_ELEC_PANEL_SM_FX_RIGHT_03				= $"P_armored_leap_elec_panel_sm_r_03"
+
+
+const asset CASTLE_WALL_INTERCEPT_PROJECTILE_SMALL_FX 			= $"P_armored_wall_zap"
+const asset CASTLE_WALL_INTERCEPT_PROJECTILE_SMALL_ENEMY_FX 	= $"P_armored_wall_zap_enemy"
+const asset CASTLE_WALL_INTERCEPT_PROJECTILE_CLOSE_FX 			= $"P_armored_wall_zap"
+const asset CASTLE_WALL_INTERCEPT_PROJECTILE_CLOSE_ENEMY_FX 	= $"P_armored_wall_zap_enemy"
+
+const string CASTLE_WALL_INTERCEPT_BEAM_SOUND 					= "Newcastle_Tactical_InterceptBeam"
+const string CASTLE_WALL_INTERCEPT_SMALL 						= "Newcastle_Tactical_InterceptZap"
+
 
 
 
@@ -497,7 +494,15 @@ struct
 
 	bool hasVisorThreatDetection	= VISOR_THREAT_DETECTION
 
+
+	bool hasWallStopsGrenades		= CASTLE_WALL_STOPS_GRENADES
+
+
 	table< entity, bool > canDoWallRemoveChatter = {}
+
+
+
+
 
 
 
@@ -569,6 +574,13 @@ void function MpAbilityArmoredLeap_Init()
 
 	PrecacheImpactEffectTable( ARMORED_LEAP_IMPACT_FX_TABLE )
 	PrecacheImpactEffectTable( CASTLE_WALL_SNAKE_IMPACT_FX_TABLE )
+
+
+	PrecacheParticleSystem( CASTLE_WALL_INTERCEPT_PROJECTILE_SMALL_FX )
+	PrecacheParticleSystem( CASTLE_WALL_INTERCEPT_PROJECTILE_SMALL_ENEMY_FX )
+	PrecacheParticleSystem( CASTLE_WALL_INTERCEPT_PROJECTILE_CLOSE_FX )
+	PrecacheParticleSystem( CASTLE_WALL_INTERCEPT_PROJECTILE_CLOSE_ENEMY_FX )
+
 
 	PrecacheModel( CASTLE_WALL_SHIELD_ANCHOR_COL_FX )
 	PrecacheModel( CASTLE_WALL_SHIELD_WALL_CENTRE_MDL )
@@ -678,6 +690,10 @@ void function MpAbilityArmoredLeap_Init()
 	file.allowEndOnMovers 			= GetCurrentPlaylistVarBool( "axiom_armored_leap_allow_end_on_movers", ARMORED_LEAP_ALLOW_END_ON_MOVERS_DEFAULT )
 
 	file.hasVisorThreatDetection	= GetCurrentPlaylistVarBool( "newcastle_hasVisorThreat", VISOR_THREAT_DETECTION )
+
+
+	file.hasWallStopsGrenades		= GetCurrentPlaylistVarBool( "newcastle_hasWallStopsGrenades", CASTLE_WALL_STOPS_GRENADES )
+
 }
 
 void function OnNewcastlePassiveChanged( entity player, int passive, bool didHave, bool nowHas )
@@ -2020,10 +2036,6 @@ void function ArmoredLeap_ReturnControlToPlayerAfterDelay( entity player, float 
 			}
 		}
 	)
-
-
-
-
 
 
 
@@ -6077,6 +6089,12 @@ array<entity> function GetAllyPlayerArray( entity owner )
 
 
 
+
+
+
+
+
+
 bool function SnakeWall_IsValidMountHitEnt( entity hitEnt )
 {
 	
@@ -6809,6 +6827,10 @@ float function GetUpgradedArmoredLeapDistance()
 
 
 
+
+
+
+
 vector function CastleWall_OffsetDamageNumbers( entity shieldEnt, vector damageFlyoutPosition )
 {
 	vector flyoutPosition = ZERO_VECTOR
@@ -7015,7 +7037,7 @@ bool function IsCastleWallEnt( entity ent )
 
 float function CastleWall_GetWallBarrierDuration( entity owner )
 {
-	float result = CASTLE_WALL_BARRIER_DURATION
+	float result = file.barrierDuration
 
 
 	if( IsValid( owner ) && owner.HasPassive( ePassives.PAS_ULT_UPGRADE_TWO ) ) 
@@ -7441,6 +7463,409 @@ float function CastleWall_GetWallBarrierDuration( entity owner )
 
 
 
+const float INTERCEPT_RANGE_MAX 							= 200 
+const float INTERCEPT_RANGE_MIN 							= 64 
+const float INTERCEPT_HEIGHT_MAX 							= 800 
+const float CASTLE_WALL_INTERCEPT_FWD_OFFSET 				= 200
+const float CASTLE_WALL_INTERCEPT_Z_OFFSET 					= 50 
+const float CASTLE_WALL_MAX_INTERCEPT_OFFSET 				= 100.0 
+const float CASTLE_WALL_MAX_INTERCEPT_OFFSET_LOW 			= 50.0
+const float CASTLE_WALL_MIN_INTERCEPT_DIST_TO_WALL 			= 30.0
+const float CASTLE_WALL_INTERCEPT_OVERHEAD_MIN_HEIGHT 		= 120
+const float CASTLE_WALL_INTERCEPT_OVERHEAD_MAX_BACK_DIST 	= 150
+const float CASTLE_WALL_LOW_CENTER_OFFSET					= 15
+const float CASTLE_WALL_MAIN_INTERCEPT_RANGE_EXTENTION		= 50
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7458,6 +7883,9 @@ bool function CastleWall_CanUse( entity player, entity ent, int useFlags )
 	SURVIVAL_PlayerAllowedToPickup( player ) &&
 	! GradeFlagsHas( ent, eGradeFlags.IS_BUSY )
 }
+
+
+
 
 
 
@@ -8067,4 +8495,3 @@ bool function DoAdditionalAirPosChecks()
 {
 	return GetCurrentPlaylistVarBool( "newcastle_ult_additional_air_pos_checks", true )
 }
-

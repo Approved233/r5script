@@ -121,7 +121,7 @@ void function SocialEventUpdate()
 {
 	var currMenu = GetActiveMenu()
 	
-	if ( (!IsVCPopUp( currMenu ) && IsDialog( currMenu )) || !IsLobby() )
+	if ( (!IsWalletModalOpened( ) && IsDialog( currMenu )) || !IsLobby() )
 		return
 
 	if( !IsPersistenceAvailable( )) 	
@@ -209,12 +209,16 @@ void function SocialEvent_TryPurgeCrossplayPartyInvites()
 	{
 		if( event.eventType == eSocialEventType.PARTY )
 		{
-			 if(event.hardwareID  >= 0 && event.hardwareID  <= HARDWARE_XB5 )
+			 if( event.hardwareID  >= 0 && event.hardwareID  <= HARDWARE_XB5 )
 			 {
 				string hardware = GetNameFromHardware( event.hardwareID )
-				
-				if ( event.hardwareID == HARDWARE_PC_STEAM )
-					hardware = GetNameFromHardware( HARDWARE_PC ) 
+
+				if( !GetConVarBool( "steam_useProperHardware" ) )
+				{
+					
+					if ( event.hardwareID == HARDWARE_PC_STEAM )
+						hardware = GetNameFromHardware( HARDWARE_PC ) 
+				}
 
 				if (  IsInPartyWithHardware( event.eventID, hardware ) )
 				{

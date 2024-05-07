@@ -18,6 +18,7 @@ global function GetActiveBaseEvent
 
 
 
+
 global struct RTKBaseEventLandingTitleData
 {
 	string		text
@@ -57,12 +58,17 @@ global enum eEventLandingPageButtonRedirect
 struct FileStruct_LifetimeLevel
 {
 	EntitySet chasePackGrantQueued
-	bool milestoneEvents_MilestoneRewardCeremonyDue = false
 }
 
 
 
 FileStruct_LifetimeLevel fileLevel 
+
+
+
+
+
+
 
 
 
