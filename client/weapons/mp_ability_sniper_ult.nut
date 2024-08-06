@@ -15,6 +15,7 @@ global function SniperUlt_GetMarkedDuration
 
 
 
+
 global function OnClientAnimEvent_ability_sniper_ult
 
 
@@ -39,7 +40,12 @@ global  const float SNIPERULT_HEALINGDENIED_DURATION = 15
 
 const float SNIPERULT_WHIZ_BY_SCAN_DURATION = 1
 const float SNIPERULT_PLAYER_MARKED_DURATION = 10
-const float SNIPERULT_VANTAGE_DMG_SCALE = 2
+
+const float SNIPERULT_VANTAGE_DMG_SCALE = 2.5
+
+
+
+
 const float SNIPERULT_TEAM_DMG_SCALE = 1.15
 
 
@@ -71,26 +77,25 @@ const string SNIPERULT_ZOOM_OUT = "weapon_vantageUlt_ads_out"
 
 
 
+struct
+{
 
+		float timeLastUltHint = 0
+
+
+} file
 
 const bool SNIPERULT_DEBUG_DRAW = false
 
 void function SniperUlt_Init()
 {
 	
-	
-	
-	
-	
-
 	PrecacheParticleSystem( FX_SNIPER_ULT_MARK )
 	PrecacheParticleSystem( FX_SNIPER_ULT_MARK_WHIZ_BY )
 	PrecacheParticleSystem( FX_SNUPER_ULT_MUZZLE_FLASH_1P )
 	PrecacheParticleSystem( FX_SNUPER_ULT_MUZZLE_FLASH_3P )
 
-	
-	
-	
+
 
 
 
@@ -115,6 +120,9 @@ void function SniperUlt_Init()
 
 		RegisterSignal( "SniperUlt_Mark_StopSignal" )
 
+		RegisterSignal( "End_UltAccelHintThread" )
+
+
 		
 		StatusEffect_RegisterEnabledCallback( eStatusEffect.sonar_round_embedded, SniperUlt_Mark_Client_Start )
 		StatusEffect_RegisterDisabledCallback( eStatusEffect.sonar_round_embedded, SniperUlt_Mark_Client_Stop )
@@ -130,9 +138,20 @@ void function OnWeaponActivate_ability_sniper_ult( entity weapon )
 		weapon.SetTargetingLaserEnabled( false )
 	}
 
+	entity weaponOwner = weapon.GetOwner()
 
 
 
+
+
+
+
+
+
+	if ( IsValid( weaponOwner ) )
+	{
+		thread UltAccelHintThread( weaponOwner, weapon )
+	}
 
 
 
@@ -146,6 +165,12 @@ void function OnWeaponActivate_ability_sniper_ult( entity weapon )
 
 void function OnWeaponDeactivate_ability_sniper_ult( entity weapon )
 {
+
+
+	if ( IsValid(weapon) )
+		weapon.Signal( "End_UltAccelHintThread" )
+
+
 
 
 
@@ -710,6 +735,23 @@ float function SniperUlt_GetMarkedDuration()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function OnClientAnimEvent_ability_sniper_ult( entity weapon, string name )
 {
 	GlobalClientEventHandler( weapon, name )
@@ -854,6 +896,45 @@ void function SniperUlt_Mark_Client_Stop( entity ent, int statusEffect, bool act
 
 	
 	ent.Signal( "SniperUlt_Mark_StopSignal" )
+}
+
+
+void function UltAccelHintThread( entity player, entity weapon )
+{
+	if ( !IsValid(player) )
+		return
+
+	if ( player != GetLocalViewPlayer() )
+		return
+
+	if ( !IsValid( weapon ) )
+		return
+
+	weapon.Signal( "End_UltAccelHintThread" )
+	weapon.EndSignal( "End_UltAccelHintThread" )
+
+	OnThreadEnd(
+		function() : ( )
+		{
+			HidePlayerHint( "#VANTAGE_ULT_ACCEL_HINT" )
+		}
+	)
+
+	while( true )
+	{
+		if ( Consumable_CanUseConsumable( player, eConsumableType.ULTIMATE, false ) )
+		{
+			const float ULT_HINT_DEBOUNCE = 20
+			float timeSinceLastUltHint = Time() - file.timeLastUltHint
+			if ( timeSinceLastUltHint > ULT_HINT_DEBOUNCE )
+			{
+				file.timeLastUltHint = Time()
+				AddPlayerHint( 5.0, 0.25, $"", "#VANTAGE_ULT_ACCEL_HINT", "#SURVIVAL_PICKUP_HEALTH_ULTIMATE" )
+			}
+		}
+
+		wait 0.5
+	}
 }
 
 

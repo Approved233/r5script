@@ -7,6 +7,7 @@ global function AnimateRankedProgressBar
 global function StartRankUpAnimation
 global function SetContinueButtonRegistration
 global function RTKRankedMatchSummary_UpdateTweenDataModel
+global function InitRTKRankedMatchSummary
 
 global struct RTKRankedMatchSummary_Properties
 {
@@ -118,6 +119,10 @@ global struct RankedMatchSummaryExtraInfo
 	string lastGameMode = ""
 
 	PromoTrialsData& trialsData
+
+	bool showProtection = false
+	int protectionCurrent = 0
+	int protectionMax = 0
 }
 
 global struct RankedMatchSummaryScreenData
@@ -153,6 +158,8 @@ void function RTKRankedMatchSummary_InitMetaData( string behaviorType, string st
 {
 	RTKMetaData_SetAllowedBehaviorTypes( structType, "progressBarAnimator", [ "Animator" ] )
 	RTKMetaData_SetAllowedBehaviorTypes( structType, "tweenStagger", [ "TweenStagger" ] )
+
+	RegisterSignal( "OnRankedMatchSummaryDestroyed" )
 }
 
 void function RTKRankedMatchSummary_OnInitialize( rtk_behavior self )
@@ -186,6 +193,8 @@ void function RTKRankedMatchSummary_OnInitialize( rtk_behavior self )
 
 void function RTKRankedMatchSummary_OnDestroy( rtk_behavior self )
 {
+	Signal( self, "OnRankedMatchSummaryDestroyed" )
+
 	RTKDataModelType_DestroyStruct( RTK_MODELTYPE_MENUS, "ranked", ["postGame"] )
 	SetContinueButtonRegistration( self, false )
 }
@@ -604,9 +613,19 @@ void function BuildRankedMatchSummaryDataModel( rtk_behavior self )
 	p.summaryBreakdownModel = RTKStruct_GetOrCreateScriptStruct( p.rankedMatchSummaryModel, "breakdown", "RankLadderPointsBreakdown" )
 	p.summaryExtraInfoModel = RTKStruct_GetOrCreateScriptStruct( p.rankedMatchSummaryModel, "extraInfo", "RankedMatchSummaryExtraInfo" )
 
+	bool isProvisional = Ranked_GetNumProvisionalMatchesCompleted( player ) < Ranked_GetNumProvisionalMatchesRequired()
+	SharedRankedDivisionData currentRank = GetCurrentRankedDivisionFromScoreAndLadderPosition( scoreBreakdown.finalLP, Ranked_GetLadderPosition( player ) )
+	int tierFloor = currentRank.tier.scoreMin
+	extraInfo.showProtection = (scoreBreakdown.finalLP - tierFloor) <= abs( extraInfo.entryCost ) && currentRank.tier.allowsDemotion && !isProvisional
+	if ( extraInfo.showProtection )
+	{
+		extraInfo.protectionCurrent = GetDemotionProtectionBuffer ( player )
+		extraInfo.protectionMax = DEMOTION_BUFFER_MAX
+	}
+
 	RTKStruct_SetValue( p.rankedMatchSummaryScreenDataModel, screenData )
 	RTKStruct_SetValue( p.summaryBreakdownModel, scoreBreakdown )
-	RTKStruct_SetValue( p.summaryExtraInfoModel,  extraInfo )
+	RTKStruct_SetValue( p.summaryExtraInfoModel, extraInfo )
 }
 
 void function BuildRankedBadgeDataModel( rtk_behavior self )
@@ -937,6 +956,7 @@ void function StartRankUpAnimation( rtk_behavior self, bool isProvisionalGraduat
 
 	
 	EndSignal( uiGlobal.signalDummy, "OnPostGameRankedMenu_Close" )
+	EndSignal( self, "OnRankedMatchSummaryDestroyed" )
 
 	
 	wait 1
@@ -947,7 +967,7 @@ void function StartRankUpAnimation( rtk_behavior self, bool isProvisionalGraduat
 
 	
 	wait 0.1
-	RankUpAnimation( p.numRanksEarned, p.scoreStart, p.ladderPosition, p.scoreEnd, isProvisionalGraduation )
+	RankUpAnimation( GetTopNonDialogMenu(), p.numRanksEarned, p.scoreStart, p.ladderPosition, p.scoreEnd, isProvisionalGraduation )
 	wait 0.1
 }
 
@@ -1009,4 +1029,9 @@ void function OnContinueButton_Activated( var button )
 {
 	if ( GetActiveMenuName() == POSTGAME_RANKED_MENU_NAME )
 		thread CloseActiveMenu()
+}
+
+void function InitRTKRankedMatchSummary( var panel )
+{
+	InitDeathScreenPanelFooter( panel, eDeathScreenPanel.RANK)
 }

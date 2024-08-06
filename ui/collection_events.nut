@@ -329,7 +329,7 @@ string function HeirloomEvent_GetCompletionSequenceName( ItemFlavor event )
 string function CollectionEvent_GetFrontPageGRXOfferLocation( ItemFlavor event, bool isRestricted = false )
 {
 	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_collection )
-	return GetGlobalSettingsString( ItemFlavor_GetAsset( event ), isRestricted ? "restrictedGRXOfferLocation" : "frontGRXOfferLocation" )
+	return GetGlobalSettingsString( ItemFlavor_GetAsset( event ), "frontGRXOfferLocation" ) 
 }
 
 

@@ -12,6 +12,11 @@ global struct RewardPurchaseDialogConfig
 	ItemFlavor functionref()  getPurchaseFlavCallback = null
 	ItemFlavor functionref()  getSecondaryPurchaseFlavCallback = null
 
+	string functionref( int ) eliteBattlePassDescTextCallback = null
+	void functionref()  getEliteBattlePassPurchaseFlavCallback = null
+
+
+
 	ToolTipData toolTipDataMaxPurchase
 	ToolTipData toolTipDataSecondaryButton
 
@@ -29,6 +34,10 @@ global struct RewardPurchaseDialogConfig
 	string quantityTextPlural
 	string titleTextPlural
 	string descTextPlural
+
+	bool   eliteBatllePassOptionIsEnabled
+	string eliteBattlePassText
+
 }
 
 struct
@@ -53,6 +62,13 @@ struct
 	var dec1Button
 	var dec5Button
 
+
+	var eliteBattlePassDescription
+	var eliteBattlePassPurchaseButton
+	var discountPanel
+	var taxNoticeMessage
+
+
 	table<var, BattlePassReward> buttonToItem
 
 	int purchaseQuantity = 1
@@ -72,6 +88,13 @@ void function InitRewardPurchaseDialog( var menu )
 	s_rewardPurchaseDialog.purchaseButtonHeader = Hud_GetChild( menu, "PurchaseButtonHeader" )
 	s_rewardPurchaseDialog.purchaseButtonLinker = Hud_GetChild( menu, "PurchaseButtonLinker" )
 
+	s_rewardPurchaseDialog.eliteBattlePassDescription = Hud_GetChild( menu, "EliteBattlePassDescription" )
+	s_rewardPurchaseDialog.discountPanel = Hud_GetChild( menu, "DiscountPanel" )
+
+
+
+
+
 	AddMenuEventHandler( menu, eUIEvent.MENU_OPEN, RewardPurchaseDialog_OnOpen )
 	AddMenuEventHandler( menu, eUIEvent.MENU_CLOSE, RewardPurchaseDialog_OnClose )
 
@@ -79,6 +102,11 @@ void function InitRewardPurchaseDialog( var menu )
 
 	s_rewardPurchaseDialog.purchaseButton = Hud_GetChild( menu, "PurchaseButton" )
 	Hud_AddEventHandler( s_rewardPurchaseDialog.purchaseButton, UIE_CLICK, RewardPurchaseButton_OnActivate )
+
+
+	s_rewardPurchaseDialog.eliteBattlePassPurchaseButton = Hud_GetChild( menu, "EliteBattlePassPurchaseButton" )
+	Hud_AddEventHandler( s_rewardPurchaseDialog.eliteBattlePassPurchaseButton, UIE_CLICK, RewardEliteBattlePassPurchaseButton_OnActivate )
+
 
 	s_rewardPurchaseDialog.primaryPurchaseButton = Hud_GetChild( menu, "PrimaryPurchaseButton" )
 	Hud_AddEventHandler( s_rewardPurchaseDialog.primaryPurchaseButton, UIE_CLICK, RewardPurchaseButton_OnActivate )
@@ -159,7 +187,6 @@ void function RewardPurchaseDialog_OnOpen()
 	
 	Hud_Show( s_rewardPurchaseDialog.rewardPanel )
 	Hud_Show( s_rewardPurchaseDialog.header )
-	Hud_Show( s_rewardPurchaseDialog.background )
 
 	Hud_Show( s_rewardPurchaseDialog.purchaseButton )
 	Hud_Show( s_rewardPurchaseDialog.inc1Button )
@@ -172,6 +199,28 @@ void function RewardPurchaseDialog_OnOpen()
 	Hud_Show( s_rewardPurchaseDialog.primaryPurchaseButton )
 	Hud_Show( s_rewardPurchaseDialog.secondaryPurchaseButton )
 
+
+	Hud_Show( s_rewardPurchaseDialog.eliteBattlePassDescription )
+	Hud_Show( s_rewardPurchaseDialog.eliteBattlePassPurchaseButton )
+	if ( Script_UserHasEAAccess() )
+	{
+		Hud_Show( s_rewardPurchaseDialog.discountPanel )
+	}
+	else
+	{
+		Hud_Hide( s_rewardPurchaseDialog.discountPanel )
+	}
+
+
+
+
+
+
+
+
+
+
+
 	file.rpdcfg.toolTipDataMaxPurchase.tooltipFlags 	= file.rpdcfg.toolTipDataMaxPurchase.tooltipFlags | eToolTipFlag.SOLID
 	file.rpdcfg.toolTipDataMaxPurchase.tooltipStyle     = eTooltipStyle.DEFAULT
 	file.rpdcfg.toolTipDataSecondaryButton.tooltipFlags = file.rpdcfg.toolTipDataSecondaryButton.tooltipFlags | eToolTipFlag.SOLID
@@ -181,13 +230,43 @@ void function RewardPurchaseDialog_OnOpen()
 	{
 		Hud_Hide( s_rewardPurchaseDialog.purchaseButton )
 
+		Hud_Hide( s_rewardPurchaseDialog.eliteBattlePassPurchaseButton )
+		Hud_Hide( s_rewardPurchaseDialog.discountPanel )
+		Hud_Hide( s_rewardPurchaseDialog.eliteBattlePassDescription )
+
+
+
+
+
 		RuiSetString( Hud_GetRui( s_rewardPurchaseDialog.purchaseButtonLinker ), "linkerText", Localize( file.rpdcfg.buttonLinkerText ) )
 	}
+
+	else if ( file.rpdcfg.eliteBatllePassOptionIsEnabled )
+	{
+		int purchaseButtonWidth = Hud_GetWidth( s_rewardPurchaseDialog.purchaseButton )
+		int eliteButtonWidth = Hud_GetWidth( s_rewardPurchaseDialog.eliteBattlePassPurchaseButton )
+		UIPos purchaseButtonPos = REPLACEHud_GetPos( s_rewardPurchaseDialog.purchaseButton )
+		UIPos eliteButtonPos = REPLACEHud_GetPos( s_rewardPurchaseDialog.eliteBattlePassPurchaseButton )
+		Hud_SetPos( s_rewardPurchaseDialog.purchaseButton, ( eliteButtonWidth + eliteButtonPos.x ) / -2, purchaseButtonPos.y )
+
+		Hud_Hide( s_rewardPurchaseDialog.purchaseButtonLinker )
+		Hud_Hide( s_rewardPurchaseDialog.primaryPurchaseButton )
+		Hud_Hide( s_rewardPurchaseDialog.secondaryPurchaseButton )
+	}
+
 	else
 	{
 		Hud_Hide( s_rewardPurchaseDialog.purchaseButtonLinker )
 		Hud_Hide( s_rewardPurchaseDialog.primaryPurchaseButton )
 		Hud_Hide( s_rewardPurchaseDialog.secondaryPurchaseButton )
+
+		Hud_Hide( s_rewardPurchaseDialog.eliteBattlePassPurchaseButton )
+		Hud_Hide( s_rewardPurchaseDialog.discountPanel )
+		Hud_Hide( s_rewardPurchaseDialog.eliteBattlePassDescription )
+
+
+
+
 	}
 
 	RewardPurchaseDialog_UpdateRewards()
@@ -211,8 +290,16 @@ void function RewardPurchaseDialog_OnClose()
 	Hud_Hide( s_rewardPurchaseDialog.purchaseButtonLinker )
 	Hud_Hide( s_rewardPurchaseDialog.primaryPurchaseButton )
 	Hud_Hide( s_rewardPurchaseDialog.secondaryPurchaseButton )
-}
 
+
+	Hud_Hide( s_rewardPurchaseDialog.eliteBattlePassPurchaseButton )
+	Hud_Hide( s_rewardPurchaseDialog.eliteBattlePassDescription )
+	Hud_Hide( s_rewardPurchaseDialog.discountPanel )
+
+
+
+
+}
 
 void function RewardPurchaseDialog_OnGetTopLevel()
 {
@@ -257,6 +344,11 @@ void function RewardPurchaseDialog_UpdateRewards()
 
 	string purchaseButtonText = file.rpdcfg.purchaseButtonTextCallback( s_rewardPurchaseDialog.purchaseQuantity )
 	HudElem_SetRuiArg( s_rewardPurchaseDialog.purchaseButton, "buttonText", purchaseButtonText )
+
+
+	HudElem_SetRuiArg( s_rewardPurchaseDialog.eliteBattlePassPurchaseButton, "buttonText", file.rpdcfg.eliteBattlePassText )
+	HudElem_SetRuiArg( s_rewardPurchaseDialog.eliteBattlePassPurchaseButton, "buttonDescText", file.rpdcfg.eliteBattlePassDescTextCallback( s_rewardPurchaseDialog.purchaseQuantity ) )
+
 
 	if ( file.rpdcfg.secondaryButtonIsEnabled )
 	{
@@ -333,7 +425,7 @@ void function RewardPurchase_OnActivate( var something )
 
 void function RewardPurchaseButton_OnActivate( var something )
 {
-	if ( Hud_IsLocked( s_rewardPurchaseDialog.purchaseButton ) )
+	if ( Hud_IsLocked( s_rewardPurchaseDialog.purchaseButton ) || !GRX_IsInventoryReady() || !GRX_AreOffersReady() )
 		return
 
 	var focus = GetFocus()
@@ -358,6 +450,40 @@ void function RewardPurchaseButton_OnActivate( var something )
 	pdc.onPurchaseResultCallback = OnRewardPurchaseResult
 	PurchaseDialog( pdc )
 }
+
+
+void function RewardEliteBattlePassPurchaseButton_OnActivate( var button )
+{
+	
+	if ( Hud_IsLocked( s_rewardPurchaseDialog.eliteBattlePassPurchaseButton ) || !GRX_IsInventoryReady() || !GRX_AreOffersReady() )
+		return
+
+	var focus = GetFocus()
+	if ( focus == s_rewardPurchaseDialog.inc1Button || focus == s_rewardPurchaseDialog.inc5Button || focus == s_rewardPurchaseDialog.dec1Button || focus == s_rewardPurchaseDialog.dec5Button || focus == s_rewardPurchaseDialog.secondaryPurchaseButton )
+		return
+
+	PIN_UIInteraction_OnClick( "menu_rewardpurchasedialog", Hud_GetHudName( button ) )
+
+	file.rpdcfg.getEliteBattlePassPurchaseFlavCallback()
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+}
+
 
 void function SecondaryRewardPurchaseButton_OnActivate( var something )
 {
@@ -399,7 +525,7 @@ void function OnRewardPurchaseResult( bool wasSuccessful )
 
 void function UpdatePurchaseQuantity( int delta )
 {
-	if ( delta == 0 )
+	if ( delta == 0 || !GRX_IsInventoryReady() || !GRX_AreOffersReady() )
 		return
 
 	if ( delta > 0 )

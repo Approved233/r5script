@@ -19,6 +19,16 @@ global function Perks_GetSettingsInfoForClassRole
 global function Perks_GetSettingsInfoForPerk
 
 
+global function Perks_S22UpdateEnabled
+global function Perks_AllClassesCanScanBeacons
+
+
+
+
+
+
+
+
 
 
 
@@ -80,6 +90,14 @@ global enum ePerkIndex
 
 
 
+	AMMUVISION,
+	RING_EXPERT,
+	KNOCK_EXPERT,
+	EXPLOSIVE_EXPERT,
+	SCOUT_EXPERT,
+
+
+
 
 
 
@@ -125,8 +143,8 @@ global struct ClassRoleSettingsInfo
 	asset icon
 
 
-
-
+	string classUpgradeName
+	string classUpgradeDescription
 
 }
 
@@ -154,6 +172,9 @@ struct
 	table< int, ClassRoleSettingsInfo >  classRoleToSettingsTable
 	table< int, PerkSettingsInfo  >		 perkToPerkSettingsTable
 	table< int, PerkInfo > 				 perkInfoTable
+
+	table< int, PerkInfo > 				 perkInfoTableReserve
+
 	table< ItemFlavor, int > 		 	 characterToRoleTable
 
 
@@ -245,6 +266,13 @@ void function OnItemFlavorRegistered_Class( ItemFlavor characterClass )
 		}
 	}
 
+
+	if( Perks_AllClassesCanScanBeacons() && !perks.contains( ePerkIndex.BEACON_SCAN ) )
+	{
+		perks.append( ePerkIndex.BEACON_SCAN )
+	}
+
+
 	ClassRoleSettingsInfo settingsInfo
 	settingsInfo.perks = perks
 
@@ -259,8 +287,8 @@ void function OnItemFlavorRegistered_Class( ItemFlavor characterClass )
 	settingsInfo.uiColor = color
 
 
-
-
+	settingsInfo.classUpgradeDescription = GetGlobalSettingsString( classAsset, "localizationKey_DESCRIPTION_LONG" )
+	settingsInfo.classUpgradeName = GetGlobalSettingsString( classAsset, "localizationKey_NAME_SHORT" )
 
 
 
@@ -304,6 +332,18 @@ PerkSettingsInfo function Perks_GetSettingsInfoForPerk( int perk )
 {
 	return file.perkToPerkSettingsTable[perk]
 }
+
+
+bool function Perks_S22UpdateEnabled()
+{
+	return GetCurrentPlaylistVarBool( "perks_s22_update_enabled", true )
+}
+
+bool function Perks_AllClassesCanScanBeacons()
+{
+	return GetCurrentPlaylistVarBool( "perks_all_classes_can_scan_beacons", false )
+}
+
 
 
 
@@ -389,6 +429,52 @@ void function Perks_RegisterClassPerk( PerkInfo perkToRegister )
 
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

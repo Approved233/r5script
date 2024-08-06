@@ -24,6 +24,9 @@ array< featureTutorialTab > function Survival_Solos_PopulateAboutText()
 
 	GameMode_AboutDialog_AppendRequeueTab(tabs)
 
+	GameMode_AboutDialog_AppendFreeSpawnsTab(tabs)
+
+	
 	return tabs
 }
 

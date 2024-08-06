@@ -271,6 +271,7 @@ void function SurvivalGroundList_LevelInit()
 
 
 
+
 void function UIToClient_SurvivalGroundListOpened( var menu )
 {
 	CloseQuickSwapIfOpen()
@@ -375,6 +376,14 @@ void function UIToClient_SurvivalGroundListOpened( var menu )
 			category.itemHeight = 100
 			category.itemPadding = 4
 		}
+
+		else if ( enumVal == eLootSortCategories.HEALING )
+		{
+			category.itemWidth   = 100
+			category.itemHeight  = 100
+			category.itemPadding = 4
+		}
+
 		else
 		{
 			category.itemWidth = 406 + 110
@@ -403,6 +412,24 @@ void function UIToClient_SurvivalGroundListOpened( var menu )
 		item.sortOrdinal = format( "%02d", 50 - ammoPoolTypeVal )
 		DeathBoxListPanel_AddItem( fileLevel.listPanel, item )
 	}
+
+
+	array<string> healingTypes = [ "health_pickup_health_small", "health_pickup_combo_small", "health_pickup_health_large", "health_pickup_combo_large", "health_pickup_combo_full" ]
+	
+	foreach ( string healingItemType in healingTypes )
+	{
+		DeathBoxEntryData entryData
+		entryData.lootFlav = SURVIVAL_Loot_GetLootDataByRef( healingItemType )
+		entryData.key = entryData.lootFlav.ref
+		fileLevel.deathBoxEntryDataByKey[entryData.key] <- entryData
+		entryData.lootEnts = []
+
+		DeathBoxListPanelItem item
+		item.categoryKey = format( "%02d", 99 - eLootSortCategories.HEALING )
+		item.key = entryData.key
+		DeathBoxListPanel_AddItem( fileLevel.listPanel, item )
+	}
+
 
 	thread Delayed_SetCursorToObject( fileLevel.backer )
 
@@ -989,6 +1016,14 @@ void function UpdateSurvivalGroundList( SurvivalGroundListUpdateParams params )
 		}
 
 
+		bool shouldSortTop = false
+
+		if ( entryData.lootFlav.lootType == eLootType.ARMOR )
+		{
+			shouldSortTop = true
+		}
+
+
 		DeathBoxListPanelItem ornull item = DeathBoxListPanel_GetItemByKey( fileLevel.listPanel, entryData.key )
 		if ( shouldBeVisible )
 		{
@@ -1000,7 +1035,7 @@ void function UpdateSurvivalGroundList( SurvivalGroundListUpdateParams params )
 				newItem.categoryKey = format( "%02d", maxCategories - enumVal )
 				newItem.key = entryData.key
 				newItem.sortOrdinal = format( "%02d,%02d,%02d,%d",
-					entryData.lootFlav.lootType,
+					shouldSortTop ? 99 : entryData.lootFlav.lootType,
 					entryData.lootFlav.tier,
 					int(newItem.categoryKey) == maxCategories ? GetWeaponCategorySortNumber( entryData ) : entryData.lootFlav.index,
 					hasSpecialAmmo ? entryData.lastSeenBestLootEntEEH : 0
@@ -1061,17 +1096,15 @@ void function UpdateSurvivalGroundList( SurvivalGroundListUpdateParams params )
 		Hud_Hide( fileLevel.blackMarketWidget )
 	}
 
-	const int BLACK_MARKET_UI_TEAMMATES_SUPPORTED = 3
+	const int BLACK_MARKET_UI_TEAMMATES_SUPPORTED = 4
+	float scaleFrac = GetScreenScaleFrac()
+
 	for ( int playerIdx = 0; playerIdx < BLACK_MARKET_UI_TEAMMATES_SUPPORTED; playerIdx++ )
 	{
 
 		entity player = (playerIdx < teammates.len() && IsValid( teammates[playerIdx] ) ? teammates[playerIdx] : null)
 		if ( !isMyTeamsBlackMarket && playerIdx > 0 )
 			player = null 
-
-		RuiSetString( widgetRui, format( "player%dName", playerIdx ), player != null ? GetDisplayablePlayerNameFromEHI( ToEHI( player ) ) : "" )
-		RuiSetInt( widgetRui, format( "player%dUseCount", playerIdx ), player != null ? GetBlackMarketUseCount( deathBox, player ) : -1 )
-		RuiSetFloat( widgetRui, format( "player%dLastPickupTime", playerIdx ), player != null ? GetBlackMarketLastUseTime( deathBox, player ) : -9999.0 )
 
 		asset charImage           = $""
 		asset charBackgroundImage = $""
@@ -1082,8 +1115,6 @@ void function UpdateSurvivalGroundList( SurvivalGroundListUpdateParams params )
 			charBackgroundImage = CharacterClass_GetGalleryPortraitBackground( char )
 
 		}
-		RuiSetAsset( widgetRui, format( "player%dCharImage", playerIdx ), charImage )
-		RuiSetAsset( widgetRui, format( "player%dCharBGImage", playerIdx ), charBackgroundImage )
 
 		array<LootRef> useItemRefs = []
 		if ( player != null )
@@ -1101,7 +1132,37 @@ void function UpdateSurvivalGroundList( SurvivalGroundListUpdateParams params )
 			}
 
 
-		float scaleFrac = GetScreenScaleFrac()
+		if( playerIdx == 0  )
+		{
+			RuiSetString( widgetRui, format( "player%dName", playerIdx ), player != null ? GetDisplayablePlayerNameFromEHI( ToEHI( player ) ) : "" )
+			RuiSetInt( widgetRui, format( "player%dUseCount", playerIdx ), player != null ? GetBlackMarketUseCount( deathBox, player ) : -1 )
+			RuiSetFloat( widgetRui, format( "player%dLastPickupTime", playerIdx ), player != null ? GetBlackMarketLastUseTime( deathBox, player ) : -9999.0 )
+			RuiSetAsset( widgetRui, format( "player%dCharImage", playerIdx ), charImage )
+			RuiSetAsset( widgetRui, format( "player%dCharBGImage", playerIdx ), charBackgroundImage )
+		}
+		else
+		{
+			var unitFrameAttach    = Hud_GetChild( fileLevel.menu, format( "BlackMarketWidget_Player%d_UnitFrameAttach", playerIdx ) )
+			Hud_SetVisible( unitFrameAttach, params.isBlackMarket && player != null)
+
+			float unitFrameAttach_LeftPadding = 30
+			float unitFrameAttach_RightPadding = 30
+			float unitFrameAttach_ItemSize =  40
+			float unitFrameAttach_ItemPadding = 7
+
+			int itemsCount = 2
+
+				itemsCount = ( ( isPlayerLoba && hasBlackMarketUpgrade )? 3: 2 )
+
+
+			float unitFrameAttachSize = unitFrameAttach_LeftPadding
+			unitFrameAttachSize += unitFrameAttach_RightPadding
+			unitFrameAttachSize += unitFrameAttach_ItemSize * itemsCount
+			unitFrameAttachSize += unitFrameAttach_ItemPadding * ( itemsCount - 1 )
+
+			Hud_SetWidth( unitFrameAttach,  unitFrameAttachSize * scaleFrac  )
+		}
+
 		for ( int itemIdx = 0; itemIdx < BLACK_MARKET_UI_ITEMS_SUPPORTED; itemIdx++ )
 		{
 			var itemButton    = Hud_GetChild( fileLevel.menu, format( "BlackMarketWidget_Player%d_ItemButton%d", playerIdx, itemIdx ) )
@@ -1132,8 +1193,6 @@ void function UpdateSurvivalGroundList( SurvivalGroundListUpdateParams params )
 				else
 				{
 					isItemButtonBonusVisible = isPlayerLoba && hasBlackMarketUpgrade
-					if( itemIdx == 0 && isItemButtonBonusVisible )
-						itemButtonOffset += int(-68 * scaleFrac )
 				}
 			}
 
@@ -1184,8 +1243,13 @@ void function UpdateSurvivalGroundList( SurvivalGroundListUpdateParams params )
 			if ( lootFlavor.lootType == eLootType.MAINWEAPON )
 			{
 				ItemFlavor ornull weaponFlav = GetWeaponItemFlavorByClass( lootFlavor.baseWeapon )
-				if ( weaponFlav != null )
-					icon = ItemFlavor_GetIcon( expect ItemFlavor( weaponFlav ) )
+
+
+					icon = GetWeaponLootIcon_WeaponLootHint( player, lootFlavor )
+
+
+
+
 
 				ammoIcon = lootFlavor.fakeAmmoIcon == $"" ? $"rui/hud/gametype_icons/survival/sur_ammo_unique" : lootFlavor.fakeAmmoIcon
 				string ammoType = GetWeaponAmmoType( lootFlavor.ref )
@@ -1313,6 +1377,12 @@ void function UpdateItem( DeathBoxListPanelItem item )
 	bool isMainWeapon   = (lootFlavor.lootType == eLootType.MAINWEAPON)
 	bool isGadget		= (lootFlavor.lootType == eLootType.GADGET)
 	bool isArmor   		= (lootFlavor.lootType == eLootType.ARMOR)
+
+	bool isHealth  		= ( (lootFlavor.lootType == eLootType.HEALTH) && lootFlavor.ref != "health_pickup_ultimate" )
+
+
+
+
 	bool hasSpecialAmmo = (isMainWeapon && !GetWeaponInfoFileKeyField_GlobalBool( lootFlavor.baseWeapon, "uses_ammo_pool" ))
 
 	bool pingsAreIndirect = false
@@ -1400,9 +1470,26 @@ void function UpdateItem( DeathBoxListPanelItem item )
 		}
 	}
 
+	if ( isHealth )
+	{
+
+		 if ( isVendingMachine )
+		 {
+			 title = ""
+		 }
+		else
+
+		{
+			title = (entryData.totalCount == 0 ? "--" : format( "%d", entryData.totalCount ))
+		}
+	}
+
+
 	else if ( isVendingMachine && isMainWeapon )
 	{
-		
+
+			lootFlavor.hudIcon = GetWeaponLootIcon_WeaponLootHint( GetLocalClientPlayer(), lootFlavor )
+
 	}
 
 	else if ( hasSpecialAmmo )
@@ -1425,6 +1512,10 @@ void function UpdateItem( DeathBoxListPanelItem item )
 	else if ( isMainWeapon )
 	{
 		title = (entryData.totalCount > 1 ? format( "%s   x%d", title, entryData.totalCount ) : title)
+
+
+			lootFlavor.hudIcon = GetWeaponLootIcon_WeaponLootHint( GetLocalClientPlayer(), lootFlavor )
+
 	}
 	else if ( lootFlavor.passive != ePassives.INVALID )
 	{
@@ -1478,6 +1569,9 @@ void function UpdateItem( DeathBoxListPanelItem item )
 	RuiSetBool( rui, "isDimmed", (fileLevel.currentQuickSwapEntry != null && fileLevel.currentQuickSwapEntry != entryData) )
 	RuiSetBool( rui, "isBlocked", entryData.isBlocked )
 	RuiSetBool( rui, "isClickable", entryData.isClickable )
+
+	RuiSetBool( rui, "isHealthItem", isHealth )
+
 
 
 
@@ -1814,7 +1908,7 @@ void function PerformItemAction( DeathBoxListPanelItem item, bool isAltAction, b
 
 	array<ConsumableInventoryItem> predictedInventory = GetPredictedInventory()
 	int inventoryLimit                                = SURVIVAL_GetInventoryLimit( player )
-	int amountThatWouldBePickedUp                     = SURVIVAL_AddToInventory( predictedInventory, inventoryLimit, lootFlavor, count, SURVIVAL_GetInventorySlotCountForPlayer( player, lootFlavor ), true )
+	int amountThatWouldBePickedUp                     = SURVIVAL_AddToInventory( player, predictedInventory, inventoryLimit, lootFlavor, count, SURVIVAL_GetInventorySlotCountForPlayer( player, lootFlavor ), true )
 	bool isInventoryFull                              = (amountThatWouldBePickedUp == 0)
 
 	LootRef lootRef  = SURVIVAL_CreateLootRef( lootFlavor, bestLootEnt )
@@ -1934,7 +2028,7 @@ array<ConsumableInventoryItem> function GetPredictedInventory()
 		LootData pladLootFlav = SURVIVAL_Loot_GetLootDataByRef( plad.lootFlavRef )
 
 		if ( plad.count > 0 )
-			SURVIVAL_AddToInventory( predictedInventory, inventoryLimit, pladLootFlav, plad.count, SURVIVAL_GetInventorySlotCountForPlayer( localPlayer, pladLootFlav ), true )
+			SURVIVAL_AddToInventory( localPlayer, predictedInventory, inventoryLimit, pladLootFlav, plad.count, SURVIVAL_GetInventorySlotCountForPlayer( localPlayer, pladLootFlav ), true )
 		else
 			SURVIVAL_RemoveFromInventory( localPlayer, predictedInventory, pladLootFlav, -plad.count )
 	}
@@ -2014,7 +2108,7 @@ void function SendItemActionCommand( DeathBoxEntryData entryData, int count, ent
 	{
 		array<ConsumableInventoryItem> predictedInventory = GetPredictedInventory()
 		int inventoryLimit = SURVIVAL_GetInventoryLimit( localPlayer )
-		int numAdded       = SURVIVAL_AddToInventory( predictedInventory, inventoryLimit, entryData.lootFlav, plad.count, SURVIVAL_GetInventorySlotCountForPlayer( localPlayer, entryData.lootFlav ), true )
+		int numAdded       = SURVIVAL_AddToInventory( localPlayer, predictedInventory, inventoryLimit, entryData.lootFlav, plad.count, SURVIVAL_GetInventorySlotCountForPlayer( localPlayer, entryData.lootFlav ), true )
 		plad.count = numAdded
 	}
 

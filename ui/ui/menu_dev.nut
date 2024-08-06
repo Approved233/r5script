@@ -22,6 +22,8 @@ global function ServerCallback_OpenDevMenu
 global function AddLevelDevCommand
 
 const string DEV_MENU_NAME = "[LEVEL]"
+const int DEV_MENU_BUTTON_MAX = 64
+const int DEV_MENU_BUTTON_ROW_COUNT = 16
 
 struct DevMenuPage
 {
@@ -47,6 +49,9 @@ struct
 	DevMenuPage &      currentPage
 	var                header
 	array<var>         buttons
+	var				   prevPageButton
+	var				   nextPageButton
+	int 			   currentPageIndex
 	array<table>       actionBlocks
 	array<DevCommand>  devCommands
 	DevCommand&        lastDevCommand
@@ -98,6 +103,12 @@ void function InitDevMenu( var newMenuArg )
 			RuiSetString( Hud_GetRui( button ), "buttonText", "" )
 			Hud_SetEnabled( button, false )
 		}
+		file.prevPageButton = Hud_GetChild( menu, "BtnDevPrev" )
+		file.nextPageButton = Hud_GetChild( menu, "BtnDevNext" )
+		Hud_SetEnabled( file.prevPageButton, false )
+		Hud_SetEnabled( file.nextPageButton, false )
+		Hud_AddEventHandler( file.prevPageButton, UIE_CLICK, OnDevButton_PrevPage )
+		Hud_AddEventHandler( file.nextPageButton, UIE_CLICK, OnDevButton_NextPage )
 
 		AddMenuFooterOption( menu, LEFT, BUTTON_B, true, "%[B_BUTTON|]% Back", "Back" )
 		AddMenuEventHandler( menu, eUIEvent.MENU_NAVIGATE_BACK, BackOnePage_Activate )
@@ -197,10 +208,123 @@ void function ClearCodeDevMenu()
 	ClearFreelanceDevMenu()
 }
 
+void function UpdateDevMenuButtonsWithPage()
+{
+	int pageCount = file.devCommands.len() / DEV_MENU_BUTTON_MAX + 1
+	int currentButtonCount = file.currentPageIndex < pageCount - 1 ?  DEV_MENU_BUTTON_MAX : file.devCommands.len() % DEV_MENU_BUTTON_MAX
+	int lastColumnIndex = currentButtonCount / DEV_MENU_BUTTON_ROW_COUNT
+
+	foreach ( index, button in file.buttons )
+	{
+		int buttonID = int( Hud_GetScriptID( button ) )
+		int cmdId = DEV_MENU_BUTTON_MAX * file.currentPageIndex + buttonID
+		int remainder = index % DEV_MENU_BUTTON_ROW_COUNT
+
+		if ( cmdId < file.devCommands.len() )
+		{
+			RuiSetString( Hud_GetRui( button ), "buttonText", file.devCommands[cmdId].label )
+			Hud_SetEnabled( button, true )
+			int upIndex = index - 1
+			int downIndex = index + 1
+			int leftIndex = index - DEV_MENU_BUTTON_ROW_COUNT
+			int rightIndex = index + DEV_MENU_BUTTON_ROW_COUNT
+
+			if ( remainder == 0 )
+			{
+				upIndex = index + DEV_MENU_BUTTON_ROW_COUNT - 1
+				if( upIndex >= currentButtonCount )
+					upIndex = currentButtonCount - 1
+			}
+
+			if ( (index + 1) % DEV_MENU_BUTTON_ROW_COUNT == 0 )
+			{
+				downIndex = index - DEV_MENU_BUTTON_ROW_COUNT + 1
+			}
+
+			if ( index < DEV_MENU_BUTTON_ROW_COUNT )
+			{
+				leftIndex = lastColumnIndex * DEV_MENU_BUTTON_ROW_COUNT + remainder
+				if( leftIndex >= currentButtonCount )
+					leftIndex -= DEV_MENU_BUTTON_ROW_COUNT
+			}
+
+			if ( rightIndex >= currentButtonCount )
+			{
+				rightIndex = remainder
+			}
+
+			Hud_SetNavUp( file.buttons[index], file.buttons[upIndex] )
+			Hud_SetNavDown( file.buttons[index], file.buttons[downIndex] )
+			Hud_SetNavRight( file.buttons[index], file.buttons[rightIndex] )
+			Hud_SetNavLeft( file.buttons[index], file.buttons[leftIndex] )
+		}
+		else
+		{
+			RuiSetString( Hud_GetRui( button ), "buttonText", "" )
+			Hud_SetEnabled( button, false )
+		}
+
+		if ( buttonID == 0 )
+			Hud_SetFocused( button )
+	}
+
+	if ( file.currentPageIndex > 0 )
+	{
+		Hud_Show( file.prevPageButton )
+		Hud_SetEnabled( file.prevPageButton, true )
+	}
+	else
+	{
+		Hud_Hide( file.prevPageButton )
+		Hud_SetEnabled( file.prevPageButton, false )
+	}
+
+	if ( file.devCommands.len() > (file.currentPageIndex + 1) * DEV_MENU_BUTTON_MAX )
+	{
+		Hud_Show( file.nextPageButton )
+		Hud_SetEnabled( file.nextPageButton, true )
+	}
+	else
+	{
+		Hud_Hide( file.nextPageButton )
+		Hud_SetEnabled( file.nextPageButton, false )
+	}
+
+	if ( Hud_IsVisible( file.prevPageButton ) )
+	{
+		if ( Hud_IsVisible( file.nextPageButton ) )
+		{
+			Hud_SetNavDown( file.buttons[DEV_MENU_BUTTON_MAX - 1], file.prevPageButton )
+			Hud_SetNavUp( file.prevPageButton, file.buttons[ DEV_MENU_BUTTON_MAX - 1 ] )
+			Hud_SetNavDown( file.prevPageButton, file.nextPageButton )
+			Hud_SetNavUp( file.nextPageButton, file.prevPageButton )
+			Hud_SetNavDown( file.nextPageButton, file.buttons[ DEV_MENU_BUTTON_MAX - DEV_MENU_BUTTON_ROW_COUNT ] )
+			Hud_SetNavUp( file.buttons[ DEV_MENU_BUTTON_MAX - DEV_MENU_BUTTON_ROW_COUNT ], file.nextPageButton )
+		}
+		else
+		{
+			Hud_SetNavDown( file.buttons[currentButtonCount - 1], file.prevPageButton )
+			Hud_SetNavUp( file.prevPageButton, file.buttons[currentButtonCount - 1] )
+			Hud_SetNavDown( file.prevPageButton, file.buttons[ currentButtonCount - currentButtonCount % DEV_MENU_BUTTON_ROW_COUNT  ] )
+			Hud_SetNavUp( file.buttons[ currentButtonCount - currentButtonCount % DEV_MENU_BUTTON_ROW_COUNT ], file.prevPageButton )
+		}
+	}
+	else
+	{
+		if ( Hud_IsVisible( file.nextPageButton ) )
+		{
+			Hud_SetNavDown( file.buttons[DEV_MENU_BUTTON_MAX - 1], file.nextPageButton )
+			Hud_SetNavUp( file.nextPageButton, file.buttons[ DEV_MENU_BUTTON_MAX - 1 ] )
+			Hud_SetNavDown( file.nextPageButton, file.buttons[ DEV_MENU_BUTTON_MAX - DEV_MENU_BUTTON_ROW_COUNT ] )
+			Hud_SetNavUp( file.buttons[ DEV_MENU_BUTTON_MAX - DEV_MENU_BUTTON_ROW_COUNT ], file.nextPageButton )
+		}
+	}
+}
 
 void function UpdateDevMenuButtons()
 {
 	file.devCommands.clear()
+	file.currentPageIndex = 0
 	if ( developer() == 0 )
 		return
 
@@ -220,24 +344,7 @@ void function UpdateDevMenuButtons()
 	else
 		file.currentPage.devMenuFunc()
 
-	foreach ( index, button in file.buttons )
-	{
-		int buttonID = int( Hud_GetScriptID( button ) )
-
-		if ( buttonID < file.devCommands.len() )
-		{
-			RuiSetString( Hud_GetRui( button ), "buttonText", file.devCommands[buttonID].label )
-			Hud_SetEnabled( button, true )
-		}
-		else
-		{
-			RuiSetString( Hud_GetRui( button ), "buttonText", "" )
-			Hud_SetEnabled( button, false )
-		}
-
-		if ( buttonID == 0 )
-			Hud_SetFocused( button )
-	}
+	UpdateDevMenuButtonsWithPage()
 
 	RefreshRepeatLastDevCommandPrompts()
 }
@@ -299,6 +406,7 @@ void function SetupDefaultDevCommandsMP()
 		SetupDevMenu( "Override Spawn Character", SetDevMenu_OverrideSpawnSurvivalCharacter )
 		SetupDevMenu( "Survival", SetDevMenu_Survival )
 		SetupDevMenu( "Survival Weapons", SetDevMenu_SurvivalLoot, "main_weapon" )
+		SetupDevMenu( "Survival Event Weapons", SetDevMenu_SurvivalLoot, "main_weapon_event" )
 		SetupDevMenu( "Survival Attachments", SetDevMenu_SurvivalLoot, "attachment" )
 		SetupDevMenu( "Survival Helmets", SetDevMenu_SurvivalLoot, "helmet" )
 		SetupDevMenu( "Survival Armor", SetDevMenu_SurvivalLoot, "armor" )
@@ -503,10 +611,8 @@ void function SetupAlterLoadout()
 	array<string> categories = []
 	foreach ( LoadoutEntry entry in GetAllLoadoutSlots() )
 	{
-
 		if ( entry.category == eLoadoutCategory.ARTIFACT_CONFIGURATIONS )
 			continue
-
 
 		if ( !categories.contains( LOADOUT_CATEGORIES_TO_NAMES_MAP[entry.category] ) )
 			categories.append( LOADOUT_CATEGORIES_TO_NAMES_MAP[entry.category] )
@@ -538,10 +644,8 @@ void function SetupAlterLoadout_CategoryScreen( string category )
 
 	foreach ( LoadoutEntry entry in  entries )
 	{
-
 		if ( entry.category == eLoadoutCategory.ARTIFACT_CONFIGURATIONS )
 			continue
-
 
 		if ( LOADOUT_CATEGORIES_TO_NAMES_MAP[entry.category] != category )
 			continue
@@ -588,10 +692,8 @@ void function SetupAlterLoadout_CategoryScreenForCharacter( string category, str
 
 	foreach ( LoadoutEntry entry in entries )
 	{
-
 		if ( entry.category == eLoadoutCategory.ARTIFACT_CONFIGURATIONS )
 			continue
-
 
 		if ( LOADOUT_CATEGORIES_TO_NAMES_MAP[entry.category] != category )
 			continue
@@ -706,7 +808,6 @@ void function SetupAlterLoadout_SlotScreen( LoadoutEntry entry, int qualityFilte
 			}
 		}
 
-
 		{
 			if ( ItemFlavor_GetType( flav ) == eItemType.melee_skin && Artifacts_Loadouts_IsConfigPointerItemFlavor( flav ) )
 			{
@@ -726,7 +827,6 @@ void function SetupAlterLoadout_SlotScreen( LoadoutEntry entry, int qualityFilte
 				continue
 			}
 		}
-
 
 		SetupDevFunc( "[" + Localize( ItemFlavor_GetTypeName( flav ) ) + "]  " + Localize( ItemFlavor_GetLongName( flav ) ), void function( var unused ) : ( entry, flav ) {
 			DEV_RequestSetItemFlavorLoadoutSlot( LocalClientEHI(), entry, flav )
@@ -892,17 +992,22 @@ void function SetDevMenu_PodiumBackgroundDebug( var _ )
 
 void function SetupPodiumBackgroundDebug()
 {
-	SetupDevCommand("MP_RR_DESERTLANDS_HU", "script DEV_OverridePodiumBackground( ePodiumBackground.MP_RR_DESERTLANDS_HU )")
-	SetupDevCommand("MP_RR_DIVIDED_MOON", "script DEV_OverridePodiumBackground( ePodiumBackground.MP_RR_DIVIDED_MOON )")
-	SetupDevCommand("MP_RR_CANYONLANDS_HU", "script DEV_OverridePodiumBackground( ePodiumBackground.MP_RR_CANYONLANDS_HU )")
-	SetupDevCommand("MP_RR_OLYMPUS_MU2", "script DEV_OverridePodiumBackground( ePodiumBackground.MP_RR_OLYMPUS_MU2 )")
-	SetupDevCommand("MP_RR_TROPICS_ISLAND_MU1", "script DEV_OverridePodiumBackground( ePodiumBackground.MP_RR_TROPICS_ISLAND_MU1 )")
-	SetupDevCommand("MP_RR_ADQUEDUCT", "script DEV_OverridePodiumBackground( ePodiumBackground.MP_RR_ADQUEDUCT )")
-	SetupDevCommand("MP_RR_ARENA_HABITAT", "script DEV_OverridePodiumBackground( ePodiumBackground.MP_RR_ARENA_HABITAT )")
-	SetupDevCommand("MP_RR_PARTY_CRASHER", "script DEV_OverridePodiumBackground( ePodiumBackground.MP_RR_PARTY_CRASHER )")
-	SetupDevCommand("MP_RR_ARENA_PHASE_RUNNER", "script DEV_OverridePodiumBackground( ePodiumBackground.MP_RR_ARENA_PHASE_RUNNER )")
-	SetupDevCommand("MP_RR_FREEDM_SKULLTOWN", "script DEV_OverridePodiumBackground( ePodiumBackground.MP_RR_FREEDM_SKULLTOWN )")
-	SetupDevCommand("MP_RR_ARENA_SKYGARDER", "script DEV_OverridePodiumBackground( ePodiumBackground.MP_RR_ARENA_SKYGARDER )")
+	SetupDevCommand("mp_rr_desertlands_hu", "script DEV_OverridePodiumBackground( \"mp_rr_desertlands_hu\")")
+	SetupDevCommand("mp_rr_divided_moon_mu1", "script DEV_OverridePodiumBackground( \"mp_rr_divided_moon_mu1\" )")
+	SetupDevCommand("mp_rr_canyonlands_hu", "script DEV_OverridePodiumBackground( \"mp_rr_canyonlands_hu\" )")
+	SetupDevCommand("mp_rr_olympus_mu2", "script DEV_OverridePodiumBackground( \"mp_rr_olympus_mu2\" )")
+	SetupDevCommand("mp_rr_tropic_island_mu1", "script DEV_OverridePodiumBackground( \"mp_rr_tropic_island_mu1\" )")
+	SetupDevCommand("mp_rr_aqueduct", "script DEV_OverridePodiumBackground( \"mp_rr_aqueduct\" )")
+	SetupDevCommand("mp_rr_arena_habitat", "script DEV_OverridePodiumBackground( \"mp_rr_arena_habitat\" )")
+	SetupDevCommand("mp_rr_party_crasher", "script DEV_OverridePodiumBackground( \"mp_rr_party_crasher\" )")
+	SetupDevCommand("mp_rr_arena_phase_runner", "script DEV_OverridePodiumBackground( \"mp_rr_arena_phase_runner\" )")
+	SetupDevCommand("mp_rr_freedm_skulltown", "script DEV_OverridePodiumBackground( \"mp_rr_freedm_skulltown\" )")
+	SetupDevCommand("mp_rr_arena_skygarden", "script DEV_OverridePodiumBackground( \"mp_rr_arena_skygarden\" )")
+	SetupDevCommand("mp_rr_olympus_mu1_night", "script DEV_OverridePodiumBackground( \"mp_rr_olympus_mu1_night\" )")
+	SetupDevCommand("mp_rr_desertlands_night", "script DEV_OverridePodiumBackground( \"mp_rr_desertlands_night\" )")
+	SetupDevCommand("mp_rr_canyonlands_mu1_night", "script DEV_OverridePodiumBackground( \"mp_rr_canyonlands_mu1_night\" )")
+	SetupDevCommand("mp_rr_thunderdome", "script DEV_OverridePodiumBackground( \"mp_rr_thunderdome\" )")
+	SetupDevCommand("mp_rr_district", "script DEV_OverridePodiumBackground( \"mp_rr_district\" )")
 }
 
 void function SetDevMenu_PodiumBaseDebug( var _ )
@@ -1019,7 +1124,7 @@ void function SetupFreelanceDevMenu()
 void function SetupPrototypesDevMenu()
 {
 
-		SetupDevCommand( "Change to Shadow Zombie", "script DEV_GiveShadowZombieAbilities( gp()[0] )" )
+
 
 }
 
@@ -1060,7 +1165,8 @@ void function SetupDevFunc( string label, void functionref( var ) func, var opPa
 	{
 		string codeDevMenuAlias   = file.codeDevMenuPrefix + label
 		string codeDevMenuCommand = format( "script_ui RunCodeDevCommandByAlias( \"%s\" )", codeDevMenuAlias )
-		file.codeDevMenuCommands[codeDevMenuAlias] <- cmd
+		if( !(codeDevMenuAlias in file.codeDevMenuCommands) )
+			file.codeDevMenuCommands[codeDevMenuAlias] <- cmd
 		DevMenu_Alias_DEV( codeDevMenuAlias, codeDevMenuCommand )
 	}
 }
@@ -1089,7 +1195,8 @@ void function SetupDevMenu( string label, void functionref( var ) func, var opPa
 void function OnDevButton_Activate( var button )
 {
 	int buttonID   = int( Hud_GetScriptID( button ) )
-	DevCommand cmd = file.devCommands[buttonID]
+	int cmdId = DEV_MENU_BUTTON_MAX * file.currentPageIndex + buttonID
+	DevCommand cmd = file.devCommands[cmdId]
 
 	if ( cmd.canBeUsedInMatchmaking == false && level.ui.uiDisableDev )
 	{
@@ -1121,6 +1228,17 @@ void function OnDevButton_LoseFocus( var button )
 {
 }
 
+void function OnDevButton_NextPage( var button )
+{
+	file.currentPageIndex++
+	UpdateDevMenuButtonsWithPage()
+}
+
+void function OnDevButton_PrevPage( var button )
+{
+	file.currentPageIndex--
+	UpdateDevMenuButtonsWithPage()
+}
 
 void function RunDevCommand( DevCommand cmd, bool isARepeat )
 {

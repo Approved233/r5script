@@ -38,6 +38,8 @@ global function ShQuickchat_Init
 
 
 
+
+
 #if DEV
 global function DEV_ReloadCommsTable
 const bool DEBUG_PLAYER_IS_IN_COMBAT = false
@@ -268,6 +270,88 @@ void function DEV_ReloadCommsTable()
 	LoadCommsActionsFromDatatable()
 }
 #endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

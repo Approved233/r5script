@@ -16,6 +16,8 @@ struct
 	var        displayItem
 	var        swapIcon
 	int        displayStyle = eDisplayStyle.DEFAULT
+	bool 	   allowEquipAllLegends = false
+	int		   equipAllSlotIndex = -1
 
 } file
 
@@ -29,6 +31,7 @@ void function InitSelectSlotDefaultPanel( var panel )
 
 		Hud_AddEventHandler( button, UIE_CLICK, PurchaseButton_Activate )
 		Hud_AddEventHandler( button, UIE_CLICKRIGHT, PurchaseButton_Activate )
+		Hud_AddEventHandler( button, UIE_MIDDLECLICK, PurchaseButton_EquipAll )
 		Hud_AddEventHandler( button, UIE_GET_FOCUS, PurchaseButton_OnFocus )
 		Hud_AddEventHandler( button, UIE_LOSE_FOCUS, PurchaseButton_LoseFocus )
 
@@ -52,6 +55,41 @@ void function PurchaseButton_Activate( var button )
 	CloseActiveMenu()
 }
 
+void function PurchaseButton_EquipAll( var button )
+{
+	if ( file.allowEquipAllLegends == false )
+		return
+
+	if ( button == null ) 
+	{
+		Assert( IsControllerModeActive() )
+		button = GetFocus()
+	}
+
+	file.equipAllSlotIndex = int(Hud_GetScriptID( button ))
+
+	DialogData dialogData
+	dialogData.header = Localize( "#EQUIP_ALL_CONFIRM_HEADER" )
+	dialogData.message = Localize( "#EQUIP_ALL_CONFIRM_DESC" )
+	dialogData.darkenBackground = true
+	dialogData.useFullMessageHeight = true
+
+	AddDialogButton( dialogData, "#PROMPT_CONFIRM", EquipAllConfirm )
+	AddDialogButton( dialogData, "#B_BUTTON_BACK" )
+
+	OpenDialog( dialogData )
+}
+
+void function EquipAllConfirm()
+{
+	Assert( file.equipAllSlotIndex >= 0 && file.equipAllSlotIndex < NUM_TRACKER_LOADOUT_SLOTS )
+
+	array<LoadoutEntry> loadoutEntries = SelectSlot_GetLoadoutEntries()
+	RequestSetItemFlavorLoadoutSlot_AllLegends( LocalClientEHI(), loadoutEntries[ file.equipAllSlotIndex ], SelectSlot_GetItem() )
+	CloseActiveMenu()
+	file.equipAllSlotIndex = -1
+}
+
 void function SelectSlotDefault_OnShow( var panel )
 {
 	SelectSlot_Common_AdjustButtons( panel, file.buttonList, file.displayItem, file.swapIcon )
@@ -68,6 +106,8 @@ void function SelectSlotDefault_OnShow( var panel )
 			file.displayStyle = eDisplayStyle.BADGE_OR_STICKER
 		else if ( itemType == eItemType.gladiator_card_kill_quip || itemType == eItemType.gladiator_card_intro_quip )
 			file.displayStyle = eDisplayStyle.QUIP
+
+		file.allowEquipAllLegends = ( itemType == eItemType.gladiator_card_stat_tracker && GetTrackerUIContext() == eTrackerType.ART )
 	}
 
 	foreach ( button in file.buttonList )
@@ -109,6 +149,13 @@ void function SelectSlotDefault_OnShow( var panel )
 	ApplyItemToButton( file.displayItem, SelectSlot_GetItem() )
 
 	HudElem_SetRuiArg( file.displayItem, "bgVisible", file.displayStyle != eDisplayStyle.BADGE_OR_STICKER )
+
+	ClearPanelFooterOptions( panel )
+	AddPanelFooterOption( panel, LEFT, BUTTON_X, false, "#X_BUTTON_EQUIP", "#X_BUTTON_EQUIP" )
+	if ( file.allowEquipAllLegends )
+		AddPanelFooterOption( panel, LEFT, BUTTON_Y, false, "#Y_BUTTON_EQUIP_ALL_LEGENDS", "#Y_BUTTON_EQUIP_ALL_LEGENDS", PurchaseButton_EquipAll )
+	AddPanelFooterOption( panel, LEFT, BUTTON_B, false, "#B_BUTTON_CLOSE", "#B_BUTTON_CLOSE" )
+	UpdateFooterOptions()
 }
 
 void function SelectSlotDefault_OnHide( var panel )
@@ -186,6 +233,7 @@ void function ApplyItemToButton( var button, ItemFlavor item )
 			ItemFlavor character = expect ItemFlavor( SelectSlot_GetCharacter() )
 
 			RuiSetString( rui, "buttonText", "" )
+			RuiSetAsset( rui, "buttonImage", $"" )
 			CreateNestedGladiatorCardBadge( rui, "badgeUIHandle", LocalClientEHI(), item, index, character )
 		}
 		else
@@ -193,6 +241,7 @@ void function ApplyItemToButton( var button, ItemFlavor item )
 			Assert( itemType == eItemType.sticker )
 
 			RuiSetString( rui, "buttonText", "" )
+			RuiSetAsset( rui, "buttonImage", $"" )
 			CreateNestedRuiForSticker( rui, "badgeUIHandle", item )
 		}
 	}
@@ -203,5 +252,13 @@ void function ApplyItemToButton( var button, ItemFlavor item )
 			name = ItemFlavor_GetLongName( item )
 
 		RuiSetString( rui, "buttonText", name )
+		RuiSetAsset( rui, "buttonImage", $"" )
+
+		if ( itemType == eItemType.gladiator_card_stat_tracker && GetTrackerUIContext() == eTrackerType.ART )
+		{
+			RuiSetAsset( rui, "buttonImage", GladiatorCardStatTracker_GetBackgroundImage( item ) )
+			string trackerName = Localize( ItemFlavor_GetLongName( item ) )
+			RuiSetString( rui, "buttonText", trackerName )
+		}
 	}
 }

@@ -44,6 +44,8 @@ global function GamemodeUtility_GetIsTeamIndexValidPlayerTeam
 
 
 
+
+
 global function GamemodeUtility_GetTeamOrAllianceScore 
 global function GamemodeUtility_GetAllianceScoreFromTeam 
 global function GamemodeUtility_GetScoreDifference	
@@ -64,10 +66,15 @@ global function GamemodeUtility_GetMatchTimeLimitWarning
 global function GamemodeUtility_GetMaxPlayersToShowOnPodium 
 global function GamemodeUtility_IsSpectatorEnabled 
 global function GamemodeUtility_IsPlacementPopupEnabled 
+global function GamemodeUtility_GetPlayerArrayOfTeamOrAlliance 
+global function GamemodeUtility_GetPlayerTeamOrAlliance 
+global function GamemodeUtility_GetObjectiveProgressPercentIntFromFloat 
+global function GamemodeUtility_GetLoadoutBonusOrdinanceCount 
 
 
 
 global function GamemodeUtility_ServerCallback_DisplayMatchTimeLimitWarning	
+global function GamemodeUtility_ServerCallback_PlayMatchEndingCountdownAudio 
 global function GamemodeUtility_AnnouncementMessageWarning	
 global function GamemodeUtility_GetColorVectorForCaptureObjectiveState	
 global function GamemodeUtility_IsPlayerOnTeamObserver	
@@ -108,6 +115,10 @@ global const int EXPECTED_PARSED_CIRCLE_VALUE_COUNT = 4
 
 const float GAMEMODEUTILITY_DEFAULT_MESSAGE_DURATION = 5.0 
 const float GAMEMODEUTILITY_MATCH_TIME_LIMIT_WARNING_TIME = 300.0 
+const string GAMEMODEUTILITY_NETVAR_MATCH_START = "matchStartTime"
+const string GAMEMODEUTILITY_NETVAR_MATCH_END = "matchEndTime"
+const int GAMEMODEUTILITY_FINAL_COUNTDOWN_DURATION = 10
+const string GAMEMODEUTILITY_FINAL_COUNTDOWN_SFX = "FreeDM_UI_InGame_Timer_10Seconds_1P"
 
 
 
@@ -229,11 +240,19 @@ void function GamemodeUtility_Init()
 
 void function GamemodeUtility_RegisterNetworking()
 {
+
+		RegisterNetworkedVariable( GAMEMODEUTILITY_NETVAR_MATCH_START, SNDC_GLOBAL_NON_REWIND, SNVT_TIME, -1.0 )
+		RegisterNetworkedVariable( GAMEMODEUTILITY_NETVAR_MATCH_END, SNDC_GLOBAL_NON_REWIND, SNVT_TIME, 0.0 )
+
+
 	Remote_RegisterClientFunction( "GamemodeUtility_ServerCallback_DisplayMatchTimeLimitWarning", "bool" )
+	Remote_RegisterClientFunction( "GamemodeUtility_ServerCallback_PlayMatchEndingCountdownAudio" )
 	RegisterNetworkedVariable( "mixtape_isLeaverPenaltyEnabledForMatch", SNDC_GLOBAL, SNVT_BOOL, true )
 
 
 		RegisterNetVarBoolChangeCallback( "mixtape_isLeaverPenaltyEnabledForMatch", GamemodeUtility_OnLeaverPenaltyStatusChanged )
+		RegisterNetVarTimeChangeCallback( GAMEMODEUTILITY_NETVAR_MATCH_START, GamemodeUtility_OnMatchStartTimeChanged )
+		RegisterNetVarTimeChangeCallback( GAMEMODEUTILITY_NETVAR_MATCH_END, GamemodeUtility_OnMatchEndTimeChanged )
 
 
 
@@ -538,6 +557,14 @@ bool function GamemodeUtility_GetKillReplayActive()
 
 
 
+int function GamemodeUtility_GetLoadoutBonusOrdinanceCount()
+{
+	return GetCurrentPlaylistVarInt( "set_loadout_bonus_ordinance_count", 1 )
+}
+
+
+
+
 
 
 
@@ -560,6 +587,9 @@ void function GamemodeUtility_AddCallback_OnPlayerJoinedMatchInProgress( void fu
 	Assert( !file.onPlayerJoinedMatchInProgressCallbackFuncs.contains( func ), "GAMEMODE UTILITY: Already added " + string( func ) + " to onPlayerJoinedMatchInProgressCallbackFuncs" )
 	file.onPlayerJoinedMatchInProgressCallbackFuncs.append( func )
 }
+
+
+
 
 
 
@@ -1441,6 +1471,47 @@ void function RunVictimSquadMapScan_Thread( int victimTeam )
 
 
 
+void function GamemodeUtility_OnMatchStartTimeChanged( entity player, float time )
+{
+	var rui = ClGameState_GetRui()
+	if ( RuiIsAlive( rui ) )
+	{
+		if ( RuiHasGameTimeArg( rui, "matchStartTime" ) )
+		{
+			RuiSetGameTime( rui, "matchStartTime", time )
+		}
+	}
+}
+
+
+
+void function GamemodeUtility_OnMatchEndTimeChanged( entity player, float time )
+{
+	var rui = ClGameState_GetRui()
+	if ( RuiIsAlive( rui ) )
+	{
+		if ( RuiHasGameTimeArg( rui, "matchEndTime" ) )
+		{
+			RuiSetGameTime( rui, "matchEndTime", time )
+		}
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1615,6 +1686,31 @@ void function GamemodeUtility_ServerCallback_DisplayMatchTimeLimitWarning( bool 
 		message = Localize( "#CONTROL_MATCH_TIMELIMIT_GAMEEND" )
 
 	GamemodeUtility_AnnouncementMessageWarning( player, message, GamemodeUtility_GetColorVectorForCaptureObjectiveState( eGamemodeUtilityCaptureObjectiveColorState.ENEMY_OWNED ), SFX_MATCH_TIME_LIMIT, GAMEMODEUTILITY_DEFAULT_MESSAGE_DURATION )
+}
+
+
+
+void function GamemodeUtility_ServerCallback_PlayMatchEndingCountdownAudio()
+{
+	thread GamemodeUtility_ServerCallback_PlayMatchEndingCountdownAudio_Thread()
+}
+
+
+
+void function GamemodeUtility_ServerCallback_PlayMatchEndingCountdownAudio_Thread()
+{
+	if ( IsValid( clGlobal.levelEnt ) )
+		EndSignal( clGlobal.levelEnt, "OnDestroy" )
+
+	int secondsElapsed = 0
+	while ( secondsElapsed < GAMEMODEUTILITY_FINAL_COUNTDOWN_DURATION )
+	{
+		if ( IsValid( GetLocalClientPlayer() ) )
+			EmitSoundOnEntity( GetLocalClientPlayer(), GAMEMODEUTILITY_FINAL_COUNTDOWN_SFX )
+
+		secondsElapsed += 1
+		wait 1.0
+	}
 }
 
 
@@ -2026,14 +2122,12 @@ bool function GamemodeUtility_IsTeamOrAllianceEliminated( int teamOrAlliance )
 			continue
 
 		
-		if ( player.GetPlayerNetInt( "respawnStatus" ) != eRespawnStatus.PLAYER_ELIMINATED )
+		if ( player.GetPlayerNetInt( "respawnStatus" ) != eRespawnStatus.SQUAD_ELIMINATED )
 			return false
 	}
 
 	return true
 }
-
-
 
 
 
@@ -2858,7 +2952,6 @@ bool function GamemodeUtility_GetMixtapeAbandonPenaltyActive()
 
 
 
-
 int function GamemodeUtility_GetMaxDroppedGrenadesOnDeath()
 {
 	return GetCurrentPlaylistVarInt( "grenade_ondeath_max_spawncount", 1 )
@@ -2906,6 +2999,32 @@ float function GetPlaylistVar_DeathboxDuration()
 {
 	return GetCurrentPlaylistVarFloat( "deathbox_duration", 60.0 )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3030,6 +3149,130 @@ bool function GamemodeUtility_GetIsTeamIndexValidPlayerTeam( int teamIndex )
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+bool function GetPlaylistVar_AllowThirdPerson()
+{
+	return GetCurrentPlaylistVarBool( "allow_third_person", false )
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+array < entity > function GamemodeUtility_GetPlayerArrayOfTeamOrAlliance( int teamOrAlliance, bool shouldReturnLivingPlayersOnly )
+{
+	if ( shouldReturnLivingPlayersOnly )
+		return AllianceProximity_IsUsingAlliances() ? AllianceProximity_GetAllPlayersInAlliance( teamOrAlliance, true ) : GetPlayerArrayOfTeam_Alive( teamOrAlliance )
+
+	return AllianceProximity_IsUsingAlliances() ? AllianceProximity_GetAllPlayersInAlliance( teamOrAlliance, false ) : GetPlayerArrayOfTeam( teamOrAlliance )
+}
+
+
+
+
+
+int function GamemodeUtility_GetPlayerTeamOrAlliance( entity player )
+{
+	return AllianceProximity_IsUsingAlliances() ? AllianceProximity_GetAllianceFromTeam( player.GetTeam() ) : player.GetTeam()
+}
+
+
+
+
+int function GamemodeUtility_GetObjectiveProgressPercentIntFromFloat( float progressPercent )
+{
+	const int PERCENTAGE_MULTIPLIER = 100
+	return int( progressPercent * PERCENTAGE_MULTIPLIER )
+}
 
 
 

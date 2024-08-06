@@ -94,10 +94,7 @@ enum eLockResult
 {
 	FAILED_GENERIC,
 	FAILED_NOT_FACING_ALLY,
-	FAILED_NO_LOS_TO_ALLY,
 	FAILED_OUT_OF_RANGE,
-	FAILED_ALREADY_FULL,
-	THRESHOLD,
 	SUCCESS,
 }
 
@@ -390,6 +387,9 @@ void function OnWeaponReadyToFire_ability_conduit_arc_flash( entity weapon )
 
 
 
+
+
+
 var function OnWeaponPrimaryAttack_ability_conduit_arc_flash( entity weapon, WeaponPrimaryAttackParams attackParams )
 {
 	return true 
@@ -406,6 +406,11 @@ var function OnWeaponPrimaryAttackAnimEvent_ability_conduit_arc_flash( entity we
 
 
 	weapon.PlayWeaponEffect( FX_TAC_MUZZLE_FLASH, FX_TAC_MUZZLE_FLASH, MUZZLE_ATTACH )
+
+
+
+
+
 
 
 
@@ -468,12 +473,30 @@ var function OnWeaponPrimaryAttackAnimEvent_ability_conduit_arc_flash( entity we
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 bool function ConduitRevNerfOn()
 {
 	return GetCurrentPlaylistVarBool( "conduit_rev_nerf", true )
 }
 
-int function IsValidTacTarget( entity user, entity target, bool ignoreFaceWhenClose )
+int function IsValidTacTarget( entity user, entity target, bool ignoreAngleWhenClose )
 {
 	if ( !IsValid( user ) )
 		return eLockResult.FAILED_GENERIC
@@ -500,7 +523,7 @@ int function IsValidTacTarget( entity user, entity target, bool ignoreFaceWhenCl
 		return eLockResult.FAILED_GENERIC
 
 	float distanceSqr = DistanceSqr( user.GetOrigin(), target.GetOrigin() )
-	if ( ignoreFaceWhenClose && distanceSqr < ARC_FLASH_MIN_RANGE_SQR )
+	if ( ignoreAngleWhenClose && distanceSqr < ARC_FLASH_MIN_RANGE_SQR )
 		return eLockResult.SUCCESS
 
 	float EFFECTIVE_RANGE_SQR = GetArcFlashRangeSqr( user )
@@ -554,6 +577,7 @@ float function ScoreTarget( entity player, entity target )
 	scoreDebugString += "-coneScore: " + coneScore + "\n"
 
 	int overshieldAmt = target.GetTempshieldHealth()
+
 	scoreDebugString = "Total: " + score + "\n" + scoreDebugString + "\nOvershield: " + overshieldAmt
 
 	if( ARC_FLASH_DEBUG )
@@ -563,6 +587,117 @@ float function ScoreTarget( entity player, entity target )
 
 	return score
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1153,7 +1288,7 @@ void function SingleTargetRui_Thread(  entity player, entity target )
 		}
 
 		
-		if ( target.GetPlayerNetBool( TEMPSHIELD_ACTIVE_NETVAR ) )
+		if ( target.IsPlayer() && target.GetPlayerNetBool( TEMPSHIELD_ACTIVE_NETVAR ) )
 		{
 			
 			if ( state != eArcFlashState.NONE )

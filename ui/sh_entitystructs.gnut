@@ -54,6 +54,10 @@ global struct EHIScriptStruct
 
 
 
+
+
+
+
 		array<int> loadoutSlotsLastSeenContentsMap
 
 
@@ -72,6 +76,7 @@ global struct EHIScriptStruct
 	
 	int rankScore = -1 
 	int rankedLadderPosition = -1 
+	table< string, int > platformLadderPosition = {}
 
 	int rankScorePrevSeason = -1 
 	int rankedLadderPositionPrevSeason = -1 

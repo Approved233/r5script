@@ -423,6 +423,11 @@ void function EventShop_Init()
 
 
 
+
+
+
+
+
 bool function EventShop_IsPlaylistVarEnabled()
 {
 	return GetCurrentPlaylistVarBool( "enable_event_shop", true )
@@ -750,17 +755,20 @@ EventShopOfferData function EventShop_GetOfferByCoreItem( ItemFlavor event, Item
 	}
 
 	
+	string eventName	= ItemFlavor_GetAssetName( event )
+	string flavorName	= ItemFlavor_GetAssetName( flavor )
+
 	if ( !( event in fileLevel.eventShopDataMap ) )
 	{
-		Assert( false, format( "No event_shop could be found for event '%s1'. Ensure an event_shop Bakery Asset exists for the event.", event.guid ) )
+		Assert( false, format( "No event_shop could be found for event '%s'. Ensure an event_shop Bakery Asset exists for the event.", eventName ) )
 	}
 	else if ( fileLevel.eventShopDataMap[event].offers.len() == 0 )
 	{
-		Assert( false, format( "No event_shop offers have been created in the event_shop Bakery Asset for event '%s1'.", event.guid ) )
+		Assert( false, format( "No event_shop offers have been created in the event_shop Bakery Asset for event '%s'.", eventName ) )
 	}
 	else
 	{
-		Assert( false, format( "No event_shop offer could be found for item '%s1' in event '%s2'. Make sure the item has an entry in the event_shop's Offers array in Bakery.", flavor.guid, event.guid ) )
+		Assert( false, format( "No event_shop offer could be found for item '%s' in event '%s'. Make sure the item has an entry in the event_shop's Offers array in Bakery.", flavorName, eventName ) )
 	}
 
 	return fileLevel.eventShopDataMap[event].offers[0]

@@ -1,11 +1,4 @@
-
-
-
-
-
-
-
-
+global function BattleRush_GetPlaylistVar_ResetInventoryOnRespawn
 
 
 
@@ -62,12 +55,6 @@ const string MUSIC_BATTLERUSH_JUMP = "Music_Turbo_Jump"
 
 struct
 {
-
-
-
-
-
-
 
 
 
@@ -572,12 +559,7 @@ struct
 
 
 
-
-
-
-
-
-
-
-
-
+bool function BattleRush_GetPlaylistVar_ResetInventoryOnRespawn()
+{
+	return GetCurrentPlaylistVarBool( "battle_rush_reset_inventory_on_respawn", true )
+}

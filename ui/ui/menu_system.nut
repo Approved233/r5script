@@ -130,8 +130,8 @@ void function InitSystemMenu( var newMenuArg )
 
 
 
-		AddMenuFooterOption( menu, RIGHT, BUTTON_STICK_RIGHT, true, "#BUTTON_VIEW_CINEMATIC", "", ViewCinematic, IsLobby )
-		AddMenuFooterOption( menu, RIGHT, KEY_V, true, "", "#BUTTON_VIEW_CINEMATIC", ViewCinematic, IsLobby )
+		AddMenuFooterOption( menu, RIGHT, BUTTON_STICK_RIGHT, true, "#BUTTON_VIEW_CINEMATIC", "", ViewCinematic, CanViewCinematic )
+		AddMenuFooterOption( menu, RIGHT, KEY_V, true, "", "#BUTTON_VIEW_CINEMATIC", ViewCinematic, CanViewCinematic )
 
 		AddMenuFooterOption( menu, RIGHT, BUTTON_STICK_LEFT, true, "#BUTTON_VIEW_WELCOME_TRAILER", "", ViewWelcomeCinematic, IsLobby )
 		AddMenuFooterOption( menu, RIGHT, KEY_B, true, "", "#BUTTON_VIEW_WELCOME_TRAILER", ViewWelcomeCinematic, IsLobby )
@@ -141,6 +141,10 @@ void function InitSystemMenu( var newMenuArg )
 	AddMenuFooterOption( menu, RIGHT, KEY_R, true, "", "#BUTTON_RETURN_TO_MAIN", ReturnToMain_OnActivate, IsLobby )
 }
 
+bool function CanViewCinematic()
+{
+	return HasSeasonalVideo() && IsLobby()
+}
 
 void function ViewWelcomeCinematic( var button )
 {
@@ -161,8 +165,8 @@ void function ViewCinematic( var button )
 	CloseActiveMenu()
 
 	VideoPlaySettings settings
-	settings.video = INTRO_VIDEO
-	settings.milesAudio = INTRO_AUDIO_EVENT
+	settings.video = GetIntroVideo()
+	settings.milesAudio = GetIntroAudioEvent()
 	settings.forceSubtitles = GetLanguage() != "english"
 
 	thread PlayVideoMenu( false, settings )
@@ -230,7 +234,7 @@ void function UpdateSystemMenu()
 
 		SetButtonData( buttonIndex++, file.settingsButtonData )
 
-		if ( IsFiringRangeGameMode() )
+		if ( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_FIRING_RANGE ) )
 		{
 
 				if ( FiringRangeHasInfiniteClips() )
@@ -254,13 +258,13 @@ void function UpdateSystemMenu()
 			{
 				SetButtonData( buttonIndex++, file.abandonMissionButtonData )
 			}
-			else if ( IsSurvivalTraining() || IsFiringRangeGameMode() )
+			else if ( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_TRAINING ) || GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_FIRING_RANGE ) )
 			{
 				SetButtonData( buttonIndex++, file.lobbyReturnButtonData )
 			}
 			else if( !MenuStack_Contains( GetMenu( "CharacterSelectMenu" ) )
 
-				&& !MenuStack_Contains( GetMenu( "SpecialCharacterSelectMenu" ) )
+
 
 			)
 			{
@@ -274,7 +278,7 @@ void function UpdateSystemMenu()
 			SetButtonData( buttonIndex++, file.endMatchButtonData )
 
 
-			if ( Control_IsModeEnabled() && gameState == eGameState.Playing && GetTeam() != TEAM_UNASSIGNED && GetTeam() != TEAM_SPECTATOR )
+			if ( GameMode_IsActive( eGameModes.CONTROL ) && gameState == eGameState.Playing && GetTeam() != TEAM_UNASSIGNED && GetTeam() != TEAM_SPECTATOR )
 				SetButtonData( buttonIndex++, file.suicideButtonData )
 
 	}
@@ -293,7 +297,7 @@ void function UpdateSystemMenu()
 
 		if ( IsPrivateMatchLobby() && !MenuStack_Contains( GetMenu( "CharacterSelectMenu" ) )
 
-			&& !MenuStack_Contains( GetMenu( "SpecialCharacterSelectMenu" ) )
+
 
 		)
 			SetButtonData( buttonIndex++, file.leaveMatchButtonData )

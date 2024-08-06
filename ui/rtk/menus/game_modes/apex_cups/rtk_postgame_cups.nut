@@ -82,5 +82,5 @@ void function RTKPostGameCups_OnDestroy( rtk_behavior self )
 
 void function InitRTKPostGameCups( var panel )
 {
-	AddPanelFooterOption( panel, LEFT, BUTTON_B, true, "#B_BUTTON_CLOSE", "#B_BUTTON_CLOSE" )
+	InitDeathScreenPanelFooter( panel, eDeathScreenPanel.CUP)
 }

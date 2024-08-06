@@ -2,6 +2,7 @@ global function RTKTabbedModal_InitTabbedModal
 global function RTKTabbedModal_OnInitialize
 global function RTKTabbedModal_OnDestroy
 global function UI_RTKTabbedModal_Open
+global function UI_RTKTabbedModal_GetCurrentTabType
 
 const string SFX_MENU_OPENED = "UI_Menu_Focus_Large"
 
@@ -128,4 +129,10 @@ void function UI_RTKTabbedModal_Open( string dialogTitle, string dialogMessage, 
 	file.onCloseCallback = onCloseCallback
 
 	AdvanceMenu( GetMenu( "TabbedModal" ) )
+}
+
+int function UI_RTKTabbedModal_GetCurrentTabType()
+{
+	TabData tabData = GetTabDataForPanel( file.menu )
+	return ( tabData.activeTabIdx >= 0 ) ? file.tabsTypes[tabData.activeTabIdx] : -1
 }

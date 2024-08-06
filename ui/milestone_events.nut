@@ -4,7 +4,6 @@ global function MilestoneEvents_Init
 
 
 global function GetActiveMilestoneEvent
-global function SetStoreOnlyEventsFilter
 global function GetActiveEventTabMilestoneEvent
 global function GetActiveStoreOnlyMilestoneEvents
 global function GetAllMilestoneEvents
@@ -43,6 +42,7 @@ global function MilestoneEvent_IsPlaylistVarEnabled
 global function MilestoneEvent_UseOriginalEventTabLayout
 global function MilestoneEvent_GetGuaranteedMultiPackOffers
 global function MilestoneEvent_GetSinglePackOffers
+global function MilestoneEvent_GetMultiPackOffers
 global function MilestoneEvent_GetCustomIconForItemIdx
 global function MilestoneEvent_GetCarouselItemDescriptionText
 global function MilestoneEvent_GetRemainingCompletionItemsForCurrentMilestone
@@ -67,7 +67,6 @@ global function MilestoneEvent_MoveToLobbyForMilestoneRewardCeremony
 global function MilestoneEvent_TryDisplayMilestoneRewardCeremony
 global function MilestoneEvent_TryMoveToMilestonePostRewardCeremony
 global function ServerCallback_MilestoneEvent_MilestoneRewardCeremonyIsDue
-global function ServerCallback_MilestoneEvent_TryDisplayMilestoneRewardCeremonyForAutoOpenPacks
 global function MilestoneEvent_GetEventIcon
 global function MilestoneEvent_GetEventKeyArt
 global function MilestoneEvent_GetCollectionBoxBGImage
@@ -82,9 +81,7 @@ global function MilestoneEvent_GetInfoBoxBlurImage
 global function MilestoneEvent_GetMilestoneTrackerProgressBarColor
 global function MilestoneEvent_GetMilestoneTrackerProgressBarBGColor
 global function MilestoneEvent_GetPackInfoModalInfo
-
 global function MilestoneEvent_EventAwardsArtifact
-
 
 
 global function MilestoneEvent_GetEventItemsRatesSectionHeader
@@ -105,6 +102,8 @@ global function MilestoneEvent_GetTitleBackgroundImage
 global function MilestoneEvent_GetTitleHeaderColor
 global function MilestoneEvent_GetTitleSubheaderColor
 global function MilestoneEvent_GetPackProbabilitiesStrings
+
+global function SetStoreOnlyEventsFilter
 
 
 
@@ -176,6 +175,7 @@ global struct RTKPackProbabilitiesStrings
 {
 	string eventItemRatesHeader
 	string eventItemRatesLine1
+	int    eventItemRatesLine1Quality
 	string eventItemRatesLine2
 	string eventItemRatesLine3
 	string standardItemRatesHeader
@@ -238,6 +238,26 @@ void function MilestoneEvents_Init()
 ItemFlavor ornull function GetActiveMilestoneEvent( int t )
 {
 	Assert( IsItemFlavorRegistrationFinished() )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
 	if ( fileLevel.storeOnlyEvents )
 	{
 		array<ItemFlavor> activeStoreOnlyMilestoneEvents = GetActiveStoreOnlyMilestoneEvents( t )
@@ -253,6 +273,7 @@ ItemFlavor ornull function GetActiveMilestoneEvent( int t )
 	{
 		return GetActiveEventTabMilestoneEvent( t )
 	}
+
 
 	unreachable
 }
@@ -435,17 +456,67 @@ array<GRXScriptOffer> function MilestoneEvent_GetGuaranteedMultiPackOffers( Item
 array<GRXScriptOffer> function MilestoneEvent_GetSinglePackOffers( ItemFlavor event )
 {
 	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_milestone )
-	array<GRXScriptOffer> offers = GRX_GetItemDedicatedStoreOffers( MilestoneEvent_GetMainPackFlav( event ), MilestoneEvent_GetFrontPageGRXOfferLocation( event, GRX_IsOfferRestricted() ) )
-	int index = 0
-	foreach( offer in offers )
+	array<GRXScriptOffer> singlePackOffers = []
+
+	
+	array<GRXScriptOffer> mainPackOffers = GRX_GetItemDedicatedStoreOffers( MilestoneEvent_GetMainPackFlav( event ), MilestoneEvent_GetFrontPageGRXOfferLocation( event, GRX_IsOfferRestricted() ) )
+	foreach( offer in mainPackOffers )
 	{
-		if ( offer.items.len() > 1 )
-		{
-			offers.remove( index )
-		}
-		index++
+		int count = 0
+		foreach ( quantity in offer.output.quantities )
+			count += quantity
+
+		if ( count == 1 )
+			singlePackOffers.append( offer )
 	}
-	return offers
+
+	
+	array<GRXScriptOffer> guaranteedPackOffers = GRX_GetItemDedicatedStoreOffers( MilestoneEvent_GetGuaranteedPackFlav( event ), MilestoneEvent_GetFrontPageGRXOfferLocation( event, GRX_IsOfferRestricted() ) )
+	foreach( offer in guaranteedPackOffers )
+	{
+		int count = 0
+		foreach ( quantity in offer.output.quantities )
+			count += quantity
+
+		if ( count == 1 )
+			singlePackOffers.append( offer )
+	}
+
+	return singlePackOffers
+}
+
+
+
+array<GRXScriptOffer> function MilestoneEvent_GetMultiPackOffers( ItemFlavor event )
+{
+	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_milestone )
+	array<GRXScriptOffer> multiPackOffers = []
+
+	
+	array<GRXScriptOffer> mainPackOffers = GRX_GetItemDedicatedStoreOffers( MilestoneEvent_GetMainPackFlav( event ), MilestoneEvent_GetFrontPageGRXOfferLocation( event, GRX_IsOfferRestricted() ) )
+	foreach( offer in mainPackOffers )
+	{
+		int count = 0
+		foreach ( quantity in offer.output.quantities )
+			count += quantity
+
+		if ( count > 1 )
+			multiPackOffers.append( offer )
+	}
+
+	
+	array<GRXScriptOffer> guaranteedPackOffers = GRX_GetItemDedicatedStoreOffers( MilestoneEvent_GetGuaranteedPackFlav( event ), MilestoneEvent_GetFrontPageGRXOfferLocation( event, GRX_IsOfferRestricted() ) )
+	foreach( offer in guaranteedPackOffers )
+	{
+		int count = 0
+		foreach ( quantity in offer.output.quantities )
+			count += quantity
+
+		if ( count > 1 )
+			multiPackOffers.append( offer )
+	}
+
+	return multiPackOffers
 }
 
 
@@ -1057,7 +1128,6 @@ bool function MilestoneEvent_IsMythicEventItem( ItemFlavor event, int itemIdx )
 
 
 
-
 bool function MilestoneEvent_EventAwardsArtifact( ItemFlavor event )
 {
 	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_milestone )
@@ -1069,7 +1139,6 @@ bool function MilestoneEvent_EventAwardsArtifact( ItemFlavor event )
 	}
 	return false
 }
-
 
 
 
@@ -1170,16 +1239,6 @@ void function MilestoneEvent_TryDisplayMilestoneRewardCeremony()
 
 
 
-void function ServerCallback_MilestoneEvent_TryDisplayMilestoneRewardCeremonyForAutoOpenPacks()
-{
-	if ( GetActiveMenu() != GetMenu( "LootBoxOpen" ) )
-	{
-		MilestoneEvent_TryDisplayMilestoneRewardCeremony()
-	}
-}
-
-
-
 void function MilestoneEvent_DecrementMilestoneRewardCeremonyCount()
 {
 	if ( fileLevel.milestoneEvents_MilestoneRewardCount > 0 )
@@ -1216,6 +1275,12 @@ void function MilestoneEvent_TryMoveToMilestonePostRewardCeremony( array<BattleP
 
 		foreach ( BattlePassReward reward in awards )
 		{
+			if ( ItemFlavor_GetGRXMode( reward.flav ) == eItemFlavorGRXMode.NONE )
+			{
+				
+				continue
+			}
+
 			if ( MilestoneEvent_IsMilestoneGrantReward( milestoneEvent, ItemFlavor_GetGRXIndex( reward.flav ) ) )
 			{
 				if ( IsMilestoneEventStoreOnly( milestoneEvent ) )
@@ -1461,6 +1526,7 @@ RTKPackProbabilitiesStrings function MilestoneEvent_GetPackProbabilitiesStrings(
 	RTKPackProbabilitiesStrings packProbabilitiesStrings
 	packProbabilitiesStrings.eventItemRatesHeader = GetGlobalSettingsString( ItemFlavor_GetAsset( event ), "eventItemRatesHeader" )
 	packProbabilitiesStrings.eventItemRatesLine1 = GetGlobalSettingsString( ItemFlavor_GetAsset( event ), "eventItemRatesLine1" )
+	packProbabilitiesStrings.eventItemRatesLine1Quality = eRarityTier[GetGlobalSettingsString( ItemFlavor_GetAsset( event ), "eventItemRatesLine1Quality" )]
 	packProbabilitiesStrings.eventItemRatesLine2 = GetGlobalSettingsString( ItemFlavor_GetAsset( event ), "eventItemRatesLine2" )
 	packProbabilitiesStrings.eventItemRatesLine3 = GetGlobalSettingsString( ItemFlavor_GetAsset( event ), "eventItemRatesLine3" )
 	packProbabilitiesStrings.standardItemRatesHeader = GetGlobalSettingsString( ItemFlavor_GetAsset( event ), "standardItemRatesHeader" )

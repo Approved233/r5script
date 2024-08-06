@@ -1,9 +1,6 @@
 
-
 global function Valentines_S15_Mode_Init
-global function ShGameMode_Valentines_S15_RegisterNetworking
 
-global function IsValentinesS15
 global function Valentines_S15_ILoveYouEasterEggEnabled
 global function Valentines_S15_SpawnTicks
 
@@ -20,11 +17,11 @@ global function ValentinesGetPartner
 
 
 
+global function ClValentines_Init
 global function ServerToClient_Valentines_Add1pVFX
 global function ServerToClient_Valentines_Stop1pVFX
 
 
-global const string VALENTINES_S15_PLAYLIST_VAR = "is_valentines_s15"
 const string VALENTINES_DISABLE_MAPS_PLAYLIST_VAR = "valentines_disable_maps"
 const string VALENTINES_TOGETHER_DISTANCE_PLAYLIST_VAR = "valentines_together_dist"
 const string VALENTINES_TOGETHER_DISTANCE_IS_2D_PLAYLIST_VAR = "valentines_together_2d"
@@ -91,14 +88,9 @@ struct
 
 } file
 
-bool function IsValentinesS15()
-{
-	return GetCurrentPlaylistVarBool( VALENTINES_S15_PLAYLIST_VAR, false )
-}
-
 bool function Valentines_S15_ILoveYouEasterEggEnabled()
 {
-	return IsValentinesS15() && GetCurrentPlaylistVarBool( VALENTINES_I_LOVE_YOU_PLAYLIST_VAR, true )
+	return GetCurrentPlaylistVarBool( VALENTINES_I_LOVE_YOU_PLAYLIST_VAR, true )
 }
 
 bool function Valentines_S15_BowReskinEnabled()
@@ -108,7 +100,7 @@ bool function Valentines_S15_BowReskinEnabled()
 
 bool function IsValidGameMode()
 {
-	return !IsRankedGame()
+	return !GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_RANKED )
 }
 
 bool function IsValidMap( string map )
@@ -129,18 +121,10 @@ bool function DebugAllValentinesTicks()
 
 void function Valentines_S15_Mode_Init()
 {
+	Assert( IsValidGameMode() )
+
 	PrecacheParticleSystem( RANGE_RADIUS_REMINDER_FX )
 	PrecacheParticleSystem( VFX_ULT_ACCEL_CONT )
-	if ( !IsValentinesS15() )
-		return
-
-	if ( !IsValidGameMode() )
-		return
-
-
-		
-		GameMode_AddClientInit( SURVIVAL, ClValentines_Init )
-
 
 	float togetherDist = GetCurrentPlaylistVarFloat( VALENTINES_TOGETHER_DISTANCE_PLAYLIST_VAR, VALENTINES_TOGETHER_DISTANCE_DEFAULT )
 	file.togetherDist       = togetherDist
@@ -162,6 +146,8 @@ void function Valentines_S15_Mode_Init()
 
 
 
+
+	ShGameMode_Valentines_S15_RegisterNetworking()
 }
 
 
@@ -181,19 +167,8 @@ void function ClValentines_Init()
 }
 
 
-
-
-
-
-
-
-
-
 bool function ValentinesIsPlayerInRangeForProximityBuff( entity player )
 {
-	if ( !IsValentinesS15() )
-		return false
-
 	if ( !IsValid( player ) || !player.IsPlayer() )
 		return false
 
@@ -215,9 +190,6 @@ bool function ValentinesIsPlayerInRangeForProximityBuff( entity player )
 
 entity function ValentinesGetPartner( entity self )
 {
-	if ( !IsValentinesS15() )
-		return null
-
 	if ( !IsValid( self ) || !self.IsPlayer() )
 		return null
 
@@ -367,9 +339,6 @@ bool function IsValidPlayerForProximityBuff( entity player )
 
 	return true
 }
-
-
-
 
 
 
@@ -1147,31 +1116,26 @@ string function Valentines_S15_GetString( int infoId )
 	{
 		case eSurvivalCommentary_SringtoPrint.NEWKILLLEADER_OBIT:
 			retVal = "#SURVIVAL_NEWKILLLEADER_OBIT_DATE_NIGHT"
-			printt( "Passed Valentines String - NEWKILLLEADER_OBIT - Shicks" )
 
 			break
 
 		case eSurvivalCommentary_SringtoPrint.YOUAREKILLLEADER:
 			retVal = "#SURVIVAL_YOUAREKILLLEADER_DATE_NIGHT"
-			printt( "Passed Valentines String - YOUAREKILLLEADER - Shicks" )
 
 			break
 
 		case eSurvivalCommentary_SringtoPrint.CHAMPION_OBIT:
 			retVal = "#SURVIVAL_CHAMPION_OBIT_DATE_NIGHT"
-			printt( "Passed Valentines String - CHAMPION_OBIT - Shicks" )
 
 			break
 
 		case eSurvivalCommentary_SringtoPrint.YOUKILLED_CHAMPION:
 			retVal = "#SURVIVAL_YOUKILLED_CHAMPION_DATE_NIGHT"
-			printt( "Passed Valentines String - YOUKILLED_CHAMPION - Shicks" )
 
 			break
 
 		case eSurvivalCommentary_SringtoPrint.KILLLEADER_OBIT:
 			retVal = "#SURVIVAL_KILLLEADER_OBIT_DATE_NIGHT"
-			printt( "Passed Valentines String - KILLLEADER_OBIT - Shicks" )
 
 			break
 
@@ -1182,7 +1146,6 @@ string function Valentines_S15_GetString( int infoId )
 
 		case eSurvivalCommentary_SringtoPrint.YOUKILLED_KILLLEADER:
 			retVal = "#SURVIVAL_YOUKILLED_KILLLEADER_DATE_NIGHT"
-			printt( "Passed Valentines String -  YOUKILLED_KILLLEADER - Shicks" )
 
 			break
 

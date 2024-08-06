@@ -152,6 +152,13 @@ array<entity> function gp()
 
 
 
+array<entity> function getnpcs( entity player )
+{
+	return GetNPCArrayOfTeam( player.GetTeam() )
+}
+
+
+
 
 entity function ge( int ornull index = null )
 {
@@ -203,6 +210,43 @@ void function PrintLoc()
 	vector eyeAngles = GetPlayerArray()[0].EyeAngles()
 	eyeAngles.x = 0
 	printt( "xxx: " + origin + ", " + eyeAngles + "" )
+}
+
+const float CROSSHAIR_VERT_OFFSET = 32
+
+vector function GetPlayerCrosshairOriginRaw( entity player )
+{
+	if ( player.HasThirdPersonAttackFocus() )
+		return player.GetThirdPersonAttackFocus()
+
+	vector angles = player.EyeAngles()
+	vector forward = AnglesToForward( angles )
+	vector origin = player.EyePosition()
+
+	vector start = origin
+	vector end = origin + forward * 50000
+	TraceResults result = TraceLine( start, end )
+	vector crosshairOrigin = result.endPos
+
+	return crosshairOrigin
+}
+
+vector function GetPlayerCrosshairOrigin( entity player )
+{
+	return (GetPlayerCrosshairOriginRaw( player ) + <0,0,CROSSHAIR_VERT_OFFSET> )
+}
+
+entity function GetPlayerCrosshairEntity( entity player )
+{
+	vector angles = player.EyeAngles()
+	vector forward = AnglesToForward( angles )
+	vector origin = player.EyePosition()
+
+	vector start = origin
+	vector end = origin + forward * 50000
+	TraceResults result = TraceLine( start, end )
+
+	return result.hitEnt
 }
 
 

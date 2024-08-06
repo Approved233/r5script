@@ -132,7 +132,7 @@ void function ConfirmLeaveMatchDialog_Open()
 		data.contextImage = $"rui/hud/gametype_icons/survival/dna_station"
 	}
 
-	else if( IsStrikeoutGamemode() && !Strikeout_UI_GetIsRespawnDisabled() && Strikeout_UI_GetLocalClientPlayerSquadStrikes() < Strikeout_GetMaxSquadStrikes() && ( gamestate > eGameState.Prematch && gamestate < eGameState.WinnerDetermined ) )
+	else if( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_STRIKEOUT ) && !Strikeout_UI_GetIsRespawnDisabled() && Strikeout_UI_GetLocalClientPlayerSquadStrikes() < Strikeout_GetMaxSquadStrikes() && ( gamestate > eGameState.Prematch && gamestate < eGameState.WinnerDetermined ) )
 	{
 		data.messageText = "#SURVIVAL_STRIKEOUT_ARE_YOU_SURE_YOU_WANT_TO_LEAVE"
 		data.extendedUseYes = true
@@ -140,21 +140,24 @@ void function ConfirmLeaveMatchDialog_Open()
 	}
 
 
-	else if( IsSoloMode() && Survival_Solos_CanLocalPlayerRespawn() && ( gamestate > eGameState.Prematch && gamestate < eGameState.WinnerDetermined ) )
+	else if( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_SOLOS ) && Respawn_Token_CanLocalPlayerRespawn() && ( gamestate > eGameState.Prematch && gamestate < eGameState.WinnerDetermined ) )
 	{
 		data.messageText = "#SURVIVAL_MODE_SOLOS_ARE_YOU_SURE_YOU_WANT_TO_LEAVE"
 		data.extendedUseYes = true
 		data.yesText = ["#A_BUTTON_HOLD_YES", "#HOLD_YES"]
+		data.contextImage = $"rui/hud/gametype_icons/survival/dna_station"
+		data.onOpenAudio = "UI_Menu_LeaveMatch_BannerWarning"
 	}
 
 
 
-
-
-
-
-
-
+	else if( FreeRespawns_Feature_Exists() && FreeRespawns_CanLocalPlayerRespawn() && ( gamestate > eGameState.Prematch && gamestate < eGameState.WinnerDetermined ) )
+	{
+		data.messageText = Localize( "#FREERESPAWNS_ARE_YOU_SURE_YOU_WANT_TO_LEAVE", "%$rui/hud/gamestate/extra_life_icon%" , "%$rui/menu/challenges/challenges_icon_infinity_for_string%")
+		data.extendedUseYes = true
+		data.yesText = ["#A_BUTTON_HOLD_YES", "#HOLD_YES"]
+		data.onOpenAudio = "UI_Menu_LeaveMatch_BannerWarning"
+	}
 
 
 
@@ -182,7 +185,7 @@ void function ConfirmLeaveMatchDialog_Open()
 		data.yesText = ["#A_BUTTON_HOLD_YES", "#HOLD_YES"]
 		data.timePenaltyWarning = float( file.penaltyLength )
 	}
-	else if ( IsSurvivalTraining() || IsFiringRangeGameMode() )
+	else if ( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_TRAINING ) || GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_FIRING_RANGE ) )
 	{
 		data.headerText = "#RETURN_TO_LOBBY"
 		data.messageText = "#LEAVE_QUESTION"

@@ -71,6 +71,13 @@ global function UpgradeCore_ParseUpgradeOverrides
 
 
 
+
+
+
+
+
+
+
 global function UpgradeCore_SetProgressionLocked
 global function UpgradeCore_ProgressionLocked_ForPlayer_Set
 global function UpgradeCore_ProgressionLocked_ForPlayer_Get
@@ -93,6 +100,7 @@ global function UpgradeCore_UsePersonalObituaryNotifications
 global function UpgradeCore_ShowUpgradeTree_LobbyMenu
 global function UpgradeCore_ShowUpgradeTree_SkillsMenu
 global function UpgradeCore_ShowUpgradeTree_CharacterSelect
+
 
 
 
@@ -154,6 +162,18 @@ global enum eUpgradeXPActions
 	ARMORY,
 	MINGUARANTEEDLOOT_RESPAWN,
 	RESPAWN_TOKEN_PRESERVED,
+
+		MYTHIC_BIN_LOOTED,
+
+
+
+
+
+
+
+
+
+
 	COUNT
 }
 
@@ -255,6 +275,7 @@ struct
 
 
 
+
 } file
 
 struct
@@ -271,7 +292,7 @@ struct
 	int knockXp = 150
 	int assistXp = 100
 	int squadwipeXp = 100
-	int beaconScanXp = 200
+	int beaconScanXp = 75
 	int consoleScanXp = 200
 	int wildlifeClearXp = 150
 	int bannerRecoveryXp = 75
@@ -284,11 +305,21 @@ struct
 	int explosiveHoldOpenXp = 150
 	int bloodhoundTrialsXp = 250
 	int flyerKillXp = 50
-	int xpCacheSmallXp = 150
+	int xpCacheSmallXp = 100
 	int xpCacheLargeXp = 500
 	int xpCacheDynamicMinXp = 450
 	float evoHarvesterTimegateDuration = 100.0
 	int largeXpThreshold = 250
+
+
+
+
+
+
+
+
+
+
 	bool shiftInventoryRight = true
 	bool showGladCardUpgrades = true
 	bool showHudUpgradeSelection = true
@@ -343,12 +374,16 @@ struct
 	float harvester_badAreaAvoidanceRadius = 3000.0
 
 	float harvester_useSafeDistFromRing = -1.0
+
+	bool harvester_checkGroundNormalAngle = true
+	float maxGroundNormalAngleWithVertical = DEG_TO_RAD * 20.0
 }tunings
 
 
 const string FUNCNAME_PingConsoleFromMap = "Crafting_ClientToServer_PingConsoleFromMap"
 const string FUNCNAME_ClientToServer_UpgradeCore_HandleUpgradeSelection = "Server_UpgradeCore_HandleSelection"
 const string FUNCNAME_ServerToClient_UpgradeCore_RefreshArmorHud = "ServerToClient_UpgradeCore_RefreshArmorHud"
+const string FUNCNAME_ServerToClient_UpgradeCore_UpdateHarvesterState = "ServerToClient_UpgradeCore_UpdateHarvesterState"
 const string FUNCNAME_ServerToClient_UpgradeCore_Play1pEvoGainVfx = "ServerCallback_Play1P_EvoGain_VFX"
 const string FUNCNAME_ServerToClient_UpgradeCore_XPAwarded = "ServertoClient_UpgradeCore_XPAwarded"
 const string FUNCNAME_ServerToClient_UpgradeCore_ConsoleUsed = "ServerToClient_UpgradeCore_ConsoleUsed"
@@ -410,6 +445,7 @@ const string UPGRADE_CORE_DEFAULT_XP_THRESHOLDS_FOUR_TIER = "450 750 800 1000"
 const int UPGRADE_CORE_LARGE_XP_THRESHOLD = 250
 const float UPGRADE_CORE_LEVEL_UP_NOTI_DURATION = 4.0
 const float EVO_HARVESTER_PING_DISTANCE = 3250 
+const float EVO_HARVESTER_VO_ANNOUNCE_OFFSET = 4.0
 
 void function ShPassiveUpgradeCore_Init()
 {
@@ -423,6 +459,13 @@ void function ShPassiveUpgradeCore_Init()
 
 	if( !UpgradeCore_IsEnabled() )
 		return
+
+
+
+
+
+
+
 
 
 
@@ -550,6 +593,15 @@ void function UpgradeCore_InitTuningValues()
 	tunings.xpCacheLargeXp = GetCurrentPlaylistVarInt( "passive_upgrade_xp_xpcache_large", tunings.xpCacheLargeXp )
 	tunings.xpCacheDynamicMinXp = GetCurrentPlaylistVarInt( "passive_upgrade_xp_min_val_dynamic_xpcache", tunings.xpCacheDynamicMinXp )
 	tunings.largeXpThreshold = GetCurrentPlaylistVarInt( "passive_upgrade_core_xp_notification_thresholds", tunings.largeXpThreshold )
+
+
+
+
+
+
+
+
+
 	tunings.evoHarvesterTimegateDuration = GetCurrentPlaylistVarFloat( "passive_upgrade_core_evo_harvester_activation_delay", tunings.evoHarvesterTimegateDuration ) 
 	tunings.shiftInventoryRight = GetCurrentPlaylistVarBool( "passive_upgrade_core_shift_inventory_right", tunings.shiftInventoryRight )
 	tunings.showGladCardUpgrades = UpgradeCore_IsEnabled() && GetCurrentPlaylistVarBool( "passive_upgrade_glad_card_show_upgrades", true )
@@ -596,6 +648,7 @@ void function UpgradeCore_InitTuningValues()
 	tunings.harvester_useBadAreaAvoidanceRadius = GetCurrentPlaylistVarBool( "passive_upgrade_core_harvester_bad_area_avoidance_enabled", tunings.harvester_useBadAreaAvoidanceRadius )
 	tunings.harvester_badAreaAvoidanceRadius = GetCurrentPlaylistVarFloat( "passive_upgrade_core_harvester_bad_area_avoidance_radius", tunings.harvester_badAreaAvoidanceRadius )
 	tunings.harvester_useSafeDistFromRing = GetCurrentPlaylistVarFloat( "passive_upgrade_core_harvester_dist_from_ring", tunings.harvester_useSafeDistFromRing )
+	tunings.harvester_checkGroundNormalAngle = GetCurrentPlaylistVarBool( "passive_upgrade_core_harvester_check_ground_normal_angle", tunings.harvester_checkGroundNormalAngle )
 }
 
 void function ShPassiveUpgradeCore_NetvarsInit()
@@ -2788,6 +2841,199 @@ array<int> function UpgradeCore_GetLevelXpThresholds()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 bool function UpgradeCore_EnabledForCharacter( entity player )
 {
 	return UpgradeCore_GetUpgradesForPlayer( player ).len() > 0
@@ -2973,6 +3219,10 @@ bool function UpgradeCore_IsPlayerAtMaxLevel( entity player )
 
 
 
+
+
+
+
 array<UpgradeCoreChoice> function UpgradeCore_GetSelectedUpgrades( entity player )
 {
 	int selectedUpgradesInt = player.GetPlayerNetInt( UPGRADE_CORE_SELECTED_UPGRADES )
@@ -3046,6 +3296,14 @@ int function GetShieldTierFromShieldAmount( int amount )
 	}
 	if( tier == 4 ) 
 		tier += 1
+
+
+
+
+
+
+
+
 	return tier
 }
 
@@ -3061,12 +3319,68 @@ const array<asset> ARMOR_CORE_ICONS = [
 asset function GetShieldCoreIconFromShieldAmount( int amount )
 {
 	int tier = GetShieldTierFromShieldAmount( amount )
-
-	if ( ARMOR_CORE_ICONS.len() < tier - 1 )
-		return $""
-
-	return ARMOR_CORE_ICONS[ tier ]
+	int index = int( clamp( tier, 0, ARMOR_CORE_ICONS.len() - 1 ) )
+	return ARMOR_CORE_ICONS[ index ]
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3329,6 +3643,73 @@ UpgradeCoreChoice function UpgradeCore_GetUpgradeChoiceStructByIndex( entity pla
 	}
 	return clone upgradesList[upgradeIndex]
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

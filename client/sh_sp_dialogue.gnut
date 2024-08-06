@@ -1725,6 +1725,8 @@ void function PlayClientDialogue_Internal( int aliasID, int dialogueFlags, array
 				{
 					file.currentDialoguePlayingHandle = EmitSoundOnEntityWithSelector( speaker, milesAlias, selector )
 					file.currentDialoguePlayingName = data.name
+
+					SetPlayThroughPOVTransitions( file.currentDialoguePlayingHandle )
 				}
 			}
 			else if ( pos != <0, 0, 0> )

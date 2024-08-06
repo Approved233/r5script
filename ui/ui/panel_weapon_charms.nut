@@ -107,6 +107,12 @@ void function WeaponCharmsPanel_OnShow( var panel )
 	thread TrackIsOverScrollBar( file.panelDataMap[panel].listPanel )
 	WeaponCharmsPanel_Update( panel )
 	Hud_ScrollToTop( file.panelDataMap[panel].listPanel )
+
+	if( Hud_GetButtonCount( file.panelDataMap[panel].listPanel ) > 0 )
+	{
+		var button0 = Hud_GetButton( file.panelDataMap[panel].listPanel, 0 )
+		Hud_HandleEvent( button0, UIE_CLICK )
+	}
 }
 
 void function WeaponCharmsPanel_OnHide( var panel )

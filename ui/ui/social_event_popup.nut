@@ -213,13 +213,6 @@ void function SocialEvent_TryPurgeCrossplayPartyInvites()
 			 {
 				string hardware = GetNameFromHardware( event.hardwareID )
 
-				if( !GetConVarBool( "steam_useProperHardware" ) )
-				{
-					
-					if ( event.hardwareID == HARDWARE_PC_STEAM )
-						hardware = GetNameFromHardware( HARDWARE_PC ) 
-				}
-
 				if (  IsInPartyWithHardware( event.eventID, hardware ) )
 				{
 					EADP_RejectInviteToPlay( event.eventID )
@@ -627,7 +620,7 @@ void function UpdatePartyInviteCache()
 			continue
 
 		string eaid = GetLocalClientPlayer().GetPINNucleusId()
-		int hardwareId = GetHardwareFromName( GetUnspoofedPlayerHardware() )
+		int hardwareId = GetHardwareFromName( GetPlayerHardware() )
 
 		if ( invite.eaid == eaid && invite.hardware == hardwareId )
 			continue 

@@ -2,20 +2,18 @@ globalize_all_functions
 
 string function RTKMutator_GamemodeName( string input )
 {
-	if ( LimitedTimeMode_IsDefined( input ) )
-		return LimitedTimeMode_GetName( input )
-	else if ( GameMode_IsDefined( input ) )
-		return GameMode_GetName( input )
+	int gamemode = GameModeVariant_GetByDevName( input )
+	if ( GameModeVariant_IsDefined( gamemode ) )
+		return GameModeVariant_GetName( gamemode )
 
 	return ""
 }
 
 asset function RTKMutator_GamemodeIcon( string input )
 {
-	if ( LimitedTimeMode_IsDefined( input ) )
-		return LimitedTimeMode_GetIcon( input )
-	else if ( GameMode_IsDefined( input ) )
-		return GameMode_GetIcon( input )
+	int gamemode = GameModeVariant_GetByDevName( input )
+	if ( GameModeVariant_IsDefined( gamemode ) )
+		return GameModeVariant_GetIcon( gamemode )
 
 	return $""
 }

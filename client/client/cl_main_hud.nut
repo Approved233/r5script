@@ -4,6 +4,7 @@ global function ClMainHud_Init
 
 global function InitChatHUD
 global function UpdateChatHUDVisibility
+global function SetChatHUDPosition
 
 global function MainHud_TurnOff_RUI
 
@@ -45,6 +46,8 @@ const float OFFHAND_ALERT_ICON_SCALE = 4.5
 
 const bool ALWAYS_SHOW_BOOST_MOBILITY_BAR = true
 
+global const int DEFAULT_TEXTCHAT_VERTICAL_OFFSET = -512
+
 
 global struct HudVisibilityStatus
 {
@@ -63,6 +66,9 @@ struct
 	var  rodeoRUI 
 	bool trackingDoF = false
 	bool onlyShowMinimap = false
+
+	bool hasInitChatHud = false
+	int chatVerticalOffset = DEFAULT_TEXTCHAT_VERTICAL_OFFSET
 } file
 
 void function ClMainHud_Init()
@@ -1131,7 +1137,7 @@ bool function ShouldPermanentHudBeVisible( entity player )
 			return false
 	}
 
-	if ( ShouldHideHudForDeadPlayer( player ) && !Control_IsModeEnabled() )
+	if ( ShouldHideHudForDeadPlayer( player ) && !GameMode_IsActive( eGameModes.CONTROL ) )
 		return false
 
 #if DEV
@@ -1172,7 +1178,14 @@ void function InitChatHUD()
 	int width           = 630
 	int height          = 200
 
-	Hud_SetSize( HudElement( "IngameTextChat" ), width * resMultiplier, height * resMultiplier )
+	var chat = HudElement( "IngameTextChat" )
+	Hud_SetSize( chat, width * resMultiplier, height * resMultiplier )
+
+	file.hasInitChatHud = true
+
+	
+	if ( Hud_GetY( chat ) != file.chatVerticalOffset )
+		SetChatHUDPosition( file.chatVerticalOffset )
 }
 
 
@@ -1195,6 +1208,20 @@ void function UpdateChatHUDVisibility()
 		Hud_Hide( hint )
 	else
 		Hud_Show( hint )
+}
+
+void function SetChatHUDPosition( int yPosition )
+{
+	if ( IsLobby() || clGlobal.isMenuOpen )
+		return
+
+	file.chatVerticalOffset = yPosition
+
+	if ( !file.hasInitChatHud )
+		return
+
+	var chat = HudElement( "IngameTextChat" )
+	Hud_SetY( chat, yPosition )
 }
 
 

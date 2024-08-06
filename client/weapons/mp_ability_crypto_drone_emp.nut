@@ -7,6 +7,7 @@ global function OnWeaponPrimaryAttack_ability_crypto_drone_emp
 
 
 
+
 const asset EMP_CHARGE_UP_FX = $"P_emp_chargeup"
 const CAMERA_EMP_EXPLOSION = "exp_drone_emp"
 const asset FX_EMP_SUPPORT_FX = $"P_emp_explosion"
@@ -20,6 +21,10 @@ const asset EMP_RADIUS_FX = $"P_emp_charge_radius_MDL"
 const string EMP_CHARGING_3P = "Char11_UltimateA_A_3p"
 const string EMP_CHARGING_CRYPTO_3P = "Char11_UltimateA_A_3p"
 const string EMP_CHARGING_1P = "Char11_UltimateA_A"
+
+
+const float ULT_SCAN_TIME = 4.0
+
 
 struct
 {
@@ -111,6 +116,44 @@ var function OnWeaponPrimaryAttack_ability_crypto_drone_emp( entity weapon, Weap
 	int ammoReq = weapon.GetAmmoPerShot()
 	return ammoReq
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

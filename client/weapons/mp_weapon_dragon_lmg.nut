@@ -10,9 +10,9 @@ global function OnWeaponStartEnergizing_weapon_dragon_lmg
 global function OnWeaponEnergizedEnd_weapon_dragon_lmg
 
 
-
-
-
+global function OnWeaponStartZoomIn_weapon_dragon_lmg
+global function OnWeaponStartZoomOut_weapon_dragon_lmg
+global function OnWeaponOwnerChanged_weapon_dragon_lmg
 
 
 global const string DRAGON_LMG_ENERGIZED_MOD = "energized"
@@ -121,6 +121,10 @@ void function OnWeaponActivate_weapon_dragon_lmg( entity weapon )
 
 
 
+
+
+		HopupGunshield_OnWeaponActivate( weapon )
+
 }
 
 void function OnWeaponDeactivate_weapon_dragon_lmg( entity weapon )
@@ -136,6 +140,10 @@ void function OnWeaponDeactivate_weapon_dragon_lmg( entity weapon )
 
 
 
+
+
+
+		HopupGunshield_OnWeaponDeactivate( weapon )
 
 }
 
@@ -185,20 +193,20 @@ void function OnWeaponEnergizedEnd_weapon_dragon_lmg( entity weapon, entity play
 
 }
 
+void function OnWeaponStartZoomIn_weapon_dragon_lmg( entity weapon )
+{
+	HopupGunshield_OnWeaponStartZoomIn( weapon )
+}
 
+void function OnWeaponStartZoomOut_weapon_dragon_lmg( entity weapon )
+{
+	HopupGunshield_OnWeaponStartZoomOut( weapon )
+}
 
+void function OnWeaponOwnerChanged_weapon_dragon_lmg( entity weapon, WeaponOwnerChangedParams changeParams )
+{
 
-
-
-
-
-
-
-
-
-
-
-
+}
 
 
 

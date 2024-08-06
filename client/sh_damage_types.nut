@@ -103,6 +103,7 @@ global enum eDamageSourceId
 	mp_weapon_dmr
 	mp_weapon_wingman
 	mp_weapon_semipistol
+	mp_weapon_semipistol_akimbo 
 	mp_weapon_autopistol
 	mp_weapon_sniper
 	mp_weapon_sentinel
@@ -130,8 +131,12 @@ global enum eDamageSourceId
 
 	mp_weapon_throwingknife
 
+
+
+
 	mp_extreme_environment
 	mp_weapon_shotgun_pistol
+	mp_weapon_shotgun_pistol_akimbo 
 
 
 
@@ -242,9 +247,9 @@ global enum eDamageSourceId
 
 
 
-	melee_shadowsquad_hands
-	melee_shadowroyale_hands
-	mp_weapon_shadow_squad_hands_primary
+
+
+
 
 
 
@@ -314,6 +319,7 @@ global enum eDamageSourceId
 
 
 	mp_ability_conduit_shield_mines
+
 
 
 
@@ -435,7 +441,7 @@ global enum eDamageSourceId
 
 
 
-	mp_ability_rise_from_the_ashes
+
 
 
 	mp_weapon_spectre_spawner
@@ -492,6 +498,10 @@ global enum eDamageSourceId
 	mp_ability_redeploy_balloon
 
 	landing_zone 
+
+
+
+
 
 
 
@@ -617,33 +627,73 @@ global enum eDamageSourceId
 
 
 
+
+
+
+
 	golden_horse_green
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
 	melee_artifact_dagger
 	mp_weapon_artifact_dagger_primary
 
+melee_artifact_sword
+mp_weapon_artifact_sword_primary
 
+melee_crypto_heirloom_rt01
+mp_weapon_crypto_heirloom_rt01_primary
 
-	melee_artifact_sword
-	mp_weapon_artifact_sword_primary
-
-
-
-	melee_crypto_heirloom_rt01
-	mp_weapon_crypto_heirloom_rt01_primary
-
-
-
-	melee_octane_knife_rt01
-	mp_weapon_octane_knife_rt01_primary
+melee_octane_knife_rt01
+mp_weapon_octane_knife_rt01_primary
 
 
 
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	freerespawn_finish_downedsquad
+
+
+
+
+	melee_bangalore_heirloom_rt01
+	mp_weapon_bangalore_heirloom_rt01_primary
 
 
 
@@ -707,8 +757,8 @@ void function DamageTypes_Init()
 
 
 
-		file.damageSourceIDToImage[eDamageSourceId.melee_shadowsquad_hands] <- $"rui/gamemodes/shadow_squad/shadow_icon_small"
-		file.damageSourceIDToImage[eDamageSourceId.melee_shadowroyale_hands] <- $"rui/gamemodes/shadow_squad/shadow_icon_small"
+
+
 
 
 
@@ -801,7 +851,7 @@ void function DamageTypes_Init()
 
 
 
-			[ eDamageSourceId.mp_ability_rise_from_the_ashes ] = "#SHADOW_ARMY_RISE_FROM_THE_ASHES",
+
 
 
 		[ eDamageSourceId.mp_ability_valk_cluster_missile ] = "#DEATH_VALK_CLUSTER_MISSILE",
@@ -887,20 +937,14 @@ void function DamageTypes_Init()
 		[ eDamageSourceId.melee_fuse_heirloom ] = "#DEATH_MELEE_FUSE_HEIRLOOM",
 		[ eDamageSourceId.mp_weapon_fuse_heirloom_primary] = "#DEATH_MELEE_FUSE_HEIRLOOM",
 
+		[ eDamageSourceId.melee_artifact_sword] = "#DEATH_MELEE_ARTIFACT_SWORD",
+		[ eDamageSourceId.mp_weapon_artifact_sword_primary] = "#DEATH_MELEE_ARTIFACT_SWORD",
 
-			[ eDamageSourceId.melee_artifact_sword] = "#DEATH_MELEE_ARTIFACT_SWORD",
-			[ eDamageSourceId.mp_weapon_artifact_sword_primary] = "#DEATH_MELEE_ARTIFACT_SWORD",
+		[ eDamageSourceId.melee_crypto_heirloom_rt01 ] = "#DEATH_MELEE_CRYPTO_HEIRLOOM_RT01",
+		[ eDamageSourceId.mp_weapon_crypto_heirloom_rt01_primary ] = "#DEATH_MELEE_CRYPTO_HEIRLOOM_RT01",
 
-
-
-			[ eDamageSourceId.melee_crypto_heirloom_rt01 ] = "#DEATH_MELEE_CRYPTO_HEIRLOOM_RT01",
-			[ eDamageSourceId.mp_weapon_crypto_heirloom_rt01_primary ] = "#DEATH_MELEE_CRYPTO_HEIRLOOM_RT01",
-
-
-
-			[ eDamageSourceId.melee_octane_knife_rt01 ] = "#DEATH_MELEE_OCTANE_KNIFE_RT01",
-			[ eDamageSourceId.mp_weapon_octane_knife_rt01_primary ] = "#DEATH_MELEE_OCTANE_KNIFE_RT01",
-
+		[ eDamageSourceId.melee_octane_knife_rt01 ] = "#DEATH_MELEE_OCTANE_KNIFE_RT01",
+		[ eDamageSourceId.mp_weapon_octane_knife_rt01_primary ] = "#DEATH_MELEE_OCTANE_KNIFE_RT01",
 
 
 
@@ -938,9 +982,9 @@ void function DamageTypes_Init()
 
 
 
-			[ eDamageSourceId.melee_shadowsquad_hands ] = "#DEATH_MELEE_SHADOWSQUAD_HANDS",
-			[ eDamageSourceId.melee_shadowroyale_hands ] = "#DEATH_MELEE_SHADOWSQUAD_HANDS",
-			[ eDamageSourceId.mp_weapon_shadow_squad_hands_primary ] = "#DEATH_MELEE_SHADOWSQUAD_HANDS",
+
+
+
 
 
 
@@ -979,9 +1023,28 @@ void function DamageTypes_Init()
 
 
 
+		[ eDamageSourceId.melee_artifact_dagger] = "#DEATH_MELEE_ARTIFACT_DAGGER",
+		[ eDamageSourceId.mp_weapon_artifact_dagger_primary] = "#DEATH_MELEE_ARTIFACT_DAGGER",
 
-			[ eDamageSourceId.melee_artifact_dagger] = "#DEATH_MELEE_ARTIFACT_DAGGER",
-			[ eDamageSourceId.mp_weapon_artifact_dagger_primary] = "#DEATH_MELEE_ARTIFACT_DAGGER",
+
+			[ eDamageSourceId.melee_bangalore_heirloom_rt01 ] = "#DEATH_MELEE_BANGALORE_HEIRLOOM_RT01",
+			[ eDamageSourceId.mp_weapon_bangalore_heirloom_rt01_primary ] = "#DEATH_MELEE_BANGALORE_HEIRLOOM_RT01",
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 	}
 
@@ -1006,6 +1069,19 @@ void function RegisterWeaponDamageSource( string weaponRef )
 	file.damageSourceIDToName[ sourceID ] <- GetWeaponInfoFileKeyField_GlobalString( weaponRef, "shortprintname" )
 	file.damageSourceIDToImage[ sourceID ] <- GetWeaponInfoFileKeyFieldAsset_Global( weaponRef, "hud_icon" )
 	file.damageSourceIDToString[ sourceID ] <- weaponRef
+
+	
+	if ( GetWeaponInfoFileKeyField_GlobalBool( weaponRef, "is_akimbo_weapon" ) &&  ( weaponRef + "_akimbo" ) in eDamageSourceId)
+	{
+		string akimboWeaponRef = weaponRef + "_akimbo"
+
+		int akimboSourceID = eDamageSourceId[akimboWeaponRef]
+		file.damageSourceIDToName[ akimboSourceID ] <- GetWeaponInfoFileKeyField_GlobalString( weaponRef, "shortprintname" )
+		file.damageSourceIDToImage[ akimboSourceID ] <- GetWeaponInfoFileKeyFieldAsset_Global( weaponRef, "hud_icon_akimbo_active" )
+		file.damageSourceIDToString[ akimboSourceID ] <- akimboWeaponRef
+
+		RegisterAdditionalMainWeapon( akimboWeaponRef )
+	}
 }
 
 

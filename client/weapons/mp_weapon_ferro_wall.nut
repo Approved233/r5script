@@ -1940,6 +1940,8 @@ void function FerroWallDarkVision_UpdatePlayerScreenVFX_Thread( entity player, i
 		{
 			file.darkVisionLimit1FX = StartParticleEffectOnEntity( player, debuglimitFXID, FX_PATTACH_POINT_FOLLOW, player.GetCockpit().LookupAttachment( "CAMERA" ) )
 			EffectSetControlPointVector( file.darkVisionLimit1FX, 2, <0, 0, 0> )
+			
+			EffectSetControlPointVector( file.darkVisionLimit1FX, 1, <0, 15, 0> )
 	
 	
 	
@@ -2122,6 +2124,15 @@ void function FerroWallDarkVision_StartVisualEffect( entity ent, int statusEffec
 		GfxDesaturateOn()
 
 	thread FerroWallDarkVision_UpdatePlayerScreenVFX_Thread( ent, statusEffect )
+
+	
+	int contextId = HighlightContext_GetId( "always_on_enemy_assist" )
+	if ( contextId == HIGHLIGHT_INVALID_ID )
+		return
+
+	HighlightContext_SetParam( contextId, 1, < 85, 0, 0 > )
+
+
 }
 
 void function FerroWallDarkVision_StopVisualEffect( entity ent, int statusEffect, bool actuallyChanged )
@@ -2139,6 +2150,15 @@ void function FerroWallDarkVision_StopVisualEffect( entity ent, int statusEffect
 	float fadeTime = 1.5
 	thread FerroWallDarkVision_FadePlayerScreenVFX_Thread( ent, fadeTime, file.darkVisionFXID, file.darkVisionLimit0FX, file.darkVisionLimit1FX, file.darkVisionLimit2FX, file.darkVisionLimit3FX, file.darkVisionFXAlpha, file.flashlightFXAlpha, true, statusEffect )
 	thread FerroWallDarkVision_ClearPlayerScreenFX_Thread( ent, fadeTime)
+
+
+	
+
+	int contextId = HighlightContext_GetId( "always_on_enemy_assist" )
+	if ( contextId == HIGHLIGHT_INVALID_ID )
+		return
+
+	HighlightContext_SetParam( contextId, 1, < 85, GetAlwaysOnHighlightRadius(), 0 > )
 
 
 }

@@ -10,10 +10,14 @@ global struct RTKPrefabInstantiator_Properties
 	array<asset> prefabArray
 	string instanceName = "PrefabInstance"
 	string bindingPath = ""
+	bool forceInstantiate = false
+
 	rtk_panel parentPanel
 	rtk_panel prevInstance
 	int prevIndex = -1
 	int propertyListenerID
+
+	void functionref( int index, rtk_panel newInstance ) onPrefabInstantiated
 }
 
 void function RTKPrefabInstantiator_OnInitialize( rtk_behavior self )
@@ -30,8 +34,9 @@ void function RTKPrefabInstantiator_Instantiate( rtk_behavior self )
 	
 	int index = self.PropGetInt( "prefabIndex" )
 	int prevIndex = self.PropGetInt( "prevIndex" )
+	bool forceInstantiate = self.PropGetBool( "forceInstantiate" )
 
-	if ( index == prevIndex )
+	if ( index == prevIndex && !forceInstantiate )
 		return
 
 	rtk_array prefabs = self.PropGetArray( "prefabArray" )
@@ -60,6 +65,8 @@ void function RTKPrefabInstantiator_Instantiate( rtk_behavior self )
 	{
 		newInstance.SetBindingRootPath( bindingPath )
 	}
+
+	self.InvokeEvent( "onPrefabInstantiated", index, newInstance )
 }
 
 

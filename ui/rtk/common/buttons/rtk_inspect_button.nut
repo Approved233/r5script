@@ -21,6 +21,10 @@ void function RTKInspectButton_OnEnable( rtk_behavior self )
 		friend.name     = self.PropGetString( "playerName" )
 		friend.hardware = self.PropGetString( "playerHardware" )
 		friend.id       = self.PropGetString( "playerUID" )
-		InspectFriend( friend, false )
+
+		friend.inleaderboard = true
+		friend.eadpData = CreateEADPDataFromEAID( friend.id )
+
+		InspectFriendForceEADP( friend, true )
 	} )
 }

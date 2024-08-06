@@ -507,7 +507,7 @@ void function UpdateMyFriendButton()
 {
 	Friend friend
 	friend.status   = eFriendStatus.ONLINE_INGAME
-	friend.hardware = GetUnspoofedPlayerHardware()
+	friend.hardware = GetPlayerHardware()
 	friend.ingame   = true
 	friend.id       = GetPlayerUID()
 
@@ -541,7 +541,7 @@ void function UpdateMyFriendButton()
 void function UpdateCanInviteSelf()
 {
 	string eaid                               = GetLocalClientPlayer().GetPINNucleusId()
-	int hardwareId                            = GetHardwareFromName( GetUnspoofedPlayerHardware() )
+	int hardwareId                            = GetHardwareFromName( GetPlayerHardware() )
 	array<EadpPresenceData> selfPresenceArray = EADP_GetPresenceForAccount( eaid )
 
 	s_socialFile.canInviteSelf = false
@@ -625,7 +625,7 @@ void function UpdateEADPQueryData( int queryType )
 					foreach ( presence in person.presences )
 					{
 
-							if ( presence.hardware == HARDWARE_PC && GetHardwareFromName( GetUnspoofedPlayerHardware() ) == HARDWARE_PC )
+							if ( presence.hardware == HARDWARE_PC && GetHardwareFromName( GetPlayerHardware() ) == HARDWARE_PC )
 								continue
 
 							
@@ -2093,7 +2093,7 @@ void function InspectFriend( Friend friend, bool attemptRTKMenu )
 	s_socialFile.actionFriend = friend
 	s_socialFile.actionFriendForceEADP = false
 
-	printt( "Inspect", friend.name, friend.id, friend.hardware, friend.unspoofedid, friend.unspoofedHardware )
+	printt( "Inspect", friend.name, friend.id, friend.hardware, friend.unspoofedid )
 	EmitUISound( "UI_Menu_FriendInspect" )
 
 
@@ -2431,7 +2431,7 @@ void function PreviewFriendCosmetics( bool isForLocalPlayer, CommunityUserInfo o
 		{
 			ItemFlavor tracker = GetTrackerItemFlavorForCommunityUserInfo( userInfo, character, trackerIndex )
 			int dataInteger    = GetTrackerDataIntegerFromCommunityUserInfo( userInfo, trackerIndex )
-			SendMenuGladCardPreviewCommand( eGladCardPreviewCommandType.TRACKER, trackerIndex, tracker, dataInteger )
+			SendMenuGladCardPreviewCommand( eGladCardPreviewCommandType.TRACKER_STAT, trackerIndex, tracker, dataInteger )
 		}
 
 		ItemFlavor introQuip = GetItemFlavorForCommunityUserInfo( userInfo, ePlayerStryderCharDataArraySlots.CHARACTER_INTRO_QUIP, eItemType.gladiator_card_intro_quip )
@@ -2707,7 +2707,7 @@ bool function IsPlayerEADPFriend()
 	if ( !FriendHasEAPDData( s_socialFile.actionFriend ) )
 		return false
 
-	int hardwareID = GetHardwareFromName( GetUnspoofedPlayerHardware() )
+	int hardwareID = GetHardwareFromName( GetPlayerHardware() )
 	if ( hardwareID == HARDWARE_PC && GetHardwareFromName( s_socialFile.actionFriend.hardware ) == HARDWARE_PC )
 	{
 		
@@ -2733,13 +2733,8 @@ void function OnUserReport(var button)
 	if( friendNucleusID != "" )
 	{
 		printt( "OnUserReport hardware:", s_socialFile.actionFriend.hardware )
-		printt( "OnUserReport unspoofedHardware:", s_socialFile.actionFriend.unspoofedHardware )
 
 		int hardwareID = GetHardwareFromName( s_socialFile.actionFriend.hardware )
-		if( s_socialFile.actionFriend.unspoofedHardware != "" )
-		{
-			hardwareID = GetHardwareFromName( s_socialFile.actionFriend.unspoofedHardware )
-		}
 
 		ClientToUI_ShowReportPlayerDialog( s_socialFile.actionFriend.name, hardwareID,
 			s_socialFile.actionFriend.id, friendNucleusID, "friendly" ) 
@@ -2821,7 +2816,7 @@ void function OnPlayerSendFriendRequest( var button )
 		}
 		else
 		{
-			DoInviteToBeFriend( ( friend.unspoofedid == "" || GetHardwareFromName( GetUnspoofedPlayerHardware() ) == HARDWARE_PC ) ? friend.id : friend.unspoofedid )
+			DoInviteToBeFriend( ( friend.unspoofedid == "" || GetHardwareFromName( GetPlayerHardware() ) == HARDWARE_PC ) ? friend.id : friend.unspoofedid )
 		}
 	}
 	else if ( FriendHasEAPDData( friend ) )
@@ -2863,6 +2858,9 @@ bool function CanSendEADPFriendRequest()
 	if ( s_socialFile.actionFriend.id == GetPlayerUID() )
 		return false
 
+	if ( s_socialFile.actionFriend.inleaderboard )
+		return false
+
 	CommunityFriends friends = GetFriendInfo()
 	bool use_unspoofedid_social = !GetConVarBool( "disable_use_unspoofedid_social" )
 	foreach ( id in friends.ids )
@@ -2894,12 +2892,15 @@ bool function CanSendEADPFriendRequest()
 
 bool function ViewProfileAllowed()
 {
-	string hardware       = GetUnspoofedPlayerHardware()
-	string friendHardware = s_socialFile.actionFriend.unspoofedHardware != "" ? s_socialFile.actionFriend.unspoofedHardware : s_socialFile.actionFriend.hardware
+	string hardware       = GetPlayerHardware()
+	string friendHardware = s_socialFile.actionFriend.hardware
 
 	string friendID = s_socialFile.actionFriend.id
 
 	if ( friendID == "" )
+		return false
+
+	if ( s_socialFile.actionFriend.inleaderboard )
 		return false
 
 	if ( hardware != friendHardware )
@@ -3104,6 +3105,16 @@ void function OnOpenSeasonSelectDialog()
 		return
 
 	Hud_Show( s_inspectFile.statsSeasonButton )
+
+	
+	if ( GetCurrentPlaylistVarBool( "rankv2_show_single_season", true ) )
+	{
+		for ( int i = seasonsAndRankedPeriods.len() - 1; i >= 0 ; i-- )
+		{
+			if ( Ranked_IsRankedV2SecondSplit( seasonsAndRankedPeriods[i] ) )
+				seasonsAndRankedPeriods.remove(i)
+		}
+	}
 
 	Hud_InitGridButtons( s_inspectFile.statsSeasonList, seasonsAndRankedPeriods.len() )
 	var scrollPanel = Hud_GetChild( s_inspectFile.statsSeasonList, "ScrollPanel" )

@@ -94,9 +94,9 @@ void function SetUpLandingButtons( rtk_behavior self )
 							EventsPanel_GoToPage( eEventsPanelPage.LANDING )
 							break
 
-
-
-
+						case eEventLandingPageButtonRedirect.COLLECTION_EVENT:
+							EventsPanel_GoToPage( eEventsPanelPage.COLLECTION_EVENT )
+							break
 
 						case eEventLandingPageButtonRedirect.MILESTONES:
 							EventsPanel_GoToPage( eEventsPanelPage.MILESTONES )
@@ -113,10 +113,32 @@ void function SetUpLandingButtons( rtk_behavior self )
 							{
 								JumpToEventTab( "ThemedShopPanel" )
 							}
+							OpenPromoLink( "storeOfferShop", "#VOID_RECKONING_STORE" )
 							break
 						case eEventLandingPageButtonRedirect.PLAY_MODE:
 							OpenGameModeSelectDialog()
 							break
+						case eEventLandingPageButtonRedirect.VGUI_PRIZE_TRACKER: 
+
+							EventsPanel_GoToPage( eEventsPanelPage.PRIZE_TRACKER )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+							break
+						case eEventLandingPageButtonRedirect.CUSTOM_DEEPLINK:
+							OpenPromoLink( buttonsData[newChildIndex].customDeeplinkType, buttonsData[newChildIndex].customDeeplink )
+						break
 					}
 				} )
 			}

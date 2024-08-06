@@ -5,6 +5,7 @@ global function Create_DamageIndicatorHUD
 global function GrenadeArrowThink
 global function RumbleForTitanDamage
 global function DamageIndicators
+global function ShowDamageArrow
 
 global function ServerCallback_PlayerTookDamage
 global function ServerCallback_PlayerTookDamage_NoAttacker
@@ -34,6 +35,10 @@ struct {
 	float        damageArrowTime = 0.0
 	vector       damageArrowAngles = <0, 0, 0>
 	vector       damageArrowPointCenter = <0, 0, 0>
+
+
+
+
 
 	table whizByFX = {
 		small = null,
@@ -351,8 +356,20 @@ void function DamageIndicators( vector origin, entity attacker, int damageSource
 	if ( show2DIndicator )
 		thread DamageIndicatorRui( origin, arrowType )
 
-	if ( show3DIndicator )
-		ShowDamageArrow( localViewPlayer, origin, arrowType, attacker )
+
+
+
+
+
+
+
+	{
+		if ( show3DIndicator )
+		{
+			ShowDamageArrow( localViewPlayer, origin, arrowType, attacker )
+		}
+	}
+
 }
 
 
@@ -809,11 +826,6 @@ asset function GetIndicatorModel( entity grenade )
 			return GRENADE_INDICATOR_PHASE_DOOR
 
 
-
-
-
-
-
 	if ( grenade instanceof C_PlayerWaypoint )
 	{
 		switch( grenade.GetWaypointInt( 0 ) )
@@ -857,6 +869,12 @@ asset function GetIndicatorModel( entity grenade )
 			case eThreatIndicatorID.GRENADE_INDICATOR_PHASE_DOOR:
 				return GRENADE_INDICATOR_PHASE_DOOR
 				break
+
+
+
+
+
+
 
 
 			default:
@@ -1003,12 +1021,26 @@ void function ShowDamageArrow( entity player, vector damageOrigin, int arrowType
 	if ( file.damageArrows.len() == 0 ) 
 		return
 
-	table arrowData = file.damageArrows[file.currentDamageArrow]
-	entity arrow    = expect entity( arrowData.arrow )
+	table arrowData
 
-	file.currentDamageArrow++
-	if ( file.currentDamageArrow >= file.numDamageArrows )
-		file.currentDamageArrow = 0
+
+
+
+
+
+
+
+	{
+		arrowData = file.damageArrows[file.currentDamageArrow]
+
+		file.currentDamageArrow++
+		if ( file.currentDamageArrow >= file.numDamageArrows )
+		{
+			file.currentDamageArrow = 0
+		}
+	}
+
+	entity arrow = expect entity( arrowData.arrow )
 
 	float time = Time()
 
@@ -1045,6 +1077,36 @@ void function ShowDamageArrow( entity player, vector damageOrigin, int arrowType
 	UpdateDamageArrowVars( player )
 	UpdateDamageArrowAngle( arrowData )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 void function PulseDamageArrow( entity arrow, int arrowType )

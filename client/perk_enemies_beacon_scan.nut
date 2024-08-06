@@ -19,6 +19,11 @@ global function ServerToClient_BeaconScanEnemy_Notifications
 global function PlayEffects_SurveyBeacon_Laser
 global function StopEffects_SurveyBeacon_Laser
 
+global function BeaconScanEnemy_GetScannedEnemies
+global function BeaconScanCompanion_SetScanStartTime
+global function BeaconScanCompanion_GetScanStartTime
+
+
 
 struct
 {
@@ -32,13 +37,17 @@ struct
 		array< var > fullMapRuis
 		array< var > minimapRuis
 
+		array< entity > scannedEnemies
+		table< entity, float > companionScanTime
+
+
 } file
 
 void function Perk_EnemyBeaconScan_Init()
 {
 
-		Remote_RegisterClientFunction( "BeaconScanEnemy_ShowEnemiesOnMinimap", "entity", "entity", "entity", "float", -1.0, 16000.0, 15, "float", -1.0, 60.0, 6  )
-		Remote_RegisterClientFunction( "BeaconScanEnemy_ShowBeaconLocationOnMinimap", "entity", "entity" )
+		Remote_RegisterClientFunction( "BeaconScanEnemy_ShowEnemiesOnMinimap", "entity", "entity", "vector", -MAX_MAP_BOUNDS, MAX_MAP_BOUNDS, 32, "float", -1.0, 50000.0, 15, "float", -1.0, 60.0, 6  )
+		Remote_RegisterClientFunction( "BeaconScanEnemy_ShowBeaconLocationOnMinimap", "typed_entity", "player", "vector", -MAX_MAP_BOUNDS, MAX_MAP_BOUNDS, 32 )
 		Remote_RegisterClientFunction( "ServerToClient_BeaconScanEnemy_Notifications", "entity", "entity" )
 		Remote_RegisterClientFunction( "StopEffects_SurveyBeacon_Laser", "entity", "entity" )
 
@@ -111,6 +120,11 @@ bool function EnemyBeaconScan_UseNewBeaconModel()
 
 bool function EnemyBeaconScan_RevealScannerLocation()
 {
+
+	if( Perk_ScoutExpert_FastBeaconScan_Enabled() )
+		return false
+
+
 	return GetCurrentPlaylistVarBool( "perk_enemy_beacon_use_scanner_location", true )
 }
 
@@ -122,6 +136,13 @@ float function EnemyBeaconScan_WarningRange()
 
 float function EnemyBeaconScan_GetBeaconScanDuration()
 {
+
+	if( Perk_ScoutExpert_FastBeaconScan_Enabled() )
+	{
+		return Perk_ScoutExpert_FastBeaconScan_ScanDuration()
+	}
+
+
 	return GetCurrentPlaylistVarFloat( "perk_enemy_beacon_scan_duration", 30.0 )
 }
 
@@ -202,6 +223,23 @@ void function RegisterEnemySurveyBeaconData(  entity player, string calloutLine,
 
 	data.calloutLine = calloutLine
 	data.scanType = eBeaconScanType.BEACON_SCAN_ENEMY
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -465,16 +503,65 @@ bool function BeaconScanEnemy_CanUseBeacon( entity player, entity beacon )
 
 
 
-void function BeaconScanEnemy_ShowBeaconLocationOnMinimap( entity enemy, entity beacon )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+void function BeaconScanEnemy_ShowBeaconLocationOnMinimap( entity enemy, vector pulseOrigin )
 {
 	if ( enemy != GetLocalViewPlayer() )
 		return
 
-	vector pulseOrigin = beacon.GetOrigin()
 	FullMap_PlayCryptoPulseSequence( pulseOrigin, false, EnemyBeaconScan_GetBeaconScanDuration() ) 
 }
 
-void function BeaconScanEnemy_ShowEnemiesOnMinimap( entity playerWhoScanned, entity player, entity beacon, float scanRangeParm, float scanDurationParm )
+void function BeaconScanEnemy_ShowEnemiesOnMinimap( entity playerWhoScanned, entity player, vector scanLocation, float scanRangeParm, float scanDurationParm )
 {
 	if ( player != GetLocalViewPlayer() )
 		return
@@ -490,48 +577,58 @@ void function BeaconScanEnemy_ShowEnemiesOnMinimap( entity playerWhoScanned, ent
 	string playerName = playerWhoScanned == player ? Localize( "#OBITUARY_YOU" ) : playerWhoScanned.GetPlayerName()
 
 	Obituary_Print_Localized( Localize( "#SURVIVAL_HUD_REVEALED_ENEMIES", playerName ), playerNameColor )
-	thread BeaconScanEnemy_DisplayEnemiesOnMinimap_Thread( player, beacon, scanRangeParm, scanDurationParm )
+	thread BeaconScanEnemy_DisplayEnemiesOnMinimap_Thread( player, scanLocation, scanRangeParm, scanDurationParm )
 }
 
-void function BeaconScanEnemy_DisplayEnemiesOnMinimap_Thread( entity player, entity beacon, float scanRangeParm, float scanDurationParm )
+
+array< entity > function BeaconScanEnemy_GetScannedEnemies()
 {
-	if ( player != GetLocalViewPlayer() )
-		return
+	return file.scannedEnemies
+}
 
-	player.EndSignal( "OnDestroy" )
-	player.EndSignal( "OnDeath" )
+void function BeaconScanCompanion_SetScanStartTime( entity beacon, float time )
+{
+	file.companionScanTime[beacon] <- time
+}
 
+float function BeaconScanCompanion_GetScanStartTime( entity beacon )
+{
+	if( beacon in file.companionScanTime )
+		return file.companionScanTime[beacon]
+
+	return -1
+}
+
+
+void function BeaconScanEnemy_SateliteScanEnemies( entity player, vector scanLocation, float scanRangeParm, float timeToStartFade, float timeToEndFade )
+{
 	int team = player.GetTeam()
 	array<entity> aliveEnemies = GetPlayerArrayOfEnemies_Alive( team )
 
 	
 	if( scanRangeParm > 0 )
 	{
+		array<entity> enemiesToRemove
 		float scanRange = scanRangeParm > 0 ? scanRangeParm : EnemyBeaconScan_WarningRange()
 		float scanRangeSqr = scanRange * scanRange
 		foreach( enemy in aliveEnemies )
 		{
-			float distToBeaconSqr = Distance2DSqr( enemy.GetOrigin(), beacon.GetOrigin() )
+			float distToBeaconSqr = Distance2DSqr( enemy.GetOrigin(), scanLocation )
 			if( distToBeaconSqr > scanRangeSqr )
 			{
-				aliveEnemies.removebyvalue( enemy )
+				enemiesToRemove.append( enemy )
 			}
+		}
+
+		foreach( enemy in enemiesToRemove )
+		{
+			aliveEnemies.fastremovebyvalue( enemy )
 		}
 	}
 
-	float scanDuration = scanDurationParm > 0 ? scanDurationParm : EnemyBeaconScan_GetBeaconScanDuration()
-	float endTime = Time() + scanDuration
-	float timeToStartFade = Time() + ( scanDuration/2 ) 
-	float timeToEndFade = endTime
+		file.scannedEnemies = aliveEnemies
+		array<vector> scannedPositions
 
-	array<entity> entsForTracking
-
-	OnThreadEnd(
-		function() : ( player )
-		{
-			BeaconScanEnemy_ClearEnemiesOnMinimap( player )
-		}
-	)
 
 	foreach( entity enemy in aliveEnemies )
 	{
@@ -549,16 +646,140 @@ void function BeaconScanEnemy_DisplayEnemiesOnMinimap_Thread( entity player, ent
 		file.minimapRuis.append( mRui )
 		RuiSetGameTime( mRui, "fadeStartTime", timeToStartFade )
 		RuiSetGameTime( mRui, "fadeEndTime", timeToEndFade )
+
+
+		scannedPositions.append( enemy.GetOrigin() )
+
 	}
 
-	vector pulseOrigin = beacon.GetOrigin()
 
-	FullMap_PlayCryptoPulseSequence( pulseOrigin, true, EnemyBeaconScan_GetBeaconScanDuration() )
+		thread BeaconScanEnemy_UpdateMinimapScanBorder_Thread( player, scannedPositions, timeToEndFade )
+
+}
+
+
+void function BeaconScanEnemy_UpdateMinimapScanBorder_Thread( entity player, array<vector> scanLocations, float endTime )
+{
+	player.EndSignal( "OnDestroy", "OnDeath" )
+
+	array<string> indexToVar = ["rightScanned", "topRightScanned", "topScanned", "topLeftScanned", "leftScanned", "botLeftScanned", "botScanned", "botRightScanned"]
+	
+	float borderTreshold = Minimap_GetFloatForKey( "displayDist" ) * 2
+	while( Time() < endTime )
+	{
+		vector playerOrigin = player.GetOrigin()
+		array<bool> hasEnemy = [false, false, false, false, false, false, false, false]
+		foreach( vector enemyPos in scanLocations )
+		{
+			vector dif = enemyPos - playerOrigin
+			if( fabs( dif.x ) < borderTreshold && fabs( dif.y ) < borderTreshold )
+				continue
+
+			dif.z = 0
+			dif = Normalize( dif )
+			float angle = atan2( dif.y, dif.x ) * RAD_TO_DEG
+			
+			
+			for( int i=0; i < hasEnemy.len(); i++ )
+			{
+				if( hasEnemy[i] )
+					continue
+				float angleDiff = AngleDiff( i*45.0, angle )
+				if( fabs( angleDiff ) < ( 45.0 / 2.0 ) )
+				{
+					hasEnemy[i] = true
+					break
+				}
+			}
+
+		}
+
+		var ruiFrame = GetMinimapFrameRui()
+		if( ruiFrame != null )
+		{
+			for( int i=0; i < indexToVar.len(); i++ )
+			{
+				RuiSetBool( ruiFrame, indexToVar[i], hasEnemy[i] )
+			}
+		}
+		WaitFrame()
+	}
+
+	var ruiFrame = GetMinimapFrameRui()
+	if( ruiFrame != null )
+	{
+		for( int i=0; i < indexToVar.len(); i++ )
+		{
+			RuiSetBool( ruiFrame, indexToVar[i], false )
+		}
+	}
+}
+
+
+void function BeaconScanEnemy_DisplayEnemiesOnMinimap_Thread( entity player, vector scanLocation, float scanRangeParm, float scanDurationParm )
+{
+	if ( player != GetLocalViewPlayer() )
+		return
+
+	player.EndSignal( "OnDestroy" )
+	player.EndSignal( "OnDeath" )
+
+	float scanDuration = scanDurationParm > 0 ? scanDurationParm : EnemyBeaconScan_GetBeaconScanDuration()
+	float curTime = Time()
+	float endTime =  curTime + scanDuration
+	float timeToStartFade = curTime + ( scanDuration/2 ) 
+	float timeToEndFade = endTime
+
+	OnThreadEnd(
+		function() : ( player )
+		{
+			BeaconScanEnemy_ClearEnemiesOnMinimap( player )
+		}
+	)
+
+
+		float rescanWait = Perk_ScoutExpert_RescanWait()
+		if( Perk_ScoutExpert_FastBeaconScan_Enabled() )
+		{
+			timeToStartFade = curTime + rescanWait - .5
+			timeToEndFade = curTime + rescanWait
+		}
+
+
+	BeaconScanEnemy_SateliteScanEnemies( player, scanLocation, scanRangeParm, timeToStartFade, timeToEndFade )
+
+
+
+	if( Perk_ScoutExpert_FastBeaconScan_Enabled() )
+	{
+		FullMap_PlayCryptoPulseSequence( scanLocation, true, EnemyBeaconScan_GetBeaconScanDuration(), scanRangeParm )
+	}
+	else
+
+	{
+		FullMap_PlayCryptoPulseSequence( scanLocation, true, EnemyBeaconScan_GetBeaconScanDuration() )
+	}
+
+
+	float rescanTime = Time() + Perk_ScoutExpert_RescanWait()
 
 	while ( Time() < endTime ) 
 	{
 		if( !IsValid(player) )
 			break
+
+
+		curTime = Time()
+		if( Perk_ScoutExpert_FastBeaconScan_Enabled() && curTime > rescanTime )
+		{
+			rescanTime = curTime + rescanWait
+			BeaconScanEnemy_ClearEnemiesOnMinimap( player )
+			timeToStartFade = curTime + rescanWait / 2
+			timeToEndFade = curTime + rescanWait
+			BeaconScanEnemy_SateliteScanEnemies( player, scanLocation, scanRangeParm, timeToStartFade, timeToEndFade )
+		}
+
+
 		WaitFrame()
 	}
 }
@@ -584,13 +805,16 @@ void function BeaconScanEnemy_ClearEnemiesOnMinimap( entity player )
 
 void function ServerToClient_BeaconScanEnemy_Notifications( entity player, entity beacon )
 {
-	int team = player.GetTeam()
 	
 	bool showSquadInfo =  GetCurrentPlaylistVarBool( "beacon_show_squad_info", false )
 	if (showSquadInfo)
 		SurveyBeacon_ShowSquadInfo()
 
-	EmitSoundOnEntity( beacon, "Recon_SurveyBeacon_EnemiesScanned_UI_1P" )
+	entity soundEnt = beacon
+	if ( !IsValid( beacon ) )
+		soundEnt = player
+
+	EmitSoundOnEntity( soundEnt, "Recon_SurveyBeacon_EnemiesScanned_UI_UPDATED_1P" )
 }
 
 

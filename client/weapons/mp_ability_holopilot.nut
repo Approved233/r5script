@@ -101,8 +101,6 @@ void function Decoy_Init()
 
 		PrecacheParticleSystem( DECOY_AR_MARKER )
 
-		AddCreateCallback( "player_decoy", OnDecoyCreate )
-
 		RegisterConCommandTriggeredCallback( "+scriptCommand5", AttemptToggleDecoys )
 
 
@@ -117,6 +115,15 @@ void function Decoy_Init()
 	PrecacheScriptString( DECOY_SCRIPTNAME )
 	PrecacheScriptString( CONTROLLED_DECOY_SCRIPTNAME )
 }
+
+
+
+
+
+
+
+
+
 
 
 
@@ -301,6 +308,23 @@ var function OnWeaponPrimaryAttack_holopilot( entity weapon, WeaponPrimaryAttack
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 		if ( chargeLevel == 1 )
 			CreateARIndicator( weaponOwner )
 
@@ -318,6 +342,10 @@ int function GetMaxAllowedTacticalDecoys( entity player )
 
 	return 1
 }
+
+
+
+
 
 
 
@@ -1357,10 +1385,6 @@ bool function OnWeaponChargeLevelIncreased_holopilot( entity weapon )
 
 
 
-void function OnDecoyCreate( entity decoy )
-{
-	
-}
 void function AttemptToggleDecoys( entity player )
 {
 	if ( !TryCharacterButtonCommonReadyChecks( player ) )

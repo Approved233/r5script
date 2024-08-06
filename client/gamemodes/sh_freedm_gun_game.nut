@@ -85,9 +85,6 @@ struct
 
 void function GunGame_Init()
 {
-	if( !GunGame_IsModeEnabled() )
-		return
-
 
 
 
@@ -136,6 +133,23 @@ void function GunGame_Init()
 	AddCallback_GameStateEnter( eGameState.PickLoadout, GunGame_OnPlayerGameStateEntered )
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

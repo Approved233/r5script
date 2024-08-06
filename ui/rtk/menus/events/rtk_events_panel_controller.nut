@@ -53,24 +53,23 @@ global struct RTKEventShopInfoModel
 	SettingsAssetGUID calEventShop
 }
 
-
-
-
-
-
-
-
-
-
-
 global enum eEventsPanelPage
 {
 	LANDING = 0
-	MILESTONES = 1
-	COLLECTION = 2
-	EVENT_SHOP = 3
-}
 
+	COLLECTION_EVENT = 1
+	MILESTONES = 2
+	COLLECTION = 3
+	EVENT_SHOP = 4
+
+	PRIZE_TRACKER = 5
+
+
+
+
+
+
+}
 
 global enum eEventGiftingButtonState
 {
@@ -100,7 +99,10 @@ struct
 {
 	ItemFlavor ornull baseEvent
 
+	ItemFlavor ornull collectionEvent
 
+
+	array<ItemFlavor> buffetEvent
 
 	ItemFlavor ornull activeEventShop
 	ItemFlavor ornull milestoneEvent
@@ -140,7 +142,10 @@ const string COLLECTION_PAGE_NAME = "Collection Page"
 const string EVENT_SHOP_NAME = "Event Shop Page"
 
 
+	const string COLLECTION_EVENT_NAME = "Collection Event Page"
 
+
+	const string PRIZE_TRACKER_NAME = "Prize Tracker Page"
 
 
 bool function EventsPanel_IsPlaylistVarEnabled()
@@ -160,20 +165,20 @@ void function RTKEventsPanel_OnInitialize( rtk_behavior self )
 	}
 
 
-	if ( EventShop_GetCurrentActiveEventShop() == null )
+
+
+
+
+
+
+
+
+	if ( GetActiveBaseEvent( GetUnixTimestamp() ) == null )
 	{
-		
-		Warning("RTKEventsPanel_OnInitialize: no active event shop")
+		Warning("RTKEventsPanel_OnInitialize: no active base event")
 		file.didInitialize = false
 		return
 	}
-
-
-
-
-
-
-
 
 
 	if ( !GRX_AreOffersReady() )
@@ -203,6 +208,7 @@ void function RTKEventsPanel_OnInitialize( rtk_behavior self )
 
 	RTKEventsPanelController_SendPageViewEvent( self )
 	fileTelemetry.linkName = ""
+
 }
 
 void function RTKEventsPanel_OnDestroy( rtk_behavior self )
@@ -401,7 +407,10 @@ void function OpenSweepstakesRules( var button )
 void function EventsPanel_SetOpenPageIndex( int page )
 {
 	UpdateMilestoneInstantiatedEnumMap()
-	file.currentPage = file.enumToInstantiatedPage[page]
+	if ( page in file.enumToInstantiatedPage )
+		file.currentPage = file.enumToInstantiatedPage[page]
+	else
+		Warning( "parameter page %d is not find in the array file.enumToInstantiatedPage, use current page %d instead.", page, file.currentPage )
 }
 
 int function EventsPanel_GetCurrentPageIndex()
@@ -432,42 +441,42 @@ void function InstantiateActiveEventsPanels( rtk_behavior self )
 			file.indexToInstantiatedPage[ count ] <- eEventsPanelPage.LANDING
 		}
 
+		file.collectionEvent = GetActiveCollectionEvent( GetUnixTimestamp() )
+		
+		if ( file.collectionEvent != null && CollectionEvent_IsV2PlaylistVarEnabled() )
+		{
+			count++
+			RTKPanel_Instantiate( $"ui_rtk/menus/events/collection/collection_event_panel.rpak", context, COLLECTION_EVENT_NAME )
+			file.enumToInstantiatedPage[ eEventsPanelPage.COLLECTION_EVENT ] <- count
+			file.indexToInstantiatedPage[ count ] <- eEventsPanelPage.COLLECTION_EVENT
+		}
 
 
-
-
-
-
-
-
-
-
-
-			file.milestoneEvent = GetActiveMilestoneEvent( GetUnixTimestamp() )
-			
-			if ( file.milestoneEvent != null && MilestoneEvent_IsPlaylistVarEnabled() )
+		file.milestoneEvent = GetActiveMilestoneEvent( GetUnixTimestamp() )
+		
+		if ( file.milestoneEvent != null && MilestoneEvent_IsPlaylistVarEnabled() )
+		{
+			if ( !MilestoneEvent_UseOriginalEventTabLayout() )
 			{
-				if ( !MilestoneEvent_UseOriginalEventTabLayout() )
-				{
-					RTKPanel_Instantiate( $"ui_rtk/menus/events/milestone/milestone_event_panel.rpak", context, "Milestone Event" )
-					count++
-					file.enumToInstantiatedPage[ eEventsPanelPage.MILESTONES ] <- count
-					file.indexToInstantiatedPage[ count ] <- eEventsPanelPage.MILESTONES
-				}
-				else
-				{
-					RTKPanel_Instantiate( $"ui_rtk/menus/events/milestone/milestone_event_main_panel.rpak", context, MILESTONE_PAGE_NAME )
-					RTKPanel_Instantiate( $"ui_rtk/menus/events/milestone/milestone_event_collection_panel.rpak", context, COLLECTION_PAGE_NAME )
-					count++
-					file.enumToInstantiatedPage[ eEventsPanelPage.MILESTONES ] <- count
-					file.indexToInstantiatedPage[ count ] <- eEventsPanelPage.MILESTONES
-					count++
-					file.enumToInstantiatedPage[ eEventsPanelPage.COLLECTION ] <- count
-					file.indexToInstantiatedPage[ count ] <- eEventsPanelPage.COLLECTION
-				}
-
-				thread ClearItemPreviewOnStart_Thread()
+				RTKPanel_Instantiate( $"ui_rtk/menus/events/milestone/milestone_event_panel.rpak", context, "Milestone Event" )
+				count++
+				file.enumToInstantiatedPage[ eEventsPanelPage.MILESTONES ] <- count
+				file.indexToInstantiatedPage[ count ] <- eEventsPanelPage.MILESTONES
 			}
+			else
+			{
+				RTKPanel_Instantiate( $"ui_rtk/menus/events/milestone/milestone_event_main_panel.rpak", context, MILESTONE_PAGE_NAME )
+				RTKPanel_Instantiate( $"ui_rtk/menus/events/milestone/milestone_event_collection_panel.rpak", context, COLLECTION_PAGE_NAME )
+				count++
+				file.enumToInstantiatedPage[ eEventsPanelPage.MILESTONES ] <- count
+				file.indexToInstantiatedPage[ count ] <- eEventsPanelPage.MILESTONES
+				count++
+				file.enumToInstantiatedPage[ eEventsPanelPage.COLLECTION ] <- count
+				file.indexToInstantiatedPage[ count ] <- eEventsPanelPage.COLLECTION
+			}
+
+			thread ClearItemPreviewOnStart_Thread()
+		}
 
 		file.activeEventShop = EventShop_GetCurrentActiveEventShop()
 		
@@ -478,6 +487,18 @@ void function InstantiateActiveEventsPanels( rtk_behavior self )
 			file.enumToInstantiatedPage[ eEventsPanelPage.EVENT_SHOP ] <- count
 			file.indexToInstantiatedPage[ count ] <- eEventsPanelPage.EVENT_SHOP
 		}
+
+		file.buffetEvent = GetActiveBuffetEventArray( GetUnixTimestamp() )
+		if ( file.buffetEvent.len() > 0 && CollectionEvent_IsV2PlaylistVarEnabled() )
+		{
+			count++
+			RTKPanel_Instantiate( $"ui_rtk/menus/events/prize_tracker/events_prize_tracker.rpak", context, PRIZE_TRACKER_NAME )
+			file.enumToInstantiatedPage[ eEventsPanelPage.PRIZE_TRACKER ] <- count
+			file.indexToInstantiatedPage[ count ] <- eEventsPanelPage.PRIZE_TRACKER
+
+			thread ClearItemPreviewOnStart_Thread()
+		}
+
 	}
 }
 
@@ -488,14 +509,14 @@ void function SetUpPaginationBehavior( rtk_behavior self )
 	{
 		expect rtk_behavior( pagination )
 		file.paginationBehavior = pagination
-		
-
-
-
-
-
 
 		pagination.PropSetInt( "startPageIndex", file.currentPage )
+
+		if ( file.currentPage < file.indexToInstantiatedPage.len() )
+		{
+			file.currentPage = file.indexToInstantiatedPage[file.currentPage]
+		} 
+
 		self.AutoSubscribe( pagination, "onScrollStarted", function () : ( self, pagination ) {
 
 			int targetPageIndex = RTKPagination_GetTargetPage( pagination )
@@ -650,16 +671,16 @@ void function UpdateVGUIFooterButtons()
 			break
 		}
 
-
-
-
-
-
-
-
-
-
-
+		case eEventsPanelPage.COLLECTION_EVENT: 
+		{
+			file.secondFooter.mouseLabel = "#MILESTONE_BUTTON_EVENT_INFO"
+			file.secondFooter.gamepadLabel = "#MILESTONE_BUTTON_EVENT_INFO"
+			file.secondFooter.activateFunc = OpenCollectionEventAboutPageWithEventTabTelemetry
+			file.thirdFooter.gamepadLabel = "#GIFT_INFO_TITLE"
+			file.thirdFooter.mouseLabel = "#GIFT_INFO_TITLE"
+			file.thirdFooter.activateFunc = OpenGiftInfoPopUpWithEventTabTelemetry
+			break
+		}
 
 		case eEventsPanelPage.EVENT_SHOP: 
 		{
@@ -668,6 +689,15 @@ void function UpdateVGUIFooterButtons()
 			file.secondFooter.activateFunc = OpenEventShopTutorial
 			break
 		}
+
+		case eEventsPanelPage.PRIZE_TRACKER: 
+		{
+			file.secondFooter.mouseLabel = "#MILESTONE_BUTTON_EVENT_INFO"
+			file.secondFooter.gamepadLabel = "#MILESTONE_BUTTON_EVENT_INFO"
+			file.secondFooter.activateFunc = OpenCollectionEventAboutPageWithEventTabTelemetry
+			break
+		}
+
 	}
 	UI_SetPresentationType( ePresentationType.COLLECTION_EVENT )
 	UpdateFooterOptions()
@@ -681,16 +711,23 @@ void function OpenCurrentPanelAdditionalInfo( var button )
 		OpenCollectionEventAboutPageWithEventTabTelemetry( button )
 	}
 
-
-
-
-
-
+	else if ( file.currentPage == eEventsPanelPage.COLLECTION_EVENT ) 
+	{
+		SetCollectionEventAboutPageEvent( file.collectionEvent )
+		OpenCollectionEventAboutPageWithEventTabTelemetry( button )
+	}
 
 	else if ( file.currentPage == eEventsPanelPage.EVENT_SHOP ) 
 	{
 		OpenEventShopTutorial( button )
 	}
+
+	else if ( file.currentPage == eEventsPanelPage.PRIZE_TRACKER ) 
+	{
+		SetCollectionEventAboutPageEvent( file.collectionEvent )
+		OpenCollectionEventAboutPageWithEventTabTelemetry( button )
+	}
+
 }
 
 string function GetPaginationButtonText( bool isPrev )
@@ -700,10 +737,10 @@ string function GetPaginationButtonText( bool isPrev )
 		case eEventsPanelPage.LANDING: 
 		{
 
-
-
-
-
+			if ( file.collectionEvent )
+			{
+				return isPrev ? "" : "#S19ME01_LANDING_PAGE_BUTTON_COLLECTION_NAME"
+			}
 
 			if ( GRX_IsOfferRestricted() )
 			{
@@ -718,10 +755,10 @@ string function GetPaginationButtonText( bool isPrev )
 		case eEventsPanelPage.MILESTONES: 
 		{
 
-
-
-
-
+			if ( file.collectionEvent )
+			{
+				return isPrev ? "#S19ME01_LANDING_PAGE_BUTTON_COLLECTION_NAME" : "#S19ME01_LANDING_PAGE_BUTTON_COLLECTION_NAME"
+			}
 
 			return isPrev ? "#S19ME01_LANDING_PAGE_BUTTON_LANDING_NAME" : "#S19ME01_LANDING_PAGE_BUTTON_COLLECTION_NAME"
 			break
@@ -739,20 +776,37 @@ string function GetPaginationButtonText( bool isPrev )
 			break
 		}
 
+		case eEventsPanelPage.COLLECTION_EVENT: 
+		{
+			if ( file.milestoneEvent )
+			{
+				return isPrev ? "#S19ME01_LANDING_PAGE_BUTTON_LANDING_NAME" : "#S19ME01_LANDING_PAGE_BUTTON_PACKS_NAME"
+			}
 
+			else if ( file.buffetEvent.len() > 0 )
+			{
+				return isPrev ? "#S19ME01_LANDING_PAGE_BUTTON_LANDING_NAME" : "#S19ME01_LANDING_PAGE_BUTTON_PRIZE_TRACKER_NAME"
+			}
 
-
-
-
-
-
-
+			return isPrev ? "#S19ME01_LANDING_PAGE_BUTTON_LANDING_NAME" : ""
+		}
 
 		case eEventsPanelPage.EVENT_SHOP: 
 		{
 			return isPrev ? "#S19ME01_LANDING_PAGE_BUTTON_COLLECTION_NAME" : ""
 			break
 		}
+
+		case eEventsPanelPage.PRIZE_TRACKER:
+		{
+			if ( file.collectionEvent )
+			{
+				return isPrev ? "#S19ME01_LANDING_PAGE_BUTTON_COLLECTION_NAME" : "#S19ME01_LANDING_PAGE_BUTTON_COLLECTION_NAME"
+			}
+			return isPrev ? "#S19ME01_LANDING_PAGE_BUTTON_LANDING_NAME" : "#S19ME01_LANDING_PAGE_BUTTON_COLLECTION_NAME"
+			break
+		}
+
 	}
 	return "#PLAYER_SEARCH_NOT_FOUND"
 }
@@ -786,6 +840,20 @@ void function UpdateDefaultItemPreviews()
 			Signal( uiGlobal.signalDummy, "EndAutoAdvanceFeaturedItems" )
 			EventShop_UpdatePreviewedOffer()
 		}
+
+		else if ( file.currentPage == eEventsPanelPage.COLLECTION_EVENT )
+		{
+			Signal( uiGlobal.signalDummy, "EndAutoAdvanceFeaturedItems" )
+			RTKCollectionEventPanel_UpdateChaseItem()
+		}
+
+
+		else if ( file.currentPage == eEventsPanelPage.PRIZE_TRACKER )
+		{
+			Signal( uiGlobal.signalDummy, "EndAutoAdvanceFeaturedItems" )
+			RTKEventsPrizeTrackerPanel_UpdatePresentationModel()
+		}
+
 		else
 		{
 			Signal( uiGlobal.signalDummy, "EndAutoAdvanceFeaturedItems" )
@@ -803,11 +871,11 @@ void function UpdateMilestoneInstantiatedEnumMap()
 		file.enumToInstantiatedPage[ eEventsPanelPage.LANDING ] <- count++
 	}
 
-
-
-
-
-
+		file.collectionEvent = GetActiveCollectionEvent( GetUnixTimestamp() )
+		if ( file.collectionEvent != null )
+		{
+			file.enumToInstantiatedPage[ eEventsPanelPage.COLLECTION_EVENT ] <- count++
+		}
 
 
 	file.milestoneEvent = GetActiveMilestoneEvent( GetUnixTimestamp() )
@@ -824,6 +892,13 @@ void function UpdateMilestoneInstantiatedEnumMap()
 	{
 		file.enumToInstantiatedPage[ eEventsPanelPage.EVENT_SHOP ] <- count++
 	}
+
+	file.buffetEvent = GetActiveBuffetEventArray( GetUnixTimestamp() )
+	if ( file.buffetEvent.len() > 0 )
+	{
+		file.enumToInstantiatedPage[ eEventsPanelPage.PRIZE_TRACKER ] <- count++
+	}
+
 }
 
 int function GetEventPurchaseButtonState( array<GRXScriptOffer> offers )

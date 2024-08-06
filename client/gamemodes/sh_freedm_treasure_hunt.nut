@@ -1,7 +1,6 @@
 
 
 global function TreasureHunt_Init
-global function TreasureHunt_RegisterNetworking
 
 
 global function ServerCallback_TreasureHunt_DisplayMessageToClient
@@ -28,6 +27,12 @@ global function TreasureHunt_GetStarterPingFromTraceBlockerPing
 
 
 global const TREASUREHUNT_OBJECTIVE_SCRIPTNAME = "treasurehunt_objective"
+
+
+
+
+
+
 
 
 
@@ -222,8 +227,7 @@ struct
 
 void function TreasureHunt_Init()
 {
-	if ( !TreasureHunt_IsModeEnabled() )
-		return
+	TreasureHunt_RegisterNetworking()
 
 
 	PrecacheParticleSystem( CAPTURE_ZONE_INCOMING_VFX )
@@ -235,7 +239,6 @@ void function TreasureHunt_Init()
 
 	CaptureObjectivePing_AddCallback_SetGetCaptureObjectiveIDFromWaypointFunction( TreasureHunt_GetObjectiveIDFromWaypoint )
 	CaptureObjectivePing_AddCallback_SetIsCaptureObjectivePingObjectiveWaypoint( GetIsWaypointTreasureHuntObjectiveWaypoint )
-
 
 
 
@@ -290,9 +293,6 @@ void function TreasureHunt_Init()
 
 void function TreasureHunt_RegisterNetworking()
 {
-	if ( !TreasureHunt_IsModeEnabled() )
-		return
-
 	int pingCountMax = GetExpectedSquadSize() + 1
 	Remote_RegisterClientFunction( "ServerCallback_TreasureHunt_DisplayMessageToClient", "int", 0, eTreasureHuntMessageIndex._count, "int", 0, GetScoreLimit_FromPlaylist() + 1 )
 	RegisterNetworkedVariable( "treasureHunt_PlayerTimeOnObjectives", SNDC_PLAYER_GLOBAL, SNVT_TIME, 0.0 )
@@ -310,6 +310,16 @@ void function TreasureHunt_RegisterNetworking()
 
 
 }
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -375,13 +385,6 @@ int function GetMaxActiveObjectiveCount()
 
 	return minint( playlistDefinedCount, nameCount )
 }
-
-
-
-
-
-
-
 
 
 
@@ -1523,9 +1526,66 @@ void function TreasureHunt_RegisterTimedEvents()
 
 
 
-const vector ZONE_NORMAL_COLOR = <16, 67, 127>
-const vector ZONE_CONTESTED_COLOR = <247, 60, 82> / 255.0 
-const vector ZONE_SUDDENDEATH_COLOR = <247, 60, 82> / 255.0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const vector ZONE_NEUTRAL_COLOR = <230, 230, 230> 
+const vector ZONE_CONTESTED_COLOR = <247, 60, 82> 
+const vector ZONE_SUDDENDEATH_COLOR = <247, 60, 82> 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2357,7 +2417,11 @@ vector function TreasureHunt_GetTeamColor( int team )
 {
 	int squadIndex = Squads_GetSquadUIIndex( team )
 
-	return Squads_GetSquadColor( squadIndex )
+
+
+
+		return Squads_GetSquadColor( squadIndex )
+
 }
 
 
@@ -2477,7 +2541,10 @@ void function TreasureHunt_DisplaySquadScore_Thread()
 					TreasureHunt_CaptureZoneHud_SetObjectiveName( objectiveName )
 					TreasureHunt_CaptureZoneHud_SetContested( false )
 
-					float objStartTime = file.objectiveWaypoints[ objectiveID ].GetWaypointFloat( CAPTURE_OBJ_WAYPOINT_FLOAT_IDX_START_TIME )
+					float objStartTime = Time()
+					if ( IsValid( file.objectiveWaypoints[ objectiveID ] ) )
+						objStartTime = file.objectiveWaypoints[ objectiveID ].GetWaypointFloat( CAPTURE_OBJ_WAYPOINT_FLOAT_IDX_START_TIME )
+
 					float objEndTime = objStartTime + GetTreasureHuntZoneHoldTime()
 
 					TreasureHunt_CaptureZoneHud_SetZoneStartTime( objStartTime )
@@ -2498,7 +2565,7 @@ void function TreasureHunt_DisplaySquadScore_Thread()
 				if ( IsValid( file.objectiveWaypoints[ objectiveID ] ) )
 					objectiveState = file.objectiveWaypoints[ objectiveID ].GetWaypointInt( CAPTURE_OBJ_WAYPOINT_INT_IDX_OBJ_STATE )
 
-				vector color = objectiveState == eTreasureHuntCaptureZoneState.SUDDEN_DEATH ? SrgbToLinear( ZONE_SUDDENDEATH_COLOR ) : SrgbToLinear( ZONE_CONTESTED_COLOR )
+				vector color = objectiveState == eTreasureHuntCaptureZoneState.SUDDEN_DEATH ? SrgbToLinear( ZONE_SUDDENDEATH_COLOR / 255 ) : SrgbToLinear( ZONE_CONTESTED_COLOR /255 )
 				TreasureHunt_ScoreHud_SetCapturePointColor( objectiveID, color )
 				TreasureHunt_ScoreHud_SetCapturePointContested( objectiveID, true )
 
@@ -2512,7 +2579,10 @@ void function TreasureHunt_DisplaySquadScore_Thread()
 					TreasureHunt_CaptureZoneHud_SetObjectiveName( objectiveName )
 					TreasureHunt_CaptureZoneHud_SetContested( true )
 
-					float objStartTime = file.objectiveWaypoints[ objectiveID ].GetWaypointFloat( CAPTURE_OBJ_WAYPOINT_FLOAT_IDX_START_TIME )
+					float objStartTime = Time()
+					if ( IsValid( file.objectiveWaypoints[ objectiveID ] ) )
+						objStartTime = file.objectiveWaypoints[ objectiveID ].GetWaypointFloat( CAPTURE_OBJ_WAYPOINT_FLOAT_IDX_START_TIME )
+
 					float objEndTime = objStartTime + GetTreasureHuntZoneHoldTime()
 
 					TreasureHunt_CaptureZoneHud_SetZoneStartTime( objStartTime )
@@ -2525,7 +2595,7 @@ void function TreasureHunt_DisplaySquadScore_Thread()
 			}
 			else 
 			{
-				TreasureHunt_ScoreHud_SetCapturePointColor( objectiveID, ZONE_NORMAL_COLOR )
+				TreasureHunt_ScoreHud_SetCapturePointColor( objectiveID, ZONE_NEUTRAL_COLOR )
 				TreasureHunt_ScoreHud_SetCapturePointContested( objectiveID, false )
 			}
 
@@ -3170,7 +3240,7 @@ bool function TreasureHunt_IsTreasureHuntObjectiveCommsAction( int commsAction, 
 {
 	bool isTreasureHuntObjectiveCommsAction = false
 
-	if ( TreasureHunt_IsModeEnabled() )
+	if ( GameModeVariant_IsActive( eGameModeVariants.FREEDM_LOCKDOWN ) )
 	{
 		if ( commsAction == eCommsAction.PING_TREASUREHUNT_OBJ_ATTACK )
 		{

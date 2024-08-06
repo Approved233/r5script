@@ -188,11 +188,13 @@ void function Utility_Shared_Init()
 	RegisterSignal( "FadeModelIntensityOverTime" )
 	RegisterSignal( "FadeModelColorOverTime" )
 	RegisterSignal( "FadeModelAlphaOverTime" )
+	RegisterSignal( "StopCamPosBlend" )
+	RegisterSignal( "StopCamAngBlend" )
 
 	#document( "IsAlive", "Returns true if the given ent is not null, and is alive." )
 	#document( "ArrayWithin", "Remove ents from array that are out of range" )
 
-	file.nonInstalledModsTracked = [ DRAGON_LMG_ENERGIZED_MOD, "altfire_double_tap" ]
+	file.nonInstalledModsTracked = [ DRAGON_LMG_ENERGIZED_MOD, "altfire_double_tap", "akimbo_active", "akimbo_offhand", "akimbo_disable" ]
 }
 
 
@@ -221,6 +223,21 @@ void function InitWeaponScripts()
 
 
 		HopupGoldenHorse_Init()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -273,7 +290,7 @@ void function InitWeaponScripts()
 	MpWeaponAlternatorSMG_Init()
 	MpWeaponShotgun_Init()
 
-
+		MpWeaponShotgunPistol_Init()
 
 	MpWeaponThermiteGrenade_Init()
 	MeleeWraithKunai_Init()
@@ -312,10 +329,8 @@ void function InitWeaponScripts()
 	MeleeFuseHeirloom_Init()
 	MpWeaponFuseHeirloomPrimary_Init()
 
-
-		MeleeArtifactDagger_Init()
-		MpWeaponArtifactDaggerPrimary_Init()
-
+	MeleeArtifactDagger_Init()
+	MpWeaponArtifactDaggerPrimary_Init()
 
 
 		MeleeArtifactSword_Init()
@@ -326,18 +341,10 @@ void function InitWeaponScripts()
 
 
 
-
-		MeleeCryptoHeirloomRt01_Init()
-		MpWeaponCryptoHeirloomRt01Primary_Init()
-
-
-		MeleeOctaneKnifeRt01_Init()
-		MpWeaponOctaneKnifePrimaryRt01_Init()
-
-
-
-
-
+	MeleeCryptoHeirloomRt01_Init()
+	MpWeaponCryptoHeirloomRt01Primary_Init()
+	MeleeOctaneKnifeRt01_Init()
+	MpWeaponOctaneKnifePrimaryRt01_Init()
 	MeleeGibraltarClub_Init()
 	MpWeaponGibraltarClubPrimary_Init()
 	MeleeRampartWrench_Init()
@@ -345,8 +352,8 @@ void function InitWeaponScripts()
 	MeleeRevenantScythe_Init()
 	MpWeaponRevenantScythePrimary_Init()
 
-		MeleeShadowsquadHands_Init()
-		MpWeaponShadowsquadHandsPrimary_Init()
+
+
 
 
 		MeleeBoxingRing_Init()
@@ -372,7 +379,7 @@ void function InitWeaponScripts()
 
 
 
-		MpAbilityRiseFromTheAshes_Init()
+
 
 
 
@@ -391,6 +398,10 @@ void function InitWeaponScripts()
 
 
 		MpAbilityRedeployBalloon_Init()
+
+
+
+
 
 
 
@@ -428,6 +439,22 @@ void function InitWeaponScripts()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		HopupGunshield_Init()
 
 
 
@@ -669,6 +696,10 @@ void function InitAbilityScripts()
 
 
 
+
+
+
+		EnemyAssistHighlight_Init()
 
 
 
@@ -3625,7 +3656,7 @@ bool function IsRoundBased()
 bool function IsLootRoundBased()
 {
 
-	if ( ShGameModeExplore_IsActive() )
+	if ( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_EXPLORE ) )
 		return true
 
 	return IsRoundBased()
@@ -3882,7 +3913,18 @@ void function CamBlendFromPosToPos( entity cam, vector startPos, vector endPos, 
 	if ( !IsValid( cam ) )
 		return
 
+	cam.Signal( "StopCamPosBlend" )
+
 	cam.EndSignal( "OnDestroy" )
+	cam.EndSignal( "StopCamPosBlend" )
+
+	OnThreadEnd(
+		function () : ( cam, endPos )
+		{
+			if ( IsValid( cam ) )
+				cam.SetOrigin( endPos )
+		}
+	)
 
 	float currentTime = Time()
 	float startTime   = currentTime
@@ -3909,7 +3951,18 @@ void function CamBlendFromAngToAng( entity cam, vector startAng, vector endAng, 
 	if ( !IsValid( cam ) )
 		return
 
+	cam.Signal( "StopCamAngBlend" )
+
 	cam.EndSignal( "OnDestroy" )
+	cam.EndSignal( "StopCamAngBlend" )
+
+	OnThreadEnd(
+		function () : ( cam, endAng )
+		{
+			if ( IsValid( cam ) )
+				cam.SetAngles( endAng )
+		}
+	)
 
 	float currentTime = Time()
 	float startTime   = currentTime
@@ -3945,6 +3998,23 @@ float function GetDeathCamLength( entity player )
 
 	return DEATHCAM_TIME
 }
+
+
+float function GetDeathCamLength_Freespawns( entity player )
+{
+	if ( file.getDeathCamTimeOverride != null )
+		return file.getDeathCamTimeOverride()
+
+	
+	if ( GetGameState() < eGameState.Playing )
+		return DEATHCAM_TIME_SHORT
+
+	if ( !FreeRespawns_Feature_IsInEffect() )
+		return DEATHCAM_TIME
+
+	return Freespawns_PLV_DeathCam_Time( player )
+}
+
 
 void function SetDeathCamSpectateTimeOverride( float functionref() func )
 {
@@ -4992,26 +5062,105 @@ array< vector > function GetPointsAlongLine( vector start, vector end, int count
 }
 
 
-int function Location_Score_ByDistance( vector loc, array< vector > testLocs, float testRadius, int outsideScoreAdd, int insideScoreAdd, bool test2D = true )
+float function Location_Score_ByDistance( vector loc, array< vector > testLocs, float testRadius, float scoreMod_Outer, float scoreMod_Inner, bool test2D = true, bool scaleScore = false )
 {
-	float testRadiusSqr = pow( testRadius, 2 )
-
-	int score = 0
-	foreach( testLoc in testLocs )
+	float score = 0
+	if( scaleScore )
 	{
-		float testDistSqr = test2D ? Distance2DSqr( loc, testLoc ) : DistanceSqr( loc, testLoc )
+		foreach( testLoc in testLocs )
+		{
+			float testDist = test2D ? Distance2D( loc, testLoc ) : Distance( loc, testLoc )
+			float testScore
 
-		if( testDistSqr > testRadiusSqr )
-		{
-			score += outsideScoreAdd
+			if( testDist > testRadius )
+			{
+				testScore = testDist / testRadius * scoreMod_Outer
+			}
+			else
+			{
+				testScore = testRadius / testDist * scoreMod_Inner
+			}
+
+			score += testScore
 		}
-		else
+	}
+	else
+	{
+		float testRadiusSqr = pow( testRadius, 2 )
+		foreach( testLoc in testLocs )
 		{
-			score += insideScoreAdd
+			float testDistSqr = test2D ? Distance2DSqr( loc, testLoc ) : DistanceSqr( loc, testLoc )
+
+			if( testDistSqr > testRadiusSqr )
+			{
+				score += scoreMod_Outer
+			}
+			else
+			{
+				score += scoreMod_Inner
+			}
 		}
 	}
 
 	return score
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+table< string, int > function Count_Strings_IntoTable( array< string > itemsToCount )
+{
+	table< string, int > results
+	foreach( item in itemsToCount )
+	{
+		if( !( item in results ) )
+		{
+			results[ item ] <- 0
+		}
+		results[ item ]++
+	}
+	return results
+}
+
+entity function Get_Player_ByName( string playerName )
+{
+	entity result
+	array< entity > players = GetPlayerArray()
+	foreach( player in players )
+	{
+		if ( !IsValid( player ) )
+			continue
+
+		if ( player.GetPlayerName() == playerName )
+		{
+			result = player
+			break
+		}
+	}
+
+	return result
 }
 
 
@@ -5651,11 +5800,6 @@ vector function OffsetPointRelativeToVector( vector point, vector offset, vector
 
 
 
-
-
-
-
-
 bool function PlayerHasWeapon( entity player, string weaponName )
 {
 	array<entity> weapons = player.GetMainWeapons()
@@ -6001,7 +6145,11 @@ bool function Do2DLinesIntersect( vector A, vector B, vector C, vector D )
 
 int function GetSlotForWeapon( entity player, entity weapon )
 {
-	array<int> slots = [ WEAPON_INVENTORY_SLOT_PRIMARY_0, WEAPON_INVENTORY_SLOT_PRIMARY_1, SLING_WEAPON_SLOT, WEAPON_INVENTORY_SLOT_ANTI_TITAN ]
+
+		array<int> slots = [ WEAPON_INVENTORY_SLOT_PRIMARY_0, WEAPON_INVENTORY_SLOT_PRIMARY_1, SLING_WEAPON_SLOT, WEAPON_INVENTORY_SLOT_ANTI_TITAN, WEAPON_INVENTORY_SLOT_DUALPRIMARY_0, WEAPON_INVENTORY_SLOT_DUALPRIMARY_1, SLING_AKIMBO_WEAPON_SLOT ]
+
+
+
 
 	foreach ( slot in slots )
 	{
@@ -6745,13 +6893,6 @@ Point function CreatePoint( vector origin, vector angles )
 	data.angles = angles
 	return data
 }
-
-
-bool function IsFallLTM()
-{
-	return GetCurrentPlaylistVarInt( "mode_fall_ltm", 0 ) == 1
-}
-
 
 table<int, array<entity> > function ArrangePlayersByTeam( array<entity> players )
 {

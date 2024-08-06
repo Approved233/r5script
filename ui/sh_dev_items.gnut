@@ -215,9 +215,11 @@ void function DEV_PrintItemFlavorsOfType( int itemFlavType = eItemType.account_p
 {
 	
 
-	foreach ( ItemFlavor itemFlav in GetAllItemFlavorsOfType( itemFlavType ) )
+	array< ItemFlavor > flavs = GetAllItemFlavorsOfType( itemFlavType )
+
+	foreach ( ItemFlavor itemFlav in flavs )
 	{
-		printt( ItemFlavor_GetAsset( itemFlav ), ItemFlavor_GetGUIDString( itemFlav ) )
+		printt( ItemFlavor_GetAssetName( itemFlav ), ItemFlavor_GetGUIDString( itemFlav ) )
 
 		if ( itemFlavType == eItemType.account_pack )
 		{
@@ -225,4 +227,6 @@ void function DEV_PrintItemFlavorsOfType( int itemFlavType = eItemType.account_p
 			printt( "\tPackContentsCount", packContents.len() )
 		}
 	}
+
+	printt( format( "Found %d ItemFlavs of type %s", flavs.len(), DescribeItemFlavorType( itemFlavType ) ) )
 }

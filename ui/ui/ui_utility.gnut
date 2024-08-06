@@ -181,28 +181,6 @@ bool function AmIPartyMember()
 }
 
 
-string function GetGameModeDisplayName( string mode )
-{
-	string displayName = GetGamemodeVarOrUseValue( mode, "name", (mode in GAMETYPE_TEXT) ? GAMETYPE_TEXT[mode] : "" )
-	return displayName
-}
-
-
-string function GetGameModeDisplayDesc( string mode )
-
-{
-	string displayDesc = GetGamemodeVarOrUseValue( mode, "description", (mode in GAMETYPE_DESC) ? GAMETYPE_DESC[mode] : "" )
-	return displayDesc
-}
-
-
-string function GetGameModeDisplayHint( string mode )
-
-{
-	string displayDesc = GetGamemodeVarOrUseValue( mode, "hint", GetGameModeDisplayDesc( mode ) )
-	return displayDesc
-}
-
 
 
 

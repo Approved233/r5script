@@ -514,43 +514,80 @@ bool function SniperRecon_IsTracking( entity owner )
 
 
 
+
+
 float function GetReconInfoFOV( entity weapon )
 {
 	if ( !IsValid( weapon ) )
 		return 0.0
 
-	if ( (weapon.GetWeaponTypeFlags() & WPT_ULTIMATE) > 0 ||
-					(weapon.GetWeaponTypeFlags() & WPT_VIEWHANDS ) > 0 )
-		return 8.0
 
-	if ( weapon.GetWeaponClassName() == KRABER_WEAPON_NAME )
-		return 4.5
+		if ( (weapon.GetWeaponTypeFlags() & WPT_ULTIMATE) > 0 ||
+						(weapon.GetWeaponTypeFlags() & WPT_VIEWHANDS) > 0 )
+			return 8.13 
 
-	string opticAttachment = GetInstalledWeaponAttachmentForPoint( weapon, "sight" )
+		if ( weapon.GetWeaponClassName() == KRABER_WEAPON_NAME )
+			return 4.125  
 
-	float reconInfoFOV = 0.0
-	switch ( opticAttachment )
-	{
-		case "optic_cq_hcog_bruiser":
-			reconInfoFOV = 5.0
+		string opticAttachment = GetInstalledWeaponAttachmentForPoint( weapon, "sight" )
+
+		float reconInfoFOV = 0.0
+		switch ( opticAttachment )
+		{
+			case "optic_cq_hcog_bruiser":        
+				reconInfoFOV = 11.94 
+				break
+			case "optic_ranged_hcog":            
+				reconInfoFOV = 8.13 
+				break
+			case "optic_ranged_aog_variable":    
+				reconInfoFOV = 11.94 
+				break
+			case "optic_sniper":                
+				reconInfoFOV = 4.12   
+				break
+			case "optic_sniper_variable":        
+			case "optic_sniper_threat":            
+				reconInfoFOV = 6.14   
+				break
+			default:                            
+				reconInfoFOV = 18.52
 			break
-		case "optic_ranged_hcog":
-			reconInfoFOV = 4.0
-			break
-		case "optic_ranged_aog_variable":
-			reconInfoFOV = 7.5
-			break
-		case "optic_sniper":
-			reconInfoFOV = 4.5
-			break
-		case "optic_sniper_variable":
-		case "optic_sniper_threat":
-			reconInfoFOV = 6.0
-			break
-		default:
-			reconInfoFOV = 0.0
-			break
-	}
+		}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 	return reconInfoFOV
 }
@@ -598,9 +635,14 @@ void function CL_SniperRecon_UI_Thread( entity owner )
 			continue
 
 		float reconInfoFOV = GetReconInfoFOV( activeWeapon )
+		
+		
 
 		float outerCornerScale = reconInfoFOV/activeWeapon.GetWeaponSettingFloat(eWeaponVar.zoom_fov)
 		float innerCornerScale = 5.0/ owner.GetFOV()
+
+
+
 
 		float fireRate = activeWeapon.GetWeaponSettingFloat( eWeaponVar.fire_rate )
 		float weaponFireDelay = 1.0
@@ -628,7 +670,7 @@ void function CL_SniperRecon_UI_Thread( entity owner )
 			RuiSetBool( file.scopeRui, "isWeaponMelee", DoesWeaponTriggerMeleeAttack( activeWeapon ) )
 
 		bool isSilenced = StatusEffect_HasSeverity( owner, eStatusEffect.silenced )
-		bool isValidGameState = ( GetGameState() >= eGameState.Playing && GetGameState() < eGameState.Resolution ) || ( IsFiringRangeGameMode() )
+		bool isValidGameState = ( GetGameState() >= eGameState.Playing && GetGameState() < eGameState.Resolution ) || ( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_FIRING_RANGE ) )
 		bool isADS = owner.GetZoomFrac() > 0.99
 		RuiSetBool( file.scopeRui, "visible", !isSilenced && isValidGameState && isADS )
 		entity bestScopeTarget = owner.GetPlayerNetEnt( SNIPER_RECON_TARGET_NETVAR )
@@ -694,9 +736,10 @@ void function CL_SniperRecon_UI_Thread( entity owner )
 				array<entity> teamPlayers = GetPlayerArrayOfTeam( bestScopeTarget.GetTeam() )
 				array<int> playerStates = [ ePlayerLiveState.None,
 											ePlayerLiveState.None,
+											ePlayerLiveState.None,
 											ePlayerLiveState.None ]
 
-				array<int> playerArmorTierStates = [ 0, 0, 0 ]
+				array<int> playerArmorTierStates = [ 0, 0, 0, 0 ]
 
 				int thisPlayerIndex = 1
 				foreach (teammate in teamPlayers )
@@ -730,7 +773,7 @@ void function CL_SniperRecon_UI_Thread( entity owner )
 					{
 						if ( playerState != ePlayerLiveState.None )
 						{
-							if ( thisPlayerIndex <= 2 )
+							if ( thisPlayerIndex <= 3 )
 							{
 								playerStates[thisPlayerIndex] = playerState
 								playerArmorTierStates[thisPlayerIndex] = playerArmorTier
@@ -740,13 +783,17 @@ void function CL_SniperRecon_UI_Thread( entity owner )
 					}
 				}
 
-				for( int i = 0; i < 3; ++i )
+				for( int i = 0; i < 4; ++i )
 				{
-					RuiSetInt( file.scopeRui, "player" + i + "State", playerStates[i] )
-
 					bool showArmorTier = GetCurrentPlaylistVarBool( "hawk_scope_show_armorTier", true )
 					if ( showArmorTier )
-						RuiSetInt( file.scopeRui, "player" + i + "ArmorTier", playerArmorTierStates[i] )
+					{
+						int playerArmorTierState = 0
+						if( playerStates.len() > i )
+							playerArmorTierState = playerArmorTierStates[i]
+
+						RuiSetInt( file.scopeRui, "player" + i + "ArmorTier", playerArmorTierState )
+					}
 				}
 			}
 			else
@@ -760,6 +807,7 @@ void function CL_SniperRecon_UI_Thread( entity owner )
 				RuiSetInt( file.scopeRui, "player0ArmorTier", 0 )
 				RuiSetInt( file.scopeRui, "player1ArmorTier", 0 )
 				RuiSetInt( file.scopeRui, "player2ArmorTier", 0 )
+				RuiSetInt( file.scopeRui, "player3ArmorTier", 0 )
 			}
 
 

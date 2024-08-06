@@ -164,7 +164,7 @@ void function RTKSlidingListInspect_OnAnimationStarted( rtk_behavior self, strin
 		case ANIMATION_ITEM_LIST_INSPECT:
 			self.InvokeEvent( "onItemListInspectStarted" )
 			rtk_panel blockList = self.PropGetPanel( "blockListPanel" )
-			blockList.SetActive( false )
+			blockList.SetActiveAndVisible( false )
 			break
 
 		case ANIMATION_BLOCK_LIST_INSPECT:
@@ -182,7 +182,7 @@ void function RTKSlidingListInspect_OnAnimationFinished( rtk_behavior self, stri
 		case ANIMATION_ITEM_LIST_INSPECT:
 			self.InvokeEvent( "onItemListInspectFinished" )
 			rtk_panel blockList = self.PropGetPanel( "blockListPanel" )
-			blockList.SetVisible( false )
+			blockList.SetActiveAndVisible( false )
 			break
 
 		case ANIMATION_BLOCK_LIST_INSPECT:

@@ -41,6 +41,8 @@ global struct RTKOfferButtonModel
 
 	bool   isOnlyGiftable
 	bool   locked
+	bool   isBaseItem
+	bool   isAddOn
 }
 
 struct PrivateData
@@ -95,24 +97,30 @@ RTKOfferButtonModel function RTKStore_CreateOfferButtonModel( GRXScriptOffer off
 		{
 			offerTypeName = Localize( "#BONUS_BUNDLE" )
 		}
-		else if ( ItemFlavor_GetType( itemFlav ) == eItemType.account_pack )
-		{
-			if ( ItemFlavor_IsThematic( itemFlav ) )
-			{
-				offerTypeName = Localize( "#THEMATIC_PACK_BUNDLE" )
-			}
-			else if ( ItemFlavor_GetAccountPackType( itemFlav ) == eAccountPackType.EVENT )
-			{
-				offerTypeName = Localize( "#EVENT_PACK_BUNDLE" )
-			}
-			else
-			{
-				offerTypeName = Localize( "#APEX_PACK_BUNDLE" )
-			}
-		}
 		else
 		{
 			offerTypeName = Localize( "#BUNDLE" )
+
+			foreach ( flav in offer.output.flavors )
+			{
+				if ( ItemFlavor_GetType( flav ) == eItemType.account_pack )
+				{
+					if ( ItemFlavor_IsThematic( flav ) )
+					{
+						offerTypeName = Localize( "#THEMATIC_PACK_BUNDLE" )
+					}
+					else if ( ItemFlavor_GetAccountPackType( flav ) == eAccountPackType.EVENT )
+					{
+						offerTypeName = Localize( "#EVENT_PACK_BUNDLE" )
+					}
+					else
+					{
+						offerTypeName = Localize( "#APEX_PACK_BUNDLE" )
+					}
+
+					break
+				}
+			}
 		}
 	}
 	else if ( ItemFlavor_IsThematic( itemFlav ) )
@@ -152,6 +160,17 @@ RTKOfferButtonModel function RTKStore_CreateOfferButtonModel( GRXScriptOffer off
 	if ( GRXOffer_IsFullyClaimed( offer ) )
 	{
 		offerButtonModel.price        = Localize( "#OWNED" )
+		offerButtonModel.newPriceShow = false
+	}
+	else if ( !offer.isAvailable )
+	{
+		offerButtonModel.price = Localize( "#UNAVAILABLE" )
+		offerButtonModel.priceColor = < 0.3, 0.3, 0.3 >
+		offerButtonModel.newPriceShow = false
+	}
+	else if ( GRXOffer_IsPurchaseLimitReached( offer ) )
+	{
+		offerButtonModel.price = Localize( "#STORE_V2_PURCHASE_LIMIT", offer.purchaseCount, offer.purchaseLimit )
 		offerButtonModel.newPriceShow = false
 	}
 	else if ( offer.prices.len() > 1 )
@@ -226,6 +245,7 @@ RTKOfferButtonModel function RTKStore_CreateOfferButtonModel( GRXScriptOffer off
 			if ( Artifacts_IsBaseArtifact( itemFlav ) )
 			{
 				offerButtonModel.offerType = Localize( GRXOffer_IsFullyClaimed( offer ) ? "#BASE_ARTIFACT_OWNED" : "#BASE_ARTIFACT_UNOWNED" )
+				offerButtonModel.isBaseItem = true
 			}
 			else
 			{
@@ -234,6 +254,24 @@ RTKOfferButtonModel function RTKStore_CreateOfferButtonModel( GRXScriptOffer off
 				offerButtonModel.locked = locked
 			}
 		}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	}
 
 	return offerButtonModel

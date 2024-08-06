@@ -5,6 +5,10 @@ global function GetLootTypeData
 
 global function RegisterCustomItemGroundAction
 
+
+
+
+
 global const bool AUTOEQUIP_ATTACHMENTS = true
 
 global struct LootTypeData
@@ -262,6 +266,32 @@ void function SURVIVAL_LootTypes_InitShared()
 		lt.groundActionFunc = GroundAction_ForCustomItem
 		lt.groundAltActionFunc = GroundAltAction_None
 		lt.backpackAction = eLootAction.USE
+
+
+
+
+
+
+
+
+
+
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -581,9 +611,9 @@ LootActionStruct function GroundAction_ForWeapons( entity player, LootRef lootRe
 	as.displayString = ""
 
 
+	if ( SURVIVAL_CountPrimaryWeapons( player ) <= 1 || InventoryHasSingleAkimboWeapon( player, lootRef.lootData.ref ) != -1 )
 
 
-	if ( SURVIVAL_CountPrimaryWeapons( player ) <= 1 )
 
 	{
 		as.action = eLootAction.EQUIP
@@ -829,6 +859,32 @@ int function EquipmentCharacterAction2_ForWeapons( entity player )
 
 	return eLootAction.NONE
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

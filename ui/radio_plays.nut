@@ -1,5 +1,7 @@
 
 global function RadioPlays_GetAnimations
+global function RadioPlay_PlayItemFlavor
+global function RadioPlay_PlayFromGUIDString
 
 
 
@@ -34,5 +36,19 @@ array< RadioPlayLayerModel > function RadioPlays_GetAnimations( ItemFlavor radio
 	}
 
 	return animations
+}
+
+
+
+void function RadioPlay_PlayItemFlavor( ItemFlavor radioPlay )
+{
+	Assert( ItemFlavor_GetType( radioPlay ) == eItemType.radio_play )
+	RadioPlay_PlayFromGUIDString( ItemFlavor_GetGUIDString( radioPlay ) )
+}
+
+void function RadioPlay_PlayFromGUIDString( string radioPlayGUID )
+{
+	RadioPlay_SetGUID( radioPlayGUID )
+	AdvanceMenu( GetMenu( "RadioPlayDialog" ) )
 }
 

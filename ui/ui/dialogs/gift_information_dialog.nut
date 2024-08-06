@@ -4,6 +4,7 @@ global function OpenGiftInfoPopUpWithEventTabTelemetry
 global function OpenGiftInfoPopUpWithMilestoneStoreTelemetry
 global function InitTwoFactorInformationDialog
 global function OpenTwoFactorInfoDialog
+
 struct {
 	var menu
 	var infoPanel
@@ -37,6 +38,17 @@ void function GiftInformationDialog_OnOpen()
 	int maxGiftsPerDay = GetConVarInt( "mtx_giftingLimit" )
 
 	HudElem_SetRuiArg( giftFile.infoPanel, "playerDescription", Localize( "#GIFT_INFO_PLAYER_DESC", minAccountLevel, minFriendshipTenure, maxGiftsPerDay ) )
+
+	if ( !Escrow_IsPlayerTrusted() && ( HasEscrowBalance() || PCPlat_IsSteam() ) )
+	{
+		HudElem_SetRuiArg( giftFile.infoPanel, "escrowText", Localize( "#GIFT_INFO_PLAYER_DESC_ESCROW" ) )
+		HudElem_SetRuiArg( giftFile.infoPanel, "basicEscrowText", Localize( "#GIFT_INFO_EXTRA_DESC_ESCROW" ) )
+	}
+	else
+	{
+		HudElem_SetRuiArg( giftFile.infoPanel, "escrowText", Localize( "#GIFT_INFO_PLAYER_DESC_NO_ESCROW" ) )
+		HudElem_SetRuiArg( giftFile.infoPanel, "basicEscrowText", Localize( "#GIFT_INFO_EXTRA_DESC" ) )
+	}
 }
 
 void function OpenGiftInfoPopUp( var button )

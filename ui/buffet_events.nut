@@ -51,7 +51,45 @@ global function BuffetEvent_GetChallengeButtonImage
 global function BuffetEvent_GetChallengeButtonText
 global function BuffetEvent_GetChallengeButtonTextCol
 
+global function BuffetEvent_GetString
+global function BuffetEvent_GetAsset
+global function BuffetEvent_GetBool
+global function BuffetEvent_GetVector
+global function BuffetEvent_GetFloat
+
 global function BuffetEvent_OnLobbyPlayPanelSpecialChallengeClicked
+
+global const string UI_TITLE_HEADER_ID = "titleHeaderText"
+global const string UI_TITLE_SUBHEADER_ID = "titleSubheaderText"
+global const string UI_TITLE_MAIN_ICON_ID = "titleMainIcon"
+global const string UI_TITLE_USE_BG_BLUR_ID = "titleUseBgBlur"
+global const string UI_TITLE_BG_BLUR_IMAGE_ID = "titleBlurImage"
+global const string UI_TITLE_BG_BLUR_DARKENING_ID = "titleBgDarkening"
+global const string UI_TITLE_BG_IMAGE_ID = "titleBgImage"
+global const string UI_TITLE_HEADER_COLOR_ID = "titleHeaderColor"
+global const string UI_TITLE_SUBHEADER_COLOR_ID = "titleSubheaderColor"
+global const string UI_TITLE_TIME_REMAINING_COLOR_ID = "timeRemainingColor"
+
+global const string UI_MAIN_PANEL_BG_ID = "mainPanelBgImage"
+
+global const string UI_BADGE_PANEL_POINTS_LABEL_ID = "pointsLabelText"
+global const string UI_BADGE_PANEL_BADGE_LABEL_ID = "badgesLabelText"
+global const string UI_BADGE_PANEL_DESCRIPTION_LABEL_ID = "descriptionText"
+global const string UI_BADGE_PANEL_OWNED_ICON_ID = "badgeOwnedStateIconImage"
+global const string UI_BADGE_PANEL_NOT_OWNED_ICON_ID = "badgeLockedStateIconImage"
+global const string UI_BADGE_PANEL_OWNED_BG_ID = "badgeOwnedBgImage"
+global const string UI_BADGE_PANEL_OWNED_BG_COLOR_ID = "badgeOwnedBGColor"
+global const string UI_BADGE_PANEL_NOT_OWNED_BG_ID = "badgeLockedBgImage"
+global const string UI_BADGE_PANEL_STATE_BG_ID = "badgeStateIconBgImage"
+global const string UI_BADGE_PANEL_BAGDE_BORDER_ID = "diamondFrameBadgeBorderImage"
+
+global const string UI_REWARDS_PANEL_REWARDS_LABEL_ID = "rewardsLabelText"
+global const string UI_REWARDS_PANEL_BG_ID = "rewardsPanelBgImage"
+
+global const string UI_CHASE_ITEM_FINAL_REWARDS_LABEL_ID = "finalRewardText"
+global const string UI_CHASE_ITEM_COMPLETEDLABEL_ID = "completedText"
+global const string UI_CHASE_ITEM_CHASE_ITEM_BG_ID = "chaseItemBgImage"
+global const string UI_CHASE_ITEM_CHASE_ITEM_ID = "chaseItemIcon"
 
 
 
@@ -336,7 +374,7 @@ array<ItemFlavor> function BuffetEvent_GetCurrentChallenges_EXCLUDING_DAILIES( I
 
 	foreach ( string modeName in bemacd.modes )
 	{
-		PlaylistScheduleData scheduleData = Playlist_GetScheduleData( modeName )
+		PlaylistScheduleData scheduleData = Playlist_GetScheduleData_Deprecated( modeName )
 		if ( scheduleData.currentBlock != null )
 		{
 			result.extend( bemacd.modeToChallengesMap[modeName] )
@@ -620,6 +658,37 @@ bool function BuffetEvent_GetAboutPageShowsModes( ItemFlavor event )
 
 
 
+string function BuffetEvent_GetString( ItemFlavor event, string id  )
+{
+	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_buffet )
+	return GetGlobalSettingsString( ItemFlavor_GetAsset( event ), id )
+}
+
+asset function BuffetEvent_GetAsset( ItemFlavor event, string id )
+{
+	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_buffet )
+	return GetGlobalSettingsAsset( ItemFlavor_GetAsset( event ), id )
+}
+
+bool function BuffetEvent_GetBool( ItemFlavor event, string id )
+{
+	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_buffet )
+	return GetGlobalSettingsBool( ItemFlavor_GetAsset( event ), id )
+}
+
+vector function BuffetEvent_GetVector( ItemFlavor event, string id )
+{
+	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_buffet )
+	return GetGlobalSettingsVector( ItemFlavor_GetAsset( event ), id )
+}
+
+float function BuffetEvent_GetFloat( ItemFlavor event, string id )
+{
+	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_buffet )
+	return GetGlobalSettingsFloat( ItemFlavor_GetAsset( event ), id )
+}
+
+
 
 void function BuffetEvent_OnLobbyPlayPanelSpecialChallengeClicked( ItemFlavor event )
 {
@@ -630,9 +699,15 @@ void function BuffetEvent_OnLobbyPlayPanelSpecialChallengeClicked( ItemFlavor ev
 	Assert( GetActiveMenu() == GetMenu( "LobbyMenu" ) )
 	Assert( IsTabPanelActive( GetPanel( "PlayPanel" ) ) )
 
-	BuffetEventAboutDialog_SetEvent( event )
-	AdvanceMenu( GetMenu( "BuffetEventAboutDialog" ) )
+
+	EventsPanel_SetOpenPageIndex( eEventsPanelPage.LANDING )
+	JumpToEventTab( "RTKEventsPanel" )
+
+
+
+
 }
+
 
 
 

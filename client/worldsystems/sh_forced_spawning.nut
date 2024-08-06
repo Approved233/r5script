@@ -371,17 +371,6 @@ struct
 
 
 
-
-
-
-
-
-
-
-
-
-
-
 bool function ForcedSpawn_UseForcedSpawning()
 {
 	return GetCurrentPlaylistVarBool( "forced_spawn_enabled", false )

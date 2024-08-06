@@ -14,6 +14,7 @@ global struct RTKApexCupCardController_Properties
 {
 	SettingsAssetGUID apexCup
 	SettingsAssetGUID calEvent
+	int lockState
 
 	rtk_behavior timer
 }
@@ -58,16 +59,27 @@ void function RTKApexCupCardController_OnBindingChanged( rtk_behavior self )
 	rtk_struct root = RTKDataModel_GetStruct( bindingRoot )
 
 	int apexCup = self.PropGetInt( "apexCup" )
-	UserCupEntryData cupData = Cups_GetPlayersPCupData( GetLocalClientPlayer(), apexCup )
 
-	if ( !Cups_HasParticipated( GetItemFlavorByGUID( self.PropGetInt( "calEvent" ) ) ) )
+	CupEntry ornull cupEntry = Cups_GetSquadCupData( apexCup )
+	if ( cupEntry == null )
 	{
+		ItemFlavor flav = GetItemFlavorByGUID( self.PropGetInt( "calEvent" ) )
+		if ( CalEvent_HasFinished( flav, GetUnixTimestamp() ) )
+			RTKStruct_SetInt( root, "state", CUP_STATE_NOT_PARTICIPATE )
+		if ( RTKStruct_HasProperty( root, "entry" ) )
+			RTKStruct_RemoveProperty( root, "entry" )
+		printt( "RTKApexCupCardController_OnBindingChanged cupEntry == null" )
+		return
+	}
+	expect CupEntry( cupEntry )
+
+	if ( cupEntry.active == false )
+	{
+		RTKStruct_SetInt( root, "state", CUP_STATE_FINISHED )
 		if ( RTKStruct_HasProperty( root, "entry" ) )
 			RTKStruct_RemoveProperty( root, "entry" )
 		return
 	}
-
-	CupEntry cupEntry = expect CupEntry( Cups_GetSquadCupData( apexCup ) )
 
 	rtk_struct entry
 	if ( RTKStruct_HasProperty( root, "entry" ) )
@@ -79,10 +91,11 @@ void function RTKApexCupCardController_OnBindingChanged( rtk_behavior self )
 	model.gamesPlayed = cupEntry.matchSummaryData.len()
 
 	int index = Cups_GetPlayerTierIndexForCup( apexCup )
+	int indexPrev = maxint( 0, index - 1 )
 	model.score = cupEntry.currSquadScore
-	model.upperBound = cupEntry.tierScoreBounds[ maxint( 0, index - 1 ) ]
+	model.upperBound = indexPrev <  cupEntry.tierScoreBounds.len() ? cupEntry.tierScoreBounds[indexPrev] : 1
 	model.lowerBound = index <  cupEntry.tierScoreBounds.len() ? cupEntry.tierScoreBounds[index] : 0
-	model.isTop100 = model.score > model.upperBound
+	model.isTop100 = index == 0
 
 	RTKStruct_SetValue( entry, model )
 }
@@ -95,9 +108,15 @@ void function RTKApexCupCardController_OnTimerFinished( rtk_behavior self )
 
 void function RTKApexCupCardController_OnButtonPressed( rtk_behavior self )
 {
-	CloseActiveMenu()
-	RTKApexCupsOverview_SetCup( self.PropGetInt( "apexCup" ) )
-	AdvanceMenu( GetMenu( "RTKApexCupMenu" ) )
+#if DEV
+		printt( "RTKApexCupCardController_OnButtonPressed:", self.PropGetInt( "lockState" ) )
+#endif
+	if ( self.PropGetInt( "lockState" ) == CUP_LOCK_NONE )
+	{
+		CloseActiveMenu()
+		RTKApexCupsOverview_SetCup( self.PropGetInt( "apexCup" ) )
+		AdvanceMenu( GetMenu( "RTKApexCupMenu" ) )
+	}
 }
 
 void function RTKApexCupCardController_ResetState( rtk_behavior self )

@@ -5,12 +5,11 @@ global function RTKApexCupsOverview_OnDestroy
 global function RTKApexCupsOverview_OnRegisterPressed
 global function RTKApexCupsOverview_SetCup
 global function RTKApexCupsOverview_GetCupID
-global function RTKApexCupsOverview_HideButton
 
 global struct RTKApexCupsOverview_Properties
 {
 	rtk_behavior optInButton
-	rtk_behavior reRollButton
+	rtk_behavior matchHistoryButton
 	rtk_behavior infoButton
 }
 
@@ -41,9 +40,12 @@ global struct RTKRewardTiersData
 	int					quantity
 	int					level
 	bool 				isOwned
+	bool 				isCurrentTier
 	bool 				isTall
+	bool 				isRumble
 	int 				rarity
 	SettingsAssetGUID 	flavGUID
+	int					badgeTier
 }
 
 global struct RTKRewardTiersModel
@@ -55,7 +57,7 @@ global struct RTKOptInData
 {
 	string	buttonText
 	bool	showButton
-	bool	showRerollButton
+	bool	showMatchHistoryButton
 	bool	buttonActive
 
 	array< RTKCupRulesModel >	rulesList
@@ -67,6 +69,7 @@ global struct RTKCupOverview
 {
 	int					state
 	SettingsAssetGUID 	calEvent
+	SettingsAssetGUID 	cupID
 }
 
 struct
@@ -80,7 +83,7 @@ struct
 void function RTKApexCupsOverview_InitMetaData( string behaviorType, string structType )
 {
 	RTKMetaData_SetAllowedBehaviorTypes( structType, "optInButton", [ "Button" ] )
-	RTKMetaData_SetAllowedBehaviorTypes( structType, "reRollButton", [ "Button" ] )
+	RTKMetaData_SetAllowedBehaviorTypes( structType, "matchHistoryButton", [ "Button" ] )
 	RTKMetaData_SetAllowedBehaviorTypes( structType, "infoButton", [ "Button" ] )
 }
 
@@ -91,7 +94,7 @@ void function RTKApexCupsOverview_OnInitialize( rtk_behavior self )
 	RTKOptInDataInit( self )
 
 	rtk_behavior ornull optInButton = self.PropGetBehavior( "optInButton" )
-	rtk_behavior ornull reRollButton = self.PropGetBehavior( "reRollButton" )
+	rtk_behavior ornull matchHistoryButton = self.PropGetBehavior( "matchHistoryButton" )
 	rtk_behavior ornull infoButton = self.PropGetBehavior( "infoButton" )
 
 	if ( optInButton != null )
@@ -101,12 +104,10 @@ void function RTKApexCupsOverview_OnInitialize( rtk_behavior self )
 		} )
 	}
 
-	if ( reRollButton != null )
+	if ( matchHistoryButton != null )
 	{
-		self.AutoSubscribe( reRollButton, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( self ) {
-			CupBakeryAssetData assetData = Cups_GetCupBakeryAssetDataFromGUID( file.cupId )
-			if ( IsValidItemFlavorGUID( assetData.reRollToken.guid ) )
-				OpenApexCupPurchaseRerollDialog( assetData.reRollToken, Localize ( assetData.name ), file.entry )
+		self.AutoSubscribe( matchHistoryButton, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( self ) {
+			ApexCupMenu_JumpToMatchHistory()
 		} )
 	}
 
@@ -127,6 +128,7 @@ void function RTKCupOverviewInit()
 	ItemFlavor cupItemFlav = cupData.containerItemFlavor
 
 	cupOverviewModel.calEvent = cupItemFlav.guid
+	cupOverviewModel.cupID = cupData.itemFlavor.guid
 
 	
 	if ( CalEvent_HasFinished( cupItemFlav, GetUnixTimestamp() ) )
@@ -157,8 +159,7 @@ void function RTKOptInDataInit( rtk_behavior self )
 	}
 	else 
 	{
-		
-		if ( IsPartyLeader() )
+		if ( IsPartyLeader() || !CupEvent_GetLimitSquadSize( cupItemFlav ) )
 		{
 			
 			if (  !IsRegisteredForCup  )
@@ -181,9 +182,7 @@ void function RTKOptInDataInit( rtk_behavior self )
 					RTKApexCupsOverview_ToolTip( true, "#CUP_REQUIREMENTS_NOT_MET", "#CUP_REQUIREMENTS_NOT_MET_DESC" )
 				}
 
-
-
-
+				if ( cupData.isLimitSquadSize )
 				{
 					
 					if ( GetPartySize() != cupData.squadSize )
@@ -211,7 +210,10 @@ void function RTKOptInDataInit( rtk_behavior self )
 			else 
 			{
 				if ( Cups_HasParticipated( cupItemFlav ) )
-					thread RTKApexCupsOverview_ReRollSetUp( self )
+				{
+					RTKApexCupsOverview_ButtonState( false, false, "#CUPS_MATCH_HISTORY", true )
+					RTKApexCupsOverview_ToolTip( true, "#CUPS_MATCH_HISTORY", "#CUPS_MATCH_HISTORY_DESC" )
+				}
 				else
 				{
 					RTKApexCupsOverview_ButtonState( true, false, "#CUP_ENTERED" )
@@ -230,22 +232,31 @@ void function RTKOptInDataInit( rtk_behavior self )
 
 	
 	
-	string gamemode = CupEvent_GetGameMode( cupItemFlav )
-	if ( LimitedTimeMode_IsDefined( gamemode ) )
+	int gamemode = GameModeVariant_GetByDevName( CupEvent_GetGameMode( cupItemFlav ) )
+	if ( GameModeVariant_IsDefined( gamemode ) )
 	{
 		RTKCupRulesModel rule
 		rule.bulletpointText = "#CUP_RULES_2"
 		rule.visible         = true
-		rule.textArgs        = Localize( LimitedTimeMode_GetName( gamemode ) )
+		rule.textArgs        = Localize( GameModeVariant_GetName( gamemode ) )
 		optInModel.rulesList.append( rule )
 	}
 
 	
 	{
 		RTKCupRulesModel rule
-		rule.bulletpointText = "#CUP_RULES_3"
+
+		if ( RankedRumble_IsCupRankedRumble( cupData.itemFlavor ) )
+		{
+			rule.bulletpointText = "#CUP_RULES_RANKED_SQUAD"
+		}
+		else
+
+		{
+			rule.bulletpointText = "#CUP_RULES_3"
+			rule.textArgs        = Localize( file.squadSizeRule[cupData.squadSize - 1] )
+		}
 		rule.visible         = true
-		rule.textArgs        = Localize( file.squadSizeRule[cupData.squadSize - 1] )
 		optInModel.rulesList.append( rule )
 	}
 
@@ -261,9 +272,25 @@ void function RTKOptInDataInit( rtk_behavior self )
 	
 	{
 		RTKCupRulesModel rule
-		rule.bulletpointText = "#CUP_RULES_5"
+
+		if ( RankedRumble_IsCupRankedRumble( cupData.itemFlavor ) )
+		{
+			if ( CalEvent_HasFinished( cupData.containerItemFlavor, GetUnixTimestamp() ) && Cups_GetSquadCupData( file.cupId ) == null )
+			{
+				rule.bulletpointText = "#CUP_RULES_RANKED_NOT_ENTERED"
+			}else
+			{
+				rule.bulletpointText = "#CUP_RULES_RANKED_DIVISION"
+				rule.textArgs = Localize( restriction.maxRankString )
+			}
+		}
+		else
+
+		{
+			rule.bulletpointText = "#CUP_RULES_5"
+			rule.textArgs        = Localize( restriction.minRankString )
+		}
 		rule.visible         = restriction.hasMinRankLimit
-		rule.textArgs        = Localize( restriction.minRankString )
 		optInModel.rulesList.append( rule )
 	}
 
@@ -296,6 +323,10 @@ void function RTKRewardTiersInit()
 	ItemFlavor cupItemFlav = cupData.containerItemFlavor
 	bool hasParticipated = Cups_HasParticipated( cupItemFlav )
 
+
+		int playerRankTier = RankedRumble_IsCupIDRankedRumble( file.cupId ) ? RankedRumble_GetCupRankedTier( file.cupId ) : 0
+
+
 	RTKStruct_GetValue( apexRewards, apexCupsRewards )
 
 	int relativeTier = 0
@@ -307,21 +338,44 @@ void function RTKRewardTiersInit()
 		ItemFlavor flav = GetItemFlavorByAsset( tData.rewardData[0].reward )
 		if ( tData.tierType == eCupTierType.ABSOLUTE )
 		{
-			rewardTier.tier = Localize("#CUPS_REWARDS_TOP", tData.bound.tostring() )
+			relativeTier++
+			rewardTier.tier = Localize ( LocalizeNumeral( relativeTier ) )
+
+				if ( RankedRumble_IsCupIDRankedRumble( file.cupId ) )
+				{
+					int position = 101 
+					if ( currentRewardTier <= i )
+					{
+						CupEntry ornull cupEntryData = Cups_GetSquadCupData( file.cupId )
+						if ( cupEntryData != null )
+						{
+							expect CupEntry ( cupEntryData )
+							position = cupEntryData.currSquadPosition
+						}
+					}
+					rewardTier.badgeTier = RankedRumble_CombineBadgeTier( playerRankTier, 1, position )
+				}
+
 		}
 		else
 		{
 			relativeTier++
 			rewardTier.tier = Localize ( LocalizeNumeral( relativeTier ) )
+
+				if ( RankedRumble_IsCupIDRankedRumble( file.cupId ) )
+					rewardTier.badgeTier = RankedRumble_CombineBadgeTier( playerRankTier, tData.bound, 0 )
+
 		}
 
 		rewardTier.iconPath = CustomizeMenu_GetRewardButtonImage( flav )
 
 		rewardTier.showQuantity = tData.rewardData[0].quantity > 1
 		rewardTier.quantity 	= tData.rewardData[0].quantity
-		rewardTier.level 	= ( cupData.tiers.len() - 1 ) - i
+		rewardTier.level 	= i
 		rewardTier.isOwned 	= hasParticipated && currentRewardTier <= i
+		rewardTier.isCurrentTier = ( currentRewardTier == i )
 		rewardTier.isTall 	= true
+		rewardTier.isRumble = true
 		rewardTier.flavGUID = ItemFlavor_GetGUID( flav )
 
 		apexCupsRewards.rewardList.append( rewardTier )
@@ -329,50 +383,6 @@ void function RTKRewardTiersInit()
 	apexCupsRewards.rewardList.reverse()
 
 	RTKStruct_SetValue( apexRewards, apexCupsRewards )
-}
-
-void function RTKApexCupsOverview_ReRollSetUp( rtk_behavior self )
-{
-	EndSignal( self, RTK_ON_DESTROY_SIGNAL )
-
-	while ( Cups_GetSquadCupData( file.cupId ) == null && ( !GRX_IsInventoryReady() || !GRX_AreOffersReady() ) )
-	{
-		WaitFrame()
-	}
-
-	if ( Cups_GetSquadCupData( file.cupId ) != null )
-	{
-		CupBakeryAssetData assetData = Cups_GetCupBakeryAssetDataFromGUID( file.cupId )
-		file.entry = expect CupEntry ( Cups_GetSquadCupData( file.cupId ) )
-
-		bool active = ( assetData.maximumNumberOfReRolls > file.entry.reRollCount ) && ( assetData.maximumNumberOfReRolls > 0 ) && ( file.entry.matchSummaryData.len() > 0 )
-
-		if ( !active )
-		{
-			RTKApexCupsOverview_HideButton()
-			return
-		}
-
-		ItemFlavorPurchasabilityInfo ifpi = GRX_GetItemPurchasabilityInfo( assetData.reRollToken )
-
-		Assert( ifpi.isPurchasableAtAll )
-		array <GRXScriptOffer> offers
-
-		if ( ifpi.craftingOfferOrNull != null )
-			offers.append( GRX_ScriptOfferFromCraftingOffer( expect GRXScriptCraftingOffer(ifpi.craftingOfferOrNull) ) )
-
-		foreach ( string location, array<GRXScriptOffer> locationOfferList in ifpi.locationToDedicatedStoreOffersMap )
-			foreach ( GRXScriptOffer locationOffer in locationOfferList )
-				if ( locationOffer.offerType != GRX_OFFERTYPE_BUNDLE && locationOffer.output.flavors.len() == 1 )
-					offers.append( locationOffer )
-
-		RTKApexCupsOverview_ButtonState( false, false, Localize( "#CUPS_REROLL_BUTTON", GRX_GetFormattedPrice(offers[0].prices[0], 1 ) ), active )
-		RTKApexCupsOverview_ToolTip( false )
-	}
-	else
-	{
-		RTKApexCupsOverview_HideButton()
-	}
 }
 
 void function RTKApexCupsOverview_ToolTip( bool tooltipActive, string titleText = "", string bodyText = "" )
@@ -384,20 +394,44 @@ void function RTKApexCupsOverview_ToolTip( bool tooltipActive, string titleText 
 	RTKStruct_SetBool( tooltipData, "tooltipActive", tooltipActive )
 }
 
-void function RTKApexCupsOverview_ButtonState( bool showButton, bool buttonActive, string buttonText = "", bool showReRollButton = false )
+void function RTKApexCupsOverview_ButtonState( bool showButton, bool buttonActive, string buttonText = "", bool showMatchHistoryButton = false )
 {
 	rtk_struct optInData = RTKDataModel_GetStruct( RTKDataModelType_GetDataPath( RTK_MODELTYPE_MENUS, "optInData" ) )
 
 	RTKStruct_SetBool( optInData, "showButton", showButton )
-	RTKStruct_SetBool( optInData, "showReRollButton", showReRollButton )
+
+
+	if ( showButton )
+	{
+		CupBakeryAssetData cupData = Cups_GetCupBakeryAssetDataFromGUID( file.cupId )
+		ItemFlavor cupItemFlav = cupData.containerItemFlavor
+		int lockState = RTKGameModeSelectApexCups_GetLockState( cupItemFlav )
+
+#if DEV
+			printt( "RTKApexCupsOverview_ButtonState", lockState )
+#endif
+
+		switch ( lockState )
+		{
+			case CUP_LOCK_LEVELS:
+				buttonActive = false
+				buttonText = Localize( "#PLAYLIST_STATE_RANKED_LEVEL_REQUIRED", Ranked_GetRankedLevelRequirement() + 1 )
+				break
+			case CUP_LOCK_ORIENTATION:
+				buttonActive = false
+				buttonText = Localize( "#PLAYLIST_STATE_COMPLETED_ORIENTATION_REQUIRED" )
+				break
+			case CUP_LOCK_TRAINING:
+				buttonActive = false
+				buttonText = Localize( "#PLAYLIST_STATE_COMPLETED_TRAINING_REQUIRED" )
+				break
+		}
+	}
+
+
+	RTKStruct_SetBool( optInData, "showMatchHistoryButton", showMatchHistoryButton )
 	RTKStruct_SetBool( optInData, "buttonActive", buttonActive )
 	RTKStruct_SetString( optInData, "buttonText", buttonText )
-}
-
-void function RTKApexCupsOverview_HideButton()
-{
-	RTKApexCupsOverview_ButtonState( false, false )
-	RTKApexCupsOverview_ToolTip( false )
 }
 
 void function RTKApexCupsOverview_OnRegisterPressed( rtk_behavior self, entity player, SettingsAssetGUID cupID )
@@ -422,10 +456,15 @@ SettingsAssetGUID function RTKApexCupsOverview_GetCupID( )
 
 void function RTKApexCupsOverview_OnCupsServerMessage( SettingsAssetGUID cupID, string squadID )
 {
+#if DEV
+	printt( "RTKApexCupsOverview_OnCupsServerMessage", cupID, " ", squadID, " ", file.cupId )
+#endif
 	if( cupID != file.cupId )
 		return
 
 	ClearUserFullCupDataCache()
+	RTKRewardTiersInit()
+	RTKApexCupHistory_RegisterOrRerollComplete()
 }
 
 void function RTKApexCupsOverview_OnDestroy( rtk_behavior self )

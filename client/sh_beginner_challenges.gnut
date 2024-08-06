@@ -146,7 +146,7 @@ void function OnRegisterRootItemFlavors()
 
 	foreach ( asset beginnerChallenge in GetBaseItemFlavorsFromArray( "beginnerChallenges" ) )
 	{
-		ItemFlavor newChallenge = expect ItemFlavor(RegisterChallengeFromAsset( beginnerChallenge ))
+		ItemFlavor newChallenge = expect ItemFlavor(RegisterItemFlavorFromSettingsAsset( beginnerChallenge ))
 
 		Assert( ItemFlavor_GetType( newChallenge ) == eItemType.challenge && Challenge_GetTimeSpanKind( newChallenge ) == eChallengeTimeSpanKind.BEGINNER )
 

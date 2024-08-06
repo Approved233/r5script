@@ -76,7 +76,7 @@ string function RTKMutator_FormatTimeProperty( float input1 )
 	}
 	else if ( inputAsInt < 86400 ) 
 	{
-		timeRemaining = Localize( "#TIME_REMAINING_HOURS_MINUTES_SECONDS", inputAsInt / 3600, ( inputAsInt % 3600 ) / 60, inputAsInt % 60 )
+		timeRemaining = Localize( "#TIME_REMAINING_HOURS_MINUTES", inputAsInt / 3600, ( inputAsInt % 3600 ) / 60)
 	}
 	else 
 	{

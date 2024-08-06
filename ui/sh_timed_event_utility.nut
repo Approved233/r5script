@@ -84,6 +84,8 @@ global struct TimedEventData
 
 struct
 {
+	bool enabled = false
+
 	array<TimedEventData>		timedEvents
 	table<int, TimedEventData>	eventTypeToTimedEvent
 	table<TimedEventData, int>	timedEventToEventType
@@ -106,10 +108,7 @@ file
 
 void function TimedEvents_Init()
 {
-
-
-
-
+	file.enabled = true
 
 
 
@@ -126,6 +125,7 @@ void function TimedEvents_Init()
 
 
 }
+
 
 
 

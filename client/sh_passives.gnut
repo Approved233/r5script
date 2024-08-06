@@ -108,9 +108,6 @@ global enum ePassives
 
 
 
-
-
-
 	PAS_GUNNER,
 	PAS_LOBA_EYE_FOR_QUALITY,
 
@@ -138,6 +135,9 @@ global enum ePassives
 
 
 		PAS_WEAPON_SLING,
+
+
+
 
 
 
@@ -355,12 +355,26 @@ global enum ePassives
 
 
 
-		PAS_EXTRA_ORDINANCE_SLOT,
-		PAS_HEALING_ITEM_HIGHLIGHT,
-		PAS_EXTRA_ALL_MED_INV,
-		PAS_KNOCK_ADRENALINE,
-		PAS_SQUADWIPE,
-		PAS_ORDNANCE_HIGHLIGHT,
+
+
+
+
+
+
+	PAS_ORDNANCE_HIGHLIGHT
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -387,6 +401,20 @@ global const table<int, string> PASSIVE_NAME_MAP = {
 	[ePassives.PAS_FORTIFIED] = "#PAS_FORTIFIED",
 	[ePassives.PAS_LOWPROFILE] = "#PAS_LOW_PROFILE",
 	[ePassives.PAS_EXTRA_MED_INV] = "#PAS_EXTRA_MED_INV",
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 
 global const table<int, string> PASSIVE_DESCRIPTION_SHORT_MAP = {
@@ -399,6 +427,20 @@ global const table<int, string> PASSIVE_DESCRIPTION_SHORT_MAP = {
 	[ePassives.PAS_FORTIFIED] = "#PAS_FORTIFIED_DESC",
 	[ePassives.PAS_LOWPROFILE] = "#PAS_LOW_PROFILE_DESC",
 	[ePassives.PAS_EXTRA_MED_INV] = "#PAS_EXTRA_MED_INV_DESC",
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 
 
@@ -874,6 +916,15 @@ void function CodeCallback_OnPassiveChanged( entity player, int passiveIdx )
 
 
 
+
+
+
+
+
+
+
+
+
 void function ServerToClient_ShowCloakHintText()
 {
 	entity player = GetLocalViewPlayer()
@@ -883,6 +934,21 @@ void function ServerToClient_ShowCloakHintText()
 		AnnouncementMessageRight( player, "#CLOAK_UNARMED_WARNING" )
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -118,17 +118,33 @@ const asset LOADOUTSELECTION_LOADOUTS_DATATABLE = $"datatable/loadoutselection_s
 const asset LOADOUTSELECTION_WEAPON_DATA_DATATABLE = $"datatable/loadoutselection_weapon_data.rpak"
 
 
+const table<string, asset> CUSTOM_VARIANT_ROTATIONS_DATATABLE = {
 
-const asset WINTEREXPRESS_ROTATIONS_DATATABLE = $"datatable/gamemode_winterexpress_loadout_rotations.rpak"
-const asset WINTEREXPRESS_LOADOUTS_DATATABLE = $"datatable/gamemode_winterexpress_selectable_loadouts.rpak"
+		[ "WINTER_EXPRESS" ] = $"datatable/gamemode_winterexpress_loadout_rotations.rpak",
 
 
-const asset TDM_ROTATIONS_DATATABLE = $"datatable/gamemode_tdm_loadout_rotations.rpak"
-const asset TDM_LOADOUTS_DATATABLE = $"datatable/gamemode_tdm_selectable_loadouts.rpak"
+		[ "TDM" ] = $"datatable/gamemode_tdm_loadout_rotations.rpak",
+		[ "SWAT" ] = $"datatable/gamemode_tdm_swat_loadout_rotations.rpak",
+		[ "SHOTTYSNIPERS" ] = $"datatable/gamemode_tdm_shottysnipers_loadout_rotations.rpak",
 
-const asset TDM_SWAT_ROTATIONS_DATATABLE = $"datatable/gamemode_tdm_swat_loadout_rotations.rpak"
-const asset TDM_SWAT_LOADOUTS_DATATABLE = $"datatable/gamemode_tdm_swat_selectable_loadouts.rpak"
 
+	[ "AKIMBO_LMG" ] = $"datatable/loadouts/loadoutselection_loadout_rotations_akimbo_lmg.rpak",
+
+}
+
+const table<string, asset> CUSTOM_VARIANT_LOADOUTS_DATATABLE = {
+
+		[ "WINTER_EXPRESS" ] = $"datatable/gamemode_winterexpress_selectable_loadouts.rpak",
+
+
+		[ "TDM" ] = $"datatable/gamemode_tdm_selectable_loadouts.rpak",
+		[ "SWAT" ] = $"datatable/gamemode_tdm_swat_selectable_loadouts.rpak",
+		[ "SHOTTYSNIPERS" ] = $"datatable/gamemode_tdm_shottysnipers_selectable_loadouts.rpak",
+
+
+	[ "AKIMBO_LMG" ] = $"datatable/loadouts/loadoutselection_selectable_loadouts_akimbo_lmg.rpak",
+
+}
 
 global const string NETVAR_LOADOUT_CURRENT_MANUAL_ROTATION_INDEX_NAME = "manualLoadoutCurrentRotationIndex" 
 global const string NETVAR_TIME_SINCE_EVENT_STARTED_NAME = "timeSinceEventStarted" 
@@ -326,6 +342,11 @@ bool function LoadoutSelection_ShouldAvoidDuplicateWeaponsInLoadoutRotation()
 
 
 
+string function GetCustomLoadoutName()
+{
+	return GetCurrentPlaylistVarString( "loadoutselection_custom_loadout", "" )
+}
+
 
 
 
@@ -336,28 +357,44 @@ void function LoadoutSelection_SetDatatableAssets()
 	
 
 
-		if ( WinterExpress_IsModeEnabled() )
+		if ( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_WINTEREXPRESS ) )
 		{
-			file.rotationsDatatable = WINTEREXPRESS_ROTATIONS_DATATABLE
-			file.loadoutsDatatable = WINTEREXPRESS_LOADOUTS_DATATABLE
+			Assert( HasCustomLoadoutDefined( "WINTER_EXPRESS" ), "WINTER_EXPRESS custom loadout is not defined" )
+			file.rotationsDatatable = GetCustomLoadoutRotationsDatatable_Asset( "WINTER_EXPRESS" )
+			file.loadoutsDatatable = GetCustomLoadoutDatatable_Asset( "WINTER_EXPRESS" )
 		}
 
 
 
-	if ( TDM_IsModeEnabled())
+	if ( GameModeVariant_IsActive( eGameModeVariants.FREEDM_TDM ) )
 	{
-		if ( TDM_IsSWATLoadout() )
+		string customLoadoutName = GetCustomLoadoutName()
+		if ( customLoadoutName != "" )
 		{
-			file.rotationsDatatable = TDM_SWAT_ROTATIONS_DATATABLE
-			file.loadoutsDatatable  = TDM_SWAT_LOADOUTS_DATATABLE
-		}
-		else
-		{
-			file.rotationsDatatable = TDM_ROTATIONS_DATATABLE
-			file.loadoutsDatatable  = TDM_LOADOUTS_DATATABLE
+			if ( HasCustomLoadoutDefined( customLoadoutName ) )
+			{
+				asset customLoadoutRotation = GetCustomLoadoutRotationsDatatable_Asset( customLoadoutName )
+				asset customLoadout = GetCustomLoadoutDatatable_Asset( customLoadoutName )
+				file.rotationsDatatable = GetCustomLoadoutRotationsDatatable_Asset( customLoadoutName )
+				file.loadoutsDatatable = GetCustomLoadoutDatatable_Asset( customLoadoutName )
+			}
+			else
+				Warning( customLoadoutName + " custom loadout is not defined" )
 		}
 	}
 
+}
+
+bool function HasCustomLoadoutDefined ( string customName ) {
+	return customName in CUSTOM_VARIANT_ROTATIONS_DATATABLE && customName in CUSTOM_VARIANT_LOADOUTS_DATATABLE
+}
+
+asset function GetCustomLoadoutRotationsDatatable_Asset( string customName ) {
+	return CUSTOM_VARIANT_ROTATIONS_DATATABLE[ customName ]
+}
+
+asset function GetCustomLoadoutDatatable_Asset( string customName ) {
+	return CUSTOM_VARIANT_LOADOUTS_DATATABLE[ customName ]
 }
 
 
@@ -1190,13 +1227,13 @@ bool function ModeUsesLoadoutWeapons()
 		return true
 
 
-	if ( GetCurrentPlaylistVarBool( "is_gamemode_battle_rush", false ) )
+	if ( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_BATTLE_RUSH ) )
 		return true
 
 
 
-	if ( IsShadowArmyGamemode() )
-		return true
+
+
 
 
 	return false

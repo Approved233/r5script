@@ -6,6 +6,8 @@ global struct RTKDeepLinkButton_Properties
 	string link = ""
 	string linkType = ""
 	string fromPageId = ""
+	int messageType = 0
+	int carouselIndex = 0
 }
 
 void function RTKDeepLinkButton_OnInitialize( rtk_behavior self )
@@ -24,8 +26,30 @@ void function GoToLink( rtk_behavior self )
 	string link = self.PropGetString( "link" )
 	string linkType = self.PropGetString( "linkType" )
 	string fromPageId = self.PropGetString( "fromPageId" )
+	int messageType = self.PropGetInt( "messageType" )
+	int carouselIndex = self.PropGetInt( "carouselIndex" )
+
 	if ( linkType == "" )
 		return
+
+
+	if ( fromPageId == "battlepass" )
+	{
+		switch ( messageType )
+		{
+			case eBattlepassUMType.MESSAGE:
+				PromoDialog_UpdateBattlepassPromo( true )
+				PromoDialog_OpenToPage( carouselIndex )
+				return
+
+			case eBattlepassUMType.DEEPLINK: 
+				break
+
+			case eBattlepassUMType.NONE:
+				break
+		}
+	}
+
 
 	OpenPromoLink( linkType, link, fromPageId )
 }

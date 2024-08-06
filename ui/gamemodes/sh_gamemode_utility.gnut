@@ -77,6 +77,13 @@ global function GamemodeUtility_GetIsTeamIndexValidPlayerTeam
 
 
 
+
+
+
+
+
+
+
 global function GamemodeUtility_GetPlaylist	
 
 
@@ -89,6 +96,10 @@ global function GamemodeUtility_GetPlaylist
 const float UNSET_PLAYLIST_VAR_FLOAT = -1
 const int UNSET_PLAYLIST_VAR_INT = -1
 global const int EXPECTED_PARSED_CIRCLE_VALUE_COUNT = 4
+
+
+
+
 
 
 
@@ -229,8 +240,16 @@ void function GamemodeUtility_Init()
 
 void function GamemodeUtility_RegisterNetworking()
 {
+
+
+
+
+
 	Remote_RegisterClientFunction( "GamemodeUtility_ServerCallback_DisplayMatchTimeLimitWarning", "bool" )
+	Remote_RegisterClientFunction( "GamemodeUtility_ServerCallback_PlayMatchEndingCountdownAudio" )
 	RegisterNetworkedVariable( "mixtape_isLeaverPenaltyEnabledForMatch", SNDC_GLOBAL, SNVT_BOOL, true )
+
+
 
 
 
@@ -491,6 +510,81 @@ bool function GamemodeUtility_GetKillReplayActive()
 {
 	return GetCurrentPlaylistVarBool( "killreplay_enabled", false )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2858,7 +2952,6 @@ bool function GamemodeUtility_GetMixtapeAbandonPenaltyActive()
 
 
 
-
 int function GamemodeUtility_GetMaxDroppedGrenadesOnDeath()
 {
 	return GetCurrentPlaylistVarInt( "grenade_ondeath_max_spawncount", 1 )
@@ -3013,6 +3106,32 @@ float function GetPlaylistVar_DeathboxDuration()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 bool function GamemodeUtility_GetIsTeamIndexValidPlayerTeam( int teamIndex )
 {
 	return TEAM_MULTITEAM_FIRST <= teamIndex && teamIndex < MAX_TEAMS + TEAM_MULTITEAM_FIRST
@@ -3029,6 +3148,130 @@ string function GamemodeUtility_GetPlaylist()
 
 	unreachable
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+bool function GetPlaylistVar_AllowThirdPerson()
+{
+	return GetCurrentPlaylistVarBool( "allow_third_person", false )
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -44,7 +44,7 @@ void function StoreOfferSetItems_OnOpen()
 
 		TabData tabData = GetTabDataForPanel( file.menu )
 		tabData.centerTabs = true
-		tabData.bannerTitle = Localize( "#ARTIFACT_SET" ).toupper()
+		tabData.bannerTitle = Localize( RTKStore_GetGridItemType() == eStoreGridItemType.ARTIFACT_SET ? "#ARTIFACT_SET" : "#UNIVERSAL_MELEE_SET" ).toupper()
 		tabData.bannerLogoScale = 0.7
 		tabData.callToActionWidth = 300
 		tabData.initialFirstTabButtonXPos = GetNearestAspectRatio( GetScreenSize().width, GetScreenSize().height ) <= 2.0 ? 80: 0

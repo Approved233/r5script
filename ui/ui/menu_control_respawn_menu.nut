@@ -390,7 +390,7 @@ void function OnControlMenuShutdown()
 
 void function ControlSpawnMenu_ResolutionChanged()
 {
-	if ( IsFullyConnected()  && Control_IsModeEnabled() )
+	if ( IsFullyConnected() && GameMode_IsActive( eGameModes.CONTROL ) )
 	{
 		RunClientScript( "UICallback_Control_OnResolutionChanged" )
 	}

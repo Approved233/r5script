@@ -83,8 +83,6 @@ void function RTKRadioPlayScreen_CloseOnDelay( rtk_behavior self, float delay )
 
 void function InitRadioPlayDialog( var menu )
 {
-	SetDialog( menu, true )
-
 	AddMenuFooterOption( menu, LEFT, BUTTON_B, true, "#B_BUTTON_BACK", "#B_BUTTON_BACK" )
 }
 

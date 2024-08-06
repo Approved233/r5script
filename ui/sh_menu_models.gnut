@@ -214,10 +214,56 @@
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 struct
 {
 
 		int  activePresentationType = ePresentationType.INACTIVE
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -414,6 +460,7 @@ struct
 
 
 
+
 const STICK_ROTATE_SPEED = 2.0 
 
 
@@ -432,6 +479,7 @@ global function OnMouseWheelUp
 global function ClientToUI_PROTO_UpdateClientWithLocalClientUID
 
 global function TrackIsOverScrollBar
+global function ClientToUI_CheckPlaylist
 
 
 
@@ -446,6 +494,7 @@ global function RemoveCallback_OnMouseWheelDown
 global function RemoveCallback_OnMouseWheelUp
 global function IsCallbackRegistered_OnMouseWheelDown
 global function IsCallbackRegistered_OnMouseWheelUp
+global function IsPlayPresentationType
 
 
 
@@ -454,7 +503,55 @@ void function ShMenuModels_UIInit()
 {
 	RegisterButtonPressedCallback( MOUSE_WHEEL_DOWN, OnMouseWheelDown )
 	RegisterButtonPressedCallback( MOUSE_WHEEL_UP, OnMouseWheelUp )
+
+	AddCallback_LobbyPlaylist_OnSelectedPlaylistChanged( LSS_Callback_SelectedPlaylistChanged )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5622,7 +5719,7 @@ void function UI_SetPresentationType( int newPresentationType, bool interpolate 
 
 	file.activePresentationType = newPresentationType
 
-	if ( newPresentationType == ePresentationType.PLAY )
+	if ( IsPlayPresentationType( newPresentationType ) )
 		RunClientScript( "UpdateMenuWithPartyMembers" )
 }
 
@@ -6069,15 +6166,6 @@ void function ClientToUI_PROTO_UpdateClientWithLocalClientUID()
 
 
 
-
-
-
-
-
-
-
-
-
 void function OnMouseWheelDown( var unused )
 {
 	foreach ( void functionref() cb in file.mouseWheelDownCallbacks )
@@ -6139,6 +6227,118 @@ bool function IsCallbackRegistered_OnMouseWheelDown( void functionref() cb )
 {
 	return file.mouseWheelDownCallbacks.contains( cb )
 }
+
+bool function IsPlayPresentationType( int presentationType )
+{
+	return presentationType == ePresentationType.PLAY || presentationType == ePresentationType.PLAY_QUADS || presentationType == ePresentationType.PLAY_STAGE_B
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+void function LSS_Callback_SelectedPlaylistChanged( string playlistName )
+{
+	UpdateLobbyButtons()
+
+	if ( CanRunClientScript() )
+		RunClientScript( "LSS_UpdateLobbyStage", playlistName )
+}
+
+void function ClientToUI_CheckPlaylist()
+{
+	if ( CanRunClientScript() )
+		RunClientScript( "LSS_UpdateLobbyStage", LobbyPlaylist_GetSelectedPlaylist() )
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

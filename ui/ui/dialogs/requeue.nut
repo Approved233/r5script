@@ -77,14 +77,21 @@ void function RequeueDialog_RefreshContent_Thread()
 		bool isMatchmaking = IsMyPartyMatchmaking()
 		bool fullPartyConnected = UI_IsFullPartyConnectedForRequeue()
 		bool playlistHidden = Playlist_ShouldBeHiddenForScheduleBlocks( GetCurrentPlaylistName() )
+		bool partyRankTierDifferences = Ranked_ShowRankedSummary() && !Ranked_PartyMeetsRankedDifferenceRequirements()
+
 		Hud_SetVisible( file.actionButton1, false )
 		Hud_SetVisible( file.actionButton2, false )
 
 		string statusString = ""
+		bool canRequeue = false
 		if ( !fullPartyConnected )
 			statusString = Localize( "#REQUEUE_UNAVAILALE_PARTY_NOT_CONNECTED" )
 		else if ( playlistHidden )
 			statusString = Localize( "#REQUEUE_UNAVAILALE_PLAYLIST_EXPIRED" )
+		else if ( partyRankTierDifferences )
+			statusString = Localize( "#REQUEUE_UNAVAILALE_RANK_TIER_DIFFERENCES" )
+		else
+			canRequeue = true
 
 		if ( isMatchmaking )
 		{
@@ -105,7 +112,7 @@ void function RequeueDialog_RefreshContent_Thread()
 			RuiSetString( actionButton2Rui, "buttonText", Localize( "#BUTTON_REQUEUE_WITH_SQUAD" ) )
 			RuiSetString( exitToLobbyButtonRui, "buttonText", Localize( "#BUTTON_REQUEUE_HOLD_EXIT_TO_LOBBY" ) )
 
-			Hud_SetVisible( file.actionButton1, fullPartyConnected && !playlistHidden )
+			Hud_SetVisible( file.actionButton1, canRequeue )
 			
 
 			Hud_SetText( file.statusText, statusString )
@@ -227,8 +234,19 @@ void function RequeueDialog_Thread_ExitToLobby( var btn )
 	EndSignal( uiGlobal.signalDummy, "KillExistingRequeueHoldThreads" )
 	EndSignal( uiGlobal.signalDummy, "LevelShutdown" )
 
+	string HOLD_SOUND = "UI_Menu_ReadyUp_CancelBar_1P"
+
+	OnThreadEnd(
+		function() : ( HOLD_SOUND )
+		{
+			StopUISound( HOLD_SOUND )
+		}
+	)
+
 	float startTime = ClientTime()
 	var rui = Hud_GetRui( file.holdExitLobbyButton )
+
+	EmitUISound( HOLD_SOUND )
 
 	while( RequeueDialogIsOpen() && ClientTime() < startTime + EXIT_TO_LOBBY_HOLDTIME &&
 		( InputIsButtonDown( KEY_SPACE )
@@ -250,7 +268,7 @@ void function RequeueDialog_Thread_ExitToLobby( var btn )
 	if ( ClientTime() >= startTime + EXIT_TO_LOBBY_HOLDTIME )
 	{
 		RuiSetFloat( rui, "holdPercentage", 1.0 )
-
+		EmitUISound( "UI_Menu_ReadyUp_Cancel_1P" )
 		LeaveMatch()
 		CloseAllDialogs()
 	}

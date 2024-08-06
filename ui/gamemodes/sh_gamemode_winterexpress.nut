@@ -1,6 +1,8 @@
 global function WinterExpress_Init
-global function WinterExpress_RegisterNetworking
 global function WinterExpress_IsNarrowWin
+
+
+
 
 
 
@@ -36,37 +38,6 @@ global function WinterExpress_IsNarrowWin
 global function UI_UpdateOpenMenuButtonCallbacks_Spectate
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 global enum eWinterExpressRoundState
 {
 	OBJECTIVE_ACTIVE,
@@ -90,6 +61,13 @@ global enum eWinterExpressObjectiveState
 	CONTESTED,
 	CONTROLLED,
 	INACTIVE,
+}
+
+global enum eWinterExpressSpawnMode
+{
+	HOVERTANK,
+	SKYDIVE,
+	STATION_UNSUPPORTED 
 }
 
 
@@ -287,12 +265,8 @@ struct {
 
 void function WinterExpress_Init()
 {
-	if ( !WinterExpress_IsModeEnabled() )
-		return
-
 	file.scoreLimit = GetCurrentPlaylistVarInt( "winter_express_score_limit", 100 )
 	file.roundLimit = GetCurrentPlaylistVarInt( "winter_express_round_limit", 30 )
-
 
 	Remote_RegisterServerFunction( "ClientCallback_WinterExpress_TryRespawnPlayer" )
 
@@ -410,19 +384,12 @@ void function WinterExpress_Init()
 
 
 
-
-
-
-
-
+	WinterExpress_RegisterNetworking()
 }
 
 
 void function WinterExpress_RegisterNetworking()
 {
-	if ( !WinterExpress_IsModeEnabled() )
-		return
-
 	Remote_RegisterClientFunction( "ServerCallback_CL_GameStartAnnouncement" )
 
 	Remote_RegisterClientFunction( "ServerCallback_CL_RoundEnded", "int", 0, 128, "int", -2, 10000, "int", 0, 10000 )
@@ -470,243 +437,23 @@ bool function WinterExpress_IsNarrowWin()
 	return GetGlobalNetBool( "WinterExpress_NarrowWin" )
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+int function WinterExpress_GetSpawnMode()
+{
+	switch ( GetCurrentPlaylistVarString( "winter_express_spawn_mode", "hovertank" ) )
+	{
+		case "hovertank":
+			return eWinterExpressSpawnMode.HOVERTANK
+
+		case "skydive":
+			return eWinterExpressSpawnMode.SKYDIVE
+
+		default:
+			Assert( false, "playlist var \"winter_express_spawn_mode\" set to invalid value! (should be either hovertank or skydive)" )
+			return -1
+	}
+
+	unreachable
+}
 
 
 
@@ -3895,10 +3642,6 @@ void function WinterExpress_UI_OpenLoadoutSelect( var button )
 
 
 
-
-
-
-
 float function GetWaveRespawnInterval()
 {
 	return GetCurrentPlaylistVarFloat( "winter_express_wave_respawn_intreval", -1 )
@@ -3915,6 +3658,12 @@ bool function IsRoundBasedRespawn()
 {
 	return GetCurrentPlaylistVarBool( "winter_express_round_based_respawn", false )
 }
+
+
+
+
+
+
 
 
 

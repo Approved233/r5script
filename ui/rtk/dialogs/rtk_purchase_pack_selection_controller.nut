@@ -135,8 +135,8 @@ void function OpenPurchasePackSelectionDialog( bool isGift )
 
 void function SetUpPackSelectionButtonsModel( rtk_struct packSelectionPanel )
 {
-	array<GRXScriptOffer> singlePurchaseOffers = GRX_GetItemDedicatedStoreOffers( MilestoneEvent_GetMainPackFlav( file.activeEvent ), MilestoneEvent_GetFrontPageGRXOfferLocation( file.activeEvent, file.isRestricted ) )
-	array<GRXScriptOffer> multiplePurchaseOffers = GRX_GetItemDedicatedStoreOffers( MilestoneEvent_GetGuaranteedPackFlav( file.activeEvent ), MilestoneEvent_GetFrontPageGRXOfferLocation( file.activeEvent, file.isRestricted ) )
+	array<GRXScriptOffer> singlePurchaseOffers = MilestoneEvent_GetSinglePackOffers( file.activeEvent )
+	array<GRXScriptOffer> multiplePurchaseOffers = MilestoneEvent_GetMultiPackOffers( file.activeEvent )
 
 	Assert( singlePurchaseOffers.len() <= 1, "RTK Pack Purchase flow only supports up to ONE [1 pack] offer" )
 	Assert( multiplePurchaseOffers.len() <= 1, "RTK Pack Purchase flow only supports up to ONE [multiple pack] offer" )
@@ -144,6 +144,9 @@ void function SetUpPackSelectionButtonsModel( rtk_struct packSelectionPanel )
 	
 
 	array<RTKPurchasePackSelectionButtonModel> buttonsDataModel
+
+	bool hasCraftingOffer = false
+	RTKPurchasePackSelectionButtonModel singleCraft
 
 	
 	if ( singlePurchaseOffers.len() > 0 )
@@ -174,10 +177,10 @@ void function SetUpPackSelectionButtonsModel( rtk_struct packSelectionPanel )
 			int craftingPrice = GRXOffer_GetCraftingPriceQuantity( file.singleOffer )
 			if ( craftingPrice >= 0 )
 			{
-				RTKPurchasePackSelectionButtonModel singleCraft
 				singleCraft.price = "%$" + ItemFlavor_GetIcon( GRX_CURRENCIES[GRX_CURRENCY_CRAFTING] ) + "% " + FormatAndLocalizeNumber( "1", float( craftingPrice ), true )
 				singleCraft.packQuantity = 1
-				buttonsDataModel.append( singleCraft )
+				
+				hasCraftingOffer = true
 			}
 		}
 	}
@@ -204,6 +207,10 @@ void function SetUpPackSelectionButtonsModel( rtk_struct packSelectionPanel )
 		multiplePremium.packQuantity = 4
 		buttonsDataModel.append( multiplePremium )
 	}
+
+	
+	if ( hasCraftingOffer )
+		buttonsDataModel.append( singleCraft )
 
 	rtk_array packSelectionButtonData = RTKStruct_GetOrCreateScriptArrayOfStructs( packSelectionPanel, "buttonData", "RTKPurchasePackSelectionButtonModel" )
 	RTKArray_SetValue( packSelectionButtonData, buttonsDataModel )
@@ -294,7 +301,7 @@ void function SetUpFooterButtons( rtk_behavior self )
 		}
 		else if( state == ePurchaseDialogButtonState.AVAILABLE )
 		{
-			if ( UI_OperationQueueHasGRXOperations() )
+			if ( GRX_QueuedOperationMayDirtyOffers() )
 			{
 				EmitUISound( "menu_deny" )
 				return

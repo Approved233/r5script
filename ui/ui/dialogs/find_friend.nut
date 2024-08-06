@@ -227,7 +227,7 @@ void function ResultButton_OnActivate( var button )
 
 	printt( "EADP_InviteFriendByEAID: " + file.buttonToResultMap[button].eaid + " (" + file.buttonToResultMap[button].name + ")" )
 
-	int hardward = GetHardwareFromName( GetUnspoofedPlayerHardware() )
+	int hardward = GetHardwareFromName( GetPlayerHardware() )
 	if ( hardward == file.buttonToResultMap[button].hardware )
 	{
 		

@@ -3,7 +3,6 @@ global function InitCharactersPanel
 global function JumpToCharactersTab
 global function JumpToCharacterCustomize
 global function OpenPurchaseCharacterDialogFromTop
-global function IsCharacterLocked
 
 struct
 {
@@ -141,11 +140,6 @@ bool function IsFocusedCharacterLocked()
 		return !Character_IsCharacterOwnedByPlayer( file.buttonToCharacter[focus] )
 
 	return false
-}
-
-bool function IsCharacterLocked( ItemFlavor character )
-{
-	return !Character_IsCharacterOwnedByPlayer( character )
 }
 
 bool function IsReadyAndNonfeaturedCharacterButtonFocused()
@@ -729,11 +723,17 @@ void function CharacterClassButton_Init( var button, ItemFlavor character, bool 
 	bool isSelected = LoadoutSlot_GetItemFlavor( LocalClientEHI(), Loadout_Character() ) == character
 
 	Hud_SetVisible( button, true )
+	bool isPlayable = IsItemFlavorUnlockedForLoadoutSlot( LocalClientEHI(), Loadout_Character(), character )
+	bool isOwned = Loadout_IsCharacterOwnedByPlayerIngoringUnlockSources( FromEHI( LocalClientEHI() ), character )
 
-	if( forceOwned )
+	if ( forceOwned )
+	{
 		Hud_SetLocked( button, false )
+	}
 	else
-		Hud_SetLocked( button, !IsItemFlavorUnlockedForLoadoutSlot( LocalClientEHI(), Loadout_Character(), character ) )
+	{
+		Hud_SetLocked( button, !isPlayable )
+	}
 
 	Hud_SetSelected( button, isSelected )
 
@@ -744,93 +744,51 @@ void function CharacterClassButton_Init( var button, ItemFlavor character, bool 
 	RuiSetString( buttonRui, "portraitName", Localize( ItemFlavor_GetLongName( character ) ) )
 	RuiSetImage( buttonRui, "roleImage", CharacterClass_GetCharacterRoleImage( character ) )
 
-	
-	ItemFlavor ornull activeRewardCampaignFlav = RewardCampaign_GetActiveRewardCampaign()
-	ItemFlavor ornull characterChallenge
-	if ( activeRewardCampaignFlav != null )
-	{
-		expect ItemFlavor( activeRewardCampaignFlav )
-		array<ItemFlavor> collectionFlavs = RewardCampaign_GetChallengeCollections( activeRewardCampaignFlav )
-		if ( collectionFlavs.len() > 0 )
-		{
-			ChallengeCollection collection = ChallengeCollection_GetByGUID( collectionFlavs[0].guid )
-			characterChallenge = ChallengeCollection_GetCharacterUnlockChallenge( character, collection )
-		}
-	}
-
-	bool tempBoostedCompleted = false
-	if ( characterChallenge != null )
-	{
-		expect ItemFlavor( characterChallenge )
-		tempBoostedCompleted = Challenge_IsComplete( GetLocalClientPlayer(), characterChallenge )
-	}
-	ItemFlavor ornull rewardCampaign = RewardCampaign_GetActiveRewardCampaign()
-	bool tempComingSoon = false
-	if ( rewardCampaign != null )
-	{
-		expect ItemFlavor( rewardCampaign )
-		tempComingSoon = TempUnlock_WillCharacterUnlockDuringEvent( character, rewardCampaign )
-	}
-
 	bool isCaleventUnlocked = Character_IsCharacterUnlockedForCalevent( character )
-	RuiSetBool( buttonRui, "isTempUnlocked", isCaleventUnlocked )
-	RuiSetBool( buttonRui, "isTempCompleted", tempBoostedCompleted )
-	RuiSetBool( buttonRui, "isTempUpcoming", tempComingSoon )
+	bool isUnlockedByBP2 = Character_IsUnlockedForBattlePassV2( GetLocalClientPlayer(), character )
+	bool isUnlockableInNPP = Character_IsUnlockableInNewPlayerPass( character )
 
-	if( addNewness )
-		Newness_AddCallbackAndCallNow_OnRerverseQueryUpdated( NEWNESS_QUERIES.CharacterButton[character], OnNewnessQueryChangedUpdateButton, button )
-
-	if ( rewardCampaign != null )
+	if ( addNewness )
 	{
-		expect ItemFlavor( rewardCampaign )
-		entity player = GetLocalClientPlayer()
-		ItemFlavor challenge = RewardCampaign_GetMainChallenge( player, rewardCampaign )
-		if ( !Challenge_IsAssigned( player, challenge ) )
-		{
-			return
-		}
-
-		int tier                   = minint( Challenge_GetCurrentTier( player, challenge ), Challenge_GetTierCount( challenge ) - 1 )
-		int challengeProgressValue = Challenge_GetProgressValue( player, challenge, tier )
-		int challengeGoalValue     = Challenge_GetGoalVal( challenge, tier )
-
-		
-		ToolTipData toolTipData
-		if ( characterChallenge != null )
-		{
-			expect ItemFlavor( characterChallenge )
-			int characterChallengeTier                   = minint( Challenge_GetCurrentTier( player, characterChallenge ), Challenge_GetTierCount( characterChallenge ) - 1 )
-			int characterChallengeProgressValue = Challenge_GetProgressValue( player, characterChallenge, characterChallengeTier )
-			int characterChallengeGoalValue     = Challenge_GetGoalVal( characterChallenge, characterChallengeTier )
-			toolTipData.actionHint1 = Localize( "#N_N_CHALLENGES_COMPLETED", characterChallengeProgressValue, characterChallengeGoalValue, Localize( ItemFlavor_GetShortName( character ) ) )
-		}
-		toolTipData.tooltipFlags = toolTipData.tooltipFlags | eToolTipFlag.SOLID
-		toolTipData.tooltipStyle = eTooltipStyle.BOOSTED
-		if ( isCaleventUnlocked )
-		{
-			toolTipData.boostedToolTipData.state = eBoostedToolTipState.UNLOCKED
-			toolTipData.titleText = Localize( RewardCampaign_GetUnlockedLegendTooltipTitle( rewardCampaign ) )
-			toolTipData.descText = RewardCampaign_GetUnlockedLegendTooltipDesc( rewardCampaign, GRX_IsInventoryReady() && GRX_IsItemOwnedByPlayer( character )  )
-			Hud_SetToolTipData( button, toolTipData )
-		}
-
-		if ( tempComingSoon )
-		{
-			toolTipData.titleText = Localize( RewardCampaign_GetUpcomingLegendTooltipTitle( rewardCampaign ) )
-			toolTipData.boostedToolTipData.state = eBoostedToolTipState.LOCKED
-			toolTipData.actionHint1 = ""
-			toolTipData.descText = Localize( RewardCampaign_GetUpcomingLegendTooltipDesc( rewardCampaign ) )
-			Hud_SetToolTipData( button, toolTipData )
-		}
-
-		if ( tempBoostedCompleted )
-		{
-			toolTipData.titleText = RewardCampaign_GetCompletedLegendTooltipTitle( rewardCampaign )
-			toolTipData.boostedToolTipData.state = eBoostedToolTipState.COMPLETED
-			toolTipData.descText = RewardCampaign_GetCompletedLegendTooltipDesc( rewardCampaign )
-			Hud_SetToolTipData( button, toolTipData )
-		}
+		Newness_AddCallbackAndCallNow_OnRerverseQueryUpdated( NEWNESS_QUERIES.CharacterButton[character], OnNewnessQueryChangedUpdateButton, button )
 	}
+
+	ToolTipData toolTipData
+	asset topRightIcon = $""
+	asset bottomLeftIcon = $""
+
+	if ( isUnlockedByBP2 && !isOwned )
+	{
+		toolTipData.tooltipFlags             = toolTipData.tooltipFlags | eToolTipFlag.SOLID
+		toolTipData.tooltipStyle             = eTooltipStyle.BOOSTED
+		toolTipData.boostedToolTipData.state = eBoostedToolTipState.UNLOCKED
+		toolTipData.titleText                = Localize( "#BPV2_LEGEND_SELECT_TOOLTIP_TITLE_UNLOCKED_BY_PREMIUMPLUS" )
+		toolTipData.descText                 = Localize( "#BPV2_LEGEND_SELECT_TOOLTIP_DESC_UNLOCKED_BY_PREMIUMPLUS", Localize( ItemFlavor_GetLongName( character ) ) )
+		Hud_SetToolTipData( button, toolTipData )
+		topRightIcon                         = $"rui/menu/character_select/utility/bp_icon"
+		bottomLeftIcon                       = $"rui/menu/character_select/utility/timer_icon"
+	}
+	else if ( isUnlockableInNPP && !isOwned )
+	{
+		toolTipData.tooltipFlags             = toolTipData.tooltipFlags | eToolTipFlag.SOLID
+		toolTipData.tooltipStyle             = eTooltipStyle.BOOSTED
+		toolTipData.boostedToolTipData.state = eBoostedToolTipState.LOCKED
+		toolTipData.titleText                = Localize( "#BPV2_LEGEND_SELECT_TOOLTIP_TITLE_UNLOCKABLE_BY_NPP" )
+		toolTipData.descText                 = Localize( "#BPV2_LEGEND_SELECT_TOOLTIP_DESC_UNLOCKABLE_BY_NPP", Localize( ItemFlavor_GetLongName( character ) ) )
+		Hud_SetToolTipData( button, toolTipData )
+		topRightIcon                         = $"rui/menu/character_select/utility/npp_icon"
+		bottomLeftIcon                       = $""
+	}
+	else if ( isCaleventUnlocked && !isOwned ) 
+	{
+		topRightIcon = $""
+		bottomLeftIcon = $"rui/menu/buttons/unlocked"
+	}
+
+	RuiSetImage( buttonRui, "topRightIcon", topRightIcon )
+	RuiSetImage( buttonRui, "bottomLeftIcon", bottomLeftIcon )
+	RuiSetBool( buttonRui, "topRightIconVisible", topRightIcon != $"" )
+	RuiSetBool( buttonRui, "bottomLeftIconVisible", bottomLeftIcon != $"" )
 }
 
 
@@ -1005,7 +963,6 @@ void function CharactersPanel_OnFocusChanged( var panel, var oldFocus, var newFo
 		}
 		else
 		{
-			printt( ItemFlavor_GetCharacterRef( characterOrNull ) )
 			PresentCharacter( characterOrNull )
 			Character_UpdateFooter()
 		}
@@ -1040,7 +997,7 @@ void function CharactersPanel_DelayedSelectCharacter( var btn, ItemFlavor charac
 		previousPosition = newPosition
 
 		float velocity = xMovement + yMovement
-		printt( velocity )
+		
 		if( velocity < 0.5 || startTime + MAX_TIME_ON_CHAR_BUTTON <=  UITime())
 		{
 			printt( ItemFlavor_GetCharacterRef( characterOrNull ) )
@@ -1095,6 +1052,13 @@ void function CharacterButton_OnMiddleClick( var button )
 	if ( button in file.buttonToCharacter )
 	{
 		ItemFlavor character = file.buttonToCharacter[ button ]
+
+			if ( NPP_ShouldDisableGRXForNPPLegend( GetLocalClientPlayer(), character ) )
+			{
+				EmitUISound( "menu_deny" )
+				return
+			}
+
 
 		
 		if ( ItemFlavor_GetGRXMode( file.buttonToCharacter[button] ) == eItemFlavorGRXMode.NONE )
@@ -1227,7 +1191,13 @@ void function UpdatePanelCharacterGiftFooter( InputDef footer )
 	{
 		bool alwaysOwnsChar = ( ItemFlavor_GetGRXMode( expect ItemFlavor ( file.presentedCharacter ) ) == eItemFlavorGRXMode.NONE )
 
-		if ( alwaysOwnsChar )
+		bool isNPPLegend = false
+
+
+		isNPPLegend = NPP_IsNPPLegend( expect ItemFlavor ( file.presentedCharacter ) )
+
+
+		if ( alwaysOwnsChar || isNPPLegend )
 		{
 			footer.gamepadLabel = ""
 			footer.mouseLabel = ""

@@ -1,13 +1,13 @@
 global function OpenPurchaseRerollDialog
 global function OpenApexCupPurchaseRerollDialog
 
-const string CHALLENGE_REROLL_SOUND = "UI_Menu_Challenge_ReRoll"
 
 struct
 {
 	ItemFlavor& rerollChallenge
 	var sourceChallengeButton
 	var sourceChallengeMenu
+	int cupID
 } file
 
 
@@ -63,13 +63,11 @@ void function RerollDialog_OnClickRerollButton( int challengeType )
 			pdc.quantity = numNeeded
 			pdc.markAsNew = false
 			pdc.onPurchaseResultCallback = void function( bool wasSuccessful ) : ( challenge, rui, sourceMenu, challengeType ) {
-				if ( sourceMenu == null )
-					JumpToChallenges( "" )
-
 				if ( wasSuccessful )
 				{
 					Remote_ServerCallFunction( "ClientCallback_Challenge_ReRoll", ItemFlavor_GetGUID( challenge ) )
-					delaythread( 1.65 ) ShimmerChallenge( rui, sourceMenu )
+					delaythread( 1.65 )
+					ShimmerChallenge( rui, sourceMenu )
 				}
 			}
 
@@ -127,16 +125,33 @@ void function OpenPurchaseRerollDialog( ItemFlavor challenge, var sourceButton, 
 	RerollDialog_OnClickRerollButton( eChallengeGameMode.ANY )
 }
 
+void function RerollDialogConfirm()
+{
+	Remote_ServerCallFunction( "ClientCallback_ReRollCup", file.cupID )
+}
+
 void function OpenApexCupPurchaseRerollDialog( ItemFlavor reRoll, string cupName, CupEntry entry )
 {
 	if ( !GRX_IsInventoryReady() || !GRX_AreOffersReady() )
 		return
 
+	
 	int numTokens = maxint( GRX_GetConsumableCount( ItemFlavor_GetGRXIndex( reRoll ) ), 0 )
-
 	if ( numTokens > entry.reRollCount )
 	{
-		Remote_ServerCallFunction( "ClientCallback_ReRollCup", entry.cupID )
+		file.cupID = entry.cupID
+
+		DialogData dialogData
+		dialogData.header = Localize( "#CUP_REROLL_CONFIRM_HEADER" )
+		dialogData.message = Localize( "#CUP_REROLL_CONFIRM_DESC" )
+		dialogData.darkenBackground = true
+		dialogData.useFullMessageHeight = true
+
+		AddDialogButton( dialogData, "#CUP_REROLL_CONFIRM_BUTTON", RerollDialogConfirm )
+		AddDialogButton( dialogData, "#B_BUTTON_BACK" )
+
+		OpenDialog( dialogData )
+
 		return
 	}
 

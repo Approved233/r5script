@@ -7,7 +7,8 @@ global function AllChallengesMenu_ForceClickSpecialEventButton
 
 global function InitAllChallengesPanel
 
-global function JumpToChallenges
+
+
 
 const int MAX_CHALLENGE_CATEGORIES_PER_PAGE = 8
 const int MAX_CHALLENGE_CATEGORIES_PER_PAGE_NX = 5
@@ -121,80 +122,82 @@ void function MarkAllChallengeItemsAsViewed( var button )
 		EmitUISound( "UI_Menu_Deny" )
 }
 
-void function JumpToChallenges( string link )
-{
-	while ( GetActiveMenu() != GetMenu( "LobbyMenu" ) )
-		CloseActiveMenu()
 
-	TabData lobbyTabData = GetTabDataForPanel( GetMenu( "LobbyMenu" ) )
-	int index            = Tab_GetTabIndexByBodyName( lobbyTabData, "ChallengesPanel" )
-	if ( lobbyTabData.activeTabIdx != index )
-		ActivateTab( lobbyTabData, index )
-}
 
-void function JumpToChallengesLink ( string link )
-{
-	if ( link == "" )
-		return
 
-	var groupScrollPanel = null
-	ChallengePanelData challengePanelData
-	var button
 
-	foreach ( panel, panelData in file.panelData )
-	{
-		groupScrollPanel   = Hud_GetChild( panelData.groupListPanel, "ScrollPanel" )
-		challengePanelData = panelData
-	}
 
-	if ( groupScrollPanel == null )
-	{
-		printt( "ERROR - Failed to find Challenge Panel during JumpToChallengesLink" )
-		return
-	}
 
-	switch ( link )
-	{
-		case "challengesdaily":
-			button = challengePanelData.claimedLargeButtons[eChallengeTimeSpanKind.DAILY]
-			break
 
-		case "challengesweekly":
-			int buttonIndex = 0
-			button = Hud_GetChild( groupScrollPanel, "GridButton" + buttonIndex )
-			break
 
-		case "challengesweeklycurrent":
-			int currentWeek = GetCurrentBattlePassWeek()
-			int buttonIndex = currentWeek - 1
-			button = Hud_GetChild( groupScrollPanel, "GridButton" + buttonIndex )
-			break
 
-		case "challengesevent":
-			button = challengePanelData.claimedLargeButtons[eChallengeTimeSpanKind.EVENT]
-			break
 
-		case "challengeseventshop":
-			button = challengePanelData.claimedLargeButtons[eChallengeTimeSpanKind.EVENTSHOP_DAILY_CHALLENGE]
-			break
 
-		case "challengesspecial1":
-			button = challengePanelData.claimedLargeButtons[eChallengeTimeSpanKind.EVENT_SPECIAL]
-			break
 
-		case "challengesspecial2":
-			button = challengePanelData.claimedLargeButtons[eChallengeTimeSpanKind.EVENT_SPECIAL_2]
-			break
-	}
 
-	if ( button == null )
-	{
-		printt( "ERROR - Failed to find Group Buttons for " + link + " during JumpToChallengesLink" )
-		return
-	}
 
-	GroupButton_OnSelect( button )
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 void function AllChallengesMenu_OnShow()
 {
@@ -600,7 +603,9 @@ void function AllChallengesMenu_UpdateCategories( bool ornull isShown )
 
 			if ( file.link != "" )
 			{
-				JumpToChallengesLink( file.link )
+
+
+
 				file.link = ""
 			}
 			else if ( file.lastSelectedGroupButton != null )

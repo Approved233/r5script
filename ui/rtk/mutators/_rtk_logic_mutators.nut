@@ -6,6 +6,11 @@ bool function RTKMutator_Not( bool input )
 	return !input
 }
 
+bool function RTKMutator_NotForRTL( bool input )
+{
+	return IsRTL() ? !input : input
+}
+
 bool function RTKMutator_Equal( float input, float other )
 {
 	return fabs( input - other ) < FLT_EPSILON

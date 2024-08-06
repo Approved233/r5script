@@ -79,8 +79,6 @@ void function InitVideoPanel( var panel )
 		SetupSettingsButton( Hud_GetChild( file.videoPanel, "SwchTextureDetail" ), "#TEXTURE_QUALITY", "#ADVANCED_VIDEO_MENU_TEXTURE_DETAIL_DESC", $"rui/menu/settings/settings_video" )
 		
 
-		SetupSettingsButton( Hud_GetChild( file.videoPanel, "SwchAdaptiveSupersample" ), "#ADAPTIVE_SUPERSAMPLE", "#ADAPTIVE_SUPERSAMPLE_DESC", $"rui/menu/settings/settings_video" )
-
 		SetupSettingsButton( Hud_GetChild( file.videoPanel, "SwchVolumetricLighting" ), "#VOLUMETRIC_LIGHTING", "#VOLUMETRIC_LIGHTING_DESC", $"rui/menu/settings/settings_video" )
 #if DEV
 		SetupSettingsButton( Hud_GetChild( file.videoPanel, "SwchVolumetricFog" ), "#VOLUMETRIC_FOG", "#VOLUMETRIC_FOG_DESC", $"rui/menu/settings/settings_video" )
@@ -195,8 +193,8 @@ void function OnVideoPanel_Show( var panel )
 		var aspectRatioButton = Hud_GetChild( file.videoPanel, "SwchAspectRatio" )
 		var resolutionButton  = Hud_GetChild( file.videoPanel, "SwchResolution" )
 
-		bool isFiringRangeMode = GetCurrentPlaylistVarBool( "survival_firingrange", false )
-		bool isTraining = GetCurrentPlaylistVarBool( "survival_training", false )
+		bool isFiringRangeMode = GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_FIRING_RANGE )
+		bool isTraining = GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_TRAINING )
 		bool enableVideoSettings = GetGameState() >= eGameState.Playing || IsLobby() || isFiringRangeMode || isTraining
 
 		Hud_SetEnabled( displayModeButton, enableVideoSettings )

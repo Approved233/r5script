@@ -121,10 +121,16 @@ enum SurvivalStatusType
 
 
 
+
 void function Perk_SupportLootbin_Init()
 {
 	if ( !SupportBin_ShouldUseDiscreteSupportBins() )
 		return
+
+
+
+
+
 
 	PerkInfo extraBinLoot
 	extraBinLoot.perkId          = ePerkIndex.EXTRA_BIN_LOOT
@@ -174,12 +180,12 @@ void function Perk_SupportLootbin_Init()
 
 
 
-
-
-
-
-
 }
+
+
+
+
+
 
 
 
@@ -301,7 +307,6 @@ int function SupportBin_HeatShieldAssistanceMax()
 	return ( GetCurrentPlaylistVarInt("supportbin_heatshield_assistance_max", 3 ) )
 }
 
-
 bool function SupportBin_RotatingLoot_Refill_SecretLoot()
 {
 	return ( GetCurrentPlaylistVarBool("supportbin_dispenses_rotatingloot_only_secret_compartment", false ) )
@@ -316,7 +321,6 @@ bool function SupportBin_RotatingLoot_MainLoot_AllowGearSpawns()
 {
 	return ( GetCurrentPlaylistVarBool("supportbin_dispenses_rotatingloot_main_compartment_spawns_gear", true ) )
 }
-
 
 bool function SupportBin_AllowArmorLootInBins()
 {
@@ -337,6 +341,20 @@ bool function SupportBin_RemoveSurvivalItemsFromBaseRoll()
 {
 	return ( GetCurrentPlaylistVarBool("supportbin_remove_survival_items", true ) )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

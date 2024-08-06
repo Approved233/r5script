@@ -282,7 +282,7 @@ void function CustomMatch_SetStartMatchTooltip( CustomMatch_LobbyState data )
 
 		int maxAlliancesOrTeams = GetPlaylistVarInt(  data.playlist, "max_alliances", 0 )
 		maxAlliancesOrTeams = maxAlliancesOrTeams > 0 ? maxAlliancesOrTeams : data.maxTeams
-		int publicMinPlayersFallback = ( file.gamemode == SURVIVAL || file.gamemode == GAMEMODE_SHADOW_ROYALE ) ? 30 : data.maxPlayers
+		int publicMinPlayersFallback = ( file.gamemode == SURVIVAL ) ? 30 : data.maxPlayers
 		int minPlayers = hasSpecialAccess ? 1 : GetPlaylistVarInt( data.playlist, "cm_public_min_players", publicMinPlayersFallback )
 		int firstFoundAllianceOrTeam = -1
 		file.hasRemainingAllianceOrTeam = minPlayers > 1

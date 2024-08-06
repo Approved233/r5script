@@ -19,6 +19,7 @@ global function HidePanelInternal
 global function ShutdownAllPanels
 global function IsPanelTabbed
 global function SetPanelTabEnabled
+global function SetPanelTabVisible
 global function SetPanelTabNew
 global function IsTabIndexVisible
 global function IsTabIndexEnabled
@@ -34,6 +35,7 @@ global function SetTabNavigationEnabled
 global function SetTabNavigationEndCallback
 global function SetTabNavigationCallback
 global function AddCallback_OnTabChanged
+global function RemoveCallback_OnTabChanged
 
 global function GetTabBodyParent
 
@@ -218,6 +220,12 @@ void function AddCallback_OnTabChanged( void functionref() callbackFunc )
 {
 	if( !file.Callbacks_OnTabUpdated.contains( callbackFunc ) )
 		file.Callbacks_OnTabUpdated.append( callbackFunc )
+}
+
+void function RemoveCallback_OnTabChanged( void functionref() callbackFunc )
+{
+	Assert( file.Callbacks_OnTabUpdated.contains( callbackFunc ), "No function with name " + string( callbackFunc ) + " was found in Callbacks_OnTabUpdated" )
+	file.Callbacks_OnTabUpdated.fastremovebyvalue( callbackFunc )
 }
 
 void function OnTabChanged()
@@ -784,7 +792,7 @@ void function UpdateMenuTabs()
 				}
 			}
 
-			if ( tabIndex >= numTabs || !tabDefs[tabIndex].visible )
+			if ( tabIndex >= numTabs || !tabDefs[tabIndex].visible || ( numTabs == 1 && !Tab_IsRootLevel( tabData ) ) )
 			{
 				RuiSetString( tabButtonRUI, "buttonText", "" )
 
@@ -1313,6 +1321,8 @@ void function OnNestedTab_NavLeftOnReleased( var unusedNull )
 
 void function OnNestedTab_PreviousTab( TabData tabData, int tabIndex )
 {
+	int initialTabIndex = tabIndex
+
 	int tabsChecked = 0
 	while ( tabsChecked < tabData.tabDefs.len() )
 	{
@@ -1325,8 +1335,11 @@ void function OnNestedTab_PreviousTab( TabData tabData, int tabIndex )
 		if ( !IsTabIndexEnabled( tabData, tabIndex ) )
 			continue
 
-		EmitUISound( tabData.tabLeftSound )
-		ActivateTab( tabData, tabIndex )
+		if ( tabIndex != initialTabIndex )
+		{
+			EmitUISound( tabData.tabLeftSound )
+			ActivateTab( tabData, tabIndex )
+		}
 		break
 	}
 }
@@ -1382,6 +1395,8 @@ void function OnNestedTab_NavRightOnReleased( var unusedNull )
 
 void function OnNestedTab_NextTab( TabData tabData, int tabIndex )
 {
+	int initialTabIndex = tabIndex
+
 	int tabsChecked = 0
 	while ( tabsChecked < tabData.tabDefs.len() )
 	{
@@ -1394,8 +1409,12 @@ void function OnNestedTab_NextTab( TabData tabData, int tabIndex )
 		if ( !IsTabIndexEnabled( tabData, tabIndex ) )
 			continue
 
-		EmitUISound( tabData.tabRightSound )
-		ActivateTab( tabData, tabIndex )
+		if ( tabIndex != initialTabIndex )
+		{
+			EmitUISound( tabData.tabRightSound )
+			ActivateTab( tabData, tabIndex )
+		}
+
 		break
 	}
 }

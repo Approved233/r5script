@@ -28,27 +28,14 @@ struct
 	array<var>			customItems
 } file
 
-void function updateDeadzoneButtons()
+void function UpdateDeadzoneButtons()
 {
-	if( GetConVarBool("ps5_trig_enable") && !GetConVarBool("ps5_trig_incompatible") )
-	{
-		Hud_SetVisible( file.swchTriggerDeadzoneBtn, true )
-		Hud_SetNavDown( file.adaptiveTriggersBtn, file.swchTriggerDeadzoneBtn )
-		Hud_SetNavUp( file.sldCursorVelocityBtn, file.swchTriggerDeadzoneBtn )
-	}
-	else
-	{
-		Hud_SetVisible( file.swchTriggerDeadzoneBtn, true )
-		Hud_SetNavDown( file.adaptiveTriggersBtn, file.swchTriggerDeadzoneBtn )
-		Hud_SetNavUp( file.sldCursorVelocityBtn, file.swchTriggerDeadzoneBtn )
-	}
-
 	Hud_SetEnabled( file.adaptiveTriggersBtn, !GetConVarBool("ps5_trig_incompatible") )
 }
 
-void function adaptiveTriggers_OnChanged( var button )
+void function AdaptiveTriggers_OnChanged( var button )
 {
-	updateDeadzoneButtons()
+	UpdateDeadzoneButtons()
 }
 
 void function InitControlsGamepadPanel( var panel )
@@ -99,12 +86,24 @@ void function InitControlsGamepadPanel( var panel )
 
 	file.advanceControlsDisableItems.append( button )
 
-	SetupSettingsButton( Hud_GetChild( contentPanel, "SwchVibration" ), "#VIBRATION", "#GAMEPAD_MENU_VIBRATION_DESC", $"rui/menu/settings/settings_gamepad" )
+	file.adaptiveTriggersBtn = SetupSettingsButton( Hud_GetChild( contentPanel, "SwchAdaptiveTriggers" ), "#SETTING_ADAPTIVE_TRIGGERS", "#SETTING_ADAPTIVE_TRIGGERS_DESC", $"rui/menu/settings/settings_gamepad" )
 
+	var btnVibration = Hud_GetChild( contentPanel, "SwchVibration" )
 	if ( ADTH_IsAllowed() )
 	{
-		Hud_Hide( Hud_GetChild( contentPanel, "SwchVibration" ) )
-		SetupSettingsButton( Hud_GetChild( contentPanel, "SwchVibration_PS5" ), "#VIBRATION", "#GAMEPAD_MENU_VIBRATION_DESC", $"rui/menu/settings/settings_gamepad" )
+		var btnVibrationADTH = Hud_GetChild( contentPanel, "SwchVibration_ADTH" )
+		Hud_Hide( btnVibration )
+		Hud_Show( btnVibrationADTH )
+		Hud_SetNavDown( Hud_GetChild( contentPanel, "SwchLookInvert" ), btnVibrationADTH )
+		Hud_SetNavUp( Hud_GetChild( contentPanel, "BtnControllerOpenAdvancedMenu" ), btnVibrationADTH )
+		SetupSettingsButton( btnVibrationADTH, "#VIBRATION", "#GAMEPAD_MENU_VIBRATION_DESC", $"rui/menu/settings/settings_gamepad" )
+		AddButtonEventHandler( file.adaptiveTriggersBtn, UIE_CHANGE, AdaptiveTriggers_OnChanged )
+	}
+	else
+	{
+		
+		SetupSettingsButton( btnVibration, "#VIBRATION", "#GAMEPAD_MENU_VIBRATION_DESC", $"rui/menu/settings/settings_gamepad" )
+		Hud_Hide( file.adaptiveTriggersBtn )
 	}
 
 	SetupSettingsButton( Hud_GetChild( contentPanel, "SwchHoldToCrouch" ), "#HOLDTOCROUCH", "#GAMEPAD_MENU_HOLDTOCROUCH_DESC", $"rui/menu/settings/settings_gamepad" )
@@ -112,15 +111,24 @@ void function InitControlsGamepadPanel( var panel )
 	SetupSettingsButton( Hud_GetChild( contentPanel, "SwchToggleGamepadADS" ), "#GAMEPAD_TOGGLE_ADS", "#GAMEPAD_TOGGLE_ADS_DESC", $"rui/menu/settings/settings_gamepad" )
 	SetupSettingsButton( Hud_GetChild( contentPanel, "SwitchSurvivalSlotToWeaponInspect" ), "#GADGET_SLOT_BUTTON_SWAP", "#GADGET_SLOT_BUTTON_SWAP_DESC", $"rui/menu/settings/settings_gamepad" )
 
-	file.adaptiveTriggersBtn = SetupSettingsButton( Hud_GetChild( contentPanel, "SwchAdaptiveTriggers" ), "#SETTING_ADAPTIVE_TRIGGERS", "#SETTING_ADAPTIVE_TRIGGERS_DESC", $"rui/menu/settings/settings_gamepad" )
-	AddButtonEventHandler( file.adaptiveTriggersBtn, UIE_CHANGE, adaptiveTriggers_OnChanged )
+	file.sldCursorVelocityBtn = Hud_GetChild( contentPanel, "SldCursorVelocity" )
+	SetupSettingsSlider( file.sldCursorVelocityBtn, "#GAMEPAD_CURSOR_VELOCITY", "#GAMEPAD_CURSOR_VELOCITY_DESC", $"rui/menu/settings/settings_gamepad" )
 
 #if !PC_PROG_NX_UI
 	file.swchTriggerDeadzoneBtn = SetupSettingsButton( Hud_GetChild( contentPanel, "SwchTriggerDeadzone" ), "#GAMEPAD_TRIGGER_DEADZONES", "#GAMEPAD_TRIGGER_DEADZONES_DESC", $"rui/menu/settings/settings_gamepad" )
+	if ( ADTH_IsAllowed() )
+	{
+		Hud_SetPinSibling( file.swchTriggerDeadzoneBtn, "SwchAdaptiveTriggers" )
+	}
+	else
+	{
+		Hud_SetNavDown( Hud_GetChild( contentPanel, "SwitchSurvivalSlotToWeaponInspect" ), file.swchTriggerDeadzoneBtn )
+		Hud_SetNavUp( file.sldCursorVelocityBtn, file.swchTriggerDeadzoneBtn )
+		Hud_SetNavUp( file.swchTriggerDeadzoneBtn, Hud_GetChild( contentPanel, "SwitchSurvivalSlotToWeaponInspect" ) )
+		Hud_SetPinSibling( file.swchTriggerDeadzoneBtn, "SwitchSurvivalSlotToWeaponInspect" )
+	}
 #endif
 
-	file.sldCursorVelocityBtn = Hud_GetChild( contentPanel, "SldCursorVelocity" )
-	SetupSettingsSlider( file.sldCursorVelocityBtn, "#GAMEPAD_CURSOR_VELOCITY", "#GAMEPAD_CURSOR_VELOCITY_DESC", $"rui/menu/settings/settings_gamepad" )
 
 
 
@@ -182,7 +190,7 @@ void function InitControlsGamepadPanel( var panel )
 	{
 		file.conVarDataList.append( CreateSettingsConVarData( "ps5_trig_enable", eConVarType.INT ) )
 		file.conVarDataList.append( CreateSettingsConVarData( "ps5_trig_incompatible", eConVarType.INT ) )
-		updateDeadzoneButtons()
+		UpdateDeadzoneButtons()
 	}
 }
 
@@ -196,38 +204,10 @@ void function OnControlsGamepadPanel_Show( var panel )
 	ScrollPanel_SetActive( panel, true )
 	SetStatesForCustomEnable()
 
-	var contentPanel = Hud_GetChild( panel, "ContentPanel" )
-	var vibBtn = Hud_GetChild( contentPanel, "SwchVibration" )
-	var vibBtnPs5 = Hud_GetChild( contentPanel, "SwchVibration_PS5" )
-
 	if ( ADTH_IsAllowed() )
-	{
-		Hud_Hide( vibBtn )
-		updateDeadzoneButtons()
-	}
-	else
-	{
-		Hud_Show( vibBtn )
-		if ( IsValid( vibBtnPs5 ) )
-		{
-			Hud_Hide( vibBtnPs5 )
-		}
-		Hud_Hide( file.adaptiveTriggersBtn )
+		UpdateDeadzoneButtons()
 
-		Hud_SetNavDown( Hud_GetChild( contentPanel, "SwchLookInvert" ), vibBtn )
-		Hud_SetNavUp( Hud_GetChild( contentPanel, "BtnControllerOpenAdvancedMenu" ), vibBtn )
-
-		if ( IsValid( file.swchTriggerDeadzoneBtn ) )
-		{
-			Hud_SetNavDown( Hud_GetChild( contentPanel, "SwitchSurvivalSlotToWeaponInspect" ), file.swchTriggerDeadzoneBtn )
-			Hud_SetNavUp( file.sldCursorVelocityBtn, file.swchTriggerDeadzoneBtn )
-			Hud_SetNavUp( file.swchTriggerDeadzoneBtn, Hud_GetChild( contentPanel, "SwitchSurvivalSlotToWeaponInspect" ) )
-
-			Hud_SetPinSibling( file.swchTriggerDeadzoneBtn, "SwitchSurvivalSlotToWeaponInspect" )
-		}
-	}
-
-	SettingsPanel_SetContentPanelHeight( contentPanel )
+	SettingsPanel_SetContentPanelHeight( Hud_GetChild( panel, "ContentPanel" ) )
 	ScrollPanel_Refresh( panel )
 }
 

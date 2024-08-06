@@ -243,21 +243,20 @@ void function ScrollVertical( entity player, float val )
 	const float STICK_DEADZONE = 0.15
 	foreach ( ScrollPanelData data in file.scrollPanels )
 	{
-		if ( data.isActive )
+		if ( !data.isActive || ( !Hud_IsCursorOver( data.panel ) && data.cursorMustBeOver ) )
+			continue
+
+		if ( fabs( val ) < STICK_DEADZONE )
+			data.scrollValue = 0.0
+		else
 		{
-			if ( fabs( val ) < STICK_DEADZONE )
-				data.scrollValue = 0.0
-			else
+			if ( (data.scrollValue <= 0 && val < 0) || (data.scrollValue >= 0 && val > 0) )
 			{
-				if ( (data.scrollValue <= 0 && val < 0) || (data.scrollValue >= 0 && val > 0) )
-				{
-					data.scrollValue = val
-				}
+				data.scrollValue = val
 			}
-
-
-			UpdatePanelElements( data )
 		}
+
+		UpdatePanelElements( data )
 	}
 }
 

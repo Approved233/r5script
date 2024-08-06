@@ -347,6 +347,4 @@ bool function TitanSword_Block_IsBlocking( entity weapon )
 
 
 
-
-
                                

@@ -30,6 +30,9 @@ array<string> navItems =
 
 
 
+
+
+
 struct
 {
 	bool active
@@ -41,10 +44,8 @@ struct
 	var                itemDescriptionBox
 
 	var 			   audioLanguageButton
-
 	var 			   voiceSensitivityButton
 	var 			   voiceSensitivitySliderRui
-
 
 	array<ConVarData>    conVarDataList
 
@@ -112,15 +113,18 @@ void function InitSoundPanel( var panel )
 
 	SetupSettingsSlider( Hud_GetChild( contentPanel, "SldDialogueVolume" ), "#MENU_DIALOGUE_VOLUME_CLASSIC", "#OPTIONS_MENU_DIALOGUE_VOLUME_DESC", $"rui/menu/settings/settings_audio" )
 	SetupSettingsSlider( Hud_GetChild( contentPanel, "SldSFXVolume" ), "#MENU_SFX_VOLUME_CLASSIC", "#OPTIONS_MENU_SFX_VOLUME_DESC", $"rui/menu/settings/settings_audio" )
+	SetupSettingsSlider( Hud_GetChild( contentPanel, "SldSFXObserverVolume" ), "#MENU_SFX_OBSERVER_VOLUME", "#OPTIONS_MENU_SFX_OBSERVER_VOLUME_DESC", $"rui/menu/settings/settings_audio" )
 	SetupSettingsSlider( Hud_GetChild( contentPanel, "SldMusicVolume" ), "#MENU_MUSIC_VOLUME_CLASSIC", "#OPTIONS_MENU_MUSIC_VOLUME_DESC", $"rui/menu/settings/settings_audio" )
 	SetupSettingsSlider( Hud_GetChild( contentPanel, "SldLobbyMusicVolume" ), "#MENU_LOBBY_MUSIC_VOLUME", "#OPTIONS_MENU_LOBBY_MUSIC_VOLUME_DESC", $"rui/menu/settings/settings_audio" )
 	SetupSettingsButton( Hud_GetChild( contentPanel, "SwchSpatialAudio" ), "#AUDIO_SPATIAL", "#AUDIO_SPATIAL_DESC", $"rui/menu/settings/settings_audio" )
 
+	file.voiceSensitivityButton = Hud_GetChild( contentPanel, "SldOpenMicSensitivity" )
+	file.voiceSensitivitySliderRui = Hud_GetRui( Hud_GetChild( file.voiceSensitivityButton, "PrgValue" ) )
 
-		file.voiceSensitivityButton = Hud_GetChild( contentPanel, "SldOpenMicSensitivity" )
-		file.voiceSensitivitySliderRui = Hud_GetRui( Hud_GetChild( file.voiceSensitivityButton, "PrgValue" ) )
+	HudElem_SetRuiArg( Hud_GetChild( file.voiceSensitivityButton, "PnlDefaultMark" ), "heightScale", 0.7 )
+	SetupSettingsSlider( Hud_GetChild( contentPanel, "SldOpenMicSensitivity" ), "#OPEN_MIC_SENS", "#OPEN_MIC_SENS_DESC", $"rui/menu/settings/settings_audio" )
 
-		HudElem_SetRuiArg( Hud_GetChild( file.voiceSensitivityButton, "PnlDefaultMark" ), "heightScale", 0.7 )
+
 
 		var button = Hud_GetChild( contentPanel, "SwchInputDevice" )
 		SetupSettingsButton( button, "#VOICECHAT_INPUT_DEVICE", "#VOICECHAT_INPUT_DEVICE_DESC", $"rui/menu/settings/settings_audio" )
@@ -128,7 +132,6 @@ void function InitSoundPanel( var panel )
 		button = Hud_GetChild( contentPanel, "SwchOutputDevice" )
 		SetupSettingsButton( button, "#AUDIO_OUTPUT_DEVICE", "#AUDIO_OUTPUT_DEVICE_DESC", $"rui/menu/settings/settings_audio" )
 
-		SetupSettingsSlider( Hud_GetChild( contentPanel, "SldOpenMicSensitivity" ), "#OPEN_MIC_SENS", "#OPEN_MIC_SENS_DESC", $"rui/menu/settings/settings_audio" )
 		SetupSettingsButton( Hud_GetChild( contentPanel, "SwchPushToTalk" ), "#OPTIONS_MENU_VOICE_CHAT_MIC", "#OPTIONS_MENU_VOICE_CHAT_MIC_DESC", $"rui/menu/settings/settings_audio" )
 		var slider = Hud_GetChild( contentPanel, "SldVoiceChatVolume" )
 		SetupSettingsSlider( slider, "#VOICE_CHAT_VOLUME", "#OPTIONS_MENU_VOICE_CHAT_DESC", $"rui/menu/settings/settings_audio" )
@@ -138,6 +141,7 @@ void function InitSoundPanel( var panel )
 		AddButtonEventHandler( Hud_GetChild( contentPanel, "SwchOutputDevice" ), UIE_CHANGE, OnOutputDeviceChanged )
 
 
+	SetupSettingsButton( Hud_GetChild( contentPanel, "SwchSoundStandingEmotes" ), "#SOUND_EMOTE_PREVIEW", "#OPTIONS_MENU_SOUND_EMOTE_PREVIEW", $"rui/menu/settings/settings_audio" )
 	SetupSettingsButton( Hud_GetChild( contentPanel, "SwchVipTelemetry" ), "#OPTIONS_MENU_AUDIO_VIP_TELEMETRY", "#OPTIONS_MENU_AUDIO_VIP_TELEMETRY_DESC", $"rui/menu/settings/settings_audio" )
 
 	SettingsPanel_SetContentPanelHeight( contentPanel )
@@ -207,12 +211,10 @@ void function OnSoundPanel_Show( var panel )
 	ScrollPanel_SetActive( panel, true )
 	Hud_SetEnabled( file.audioLanguageButton, IsAudioLanguageChangeAllowed() )
 
-
 	thread UpdateVoiceMeter()
 
+
 	SoundPanel_UpdateDriverOptions()
-
-
 
 
 
@@ -318,7 +320,6 @@ void function FooterButton_Focused( var button )
 }
 
 
-
 void function UpdateVoiceMeter()
 {
 	Signal( uiGlobal.signalDummy, "UpdateVoiceMeter" )
@@ -326,11 +327,12 @@ void function UpdateVoiceMeter()
 
 	while ( true )
 	{
-		RuiSetFloat( file.voiceSensitivitySliderRui, "voiceProgress", GetConVarFloat( "speex_audio_value" ) / 10000.0 )
-		RuiSetFloat( file.voiceSensitivitySliderRui, "voiceThreshhold", GetConVarFloat( "speex_quiet_threshold" ) / 10000.0 )
+		RuiSetFloat( file.voiceSensitivitySliderRui, "voiceProgress", GetConVarFloat( "speex_audio_value" ) / 32767.0 )
+		RuiSetFloat( file.voiceSensitivitySliderRui, "voiceThreshhold", GetConVarFloat( "speex_quiet_threshold" ) / 32767.0 )
 		WaitFrame()
 	}
 }
+
 
 
 void function OnOutputDeviceChanged( var option )
@@ -379,10 +381,10 @@ void function RestoreSoundDefaults()
 		SetConVarToDefault( "sound_volume_voice" )
 		SetConVarToDefault( "miles_occlusion" )
 		SetConVarToDefault( "sound_without_focus" )
-		SetConVarToDefault( "speex_quiet_threshold" )
 
 
 
+	SetConVarToDefault( "speex_quiet_threshold" )
 
 	SaveSettingsConVars( file.conVarDataList )
 	SavePlayerSettings()

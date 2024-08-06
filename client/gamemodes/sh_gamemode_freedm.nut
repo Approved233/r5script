@@ -2,8 +2,6 @@
 
 global function FreeDM_GamemodeInitShared
 global function FreeDM_GetOtherTeam
-global function FreeDM_IsActiveGameMode
-global function FreeDM_RegisterNetworking
 global function FreeDM_SetAudioEvent
 
 #if DEV
@@ -16,6 +14,7 @@ global function FreeDM_SetAudioEvent
 global function DEV_ScoreTrackAnimateIn
 
 #endif
+
 
 
 
@@ -54,6 +53,7 @@ global function ServerCallback_FreeDM_ChampionSounds
 global function UICallback_FreeDM_OpenCharacterSelect
 global function FreeDM_CloseCharacterSelect
 global function ServerCallback_SetRespawnOverlay
+global function ServerCallback_FreeDM_DisplayScore
 
 
 const string FREEDM_SECONDARY_SCORE_NAME = "FreeDM_SecondaryPoints"
@@ -66,6 +66,18 @@ const int FREEDM_DEFAULT_MAX_PLAYERS = 0
 const float FREEDM_INTRO_MUSIC_TIME            = 5.0
 const float FREEDM_POST_ROUND_MUSIC_STOP_DELAY = 2.0
 const int FREEDM_MUSIC_START_ON_KILLS_LEFT     = 5
+
+
+
+
+
+
+
+
+
+
+
+
 
 const string FREEDM_MUSIC_GAMEPLAY = "Music_GunGame_Gameplay"
 const string FREEDM_MUSIC_VICTORY  = "Music_GunGame_Victory"
@@ -201,6 +213,8 @@ struct {
 
 
 
+
+
 	bool                          isScoreText = false
 	var        					  introCountdownRUI = null
 	asset functionref( int team ) getCustomIndicatorCallback = null
@@ -218,6 +232,7 @@ void function FreeDM_GamemodeInitShared()
 	SetScoreEventOverrideFunc( FreeDM_SetScoreEventOverride )
 	GamemodeSurvivalShared_Init()
 
+	TimedEvents_Init()
 
 
 
@@ -287,6 +302,7 @@ void function FreeDM_GamemodeInitShared()
 	Remote_RegisterClientFunction( "ServerCallback_FreeDM_ChampionSounds", "int", 0, 128)
 	Remote_RegisterClientFunction( "FreeDM_CloseCharacterSelect")
 	Remote_RegisterClientFunction( "ServerCallback_SetRespawnOverlay" )
+	Remote_RegisterClientFunction( "ServerCallback_FreeDM_DisplayScore" )
 
 
 		FreeDM_SetDisplayScoreThread( DisplayScore )
@@ -337,29 +353,8 @@ void function FreeDM_GamemodeInitShared()
 	FreeDM_SetAudioEvent( eFreeDMAudioEvents.Victory_Sound, FREEDM_VICTORY_SOUND )
 	FreeDM_SetAudioEvent( eFreeDMAudioEvents.Defeat_Sound, FREEDM_DEFEAT_SOUND )
 
-
-
-
-
-
-
-
-		GunGame_Init()
-
-
-		TDM_Init()
-
-
-
-
-
-		TreasureHunt_Init()
-
-
-
-
+	FreeDM_RegisterNetworking()
 }
-
 
 
 
@@ -667,23 +662,6 @@ void function FreeDM_SetAudioEvent( int event, string eventString )
 
 	file.audioEvents[ event ] <- eventString
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -1605,6 +1583,36 @@ const int FramesToWait = 60
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 const string FREEDM_AIRDROP_ANIMATION = "droppod_loot_drop_lifeline"
 
 
@@ -1836,6 +1844,8 @@ void function FreeDM_GamemodeInitClient()
 
 	
 	ClGamemodeSurvival_Init()
+	FreeDM_ScoreboardSetup()
+
 	AddCallback_GameStateEnter( eGameState.Playing, Client_OnGameStatePlaying )
 	AddCallback_GameStateEnter( eGameState.Prematch, Client_OnPrematchInit )
 	AddCallback_GameStateEnter( eGameState.WinnerDetermined, Client_OnWinnerDetermined )
@@ -1855,7 +1865,7 @@ void function Client_OnPrematchInit()
 	RunUIScript( "UICodeCallback_CloseAllMenus" )
 
 
-		if ( TDM_IsModeEnabled())
+		if ( GameModeVariant_IsActive( eGameModeVariants.FREEDM_TDM ) )
 		{
 			file.introCountdownRUI = CreateFullscreenPostFXRui( $"ui/freedm_countdown_timer.rpak" )
 			RuiSetGameTime( file.introCountdownRUI, "timerStartTime", GetGameStartTime() - roundStartTime )
@@ -1894,7 +1904,7 @@ void function _CountdownIntroSoundThread()
 
 	string countdownSound = GUNGAME_COUNTDOWN_SOUND
 
-		countdownSound = TDM_IsModeEnabled() ? TDM_COUNTDOWN_SOUND : GUNGAME_COUNTDOWN_SOUND
+		countdownSound = GameModeVariant_IsActive( eGameModeVariants.FREEDM_TDM ) ? TDM_COUNTDOWN_SOUND : GUNGAME_COUNTDOWN_SOUND
 
 
 	
@@ -1921,6 +1931,24 @@ void function Client_OnGameStatePlaying()
 		Warning( "FreeDM displayScoreThread is null! No score HUD will be displayed" )
 
 	thread _DelayedDestroyCountdownRUI( )
+
+
+		if ( BigTDM_IsModeEnabled() )
+		{
+			AnnouncementData announcement = Announcement_Create( Localize("#BTDM_NAME") )
+			Announcement_SetSubText( announcement, Localize("#BTDM_ANNOUNCEMENT") )
+			Announcement_SetHideOnDeath( announcement, true )
+			Announcement_SetDuration( announcement, 7.0 )
+			Announcement_SetPurge( announcement, true )
+			Announcement_SetStyle( announcement, ANNOUNCEMENT_STYLE_SWEEP )
+			Announcement_SetSoundAlias( announcement, SFX_HUD_ANNOUNCE_QUICK )
+			Announcement_SetTitleColor( announcement, <0, 0, 0> )
+			Announcement_SetIcon( announcement, $"" )
+			Announcement_SetLeftIcon( announcement, $"rui/rui_screens/apex_logo_tdm_big" )
+			Announcement_SetRightIcon( announcement, $"rui/rui_screens/apex_logo_tdm_big" )
+			AnnouncementFromClass( GetLocalClientPlayer(), announcement )
+		}
+
 }
 
 
@@ -2183,7 +2211,7 @@ void function ServerCallback_FreeDM_AnnounceRoundWonLost( int winningTeamOrAllia
 		if ( isLocalPlayerOnWinningTeamOrAlliance )
 		{
 
-				if ( TDM_IsModeEnabled())
+				if ( GameModeVariant_IsActive( eGameModeVariants.FREEDM_TDM ) )
 					TDMAnnouncementRoundWon(Localize( "#GAMEMODE_ROUND_WIN"))
 				else
 					AnnouncementMessageSweep( localPlayer, Localize( "#GAMEMODE_ROUND_WIN"))
@@ -2248,7 +2276,7 @@ void function FreeDM_DelayedShowScoreboard()
 	wait FREEDM_ROUND_WIN_ANNOUNCMENT_TIME
 
 
-		if (TDM_IsModeEnabled())
+		if ( GameModeVariant_IsActive( eGameModeVariants.FREEDM_TDM ))
 		{
 			wait FREEDM_POST_ROUND_SCOREBOARD_TIME
 			RunUIScript( "TDM_ShowScoreboard" )
@@ -2319,8 +2347,8 @@ void function AnnouncementMessageWarning( entity player, string messageText, vec
 void function UICallback_FreeDM_OpenCharacterSelect()
 {
 	
-	Assert( FreeDM_IsActiveGameMode() )
-	if ( !FreeDM_IsActiveGameMode() )
+	Assert( GameMode_IsActive( eGameModes.FREEDM ) )
+	if ( !GameMode_IsActive( eGameModes.FREEDM ) )
 		return
 
 	entity clientPlayer = GetLocalClientPlayer()
@@ -2333,6 +2361,7 @@ void function UICallback_FreeDM_OpenCharacterSelect()
 	const bool showLockedCharacters = true
 	bool isJIP = GamemodeUtility_IsJIPPlayerSpawnBonusPending( clientPlayer )
 	HideScoreboard()
+	HideHUD()
 	OpenCharacterSelectMenu( browseMode, showLockedCharacters, isJIP )
 }
 
@@ -2340,7 +2369,7 @@ void function UICallback_FreeDM_OpenCharacterSelect()
 
 void function FreeDM_CloseCharacterSelect()
 {
-	if ( !FreeDM_IsActiveGameMode() )
+	if ( !GameMode_IsActive( eGameModes.FREEDM ) )
 		return
 
 	HideScoreboard()
@@ -2440,11 +2469,6 @@ int function FreeDM_GetCratesPerAirDrop()
 	return GetCurrentPlaylistVarInt( "freedm_airdrops_crates_per_airdrop", 1 )
 }
 
-bool function FreeDM_IsActiveGameMode()
-{
-    return GameRules_GetGameMode() == GAMEMODE_FREEDM
-}
-
 float function GetDroppedLootLifetime()
 {
 	return GetCurrentPlaylistVarFloat( "freedm_dropped_loot_persist_time", -1.0 )
@@ -2475,6 +2499,40 @@ int function GetPlayMusicOnScore()
 }
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #if DEV
 
 
@@ -2490,6 +2548,26 @@ int function GetPlayMusicOnScore()
 
 
 #endif
+
+
+void function HideHUD()
+{
+	RuiTopology_UpdatePos( clGlobal.topoFullscreenHudPermanent, <0, 0, 0>, <0, 0, 0>, <0, 0, 0> )
+	RuiTopology_UpdatePos( clGlobal.topoFullscreenFullMap, <0, 0, 0>, <0, 0, 0>, <0, 0, 0> )
+	if ( file.scoreTrackerHUDRui != null )
+	{
+		RuiSetBool( file.scoreTrackerHUDRui, "isVisible", false )
+	}
+}
+
+
+
+void function ServerCallback_FreeDM_DisplayScore()
+{
+	if ( file.scoreTrackerHUDRui != null )
+		RuiSetBool( file.scoreTrackerHUDRui, "isVisible", true )
+}
+
 
 #if DEV
 

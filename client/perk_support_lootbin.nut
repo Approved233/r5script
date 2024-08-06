@@ -121,10 +121,16 @@ enum SurvivalStatusType
 
 
 
+
 void function Perk_SupportLootbin_Init()
 {
 	if ( !SupportBin_ShouldUseDiscreteSupportBins() )
 		return
+
+
+		if ( !SupportBin_ShouldSpawnSupportBins() )
+			return
+
 
 	PerkInfo extraBinLoot
 	extraBinLoot.perkId          = ePerkIndex.EXTRA_BIN_LOOT
@@ -144,11 +150,6 @@ void function Perk_SupportLootbin_Init()
 
 
 	Perks_RegisterClassPerk( extraBinLoot )
-
-
-		if ( !SupportBin_ShouldSpawnSupportBins() )
-			return
-
 
 
 
@@ -184,19 +185,24 @@ void function Perk_SupportLootbin_Init()
 
 bool function SupportBin_ShouldSpawnSupportBins()
 {
-	if(GetCurrentPlaylistVarBool("survival_block_lootbin_creation", false ))
+	if( GetCurrentPlaylistVarBool("survival_block_lootbin_creation", false ) )
 		return false
 
-	if(WinterExpress_IsModeEnabled() )
-		return false
-
-
-	if(GunGame_IsModeEnabled())
+	if ( !LootBin_ArePerkBinsEnabled() )
 		return false
 
 
+	if( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_WINTEREXPRESS ) )
+		return false
 
-		if(Control_IsModeEnabled())
+
+
+	if( GameModeVariant_IsActive( eGameModeVariants.FREEDM_GUNGAME ) )
+		return false
+
+
+
+		if( GameMode_IsActive( eGameModes.CONTROL ) )
 			return false
 
 
@@ -301,7 +307,6 @@ int function SupportBin_HeatShieldAssistanceMax()
 	return ( GetCurrentPlaylistVarInt("supportbin_heatshield_assistance_max", 3 ) )
 }
 
-
 bool function SupportBin_RotatingLoot_Refill_SecretLoot()
 {
 	return ( GetCurrentPlaylistVarBool("supportbin_dispenses_rotatingloot_only_secret_compartment", false ) )
@@ -316,7 +321,6 @@ bool function SupportBin_RotatingLoot_MainLoot_AllowGearSpawns()
 {
 	return ( GetCurrentPlaylistVarBool("supportbin_dispenses_rotatingloot_main_compartment_spawns_gear", true ) )
 }
-
 
 bool function SupportBin_AllowArmorLootInBins()
 {
@@ -359,8 +363,18 @@ bool function SupportBin_EntityIsSupportBin( entity ent )
 		return false
 	if( !LootBin_HasSecretCompartment( ent ) )
 		return false
-	return ent.GetSkin() == ent.GetSkinIndexByName( SUPPORT_LOOT_BIN_SKIN_NAME )
+
+
+		return ent.GetSkin() == ent.GetSkinIndexByName( SUPPORT_LOOT_BIN_SKIN_NAME ) || ent.GetSkin() == ent.GetSkinIndexByName( SUPPORT_BIN_RESET_SKIN_NAME )
+
+
+
 }
+
+
+
+
+
 
 
 
@@ -1705,6 +1719,10 @@ void function Perk_SupportBin_RuiThinkThread( var rui, entity ent )
 	RuiSetFloat( rui, "minAlphaDist", 1500 )
 	RuiSetFloat( rui, "maxAlphaDist", 2000 )
 }
+
+
+
+
 
 
 

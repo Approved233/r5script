@@ -4,7 +4,6 @@ global function MilestoneEvents_Init
 
 
 global function GetActiveMilestoneEvent
-global function SetStoreOnlyEventsFilter
 global function GetActiveEventTabMilestoneEvent
 global function GetActiveStoreOnlyMilestoneEvents
 global function GetAllMilestoneEvents
@@ -201,6 +200,7 @@ global struct MilestoneEventGrantReward
 
 
 
+
 struct FileStruct_LifetimeLevel
 {
 	EntitySet chasePackGrantQueued
@@ -238,31 +238,52 @@ void function MilestoneEvents_Init()
 ItemFlavor ornull function GetActiveMilestoneEvent( int t )
 {
 	Assert( IsItemFlavorRegistrationFinished() )
-	if ( fileLevel.storeOnlyEvents )
+
+
+
+	
+	ItemFlavor ornull event = null
+	foreach ( ItemFlavor ev in GetAllItemFlavorsOfType( eItemType.calevent_milestone ) )
 	{
-		array<ItemFlavor> activeStoreOnlyMilestoneEvents = GetActiveStoreOnlyMilestoneEvents( t )
-		if ( activeStoreOnlyMilestoneEvents.len() > 0 )
-		{
-			ItemFlavor ornull event = activeStoreOnlyMilestoneEvents[0]
-			return event
-		}
-		else
-			return null
+		if ( !CalEvent_IsActive( ev, t ) )
+			continue
+
+		Assert( event == null, format( "Multiple milestone events are active!! (%s, %s)", string(ItemFlavor_GetAsset( expect ItemFlavor(event) )), string(ItemFlavor_GetAsset( ev )) ) )
+
+		event = ev
 	}
-	else
-	{
-		return GetActiveEventTabMilestoneEvent( t )
-	}
+
+	return event
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 	unreachable
 }
 
 
 
-void function SetStoreOnlyEventsFilter( bool storeOnlyEvents )
-{
-	fileLevel.storeOnlyEvents = storeOnlyEvents
-}
+
+
+
+
 
 
 
@@ -420,6 +441,56 @@ string function MilestoneEvent_GetFrontPageRewardBoxTitle( ItemFlavor event )
 	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_milestone )
 	return GetGlobalSettingsString( ItemFlavor_GetAsset( event ), "frontPageRewardBoxTitle" )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1000,11 +1071,6 @@ bool function MilestoneEvent_IsItemEventItem( ItemFlavor event, int itemIdx )
 	}
 	return false
 }
-
-
-
-
-
 
 
 

@@ -6,6 +6,8 @@ global function AddItemToFakeOffer
 global function StoreInspectMenu_UpdatePrices
 global function StoreInspectMenu_UpdatePurchaseButton
 global function StoreInspectMenu_EquipOwnedItem
+global function CanPlayerAffordWithEscrow
+global function ShouldShowGiftDisclaimer
 
 #if DEV
 global function DEV_PrintInspectedOffer
@@ -560,14 +562,15 @@ void function StoreInspectMenu_UpdatePurchaseButton( GRXScriptOffer storeOffer, 
 	HudElem_SetRuiArg( uiData.discountInfo, "isGiftable", isGiftable )
 
 	bool isMythic = OfferContainsMythic( storeOffer )
-	isExtraInfoVisible = !isOfferFullyClaimed && !isMythic && !isEventShopOffer && ( ( offerData.isPurchasable && offerData.discountPct > 0.0 ) || isGiftable || !offerData.canAfford )
+	bool isPurchaseLimitReached = GRXOffer_IsPurchaseLimitReached( storeOffer )
+	isExtraInfoVisible = !isOfferFullyClaimed && !isMythic && !isEventShopOffer && ( ( offerData.isPurchasable && offerData.discountPct > 0.0 ) || isGiftable || !offerData.canAfford ) && !isPurchaseLimitReached
 
 	bool hasPurchaseLimit = offerData.purchaseLimit > 0
 	HudElem_SetRuiArg( uiData.discountInfo, "hasPurchaseLimit", hasPurchaseLimit )
 
 	if ( !isExtraInfoVisible && !isEventShopOffer )
 	{
-		isExtraInfoVisible = hasPurchaseLimit
+		isExtraInfoVisible = hasPurchaseLimit && !isPurchaseLimitReached
 	}
 
 	Hud_SetVisible( uiData.discountInfo, isExtraInfoVisible )
@@ -1064,7 +1067,11 @@ void function BattlePassStoreSale_JumpOnGRXInventoryChange()
 {
 	if ( GRX_IsInventoryReady() && GRX_AreOffersReady() )
 	{
-		JumpToSeasonTab( "PassPanel" )
+
+			JumpToSeasonTab( "RTKBattlepassPanel" )
+
+
+
 
 		RemoveCallback_OnGRXInventoryStateChanged( BattlePassStoreSale_JumpOnGRXInventoryChange )
 	}
@@ -1097,6 +1104,11 @@ void function GiftButton_OnClick( var button )
 	OpenGiftingDialog( offer )
 }
 
+bool function ShouldShowGiftDisclaimer()
+{
+	return ( !Escrow_IsPlayerTrusted() && PCPlat_IsSteam() )
+}
+
 bool function CanPlayerAffordWithPremiumCurrency( GRXScriptOffer offer )
 {
 	foreach ( ItemFlavorBag price in offer.prices )
@@ -1105,6 +1117,19 @@ bool function CanPlayerAffordWithPremiumCurrency( GRXScriptOffer offer )
 			continue
 
 		if ( GRX_CanAfford( price, 1 ) )
+			return true
+	}
+	return false
+}
+
+bool function CanPlayerAffordWithEscrow( GRXScriptOffer offer )
+{
+	foreach ( ItemFlavorBag price in offer.prices )
+	{
+		if ( price.flavors[0] != GRX_CURRENCIES[GRX_CURRENCY_PREMIUM] )
+			continue
+
+		if ( GRX_CanAfford( price, 1, true ) )
 			return true
 	}
 	return false

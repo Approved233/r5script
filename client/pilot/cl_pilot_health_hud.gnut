@@ -9,6 +9,7 @@ global function DamageOverlayUpdate
 global function PilotEMP_Internal
 global function HealthHUD_ClearFX
 global function PlayShieldOverlayFX
+global function ShieldOverlayUpdate
 
 global function SetHealthDisplayRange
 
@@ -221,7 +222,7 @@ void function HealthHUD_Update( entity player )
 
 
 		
-		if ( Control_IsModeEnabled() && player.GetPlayerNetBool( "control_IsPlayerOnSpawnSelectScreen" ) )
+		if ( GameMode_IsActive( eGameModes.CONTROL ) && player.GetPlayerNetBool( "control_IsPlayerOnSpawnSelectScreen" ) )
 			return
 
 
@@ -272,7 +273,7 @@ void function HealthHUD_Update( entity player )
 		{
 
 				
-				if ( Control_IsModeEnabled() )
+				if ( GameMode_IsActive( eGameModes.CONTROL ) )
 					break
 
 			
@@ -409,6 +410,12 @@ void function ShieldOverlayUpdate( entity player, float shieldFrac, float lastSh
 	}
 	else if ( shieldFrac < lastShieldFrac )
 	{
+
+		
+		if ( player.IsMostRecentShieldChangeFromSingleSource( SHIELD_CHANGE_SOURCE_REGEN, player.GetShieldHealth(), 0.5 ) )
+			return
+
+
 		particleSystemIdx = file.shieldFX
 	}
 	else

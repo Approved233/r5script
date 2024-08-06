@@ -55,11 +55,22 @@ void function Perk_DeathBoxInsight_Init()
 
 
 
+	PerkInfo ammuvision
+	ammuvision.perkId = ePerkIndex.AMMUVISION
+
+	if ( Ammuvision_ClassPerk_Enabled() )
+	{
+		ammuvision.activateCallback = OnActivate_Ammuvision
+		ammuvision.deactivateCallback = OnDeactivate_Ammuvision
+	}
+
+	Perks_RegisterClassPerk( ammuvision )
+
+}
 
 
-
-
-
+void function OnActivate_Ammuvision( entity player, string characterName )
+{
 
 
 
@@ -68,31 +79,20 @@ void function Perk_DeathBoxInsight_Init()
 
 }
 
+void function OnDeactivate_Ammuvision( entity player )
+{
 
 
 
 
 
 
+}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+bool function Ammuvision_ClassPerk_Enabled()
+{
+	return Perks_S22UpdateEnabled() && GetCurrentPlaylistVarBool( "perks_ammuvision_enabled", true )
+}
 
 
 
@@ -385,6 +385,8 @@ bool function DeathBoxInsight_UpdateLookatPing()
 		array<entity> activeWps = Waypoints_GetActiveLootPings()
 		foreach( wp in activeWps )
 		{
+			if( !IsValid( wp ) )
+				continue
 			entity pingedEnt =  Waypoint_GetItemEntForLootWaypoint( wp )
 			entity pingedParent = pingedEnt.GetParent()
 			if( IsValid( pingedParent ) && candidateBoxes.contains( pingedParent ) )

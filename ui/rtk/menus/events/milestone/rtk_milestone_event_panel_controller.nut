@@ -4,8 +4,6 @@ global function RTKMilestoneEventPanelController_OnUpdate
 global function RTKMilestoneEventPanelController_OnTabChanged
 global function RTKMilestoneEventPanelController_SetActiveMilestoneEvent
 global function RTKMilestoneEventPanelController_SetInitialEventPage
-global function SetIsAutoOpeningMilestonePacksNew
-global function MilestoneEvent_LootBoxNewMenuOnClose
 global function MilestoneEvent_PurchasePackDialogOnClose
 
 const int SINGLE_BUTTON_PACK_QUANTITY = 1
@@ -36,7 +34,6 @@ struct
 	array<RTKMilestoneProgressTrackerTierInfo> milestoneTierInfo
 	rtk_struct itemViewerModel
 
-	bool isAutoOpeningMilestonePacks = false
 	bool willTriggerMilestonePackOpen = false
 	bool waitingForPackOpening = false
 	rtk_behavior self
@@ -65,6 +62,9 @@ void function RTKMilestoneEventPanelController_OnInitialize( rtk_behavior self )
 	else if ( file.activeEvent == null )
 		file.activeEvent = GetActiveMilestoneEvent( GetUnixTimestamp() )
 
+	ItemFlavor ornull milestonePackFlav = GetMilestoneRewardPack()
+	file.willTriggerMilestonePackOpen = milestonePackFlav != null
+
 	BuildDataModels()
 	SetupCallbacks()
 	SetupButtons()
@@ -74,7 +74,11 @@ void function RTKMilestoneEventPanelController_OnInitialize( rtk_behavior self )
 
 	self.GetPanel().SetBindingRootPath( RTKDataModelType_GetDataPath( RTK_MODELTYPE_MENUS, "milestoneEvent", true ) )
 
-	SetupPackOpening()
+	if ( milestonePackFlav != null )
+	{
+		expect ItemFlavor( milestonePackFlav )
+		thread TryOpenMilestoneRewardPack( milestonePackFlav )
+	}
 }
 
 void function RTKMilestoneEventPanelController_OnDestroy( rtk_behavior self )
@@ -149,7 +153,6 @@ void function RTKMilestoneEventPanelController_SetActiveMilestoneEvent( string e
 		file.currentEventInfoPanelAlpha = 0.0
 		file.lastHoveredItemButtonChangeTime = UITime()
 		BuildDataModels()
-		SetupPackOpening()
 		SetupButtons()
 	}
 }
@@ -158,27 +161,6 @@ void function BuildDataModels()
 {
 	BuildMilestonePanelDataModel()
 	BuildProgressTrackerDataModel()
-}
-
-void function SetupPackOpening()
-{
-	thread TryOpenMilestoneRewardPack()
-}
-
-void function SetIsAutoOpeningMilestonePacksNew( bool isAutoOpeningPacks )
-{
-	file.isAutoOpeningMilestonePacks = isAutoOpeningPacks
-	SetUpPurchaseButtons( file.self )
-}
-
-void function MilestoneEvent_LootBoxNewMenuOnClose()
-{
-	SetIsAutoOpeningMilestonePacksNew( true )
-	file.willTriggerMilestonePackOpen = false
-
-	if ( !Remote_ServerCallFunctionAllowed() )
-		return
-	Remote_ServerCallFunction( "UICallback_AutoOpenMilestonePacks" )
 }
 
 void function MilestoneEvent_PurchasePackDialogOnClose()
@@ -202,7 +184,7 @@ void function SetupButtons()
 		else
 			RTKEventsPanelController_SendPageViewInfoPage( "packInfoDialog" )
 
-		OpenMilestonePackInfoDialog( null, file.activeEvent )
+		OpenMilestonePackInfoDialog()
 	} )
 
 	SetUpGridButtons( file.self )
@@ -228,7 +210,7 @@ void function BuildPackPricingDataModel()
 	ItemFlavor ornull event = file.activeEvent
 	expect ItemFlavor(event)
 	array<GRXScriptOffer> singlePurchaseOffers = MilestoneEvent_GetSinglePackOffers( event )
-	array<GRXScriptOffer> multiplePurchaseOffers = MilestoneEvent_GetGuaranteedMultiPackOffers( event )
+	array<GRXScriptOffer> multiplePurchaseOffers = MilestoneEvent_GetMultiPackOffers( event )
 
 	array<RTKMilestonePackPricingModel> pricingDataModel
 	RTKMilestonePackPricingModel singlePurchaseDataModel = GetMilestonePricingDataModelFromOffers( singlePurchaseOffers, SINGLE_BUTTON_PACK_QUANTITY )
@@ -552,6 +534,10 @@ void function SetUpGridButtons( rtk_behavior self )
 
 		self.AutoSubscribe( offersGrid, "onChildAdded", function ( rtk_panel newChild, int newChildIndex ) : ( self, event, milestoneEventModel ) {
 			array< rtk_behavior > gridItems = newChild.FindBehaviorsByTypeName( "Button" )
+			if ( !GRX_AreOffersReady( false ) )
+			{
+				return
+			}
 			foreach( button in gridItems )
 			{
 				array<GRXScriptOffer> offers = GRX_GetItemDedicatedStoreOffers( file.items[newChildIndex], MilestoneEvent_GetFrontPageGRXOfferLocation( event, file.isRestricted ) )
@@ -726,6 +712,7 @@ void function BuildMilestoneTrackingPanelInfo()
 		generalModel.trackerProgressBarColor = MilestoneEvent_GetMilestoneTrackerProgressBarColor( event )
 		generalModel.trackerProgressBarBGColor = MilestoneEvent_GetMilestoneTrackerProgressBarBGColor( event )
 		generalModel.eventShopHasMilestonePack = EventShop_HasMilestoneEventPack()
+		generalModel.hasGuaranteedPack = MilestoneEvent_GetGuaranteedMultiPackOffers( event ).len() > 0
 		RTKStruct_SetValue( file.trackingPanelModel, generalModel )
 	}
 }
@@ -755,10 +742,6 @@ void function SetUpPurchaseButtons( rtk_behavior self )
 
 	ItemFlavor ornull event = file.activeEvent
 	expect ItemFlavor(event)
-
-	
-	if ( GRX_GetUnopenedMilestonePacksCountForEvent( GetLocalClientPlayer(), event ) == 0 )
-		file.isAutoOpeningMilestonePacks = false
 
 	rtk_behavior ornull giftButton = self.PropGetBehavior( "giftButton" )
 	rtk_behavior ornull purchaseButton = self.PropGetBehavior( "purchaseButton" )
@@ -824,7 +807,7 @@ void function BuildPurchaseButtonDataModel()
 	giftButtonModel.state = GetEventGiftButtonState( singlePurchaseOffers )
 
 	
-	if ( file.willTriggerMilestonePackOpen || file.isAutoOpeningMilestonePacks || file.waitingForPackOpening )
+	if ( file.willTriggerMilestonePackOpen )
 		giftButtonModel.state = eEventGiftingButtonState.UNAVAILABLE
 
 	rtk_struct giftButtonData = RTKStruct_GetOrCreateScriptStruct( file.trackingPanelModel, "giftButtonData", "RTKMilestoneGiftButtonData" )
@@ -834,7 +817,7 @@ void function BuildPurchaseButtonDataModel()
 	purchaseButtonModel.state = GetEventPurchaseButtonState( singlePurchaseOffers )
 
 	
-	if ( file.willTriggerMilestonePackOpen || file.isAutoOpeningMilestonePacks || file.waitingForPackOpening )
+	if ( file.willTriggerMilestonePackOpen || GRX_AreOffersDirty() )
 		purchaseButtonModel.state = eEventPackPurchaseButtonState.UNAVAILABLE
 
 	rtk_struct purchaseButtonData = RTKStruct_GetOrCreateScriptStruct( file.trackingPanelModel, "purchaseButtonData", "RTKMilestonePurchaseButtonData" )
@@ -914,15 +897,14 @@ void function BuildMilestoneItemViewerModel( ItemFlavor ornull itemToDisplay )
 		}
 		itemInfo.price = offers.len() > 0 ? GRXOffer_GetPremiumPriceQuantity( offers[0] ) : -1
 
-		foreach ( featuredItem in file.featuredItems )
-		{
-			itemInfo.progress.append( 0 )
-		}
-
 		RTKStruct_SetValue( file.itemViewerModel, itemInfo )
 		if ( IsValidItemFlavorGUID( ItemFlavor_GetGUID( item ) ) )
 		{
-			RunClientScript( "UIToClient_ItemPresentation", ItemFlavor_GetGUID( item ) , -1, 1.19, Battlepass_ShouldShowLow( item ), null, true, "collection_event_ref", false, true, false, false )
+			bool isNxHH = false
+#if PC_PROG_NX_UI
+				isNxHH = IsNxHandheldMode()
+#endif
+			RunClientScript( "UIToClient_ItemPresentation", ItemFlavor_GetGUID( item ) , -1, 1.19, Battlepass_ShouldShowLow( item ), null, true, "collection_event_ref", isNxHH, true, false, false )
 		}
 	}
 }
@@ -939,25 +921,20 @@ void function OnItemButtonExit( rtk_behavior self, rtk_behavior button )
 	file.lastHoveredItemButtonChangeTime = UITime()
 }
 
-void function TryOpenMilestoneRewardPack()
+ItemFlavor ornull function GetMilestoneRewardPack()
 {
-	EndSignal( uiGlobal.signalDummy, "OnTabChanged" )
 	
 	
 	
-	if ( !GRX_IsInventoryReady() || !GRX_AreOffersReady() )
+	if ( !GRX_IsInventoryReady() )
 	{
-		return
-	}
-	if ( file.isAutoOpeningMilestonePacks )
-	{
-		return
+		return null
 	}
 
 	ItemFlavor ornull activeEvent = file.activeEvent
 	if ( activeEvent == null )
 	{
-		return
+		return null
 	}
 	expect ItemFlavor( activeEvent )
 	ItemFlavor mainPackFlav = MilestoneEvent_GetMainPackFlav( activeEvent )
@@ -967,19 +944,27 @@ void function TryOpenMilestoneRewardPack()
 
 	if ( mainPackFlavCount == 0 && guaranteedPackFlavCount == 0 )
 	{
-		return
+		return null
 	}
 	
-	file.willTriggerMilestonePackOpen = true
+	
 	ItemFlavor milestonePackFlav = mainPackFlavCount > 0 ? mainPackFlav : guaranteedPackFlav
-	wait 1.6
-	file.waitingForPackOpening = false
+	return milestonePackFlav
+}
 
+void function TryOpenMilestoneRewardPack( ItemFlavor milestonePackFlav )
+{
+	EndSignal( uiGlobal.signalDummy, "OnTabChanged" )
 	
 	
 	while ( IsDialog( GetActiveMenu() ) )
-		wait 1.6
-
+	{
+		WaitFrame()
+	}
+	
+	
+	
+	wait 1.0
 	
 	if ( GetActiveMenu() != GetMenu( "StoreOnlyMilestoneEventsMenu" ) && !IsEventPanelCurrentlyTopLevel()  )
 		return
@@ -989,7 +974,7 @@ void function TryOpenMilestoneRewardPack()
 
 void function OnGRXStateChanged()
 {
-	bool ready = GRX_IsInventoryReady() && GRX_AreOffersReady() && IsPersistenceAvailable()
+	bool ready = GRX_IsInventoryReady() && GRX_AreOffersReady( false ) && IsPersistenceAvailable()
 
 	if ( !ready )
 	{

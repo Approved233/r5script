@@ -73,7 +73,7 @@ const float LAUNCH_TARGET_FWD_OFFSET = 0 * METERS_TO_INCHES
 
 
 
-const float VANTAGE_COMPANION_BASE_SPEED = 800
+const float VANTAGE_COMPANION_BASE_SPEED = 1200
 
 
 const float VANTAGE_COMPANION_ANG_ACCEL_LOW_SPEED = 180 
@@ -535,6 +535,46 @@ OrderPosData function FindEchoOrderPos( entity player )
 	orderPosData.orderPos  = adjustedPoint
 
 
+	
+	if( Perk_ScoutExpert_FastBeaconScan_Enabled() )
+	{
+		if( IsValid( trInitial.hitEnt ) && trInitial.hitEnt.GetScriptName() == ENEMY_SURVEY_BEACON_SCRIPTNAME )
+		{
+			orderPosData.orderPos = trInitial.endPos
+		}
+		else
+		{
+
+			entity highlightedEnt = Perks_GetPerkPingInfo().ent
+			if( IsValid( highlightedEnt ) && highlightedEnt.GetScriptName() == ENEMY_SURVEY_BEACON_SCRIPTNAME )
+			{
+				orderPosData.orderPos = highlightedEnt.GetOrigin()
+			}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		}
+	}
+
+
+
 
 
 
@@ -874,30 +914,43 @@ void function TestCompanionSendPoint_Thread( entity player, entity echoEnt )
 		vector traceEnd = player.EyePosition() + player.GetPlayerOrNPCViewVector() * (VantageCompanion_GetRangeBase( player ) - 15)
 		TraceResults tr = TraceLine( traceStart, traceEnd , [ player, echoEnt ], ECHO_ORDER_TRACE_COL_MASK , ECHO_ORDER_TRACE_COL_GRP, player )
 
-		int pointInRange = tr.fraction < 1.0 ? 1 : 0
+		bool pointInRange = tr.fraction < 1.0
 
 		entity weapon = player.GetOffhandWeapon( OFFHAND_RIGHT )
 
-		
-		
-		
-		
-		
-		
+		int canLaunchResult = CanLaunchToCompanion( player, echoEnt )
+		bool canLaunch = canLaunchResult == eCanLaunchResult.SUCCESS
+
+		int playerLaunchState = VantageCompanion_GetPlayerLaunchState( player )
+		bool isLaunching = playerLaunchState == ePlayerLaunchState.PRELAUNCHING
+		bool shouldWarn = isLaunching && !canLaunch
+
+		if ( IsValid( weapon ) )
 		{
-			if ( IsValid( weapon ) )
+			bool isPredictableEnt = false
+
+			isPredictableEnt = weapon.GetPredictable()
+
+
+
+
+			if ( isPredictableEnt )
 			{
-				bool isPredictableEnt = false
+				int scriptIntVal = 0
+				if ( pointInRange )
+					scriptIntVal = 1
+				else
+					scriptIntVal = 0
 
-				isPredictableEnt = weapon.GetPredictable()
+
+				if ( shouldWarn )
+					scriptIntVal = -1
 
 
-
-
-				if ( isPredictableEnt )
-					weapon.SetScriptInt0( pointInRange )
+				weapon.SetScriptInt0( scriptIntVal )
 			}
 		}
+
 		WaitFrame()
 	}
 
@@ -935,7 +988,6 @@ void function DebugDrawCompanion( entity echoEnt )
 	if ( IsValid( echoEnt ) )
 	{
 		DebugDrawBox( echoEnt.GetOrigin(), VANTAGE_COMPANION_BOUND_MINS, VANTAGE_COMPANION_BOUND_MAXS, <255,150,0>, 50, 2*UPDATE_RATE )
-
 		DebugDrawSphere( echoEnt.GetOrigin(), 4, <0, 100, 255>, false, 2*UPDATE_RATE )
 	}
 }
@@ -990,6 +1042,19 @@ vector function Launch_CalcLaunchToPos( entity player, entity echoEnt )
 
 	return finalLaunchToPos
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2102,9 +2167,11 @@ void function VantageCompanion_CreateHUDMarker( entity echoEnt )
 	fxs.append(locEndFXHandle)
 
 
+
 	OnThreadEnd(
 		function() : ( ruis , fxs , locLineFXMover)
 		{
+
 			foreach( rui in ruis )
 				RuiDestroy( rui )
 
@@ -2118,6 +2185,7 @@ void function VantageCompanion_CreateHUDMarker( entity echoEnt )
 				locLineFXMover.Destroy()
 		}
 	)
+
 
 	while( true )
 	{
@@ -2141,6 +2209,9 @@ void function VantageCompanion_CreateHUDMarker( entity echoEnt )
 
 				int canLaunchResult = CanLaunchToCompanion( vantagePlayer, echoEnt )
 				bool canLaunch = canLaunchResult == eCanLaunchResult.SUCCESS
+
+
+
 				RuiSetBool( rui, "canLaunch", canLaunch )
 				RuiSetInt( rui, "launchState", playerLaunchState )
 

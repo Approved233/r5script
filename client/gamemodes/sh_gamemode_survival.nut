@@ -45,12 +45,14 @@ global function Survival_IsPlayerHealing
 
 global function PlayerIsMarkedAsCanBeRespawned
 
-global function IsSurvivalMode
-
 global function Survival_IsDropshipClampedToRing
+global function Survival_SetCallback_IsDropshipClampedToRing 
 global function Survival_GetPlaneMoveSpeed
+global function Survival_SetCallback_GetPlaneMoveSpeed 
 global function Survival_GetPlaneJumpDelay
 global function Survival_GetPlaneLeaveMapDurationMultiplier
+
+
 
 
 
@@ -165,6 +167,9 @@ enum eUseHealthKitResult
 	DENY_NO_SHIELDS,
 	DENY_FULL,
 	DENY_SPRINTING,
+
+
+
 }
 
 table< int, string > healthKitResultStrings =
@@ -181,6 +186,9 @@ table< int, string > healthKitResultStrings =
 	[eUseHealthKitResult.DENY_NO_SHIELDS] = "#DENY_NO_SHIELDS",
 	[eUseHealthKitResult.DENY_FULL] = "#DENY_FULL",
 	[eUseHealthKitResult.DENY_SPRINTING] = "#DENY_SPRINTING",
+
+
+
 }
 
 global struct TargetKitHealthAmounts
@@ -215,37 +223,10 @@ global enum ePodiumBanner
 	LTM,
 	MIXTAPE,
 
-	SR_LEGENDS,
-	SR_REV,
+
 
 
 	TURBO,
-
-	_COUNT
-}
-
-global enum ePodiumBackground
-{
-	MP_RR_DESERTLANDS_HU = 0,
-	MP_RR_DIVIDED_MOON,
-	MP_RR_CANYONLANDS_HU,
-	MP_RR_OLYMPUS_MU2,
-	MP_RR_TROPICS_ISLAND_MU1,
-	MP_RR_ADQUEDUCT,
-	MP_RR_ARENA_HABITAT,
-	MP_RR_PARTY_CRASHER,
-	MP_RR_ARENA_PHASE_RUNNER,
-	MP_RR_FREEDM_SKULLTOWN,
-	MP_RR_ARENA_SKYGARDER,
-	MP_RR_OLYMPUS_MU1_NIGHT,
-	MP_RR_DESERTLANDS_NIGHT,
-	MP_RR_CANYONLANDS_MU1_NIGHT,
-
-	SR_LEGENDS,
-	SR_REV,
-
-	MP_RR_TROPICS_ISLAND_MU2,
-	MP_RR_THUNDERDOME,
 	_COUNT
 }
 
@@ -273,6 +254,14 @@ struct
 
 
 
+
+
+
+		
+		int functionref() GetDropshipCount_Callback
+		float functionref() GetPlaneHeightMultiplier_Callback
+		bool functionref() IsDropshipClampedToRing_Callback
+		float functionref() GetPlaneMoveSpeed_Callback
 
 } file
 
@@ -323,7 +312,7 @@ void function GamemodeSurvivalShared_Init()
 		Sh_Airdrops_Init()
 
 
-
+			FreeRespawns_Init()
 
 
 
@@ -689,6 +678,13 @@ int function Survival_TryUseHealthPack( entity player, int itemType )
 		if ( !ultimateAbility.IsReadyToFire() )
 			return eUseHealthKitResult.DENY_ULT_NOTREADY
 	}
+
+
+
+
+
+
+
 	else
 	{
 		int currentHealth  = player.GetHealth()
@@ -824,7 +820,36 @@ void function Sur_SetPlaneEnt( entity ent )
 
 
 
+
+
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -953,13 +978,38 @@ void function Sur_SetPlaneEnt( entity ent )
 
 bool function Survival_IsDropshipClampedToRing()
 {
+	if ( file.IsDropshipClampedToRing_Callback != null )
+		return file.IsDropshipClampedToRing_Callback()
+
 	return GetCurrentPlaylistVarBool( "dropship_bounds_clamp_to_ring", false )
 }
 
+
+
+void function Survival_SetCallback_IsDropshipClampedToRing( bool functionref() func )
+{
+	Assert( file.IsDropshipClampedToRing_Callback == null, "Tried setting a function override in " + FUNC_NAME() + " but one already exists" )
+	file.IsDropshipClampedToRing_Callback = func
+}
+
+
+
 float function Survival_GetPlaneMoveSpeed()
 {
+	if ( file.GetPlaneMoveSpeed_Callback != null )
+		return file.GetPlaneMoveSpeed_Callback()
+
 	return GetCurrentPlaylistVarFloat( "survival_plane_move_speed", 2000.0 )
 }
+
+
+
+void function Survival_SetCallback_GetPlaneMoveSpeed( float functionref() func )
+{
+	Assert( file.GetPlaneMoveSpeed_Callback == null, "Tried setting a function override in " + FUNC_NAME() + " but one already exists" )
+	file.GetPlaneMoveSpeed_Callback = func
+}
+
 
 float function Survival_GetPlaneJumpDelay()
 {
@@ -1389,42 +1439,6 @@ bool function CanWeaponInspect( entity player, int activity )
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 void function SetVictorySequencePlatformModel( asset model, vector originOffset, vector modelAngles )
 {
 	VictoryPlatformModelData data
@@ -1447,15 +1461,15 @@ string function GetMusicForJump( entity player )
 	string override = GetCurrentPlaylistVarString( "music_override_skydive", "" )
 
 
-		
-		if ( IsShadowArmyGamemode() )
-		{
-			int playerAlliance = AllianceProximity_GetAllianceFromTeam( player.GetTeam() )
-			if ( playerAlliance == SHADOWARMY_LEGEND_ALLIANCE )
-				override = "Music_RevArmy_Jump_Legends"
-			else
-				override = "Music_RevArmy_Jump_Revenants"
-		}
+
+
+
+
+
+
+
+
+
 
 
 	if ( override.len() > 0 )
@@ -1485,11 +1499,6 @@ bool function PlayerIsMarkedAsCanBeRespawned( entity player )
 	}
 
 	return false
-}
-
-bool function IsSurvivalMode()
-{
-	return GameRules_GetGameMode() == SURVIVAL
 }
 
 

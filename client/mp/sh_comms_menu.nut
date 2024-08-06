@@ -246,7 +246,7 @@ void function ChatMenuButton_Down( entity player )
 
 	int ms = PlayerMatchState_GetFor( player )
 
-	if ( !IsFiringRangeGameMode() )
+	if ( !GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_FIRING_RANGE ) )
 	{
 		if ( ms < ePlayerMatchState.SKYDIVE_PRELAUNCH )
 			return
@@ -390,7 +390,7 @@ void function CommsMenu_OpenMenuTo( entity player, int chatPage, int commsMenuSt
 	
 	CommsMenu_Shutdown( true )
 
-	if( GetGameState() < eGameState.Playing && !( IsFiringRangeGameMode() || IsSurvivalTraining() ) )
+	if( GetGameState() < eGameState.Playing && !( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_FIRING_RANGE ) || GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_TRAINING ) ) )
 		return
 
 	file.commsMenuStyle = commsMenuStyle
@@ -504,7 +504,6 @@ enum eOptionType
 
 
 
-
 	ARTIFACT_ACTIVATION_EMOTE,
 
 	_count
@@ -556,7 +555,6 @@ CommsMenuOptionData function MakeOption_WeaponInspect()
 	return op
 }
 
-
 CommsMenuOptionData function MakeOption_ArtifactActivationEmote( ItemFlavor quip )
 {
 	CommsMenuOptionData op
@@ -564,7 +562,6 @@ CommsMenuOptionData function MakeOption_ArtifactActivationEmote( ItemFlavor quip
 	op.optionType = eOptionType.ARTIFACT_ACTIVATION_EMOTE
 	return op
 }
-
 
 CommsMenuOptionData function MakeOption_Quip( ItemFlavor quip, int index )
 {
@@ -672,7 +669,6 @@ array<CommsMenuOptionData> function BuildMenuOptions( int chatPage )
 
 			ItemFlavor character = LoadoutSlot_GetItemFlavor( playerEHI, Loadout_Character() )
 
-
 			if ( !player.Player_IsSkydiving() && Artifacts_PlayerHasArtifactActive( player ) )
 			{
 				ItemFlavor meleeWeapon = LoadoutSlot_GetItemFlavor( playerEHI, Loadout_MeleeSkin( character ) )
@@ -687,7 +683,6 @@ array<CommsMenuOptionData> function BuildMenuOptions( int chatPage )
 						results.append( MakeOption_ArtifactActivationEmote( activationEmoteFlavour ) )
 				}
 			}
-
 
 			ItemFlavor ornull emptyQuip
 			int quipsInWheel
@@ -968,15 +963,13 @@ array<CommsMenuOptionData> function BuildMenuOptions( int chatPage )
 
 					if( data.category == "banner" )
 					{
-
-						if ( Crafting_IsDispenserCraftingEnabled() && ( GetRespawnStyle() == eRespawnStyle.RESPAWN_CHAMBERS ) && ( GetCurrentPlaylistVarBool( "has_auto_banners", false ) == false ) )
+						if ( Crafting_IsDispenserCraftingEnabled() && ( GetRespawnStyle() == eRespawnStyle.RESPAWN_CHAMBERS ) && Player_Banners_Enabled() )
 						{
 							results.append( MakeOption_CraftItem( counter ) )
 						}
 						else
-
 						{
-							if ( ( Perk_CanBuyBanners( player ) || Perks_DoesPlayerHavePerk( player, ePerkIndex.BANNER_CRAFTING ) ) && ( GetRespawnStyle() == eRespawnStyle.RESPAWN_CHAMBERS )  && ( GetCurrentPlaylistVarBool( "has_auto_banners", false ) == false ) )
+							if ( ( Perk_CanBuyBanners( player ) || Perks_DoesPlayerHavePerk( player, ePerkIndex.BANNER_CRAFTING ) ) && ( GetRespawnStyle() == eRespawnStyle.RESPAWN_CHAMBERS )  && Player_Banners_Enabled() )
 							{
 								results.append( MakeOption_CraftItem( counter ) )
 							}
@@ -1068,9 +1061,7 @@ string[2] function GetPromptsForMenuOption( int index )
 			promptTexts[0] = GetMenuOptionTextForCommsAction( op.commsAction )
 			break
 
-
 		case eOptionType.ARTIFACT_ACTIVATION_EMOTE:
-
 		case eOptionType.QUIP:
 		case eOptionType.SKYDIVE_EMOTE:
 			promptTexts[0] = Localize( ItemFlavor_GetLongName( expect ItemFlavor( op.emote ) ) )
@@ -1157,7 +1148,6 @@ string[2] function GetPromptsForMenuOption( int index )
 				else if ( validItems[0] == "expired_banners" )
 				{
 					promptTexts[0] = Localize( "#BANNER" )
-
 					if ( Crafting_IsDispenserCraftingEnabled() && !DoesTeammateHaveBannerCraftingPerk( player ))
 					{
 						promptTexts[1] = Localize( "#DISPENSER_BANNER_NOSUPPORT_DESC" )
@@ -1167,7 +1157,6 @@ string[2] function GetPromptsForMenuOption( int index )
 						promptTexts[1] = Localize( "#DISPENSER_BANNER_NOBANNER_DESC" )
 					}
 					else
-
 					{
 						promptTexts[1] = Localize( "#REPLICATER_CRAFT_BANNER_DESCRIPTION" )
 					}
@@ -1258,9 +1247,7 @@ bool function ShouldPopulateRuiForIndex( int index )
 	CommsMenuOptionData op = s_currentMenuOptions[index]
 	switch( op.optionType )
 	{
-
 		case eOptionType.ARTIFACT_ACTIVATION_EMOTE:
-
 		case eOptionType.QUIP:
 			ItemFlavor data = expect ItemFlavor( op.emote )
 			int type = ItemFlavor_GetType( data )
@@ -1281,9 +1268,7 @@ var function GetRuiForMenuOption( var mainRui, int index )
 
 	switch ( op.optionType )
 	{
-
 		case eOptionType.ARTIFACT_ACTIVATION_EMOTE:
-
 		case eOptionType.QUIP:
 			ItemFlavor data = expect ItemFlavor( op.emote )
 			return CreateNestedRuiForQuip( mainRui, "iconHandle" + index, data )
@@ -1292,12 +1277,10 @@ var function GetRuiForMenuOption( var mainRui, int index )
 		case eOptionType.CRAFT:
 			
 			asset craftingAsset = $"ui/comms_menu_icon_crafting.rpak"
-
-				if ( Crafting_IsDispenserCraftingEnabled() )
-				{
-					craftingAsset = $"ui/crafting_dispensers.rpak"
-				}
-
+			if ( Crafting_IsDispenserCraftingEnabled() )
+			{
+				craftingAsset = $"ui/crafting_dispensers.rpak"
+			}
 			return RuiCreateNested( mainRui, "iconHandle" + index, craftingAsset )
 
 
@@ -1331,9 +1314,7 @@ asset function GetIconForMenuOption( int index )
 		case eOptionType.COMMSACTION:
 			return GetDefaultIconForCommsAction( op.commsAction )
 
-
 		case eOptionType.ARTIFACT_ACTIVATION_EMOTE:
-
 		case eOptionType.SKYDIVE_EMOTE:
 			ItemFlavor data = expect ItemFlavor( op.emote )
 			return ItemFlavor_GetIcon( data )
@@ -1580,7 +1561,11 @@ bool function MenuStyleHasBlurredBackground( int menuStyle )
 void function SetRuiOptionsForChatPage( var rui, int chatPage )
 {
 	string labelText        = ""
-	string backText         = "#BUTTON_WHEEL_CANCEL"
+
+	string backText         = "#BUTTON_WHEEL_CANCEL_TRIGGER"
+
+
+
 	string promptText       = "#A_BUTTON_ACCEPT"
 	string nextPageText     = ""
 	bool showNextPageText   = false
@@ -1638,13 +1623,21 @@ void function SetRuiOptionsForChatPage( var rui, int chatPage )
 			
 			
 			
-			promptText = "#LOOT_USE"
+
+			promptText = "#LOOT_USE_TRIGGER"
+
+
+
 			outerCircleColor = <25, 0, 15>
 			break
 
 		case eChatPage.ORDNANCE_LIST:
 			labelText = "#COMMS_ORDNANCE"
-			promptText = "#LOOT_EQUIP"
+
+			promptText = "#LOOT_EQUIP_TRIGGER"
+
+
+
 
 
 
@@ -1653,6 +1646,10 @@ void function SetRuiOptionsForChatPage( var rui, int chatPage )
 
 
 			break
+
+
+
+
 
 
 
@@ -1678,27 +1675,24 @@ void function SetRuiOptionsForChatPage( var rui, int chatPage )
 			labelText = "#CRAFTING_WORKBENCH"
 			promptText = "#CRAFTING_USE"
 
-
-
-				nextPageText  = "#INVENTORY_USE"
-				showNextPageText = true
-				if ( Crafting_IsDispenserCraftingEnabled() )
+			nextPageText  = "#INVENTORY_USE"
+			showNextPageText = true
+			if ( Crafting_IsDispenserCraftingEnabled() )
+			{
+				entity player = GetLocalViewPlayer()
+				if ( Crafting_DispenserFreeSupportBanner() && ( Perks_GetRoleForPlayer( player ) == eCharacterClassRole.SUPPORT ) )
 				{
-					entity player = GetLocalViewPlayer()
-					if ( Crafting_DispenserFreeSupportBanner() && ( Perks_GetRoleForPlayer( player ) == eCharacterClassRole.SUPPORT ) )
-					{
-						RuiSetString( file.menuRui, "lowerHeader", Localize("#DISPENSER_SUPPORT_BANNER_LOWER_DESC") )
-					}
-					else if ( Crafting_DispenserSupportMRB() && ( Perks_GetRoleForPlayer( player ) == eCharacterClassRole.SUPPORT ) )
-					{
-						RuiSetString( file.menuRui, "lowerHeader", Localize("#DISPENSER_SUPPORT_BANNER_MRB_LOWER_DESC") )
-					}
-					else
-					{
-						RuiSetString( file.menuRui, "lowerHeader", Localize("#DISPENSER_LOWER_DESC") )
-					}
+					RuiSetString( file.menuRui, "lowerHeader", Localize("#DISPENSER_SUPPORT_BANNER_LOWER_DESC") )
 				}
-
+				else if ( Crafting_DispenserSupportMRB() && ( Perks_GetRoleForPlayer( player ) == eCharacterClassRole.SUPPORT ) )
+				{
+					RuiSetString( file.menuRui, "lowerHeader", Localize("#DISPENSER_SUPPORT_BANNER_MRB_LOWER_DESC") )
+				}
+				else
+				{
+					RuiSetString( file.menuRui, "lowerHeader", Localize("#DISPENSER_LOWER_DESC") )
+				}
+			}
 
 			
 
@@ -1859,10 +1853,8 @@ void function ShowCommsMenu( int chatPage )
 			int index = options[idx].craftingIndex
 			Crafting_PopulateItemRuiAtIndex( nestedRui, index )
 
-
 			if ( Crafting_IsDispenserCraftingEnabled() )
 				RuiSetBool( rui, "isCrafting2pt0", true )
-
 		}
 		
 
@@ -2136,6 +2128,9 @@ bool function CommsMenu_HandleKeyInput( int key )
 				choice = 7
 				break
 
+
+			case BUTTON_TRIGGER_RIGHT:
+
 			case BUTTON_A:
 			case MOUSE_LEFT:
 				executeType = eWheelInputType.USE
@@ -2144,6 +2139,9 @@ bool function CommsMenu_HandleKeyInput( int key )
 			case BUTTON_X:
 				executeType = eWheelInputType.EQUIP
 				break
+
+
+			case BUTTON_TRIGGER_LEFT:
 
 			case BUTTON_B:
 			case KEY_ESCAPE:
@@ -2523,20 +2521,14 @@ bool function MakeCommMenuSelection( int choice, int wheelInputType )
 			return true
 		}
 
-
 		case eOptionType.ARTIFACT_ACTIVATION_EMOTE:
 		{
 			if ( GetLocalViewPlayer().IsZiplining() )
 				return false
 
 			Remote_ServerCallFunction( "ClientCallback_ActivationEmote", true )
-#if DEV
-			Artifacts_DEV_PlayActivationEmote3PEffects()
-#endif
-
 			return true
 		}
-
 
 		case eOptionType.QUIP:
 		{

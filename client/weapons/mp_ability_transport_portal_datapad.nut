@@ -4,6 +4,8 @@ global function OnWeaponActivate_ability_transport_portal_datapad
 global function OnWeaponDeactivate_ability_transport_portal_datapad
 global function OnWeaponPrimaryAttack_ability_transport_portal_datapad
 
+global function TransportPortalDatapad_UseSpecialKnockedAnims
+
 
 
 
@@ -37,11 +39,11 @@ const string TRANSPORT_PORTAL_START_CHANNEL_KNOCKED_SOUND_1P = "Alter_Ult_Telepo
 const string TRANSPORT_PORTAL_START_CHANNEL_KNOCKED_SOUND_3P = "Alter_Ult_Teleport_Buildup_Downed_3p"
 const string TRANSPORT_PORTAL_START_CHANNEL_TRANSLOCATOR_SOUND_3P = "Alter_Ult_Base_Alert_RemotelyUsed_3p"
 
-const bool TRANSPORT_PORTAL_DATAPAD_DEBUG = false
+const bool TRANSPORT_PORTAL_DATAPAD_DEBUG = true
 
 struct{
 	float warpDelayAfterUse = 2.0
-	float warpDelayAfterUseAdditionalWhenKnocked = 1.0
+	float warpDelayAfterUseAdditionalWhenKnocked = 0.0
 
 	bool canCancel = true
 	bool cancelOnDamage = false
@@ -88,10 +90,15 @@ void function SetupTuning()
 	tuning.cancelOnNonBulletDamage =				GetCurrentPlaylistVarBool	( "alter_ult_cancelOnNonBulletDamage", tuning.cancelOnNonBulletDamage )
 }
 
+bool function TransportPortalDatapad_UseSpecialKnockedAnims()
+{
+	return tuning.warpDelayAfterUseAdditionalWhenKnocked > 0
+}
+
 
 void function OnSpectatorTargetChanged( entity player, entity prevTarget, entity newTarget )
 {
-	if ( IsValid( prevTarget ) )
+	if ( IsValid( prevTarget ) && prevTarget.IsPlayer() )
 	{
 		entity weapon = prevTarget.GetOffhandWeapon( OFFHAND_EQUIPMENT )
 		if ( IsValid( weapon ) && weapon.GetWeaponClassName() == TRANSPORT_PORTAL_DATAPAD_WEAPON_NAME )
@@ -105,7 +112,7 @@ void function OnSpectatorTargetChanged( entity player, entity prevTarget, entity
 		}
 	}
 
-	if ( IsValid( newTarget ) )
+	if ( IsValid( newTarget ) && newTarget.IsPlayer() )
 	{
 		entity weapon = newTarget.GetOffhandWeapon( OFFHAND_EQUIPMENT )
 		if ( IsValid( weapon ) && weapon.GetWeaponClassName() == TRANSPORT_PORTAL_DATAPAD_WEAPON_NAME )
@@ -122,13 +129,14 @@ void function OnSpectatorTargetChanged( entity player, entity prevTarget, entity
 
 void function OnWeaponActivate_ability_transport_portal_datapad( entity weapon )
 {
-#if TRANSPORT_PORTAL_DATAPAD_DEBUG
-	printf( "Alter: ACTIVATE portal datapad" )
-#endif
 
 		if ( weapon.GetOwner() != GetLocalViewPlayer() )
 			return
 
+
+#if TRANSPORT_PORTAL_DATAPAD_DEBUG
+	printf( "Alter - " + weapon.GetOwner() + ": ACTIVATE portal datapad" )
+#endif
 
 	entity player = weapon.GetWeaponOwner()
 	if ( !IsValid(player) )
@@ -154,13 +162,14 @@ void function OnWeaponActivate_ability_transport_portal_datapad( entity weapon )
 
 void function OnWeaponDeactivate_ability_transport_portal_datapad( entity weapon )
 {
-#if TRANSPORT_PORTAL_DATAPAD_DEBUG
-	printf( "Alter: Data pad DEACTIVATE" )
-#endif
 
 	if ( weapon.GetOwner() != GetLocalViewPlayer() )
 		return
 
+
+#if TRANSPORT_PORTAL_DATAPAD_DEBUG
+	printf( "Alter - " + weapon.GetOwner() + ": Data pad DEACTIVATE" )
+#endif
 
 	entity player = weapon.GetWeaponOwner()
 	if ( !IsValid(player) )
@@ -170,7 +179,7 @@ void function OnWeaponDeactivate_ability_transport_portal_datapad( entity weapon
 	{
 		player.Signal( TRANSPORT_PORTAL_CANCEL_CHANNEL_SIGNAL )
 #if TRANSPORT_PORTAL_DATAPAD_DEBUG
-		printf("Alter: datapad WAS CANCELLED " + weapon.GetWeaponChargeFraction() )
+		printf("Alter - " + weapon.GetOwner() + ": datapad WAS CANCELLED " + weapon.GetWeaponChargeFraction() )
 #endif
 	}
 	else
@@ -254,6 +263,14 @@ var function OnWeaponPrimaryAttack_ability_transport_portal_datapad( entity weap
 
 
 	return 1
+}
+
+string function GetChannelSFX( bool isKnocked, bool get1pSound )
+{
+	if ( isKnocked && TransportPortalDatapad_UseSpecialKnockedAnims() )
+		return get1pSound ? TRANSPORT_PORTAL_START_CHANNEL_KNOCKED_SOUND_1P : TRANSPORT_PORTAL_START_CHANNEL_KNOCKED_SOUND_3P
+
+	return get1pSound ? TRANSPORT_PORTAL_START_CHANNEL_SOUND_1P : TRANSPORT_PORTAL_START_CHANNEL_SOUND_3P
 }
 
 
@@ -430,7 +447,7 @@ void function SetupFxAndSound( entity player, float chargeFrac, bool forceSoundF
 	float channelTime = tuning.warpDelayAfterUse + (playerIsKnocked ? tuning.warpDelayAfterUseAdditionalWhenKnocked : 0.0)
 	float channelTimeElapsed = chargeFrac * channelTime
 	float soundTotalTime = channelTime
-	string sound = playerIsKnocked ? TRANSPORT_PORTAL_START_CHANNEL_KNOCKED_SOUND_1P : TRANSPORT_PORTAL_START_CHANNEL_SOUND_1P
+	string sound = GetChannelSFX( playerIsKnocked, true )
 
 	if ( forceSoundFromStart )
 	{
@@ -539,7 +556,7 @@ void function PlayScreenFXWarpJumpTransportPortal( entity player )
 	}
 
 #if TRANSPORT_PORTAL_DATAPAD_DEBUG
-	printf("ALTER - wait done " + Time())
+	printf("ALTER - " + player + " - wait done " + Time())
 #endif
 }
 
@@ -548,10 +565,6 @@ void function PlayScreenFXWarpJumpTransportPortal( entity player )
 
 void function TransportPortal_CancelUse( )
 {
-#if TRANSPORT_PORTAL_DATAPAD_DEBUG
-	printf("Alter: TransportPortal_CancelUse")
-#endif
-
 	entity player = GetLocalViewPlayer()
 	if ( !IsValid( player ) )
 		return
@@ -560,7 +573,7 @@ void function TransportPortal_CancelUse( )
 	if ( IsValid( datapadWeapon ) && datapadWeapon.GetWeaponClassName() == TRANSPORT_PORTAL_DATAPAD_WEAPON_NAME )
 	{
 #if TRANSPORT_PORTAL_DATAPAD_DEBUG
-		printf("Alter: TransportPortal_CancelUse - doing cancel")
+		printf("Alter - " + player + ": TransportPortal_CancelUse - doing cancel")
 #endif
 		player.ClientCommand( "invnext" )
 	}

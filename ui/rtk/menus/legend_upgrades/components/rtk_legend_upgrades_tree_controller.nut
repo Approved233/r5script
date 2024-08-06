@@ -122,32 +122,6 @@ void function RTKLegendUpgradeTree_OnDestroy( rtk_behavior self )
 	file.isInteractable = false
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 void function RTKLegendUpgradeTree_PopulateUpgrade( int tier, int upgradesIndex, rtk_struct treeTierStruct, ItemFlavor character )
 {
 	entity player = GetLocalClientPlayer()
@@ -258,26 +232,6 @@ void function RTKLegendUpgradeTree_PopulateLegendUpgradeTree( rtk_behavior self,
 		RTKStruct_SetBool( evoShieldStruct, "isLocked", state == eTreeUpgradeState.LOCKED )
 	}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	if ( file.isInteractable )
 	{
 		rtk_panel tierList = self.PropGetPanel( "tierList" )
@@ -303,8 +257,8 @@ void function RTKLegendUpgradeTree_PopulateLegendUpgradeTree( rtk_behavior self,
 						{
 							int position = ( ( newChildIndex - 1 ) * 2 ) + i
 
-
-
+							if( position < 0 )
+								return
 
 
 							if ( UpgradeCore_IsUpgradeSelectable(player, position ) )
@@ -423,11 +377,6 @@ bool function RTKMutator_UpgradesToolTipIsActive( int input )
 {
 	if ( file.showTitle || file.showDescription )
 		return false
-
-
-
-
-
 
 	switch ( input )
 	{

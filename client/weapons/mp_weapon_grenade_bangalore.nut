@@ -6,6 +6,9 @@ global function OnWeaponTossReleaseAnimEvent_weapon_grenade_bangalore
 
 global function OnClientAnimEvent_weapon_grenade_bangalore
 
+global function BangSmoke_IsPlayerHighlighted
+
+
 
 global const string BANGALORE_SMOKESCREEN_SCRIPTNAME = "bangalore_smokescreen"
 
@@ -42,6 +45,13 @@ struct
 
 
 		int colorCorrectionGas
+
+
+		float highlightFalloffDistance = 10 * METERS_TO_INCHES
+		float highlightDistance = 20 * METERS_TO_INCHES
+
+		table< entity, table<entity, bool> > highlightedPlayersInSmoke
+
 
 	int smokeGasScreenFxId
 } file
@@ -248,6 +258,14 @@ float function Bangalore_GetSmokeDuration( entity player )
 	float duration = GetCurrentPlaylistVarFloat( "bangalore_smoke_lifetime", BANGALORE_SMOKE_DURATION )
 
 
+
+
+
+
+
+
+
+
 		if( PlayerHasPassive( player, ePassives.PAS_TAC_UPGRADE_TWO ) ) 
 			duration += 3
 
@@ -255,7 +273,15 @@ float function Bangalore_GetSmokeDuration( entity player )
 	return duration
 }
 
+bool function Bangalore_ShouldSmokesExplode( entity player )
+{
 
+
+
+
+
+	return BANGALORE_SMOKE_EXPLOSIONS
+}
 
 
 
@@ -542,6 +568,13 @@ void function BangaloreSmokescreenEffectEnabled( entity ent, int statusEffect, b
 
 	thread UpdatePlayerScreenColorCorrection( viewPlayer, statusEffect, file.colorCorrectionGas )
 
+
+	if ( BangSmokeHighlightsEnabled() )
+	{
+		thread SmokeHighlight_Thread( ent )
+	}
+
+
 	if ( !viewPlayer.IsTitan() )
 	{
 		int fxHandle = StartParticleEffectOnEntityWithPos( viewPlayer, file.smokeGasScreenFxId, FX_PATTACH_ABSORIGIN_FOLLOW, ATTACHMENTID_INVALID, viewPlayer.EyePosition(), <0, 0, 0> )
@@ -580,5 +613,144 @@ void function BangaloreSmokescreenEffectThread( entity ent, int fxHandle, int st
 		WaitFrame()
 	}
 }
+
+
+bool function BangSmokeHighlightsEnabled()
+{
+
+
+
+
+
+	return GetCurrentPlaylistVarBool( "bangalore_smoke_highlight", true )
+}
+
+void function SmokeHighlight_Thread( entity player )
+{
+	EndSignal( player, "OnDestroy", "OnDeath", "stop_smokescreen_screen_fx" )
+
+	table< entity, bool > highlightedPlayers
+	file.highlightedPlayersInSmoke[player] <- highlightedPlayers
+
+	OnThreadEnd(
+		function() : ( player, highlightedPlayers )
+		{
+			delete file.highlightedPlayersInSmoke[player]
+
+			foreach ( entity otherPlayer, bool isHightlighted in highlightedPlayers )
+			{
+				ManageHighlightEntity( otherPlayer )
+			}
+		}
+	)
+
+	const float effectMin = 0.6
+	const float effectMax = 0.2
+	int contextId = HighlightContext_GetId( "smoke_highlight_blockscan" )
+
+	while(true)
+	{
+		array< entity > playersToHighlight
+		array< entity > playersToNotHighlight
+
+		float effectStrength = StatusEffect_GetSeverity( player, eStatusEffect.smokescreen )
+		float alphaFromStatusEffect = GraphCapped( effectStrength, effectMin, effectMax, 1.0, 0.0 )
+
+		HighlightContext_SetParam( contextId, 1, <file.highlightFalloffDistance, file.highlightDistance, alphaFromStatusEffect> )
+
+		BangSmoke_GetPlayersToHighlight( player, playersToHighlight, playersToNotHighlight )
+
+		foreach( entity otherPlayer in playersToHighlight )
+		{
+			if ( !( otherPlayer in highlightedPlayers ) )
+			{
+				highlightedPlayers[ otherPlayer ] <- false
+			}
+
+			if ( highlightedPlayers[otherPlayer] )
+			{
+				continue
+			}
+
+			highlightedPlayers[otherPlayer] = true
+
+			ManageHighlightEntity( otherPlayer )
+		}
+
+		foreach( entity otherPlayer in playersToNotHighlight )
+		{
+			if ( otherPlayer in highlightedPlayers )
+			{
+				if ( !highlightedPlayers[otherPlayer] )
+					continue
+
+				highlightedPlayers[otherPlayer] = false
+
+				ManageHighlightEntity( otherPlayer )
+			}
+		}
+
+		WaitFrame()
+	}
+
+}
+
+void function BangSmoke_GetPlayersToHighlight( entity player,
+		array<entity> outPlayersToHighlight, array<entity> outPlayersToNotHighlight )
+{
+	int playerTeam = player.GetTeam()
+
+	vector visibilityCheckPoint = player.EyePosition()
+	float maxSqrDist = file.highlightDistance * file.highlightDistance
+
+	array<entity> allTargets = GetPlayerArray_Alive()
+	allTargets.extend( GetEntArrayByScriptName( DECOY_SCRIPTNAME ) )
+	allTargets.extend( GetEntArrayByScriptName( CONTROLLED_DECOY_SCRIPTNAME ) )
+
+	TraceResults results
+	foreach ( entity otherPlayer in allTargets )
+	{
+		if ( otherPlayer == player )
+			continue
+
+		if ( !IsEnemyTeam( playerTeam, otherPlayer.GetTeam() ) )
+			continue
+
+		if ( StatusEffect_GetSeverity( otherPlayer, eStatusEffect.smokescreen ) >= 0.2 )
+		{
+			vector otherPlayerEyePos = otherPlayer.EyePosition()
+
+			if ( DistanceSqr( visibilityCheckPoint, otherPlayerEyePos ) < maxSqrDist )
+			{
+				results = TraceLine( visibilityCheckPoint, otherPlayerEyePos, allTargets, TRACE_MASK_SOLID, TRACE_COLLISION_GROUP_NONE )
+				if ( results.fraction == 1.0 )
+				{
+					outPlayersToHighlight.append( otherPlayer )
+					continue
+				}
+			}
+		}
+
+		outPlayersToNotHighlight.append( otherPlayer )
+	}
+}
+
+bool function BangSmoke_IsPlayerHighlighted( entity player, entity otherPlayer )
+{
+	if ( !BangSmokeHighlightsEnabled() )
+		return false
+
+	if ( !(player in file.highlightedPlayersInSmoke) )
+		return false
+
+	if ( !(otherPlayer in file.highlightedPlayersInSmoke[player]) )
+		return false
+
+	if ( !file.highlightedPlayersInSmoke[player][otherPlayer] )
+		return false
+
+	return true
+}
+
 
 

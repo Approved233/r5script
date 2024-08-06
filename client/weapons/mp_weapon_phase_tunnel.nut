@@ -31,6 +31,7 @@ global function OnWeaponPrimaryAttack_ability_phase_tunnel
 
 
 
+
 global function PhaseTunnel_IsPortalExitPointValid
 
 global const float PHASE_TUNNEL_CROUCH_HEIGHT = 48
@@ -186,8 +187,10 @@ global struct PhaseTunnelData
 
 struct
 {
+	float tunnelLifetime
 	float maxPlacementDist
 	float travelTimeMin
+	float travelTimeLong
 	float travelTimeMax
 	float travelSpeed
 
@@ -251,9 +254,11 @@ void function MpWeaponPhaseTunnel_Init()
 	
 	
 	
+	file.tunnelLifetime   = GetCurrentPlaylistVarFloat( "wraith_portal_lifeline", PHASE_TUNNEL_LIFETIME )
 	file.maxPlacementDist = GetCurrentPlaylistVarFloat( "wraith_portal_max_distance", PHASE_TUNNEL_MAX_DISTANCE )
-	
-	
+	file.travelTimeMin    = GetCurrentPlaylistVarFloat( "wraith_portal_min_travel_time", PHASE_TUNNEL_TELEPORT_TRAVEL_TIME_MIN )
+	file.travelTimeLong	  = GetCurrentPlaylistVarFloat( "wraith_portal_long_travel_time", PHASE_TUNNEL_TELEPORT_TRAVEL_TIME_LONG )
+	file.travelTimeMax    = GetCurrentPlaylistVarFloat( "wraith_portal_max_travel_time", PHASE_TUNNEL_TELEPORT_TRAVEL_TIME_MAX )
 	file.travelSpeed      = GetCurrentPlaylistVarFloat( "wraith_portal_max_travel_speed", 1024.0 )
 }
 
@@ -2185,6 +2190,29 @@ var function OnWeaponPrimaryAttack_ability_phase_tunnel( entity weapon, WeaponPr
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 entity function GetDoorForHitEnt( entity hitEnt )
 {
 	if ( IsDoor( hitEnt ) )
@@ -2221,13 +2249,6 @@ bool function IsValidWorldExitPos( TraceResults results )
 	return false
 }
 
-array< entity > function PhaseTunnel_GetPortalIgnoreEnts()
-{
-	array< entity > ignoreEnts
-	return ignoreEnts
-}
-
-
 bool function PhaseTunnel_IsPortalExitPointValid( entity player, vector testOrg, entity ignoreEnt = null, bool onlyCheckWorld = false, bool isCrouched = false, bool DEBUG_DRAW = false )
 {
 	int solidMask            = onlyCheckWorld ? TRACE_MASK_PLAYERSOLID_BRUSHONLY : TRACE_MASK_PLAYERSOLID
@@ -2244,8 +2265,6 @@ bool function PhaseTunnel_IsPortalExitPointValid( entity player, vector testOrg,
 			ignoreEnts.append( vehicle )
 
 
-	ignoreEnts.extend( PhaseTunnel_GetPortalIgnoreEnts() )
-
 	TraceResults result
 
 	mins = player.GetPlayerStandingMins()
@@ -2260,7 +2279,12 @@ bool function PhaseTunnel_IsPortalExitPointValid( entity player, vector testOrg,
 	if ( result.startSolid || result.fraction < 1 || result.surfaceNormal != <0, 0, 0> )
 	{
 		if ( DEBUG_DRAW )
-			DebugDrawBox( result.endPos, mins, maxs, COLOR_RED, 1, 20.0 )
+		{
+			if ( result.startSolid )
+				DebugDrawBox( testOrg, mins, maxs, COLOR_RED, 1, 0.1 )
+
+			DebugDrawBox( result.endPos, mins, maxs, COLOR_RED, 1, 0.1 )
+		}
 
 		if ( !onlyCheckWorld )
 			return false
@@ -2270,7 +2294,7 @@ bool function PhaseTunnel_IsPortalExitPointValid( entity player, vector testOrg,
 	}
 
 	if ( DEBUG_DRAW )
-		DebugDrawBox( result.endPos, mins, maxs, COLOR_GREEN, 1, 20.0 )
+		DebugDrawBox( result.endPos, mins, maxs, COLOR_GREEN, 1, 0.1 )
 
 	return true
 }
@@ -2394,7 +2418,7 @@ void function PhaseTunnel_CreateHUDMarker( entity portalMarker )
 	var topology = CreateRUITopology_Worldspace( portalMarker.GetOrigin(), portalMarker.GetAngles(), 24, 24 )
 	var ruiPlane = RuiCreate( $"ui/phase_tunnel_timer.rpak", topology, RUI_DRAW_WORLD, 0 )
 	RuiSetGameTime( ruiPlane, "startTime", Time() )
-	RuiSetFloat( ruiPlane, "lifeTime", PHASE_TUNNEL_LIFETIME )
+	RuiSetFloat( ruiPlane, "lifeTime", file.tunnelLifetime )
 
 	OnThreadEnd(
 		function() : ( ruiPlane, topology )

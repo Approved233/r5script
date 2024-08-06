@@ -553,6 +553,12 @@ float function Perk_CarePackageInsight_IgnoreLosRevealDistance()
 
 
 
+
+
+
+
+
+
 void function ClientCodeCallback_OnCarePackageInsightDataChanged( entity carePackageInsightEnt )
 {
 	if( carePackageInsightEnt.GetAreContentsTaken() )

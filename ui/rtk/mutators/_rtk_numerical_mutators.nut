@@ -20,6 +20,21 @@ vector function RTKMutator_MultiplyByVector( float input, vector x )
 	return input * x
 }
 
+vector function RTKMutator_MultiplyByVectorX( float input, vector x )
+{
+	return <x.x * input, x.y, x.z>
+}
+
+vector function RTKMutator_MultiplyByVectorY( float input, vector x )
+{
+	return <x.x, x.y * input, x.z>
+}
+
+vector function RTKMutator_MultiplyByVectorZ( float input, vector x )
+{
+	return <x.x, x.y, x.z * input>
+}
+
 float function RTKMutator_Divide( float input, float x )
 {
 	if	( x == 0 )
@@ -135,6 +150,24 @@ vector function RTKMutator_PickVectorFromThree( int input, vector param0, vector
 	}
 	Warning( "RTKMutator_PickVectorFromThree : Invalid index" )
 	return < 0,0,0 >
+	
+}
+
+int function RTKMutator_PickIntFromFour( int input, int option0, int option1, int option2, int option3)
+{
+	switch ( input )
+	{
+		case (0):
+			return option0
+		case (1):
+			return option1
+		case (2):
+			return option2
+		case (3):
+			return option3
+	}
+	Warning( "RTKMutator_PickIntFromFour : Invalid index" )
+	return 0
 	
 }
 

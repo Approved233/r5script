@@ -21,9 +21,6 @@ global enum ePlaylistState
 	ROTATION_GROUP_MISMATCH,
 	DEV_PLAYTEST,
 	LOCKED_FOR_EVENT,
-
-
-
 	_COUNT
 }
 
@@ -54,12 +51,7 @@ const table< int, string > playlistStateMap = {
 	[ ePlaylistState.ACCOUNT_LEVEL_REQUIRED ] = "#PLAYLIST_STATE_RANKED_LEVEL_REQUIRED",
 	[ ePlaylistState.DEV_PLAYTEST ] = "#PLAYLIST_STATE_PLAYTEST",
 	[ ePlaylistState.LOCKED_FOR_EVENT ] = "#PLAYSTATE_STATE_EVENTLOCKED",
-
-
-
 }
-
-global const int TRAINING_REQUIRED_BELOW_LEVEL_0_BASE = 14
 
 struct
 {
@@ -90,6 +82,10 @@ void function LobbyPlaylist_Init()
 void function LobbyPlaylist_SetPlaylists( array< string > playlists )
 {
 	Assert( playlists.len() > 0 )
+
+	
+	if ( CanRunClientScript() )
+		RunClientScript( "LSS_UpdateLobbyStage", LobbyPlaylist_GetSelectedPlaylist() )
 
 	file.playlists = playlists
 }
@@ -243,7 +239,7 @@ bool function DoesPlaylistRequireTraining( string playlist )
 	if ( HasLocalPlayerCompletedTraining() )
 		return false
 
-	return GetPlaylistVarBool( playlist, "require_training", true )
+	return GetPlaylistVarBool( playlist, "require_training", false )
 }
 
 bool function HasLocalPlayerCompletedTraining()
@@ -259,7 +255,7 @@ bool function HasLocalPlayerCompletedTraining()
 			return true
 #endif
 
-	if ( GetCurrentPlaylistVarBool( "require_training", true ) )
+	if ( GetCurrentPlaylistVarBool( "require_training", false ) )
 		return GetPersistentVarAsInt( "trainingCompleted" ) > 0
 
 	return true
@@ -272,6 +268,9 @@ bool function HasLocalPlayerCompletedTraining()
 bool function IsLocalPlayerExemptFromNewPlayerOrientation()
 {
 	if( GetConVarBool( "orientation_matches_disabled" ) )
+		return true
+
+	if ( !GetCurrentPlaylistVarBool( "require_new_player_orientation", false ) )
 		return true
 
 	if ( !IsFullyConnected() )
@@ -302,18 +301,23 @@ bool function DoesPlaylistRequireNewPlayerOrientation( string playlist )
 	if ( playlist == PLAYLIST_NEW_PLAYER_ORIENTATION )
 		return false
 
-	if ( IsLocalPlayerExemptFromNewPlayerOrientation() )
-		return false
 
-	if ( HasLocalPlayerCompletedNewPlayerOrientation() && !DoNonlocalPlayerPartyMembersNeedToCompleteNewPlayerOrientation() )
-		return false
 
-	return GetPlaylistVarBool( playlist, "require_new_player_orientation", true )
+
+
+
+
+
+
+	return GetPlaylistVarBool( playlist, "require_new_player_orientation", false )
 }
 
 bool function HasLocalPlayerCompletedNewPlayerOrientation()
 {
 	if( GetConVarBool( "orientation_matches_disabled" ) )
+		return true
+
+	if ( !GetCurrentPlaylistVarBool( "require_new_player_orientation", false ) )
 		return true
 
 	if ( !IsFullyConnected() )
@@ -345,6 +349,9 @@ bool function DoNonlocalPlayerPartyMembersNeedToCompleteNewPlayerOrientation()
 	if( GetConVarBool( "orientation_matches_disabled" ) )
 		return false
 
+	if ( !GetCurrentPlaylistVarBool( "require_new_player_orientation", false ) )
+		return false
+
 	Party party           = GetParty()
 	string localPlayerUID = GetPlayerUID()
 
@@ -372,7 +379,7 @@ bool function DoNonlocalPlayerPartyMembersNeedToCompleteNewPlayerOrientation()
 
 bool function IsPlaylistLockedForEvent( string playlistName )
 {
-	if ( IsRankedPlaylist( playlistName ) )
+	if ( GameModeVariant_IsActiveForPlaylist( playlistName, eGameModeVariants.SURVIVAL_RANKED ) )
 		return false
 
 
@@ -481,7 +488,7 @@ int function LobbyPlaylist_GetPlaylistState( string playlistName )
 	if ( GetPartySize() > GetMaxTeamSizeForPlaylist( playlistName ) )
 		return ePlaylistState.PARTY_SIZE_OVER
 
-	if ( IsRankedPlaylist( playlistName ) )
+	if ( GameModeVariant_IsActiveForPlaylist( playlistName, eGameModeVariants.SURVIVAL_RANKED ) )
 	{
 		if ( !SharedRanked_PartyHasRankedLevelAccess() )
 			return ePlaylistState.RANKED_LEVEL_REQUIRED
@@ -513,14 +520,12 @@ int function LobbyPlaylist_GetPlaylistState( string playlistName )
 	if ( IsPlaylistBeingRotated( playlistName ) && !IsPlaylistInActiveRotation( playlistName ) )
 		return ePlaylistState.ROTATION_GROUP_MISMATCH
 
+	if ( Playlist_ShouldBeHiddenForScheduleBlocks( playlistName ) )
+		return ePlaylistState.ROTATION_GROUP_MISMATCH
+
 
 		if ( playlistName == "private_match" && !LobbyPlaylist_IsTournamentMatchmaking() )
 			return ePlaylistState.LOCKED
-
-
-
-
-
 
 
 	return ePlaylistState.AVAILABLE

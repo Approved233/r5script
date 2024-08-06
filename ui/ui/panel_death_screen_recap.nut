@@ -138,17 +138,17 @@ void function DeathRecapTryToggleUpgradesOnGladCard( var button )
 		return
 
 
-	if (TDM_IsModeEnabled())
+	if ( GameModeVariant_IsActive( eGameModeVariants.FREEDM_TDM ) )
 		return
 
 
 
-	if (GunGame_IsModeEnabled())
+	if ( GameModeVariant_IsActive( eGameModeVariants.FREEDM_GUNGAME ) )
 		return
 
 
 
-	if (Control_IsModeEnabled())
+	if ( GameMode_IsActive( eGameModes.CONTROL ) )
 		return
 
 

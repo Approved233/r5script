@@ -15,6 +15,8 @@ global function SetPlayerTooltipAfterCallback
 global function ScoreboardMenu_IsTryingToViewProfileOfPlayerInScoreboard
 global function CustomMatch_ScoreboardUpdate
 
+global function UI_SetScoreboardVerticalOffset
+
 enum eRosterAction
 {
 	RENAME_TEAM,
@@ -79,6 +81,9 @@ struct
 	var playerRowFocused = null
 	bool viewingProfile = false
 	bool isInputRegistered = false
+
+	
+	float scoreboardVerticalOffset = 0.0
 } file
 
 enum scoreboardHeaderTypes
@@ -301,7 +306,7 @@ float function GetTeamMinWidth( var panel, float maxFillWidth )
 	int teamsPerRow = GetTotalTeamsPerRow( panel )
 
 	float screenSizeYFrac =  GetScreenSize().height / 1080.0
-	return max( ( ( maxFillWidth - ( hPadding * teamsPerRow) ) / teamsPerRow), 190.0 * screenSizeYFrac ) 
+	return max( ( ( maxFillWidth - ( hPadding * teamsPerRow) ) / teamsPerRow), 120.0 * screenSizeYFrac ) 
 }
 
 
@@ -503,10 +508,10 @@ void function CheckHeaderCountRestraints( var panel )
 
 	int playersNeeded = teams * playersPerTeam
 
-	Assert( !( playersNeeded > teamPlayers.len() ), "To many players in mode for scoreboard to support. Add more Player Buttons in teams_scoreboard.res" )
-	Assert( !( teams > teamHeaders.len() ), "To many teams in mode for scoreboard to support. Add more Team Headers in teams_scoreboard.res" )
+	Assert( !( playersNeeded > teamPlayers.len() ), "Too many players in mode for scoreboard to support. Add more Player Buttons in teams_scoreboard.res/private_match_lobby_team.res" )
+	Assert( !( teams > teamHeaders.len() ), "Too many teams in mode for scoreboard to support. Add more Team Headers in teams_scoreboard.res/private_match_lobby_team.res" )
 	if( !ShouldUseTinyMode( panel ) )
-		Assert( !( teams > teamFrames.len() ), "To many teams in mode for scoreboard to support. Add more Team Frames in teams_scoreboard.res" )
+		Assert( !( teams > teamFrames.len() ), "Too many teams in mode for scoreboard to support. Add more Team Frames in teams_scoreboard.res/private_match_lobby_team.res" )
 }
 
 float function GetHPadding( var panel )
@@ -517,7 +522,7 @@ float function GetHPadding( var panel )
 		return 22.0 * screenSizeFrac
 
 
-	if( DeathScreenIsOpen() && Control_IsModeEnabled() )
+	if( DeathScreenIsOpen() && GameMode_IsActive( eGameModes.CONTROL ) )
 		return 100.0 * screenSizeFrac
 
 
@@ -533,6 +538,11 @@ float function GetVPadding( var panel )
 		return 22.0 * screenSizeFrac
 
 	return 25.0 * screenSizeFrac
+}
+
+void function UI_SetScoreboardVerticalOffset( float verticalOffset )
+{
+	file.scoreboardVerticalOffset = verticalOffset
 }
 
 void function UI_ClearLocalPlayerToolTip( var panel, int localPlayersRow )
@@ -608,10 +618,10 @@ void function UI_SetScoreboardTeamData( var panel, int teams, int playersPerTeam
 	file.panels[panel].teamsPerRow = teamsPerRow  
 	file.panels[panel].firstTeamOffsetX = -1 * ( min( Hud_GetWidth( panel ) , 1920 * screenSizeYFrac ) - ( teamsPerRow * teamWidth ) - ( max(teamsPerRow - 1, 0) * file.panels[panel].hPadding  ) ) / 2.0
 
-	float vSpaceTakenByHeaders = headerHeight * totalRows
+	float vSpaceTakenByHeaders = ( headerHeight * totalRows)
 	float vSpaceTakenByPlayers = playersHeight * totalRows
 	float vSpaceTakenByPadding = max(totalRows - 1, 0) * file.panels[panel].vPadding
-	file.panels[panel].firstTeamOffsetY = -1 * ( tabsHeight + ( ( avialableHeight - vSpaceTakenByHeaders - vSpaceTakenByPlayers - vSpaceTakenByPadding ) / 2 ) )
+	file.panels[panel].firstTeamOffsetY = -1 * ( tabsHeight + file.scoreboardVerticalOffset + ( ( avialableHeight - vSpaceTakenByHeaders - vSpaceTakenByPlayers - vSpaceTakenByPadding ) / 2 ) )
 	int teamsAdded = 0
 
 	if( localPlayersTeam >= 0)

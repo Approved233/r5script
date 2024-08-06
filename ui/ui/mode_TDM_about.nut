@@ -2,7 +2,7 @@
 global function TDM_PopulateAboutText
 global function SWAT_PopulateAboutText
 
-
+global function BigTDM_PopulateAboutText
 
 
 
@@ -26,6 +26,8 @@ array< featureTutorialTab > function TDM_PopulateAboutText()
 
 
 
+	GameMode_AboutDialog_AppendRequeueTab(tabs)
+
 	return tabs
 }
 
@@ -44,28 +46,32 @@ array< featureTutorialTab > function SWAT_PopulateAboutText()
 	tab1.rules = tab1Rules
 	tabs.append( tab1 )
 
+	GameMode_AboutDialog_AppendRequeueTab(tabs)
+
 	return tabs
 }
 
 
+array< featureTutorialTab > function BigTDM_PopulateAboutText()
+{
+	array< featureTutorialTab > tabs
+	featureTutorialTab tab1
 
+	array< featureTutorialData > tab1Rules
 
+	
+	tab1.tabName = 	"#GAMEMODE_RULES_OVERVIEW_TAB_NAME"
+	tab1Rules.append( UI_FeatureTutorialDialog_BuildDetailsData( "#BIGTDM_RULES_ABOUT_HEADER_1", "#BIGTDM_RULES_ABOUT_BODY_1", $"rui/hud/gametype_icons/ltm/about_tdm_fight" ) )
+	tab1Rules.append( UI_FeatureTutorialDialog_BuildDetailsData( "#BIGTDM_RULES_ARMED_HEADER_2", "#BIGTDM_RULES_ARMED_BODY_2", $"rui/hud/gametype_icons/ltm/about_tdm_armed" ) )
+	tab1Rules.append( UI_FeatureTutorialDialog_BuildDetailsData( "#BIGTDM_RULES_FROSTY_HEADER_3", "#BIGTDM_RULES_FROSTY_BODY_3", $"rui/hud/gametype_icons/ltm/about_tdm_frosty" ) )
 
+	tab1.rules = tab1Rules
+	tabs.append( tab1 )
 
+	GameMode_AboutDialog_AppendRequeueTab(tabs)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+	return tabs
+}
 
 
 

@@ -15,7 +15,6 @@ global function Ranked_GetRankedLevelRequirement
 global function Ranked_GetTiers
 global function Ranked_GetCostForEntry
 
-
 global function Ranked_GetRankedDivisionDataForTier
 global function Ranked_GetNextTierData
 global function Ranked_GetLadderPosition
@@ -28,6 +27,7 @@ global function Ranked_GetHistoricalFirstSplitRankScore
 global function Ranked_GetHistoricalRankedDivisionFromScore
 global function Ranked_GetHighestHistoricalRankedTierData 
 global function Ranked_GetHistoricalRankedDivisionFromScoreAndLadderPosition
+global function Ranked_GetHistoricalRankedTiers
 global function Ranked_GetHistoricalLadderPosition
 global function Ranked_GetHistoricalLadderOnlyDivision
 global function Ranked_GetNewDivisionForNewSeasonOrSplitReset
@@ -48,7 +48,10 @@ global function Ranked_GetCurrentActiveRankedPeriod
 global function Ranked_GetAllRanked2Pt0Periods
 global function Ranked_GetSeasonForRanked2Pt0Period
 global function Ranked_GetAllRankedPeriodsInAscendingChronologicalOrder
-
+global function Ranked_HasActiveLadderOnlyDivision
+global function Ranked_GetActiveLadderOnlyDivisionData
+global function Ranked_GetRankedV2SplitStatus
+global function Ranked_GetRankedV2Sibling
 
 
 
@@ -59,15 +62,15 @@ global function Ranked_GetAllRankedPeriodsInAscendingChronologicalOrder
 
 global function Ranked_GetHistoricalRankScoreAcrossSplitsForPlayer
 global function Ranked_GetHistoricalRankedPersistenceData
-global function Ranked_HasActiveLadderOnlyDivision
-global function Ranked_GetActiveLadderOnlyDivisionData
 global function Ranked_RankedPartyMaxTierDifferential
+global function Ranked_ShowRankedSummary
 
 
 
 global function Ranked_GetTierCount
 global function Ranked_IsLocalPlayerInLadderOnlyTier
 global function Ranked_PopulateAboutText
+
 
 
 
@@ -135,6 +138,10 @@ global const string RANKED_2PT0_PERIOD_19_GUIDSTRING = "SAID01234567890"
 global const int RANKED_2PT0_NON_SPLIT = 0
 global const int RANKED_2PT0_SPLIT1 = 1
 global const int RANKED_2PT0_SPLIT2 = 2
+global const string RANKED_V2_SPLIT2_START_TIME_POSTFIX = "_split2_start_time"
+global const string RANKED_V2_SPLIT2_START_TIME_FIELD_NAME = "split2StartTime"
+
+global const int DEMOTION_BUFFER_MAX = 3
 
 global const asset RANKED_PLACEMENT_BADGE = $"ui/ranked_badge_placement.rpak"
 global const asset RANKED_PLACEMENT_ICON = $"ui_image/rui/menu/ranked/rank_emblem_placement.rpak"
@@ -145,6 +152,7 @@ global const string RANKED_CURRENT_SCORE_PERSISTENCE_VAR_NAME = "currentRankedSc
 global const string RANKED_PROVISIONAL_MATCH_COUNT_PERSISTENCE_VAR_NAME = "rankedProvisionalMatchesCompleted"
 global const string RANKED_PROVISIONAL_MATCH_HAS_PROGRESSED_OUT_PERSISTENCE_VAR_NAME = "rankedHasProgressedOutOfProvisional"
 global const string RANKED_PROVISIONAL_MATCH_CONVAR_KILL_SWITCH = "ranked_disable_placement_matches"
+global const string RANKED_ENABLE_2PT0_CROSS_SPLIT_REWARD = "ranked_enable_2pt0_cross_split_reward"
 
 global const string RANKED_TOP_5_STREAK_PERSISTENCE_VAR_NAME = "rankedTop5StreakCount"
 global const string RANKED_PROVISONAL_MATCH_RESULTS = "rankedProvisionalMatchScores"
@@ -182,6 +190,7 @@ global const string RANKED_PARTY_IGNORE_MAX_TIER_DIFFERENTIAL_PLAYLIST_VAR = "ra
 global const string RANKED_DEV_PLAYTEST_PLAYLIST_VAR = "ranked_dev_playtest"
 const string RANKED_PARTY_MAX_TIER_DIFFERENTIAL_PLAYLIST_VAR = "ranked_party_max_tier_differential"
 const int RANKED_PARTY_MAX_TIER_DIFFERENTIAL = 3
+global const int MAX_TEAM_SIZE = 3
 
 global const float RANKED_LEAVER_PENALTY_TIME_LIMIT_SEC = 60.0
 
@@ -199,6 +208,8 @@ global enum emblemDisplayMode
 	DISPLAY_LADDER_POSITION,
 	NONE,
 }
+
+
 
 
 
@@ -403,6 +414,10 @@ void function Sh_Ranked_Init()
 {
 	
 
+
+
+
+
 	if ( !file.initialized ) 
 	{
 		
@@ -491,7 +506,18 @@ void function RegisterRanked2Pt0Periods()
 		if ( rp2Pt0Flavor == null )
 			printt( "Failed to register ItemFlavor from Settings Asset ", rp2pt0 )
 		else
+		{
+#if DEV
+			ItemFlavor rankedPeriod    = expect ItemFlavor( rp2Pt0Flavor )
+			if ( Ranked_IsRankedV2SecondSplit( rankedPeriod ) )
+			{
+				var settingsBlock          = ItemFlavor_GetSettingsBlock( rankedPeriod )
+				string split2StartTime = GetSettingsBlockString( settingsBlock, RANKED_V2_SPLIT2_START_TIME_FIELD_NAME )
+				Assert( DateTimeStringToUnixTimestamp( split2StartTime ) != null, "Ranked 2.0 second split must have " + RANKED_V2_SPLIT2_START_TIME_FIELD_NAME )
+			}
+#endif
 			file.allRanked2Pt0Periods.append( expect ItemFlavor( rp2Pt0Flavor ) )
+		}
 	}
 }
 
@@ -780,6 +806,25 @@ string function SharedRanked_GetNumPlayerOnLaddersOverridePlaylistVar( ItemFlavo
 	return ItemFlavor_GetCalEventRef( rankedPeriod ) + "_num_players_on_ladder"
 }
 
+SharedRankedTierData function Ranked_GetHighestHistoricalTierAcrossSplitsForPlayer2Pt0( entity player, ItemFlavor rankedPeriod, bool highScore )
+{
+	Assert( Ranked_GetRankedV2SplitStatus( rankedPeriod ) != RANKED_2PT0_NON_SPLIT )
+
+	string rankedPeriodGUID        = ItemFlavor_GetGUIDString( rankedPeriod )
+	string siblingRankedPeriodGUID = ItemFlavor_GetGUIDString( Ranked_GetRankedV2Sibling( rankedPeriod ) )
+
+	int rankedScore                 = Ranked_GetHistoricalRankScore( player, rankedPeriodGUID, highScore )
+	int ladderPosition              = Ranked_GetHistoricalLadderPosition( player, rankedPeriodGUID )
+	SharedRankedTierData rankedTier = Ranked_GetHistoricalRankedDivisionFromScoreAndLadderPosition( rankedScore, ladderPosition, rankedPeriodGUID ).tier
+
+	int siblingRankedScore                 = Ranked_GetHistoricalRankScore( player, siblingRankedPeriodGUID, highScore )
+	int siblingLadderPosition              = Ranked_GetHistoricalLadderPosition( player, siblingRankedPeriodGUID )
+	SharedRankedTierData siblingRankedTier = Ranked_GetHistoricalRankedDivisionFromScoreAndLadderPosition( siblingRankedScore, siblingLadderPosition, siblingRankedPeriodGUID ).tier
+
+	SharedRankedTierData highestTierAchieved = Ranked_GetHigherOfTwoTiers( rankedTier, siblingRankedTier )
+
+	return highestTierAchieved
+}
 
 SharedRankedTierData function Ranked_GetHighestHistoricalTierAcrossSplitsForPlayer( entity player, ItemFlavor rankedPeriod, bool highScore )
 {
@@ -1220,6 +1265,20 @@ int function Ranked_RankedPartyMaxTierDifferential()
 }
 
 
+bool function Ranked_ShowRankedSummary()
+{
+
+
+
+
+	bool rpGainDisabled = false
+
+		rpGainDisabled = RankedRumble_IsLatestGameRankedRumble( GetLocalClientPlayer() )
+
+	return !rpGainDisabled && Ranked_GetXProgMergedPersistenceData( GetLocalClientPlayer(), RANKED_SHOW_RANKED_SUMMARY_PERSISTENCE_VAR_NAME ) != 0
+}
+
+
 SharedRankedDivisionData function Ranked_GetHistoricalRankedDivisionFromScoreAndLadderPosition( int rankScore, int ladderPosition, string rankedSeasonGUID )
 {
 	if ( Ranked_PeriodHasLadderOnlyDivision( rankedSeasonGUID ) )
@@ -1234,6 +1293,10 @@ SharedRankedDivisionData function Ranked_GetHistoricalRankedDivisionFromScoreAnd
 	unreachable
 }
 
+array<SharedRankedTierData> function Ranked_GetHistoricalRankedTiers( string rankedSeasonGUID )
+{
+	return file.historicalRankedTiers[rankedSeasonGUID]
+}
 
 int function Ranked_GetHistoricalLadderPosition( entity player, string rankedSeasonGUID, bool forFirstSplit = false )
 {
@@ -1475,12 +1538,6 @@ int function GetPlayerRankScore( entity player )
 
 	unreachable
 }
-
-
-
-
-
-
 
 
 
@@ -2455,6 +2512,15 @@ array< SharedRankedDivisionData > function Ranked_GetRankedDivisionDataForTier( 
 
 
 
+
+
+
+
+
+
+
+
+
 void function Ranked_UpdateEHIRankScore( EHI playerEHI, int rankScore )
 
 {
@@ -2604,6 +2670,21 @@ SharedRankedDivisionData function Ranked_GetNewDivisionForNewSeasonOrSplitReset(
 	return newDivData
 }
 
+ItemFlavor function Ranked_GetRankedV2Sibling( ItemFlavor rankPeriodItemFlav )
+{
+	int rankPeriodStatus = Ranked_GetRankedV2SplitStatus( rankPeriodItemFlav )
+	Assert( rankPeriodStatus == RANKED_2PT0_SPLIT1 || rankPeriodStatus == RANKED_2PT0_SPLIT2, "Can't get sibling rank period for non split period " + string( ItemFlavor_GetAsset( rankPeriodItemFlav ) ) )
+	if ( rankPeriodStatus == RANKED_2PT0_SPLIT1 )
+	{
+		return expect ItemFlavor( GetFollowingRankedPeriod( rankPeriodItemFlav ) )
+	}
+	if ( rankPeriodStatus == RANKED_2PT0_SPLIT2 )
+	{
+		return expect ItemFlavor( GetPrecedingRankedPeriod( rankPeriodItemFlav ) )
+	}
+	unreachable
+}
+
 int function Ranked_GetRankedV2SplitStatus( ItemFlavor rankPeriodItemFlav )
 {
 	if ( ItemFlavor_GetType( rankPeriodItemFlav ) == eItemType.ranked_2pt0_period )
@@ -2624,14 +2705,33 @@ bool function Ranked_IsRankedV2SecondSplit( ItemFlavor rankPeriodItemFlav )
 	return Ranked_GetRankedV2SplitStatus( rankPeriodItemFlav ) == RANKED_2PT0_SPLIT2
 }
 
-bool function Ranked_IsDisablePointGain()
+bool function Ranked_IsDisablePointGain( entity player )
 {
 
+	return RankedRumble_IsLatestGameRankedRumble( player ) || GetConVarBool( "ranked_disable_point_gain" )
 
 
-	return GetConVarBool( "ranked_disable_point_gain" )
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3000,14 +3100,27 @@ array< featureTutorialTab > function Ranked_PopulateAboutText()
 
 	
 	tab1.tabName = 	"#RANKED_ABOUT_TAB_1_NAME"
-	
-	
-	tab1Rules.append( UI_FeatureTutorialDialog_BuildDetailsData( "#RANKED_ABOUT_TAB_1_HEADER_1", "#RANKED_ABOUT_TAB_1_DESC_1", $"" ) )
+	tab1Rules.append( UI_FeatureTutorialDialog_BuildDetailsData( "#RANKED_ABOUT_TAB_1_HEADER_1", Localize( "#RANKED_ABOUT_TAB_1_DESC_1", Ranked_RankedPartyMaxTierDifferential() ), $"" ) )
 	tab1Rules.append( UI_FeatureTutorialDialog_BuildDetailsData( "#RANKED_ABOUT_TAB_1_HEADER_2", "#RANKED_ABOUT_TAB_1_DESC_2", $"" ) )
 	tab1Rules.append( UI_FeatureTutorialDialog_BuildDetailsData( "#RANKED_ABOUT_TAB_1_HEADER_3", "#RANKED_ABOUT_TAB_1_DESC_3", $"" ) )
 
 	tab1.rules = tab1Rules
 	tabs.append( tab1 )
+
+
+	tab1.tabName = "#RANKED_TITLE"
+
+	featureTutorialTab tab2
+	array<featureTutorialData> tab2Rules
+	tab2.tabName = "#RANKED_RUMBLE"
+
+	tab2Rules.append( UI_FeatureTutorialDialog_BuildDetailsData( "#RANKED_RUMBLE_ABOUT_TAB_1_HEADER_1", "#RANKED_RUMBLE_ABOUT_TAB_1_DESC_1", $"" ) )
+	tab2Rules.append( UI_FeatureTutorialDialog_BuildDetailsData( "#RANKED_RUMBLE_ABOUT_TAB_1_HEADER_2", "#RANKED_RUMBLE_ABOUT_TAB_1_DESC_2", $"" ) )
+	tab2Rules.append( UI_FeatureTutorialDialog_BuildDetailsData( "#RANKED_RUMBLE_ABOUT_TAB_1_HEADER_3", "#RANKED_RUMBLE_ABOUT_TAB_1_DESC_3", $"" ) )
+
+	tab2.rules = tab2Rules
+	tabs.append( tab2 )
+
 
 	return tabs
 }
@@ -3024,5 +3137,61 @@ bool function Ranked_ShouldShowPreRankedBadge ()
 		return true
 
 	return false
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+int function Ranked_GetRankedV2Split2StartTime( ItemFlavor rankedPeriod )
+{
+	Assert( Ranked_IsRankedV2SecondSplit( rankedPeriod ) )
+
+	string playlistVarName = ItemFlavor_GetGUIDString( rankedPeriod ) + RANKED_V2_SPLIT2_START_TIME_POSTFIX
+	string str = GetCurrentPlaylistVarString( playlistVarName, "" )
+	if ( str != "" )
+	{
+		int ornull t = DateTimeStringToUnixTimestamp( str )
+		return expect int(t)
+		Warning( "Ranked period '%s' playlist var '%s' is not a valid datetime or Unix timestamp: \"%s\"", string(ItemFlavor_GetAsset( rankedPeriod )), playlistVarName, str )
+	}
+
+	var settingsBlock = ItemFlavor_GetSettingsBlock( rankedPeriod )
+	return expect int( DateTimeStringToUnixTimestamp( GetSettingsBlockString( settingsBlock, RANKED_V2_SPLIT2_START_TIME_FIELD_NAME ) ) )
 }
 

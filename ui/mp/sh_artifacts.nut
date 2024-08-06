@@ -20,6 +20,7 @@ global function Artifacts_IsItemFlavorArtifact
 
 
 
+
 global function Artifacts_Loadouts_GetMeleeSkinNetVarOverrideType
 global function Artifacts_Loadouts_IsAnyArtifactUnlocked
 global function Artifacts_Loadouts_GetConfigIndex
@@ -80,9 +81,6 @@ global function Artifacts_Loadouts_ComponentChangeSlot
 
 
 
-
-
-
 global function Artifacts_GetSetUIData
 global function Artifacts_GetSetNameLocalized
 global function Artifacts_GetSets
@@ -90,6 +88,7 @@ global function Artifacts_GetSetIndexOrdered
 global function Artifacts_GetIndexOrder
 global function Artifacts_GetComponentOrder
 global function Artifacts_GetSetItemsOrdered
+global function Artifacts_GetComponentOfTypeFromTheme
 global function Artifacts_HasPreviousItem
 global function Artifacts_PreviewSet
 global function Artifacts_GetEquippedSet
@@ -106,9 +105,6 @@ global function Artifacts_ActivationEmote_GetVideo
 #if DEV
 
 global function Artifacts_DEV_RequestEquipSetByIndex
-
-
-
 
 
 
@@ -264,24 +260,24 @@ const string RAGOLD = "RAGOLD"
 global enum eArtifactSetIndex { 
 	
 	
+
+
+
+
 	RAGOLD = -2,
 	_EMPTY = -1, 
-
 	CELES = 0,
 	DEATH = 1,
 	HISOC = 2,
-
 	MOB = 3,
-
 	STEAM = 4,
 	STECH = 5,
-
 	COUNT = 6 
 }
 
 const int LOADOUT_MELEE_SKIN_ITEM_TYPE_OVERRIDE = eItemType.artifact_component_blade
 const int LOADOUT_MELEE_SKIN_COMPONENT_TYPE_OVERRIDE = eArtifactComponentType.BLADE
-const int ULTIMATE_SET_INDEX = eArtifactSetIndex.CELES
+global const int ULTIMATE_SET_INDEX = eArtifactSetIndex.CELES
 const int BASE_SET_INDEX = eArtifactSetIndex.MOB 
 
 const string BLADE_KEY = "blade"
@@ -309,12 +305,16 @@ const array<int> ARTIFACT_SET_ORDER = [
 
 global array<int> ARTIFACT_CUSTOMIZATION_SET_ORDER = [
 	eArtifactSetIndex.MOB,
-	eArtifactSetIndex.STECH,
+	eArtifactSetIndex.DEATH,
 	eArtifactSetIndex.HISOC,
 	eArtifactSetIndex.STEAM,
-	eArtifactSetIndex.DEATH,
+	eArtifactSetIndex.STECH,
 	eArtifactSetIndex.CELES,
 	eArtifactSetIndex.RAGOLD,
+
+
+
+
 	eArtifactSetIndex._EMPTY,
 ]
 
@@ -335,9 +335,7 @@ const int BODY_GROUP_INVALID = -1
 const int THEME_BASE = 1 
 const int THEME_SHINY = 2 
 
-const float VFX_FLOURISH_3P_START_DELAY = 1.0 
-const float VFX_FLOURISH_ANIM_DURATION = 3.2 
-global const string VFX_SIGNAL = "ArtifactsFxSignal"
+const string ARTIFACT_EMISSIVE_FX_SIGNAL = "ArtifactsEmissiveFxSignal"
 
 
 const string LOADOUTS_ARTIFACT_INDEX_COMPONENT_TYPE = "artifact_%d_component_%s"
@@ -522,7 +520,7 @@ void function ShArtifacts_LevelInit()
 
 
 
-	RegisterSignal( VFX_SIGNAL )
+	RegisterSignal( ARTIFACT_EMISSIVE_FX_SIGNAL )
 }
 
 void function RegisterArtifactComponentsForWeapon( ItemFlavor artifactWeapon )
@@ -546,6 +544,8 @@ void function RegisterArtifactComponentsForWeapon( ItemFlavor artifactWeapon )
 		componentsInSet.resize( eArtifactComponentType.COUNT )
 
 		string setTheme = GetGlobalSettingsString( componentSet, THEME_NAME )
+		Assert( setTheme in eArtifactSetIndex )
+		int setIndex = eArtifactSetIndex[ setTheme ]
 
 
 
@@ -575,7 +575,7 @@ void function RegisterArtifactComponentsForWeapon( ItemFlavor artifactWeapon )
 
 
 		{
-			bool isSpecialSet = ( setTheme == EMPTY || setTheme == RAGOLD )
+			bool isSpecialSet = ( setIndex <= 0 )
 			Assert( setTheme in eArtifactSetIndex )
 
 			string setName = GetGlobalSettingsString( componentSet, SET_NAME )
@@ -585,7 +585,7 @@ void function RegisterArtifactComponentsForWeapon( ItemFlavor artifactWeapon )
 			uiData.name = setName
 			uiData.imageRef = setImageRef
 
-			fileLevel.setUIData[ eArtifactSetIndex[ setTheme ] ] <- uiData
+			fileLevel.setUIData[ setIndex ] <- uiData
 		}
 
 
@@ -642,13 +642,13 @@ void function RegisterArtifactComponentsForWeapon( ItemFlavor artifactWeapon )
 			}
 			else
 			{
-				Assert( setTheme == RAGOLD )
+				Assert( setIndex <= eArtifactSetIndex.RAGOLD )
 				ItemFlavor invalidComponent
 				componentsInSet[ componentType ] = invalidComponent
 			}
 		}
 
-		fileLevel.componentSets[ eArtifactSetIndex[ currentTheme ] ] <- componentsInSet
+		fileLevel.componentSets[ setIndex ] <- componentsInSet
 	}
 
 }
@@ -884,11 +884,8 @@ bool function Artifacts_Loadouts_CheckAndFixMisconfigurations( EHI playerEHI, It
 
 		LoadoutEntry bladeSlot    = Artifacts_Loadouts_GetEntryForConfigIndexAndType( i, eArtifactComponentType.BLADE )
 		ItemFlavor bladeComponent = LoadoutSlot_GetItemFlavor_ForValidation( playerEHI, bladeSlot )
-#if DEV
-			isMisconfigured = Artifacts_IsEmptyComponent( bladeComponent )
-#else
-			isMisconfigured = Artifacts_IsEmptyComponent( bladeComponent ) || !IsItemFlavorUnlockedForLoadoutSlot( playerEHI, bladeSlot, bladeComponent )
-#endif
+
+		isMisconfigured = ( Artifacts_IsBaseArtifactOwned( FromEHI( playerEHI ) ) && Artifacts_IsEmptyComponent( bladeComponent ) ) || !IsItemFlavorUnlockedForLoadoutSlot( playerEHI, bladeSlot, bladeComponent )
 
 		if ( isMisconfigured && IsLobby() )
 		{
@@ -922,6 +919,8 @@ LoadoutEntry function Artifacts_Loadouts_ComponentChangeSlot()
 {
 	return fileLevel.componentChangeSlot
 }
+
+
 
 
 
@@ -1927,6 +1926,11 @@ ItemFlavor function Artifacts_GetAssociatedWeaponForComponent( ItemFlavor compon
 
 
 
+
+
+
+
+
 int function Artifacts_GetComponentChangeGUID( entity player )
 {
 
@@ -1989,6 +1993,20 @@ array< ItemFlavor > function Artifacts_GetSetItemsOrdered( int setIndex )
 	return setItemsOrdered
 }
 
+ItemFlavor function Artifacts_GetComponentOfTypeFromTheme( int theme, int type )
+{
+	array< ItemFlavor > components = Artifacts_GetSetItems( theme )
+
+	foreach ( component in components )
+	{
+		if ( Artifacts_GetComponentType( component ) == type )
+			return component
+	}
+
+	Assert( false, "Theme or type are not valid!" )
+	unreachable
+}
+
 bool function Artifacts_HasPreviousItem( ItemFlavor component )
 {
 	array< ItemFlavor > setItems = Artifacts_GetSetItems( Artifacts_GetSetIndex( component ) )
@@ -2045,6 +2063,28 @@ int function Artifacts_GetCustomizationSetIndex( ItemFlavor component )
 }
 
 
+bool function Artifacts_IsBaseArtifactOwned( entity player = null )
+{
+	array< ItemFlavor > baseSet = fileLevel.componentSets[ BASE_SET_INDEX ]
+
+	if ( baseSet.len() == 0 )
+		return false
+
+	ItemFlavor baseArtifact = baseSet[0]
+
+
+
+
+
+
+
+
+		return GRX_IsItemOwnedByPlayer( baseArtifact )
+
+
+	unreachable
+}
+
 
 array< ItemFlavor > function Artifacts_GetSetItems( int setIndex )
 {
@@ -2053,18 +2093,7 @@ array< ItemFlavor > function Artifacts_GetSetItems( int setIndex )
 
 bool function Artifacts_IsBaseArtifact( ItemFlavor component )
 {
-	return ItemFlavor_GetType( component ) == eItemType.artifact_component_blade && Artifacts_GetSetIndex( component ) == eArtifactSetIndex.MOB
-}
-
-bool function Artifacts_IsBaseArtifactOwned()
-{
-	array< ItemFlavor > baseSet = Artifacts_GetSetItems( eArtifactSetIndex.MOB )
-
-	if ( baseSet.len() == 0 )
-		return false
-
-	ItemFlavor baseArtifact = baseSet[0]
-	return GRX_IsItemOwnedByPlayer( baseArtifact )
+	return ItemFlavor_GetType( component ) == eItemType.artifact_component_blade && Artifacts_GetSetIndex( component ) == BASE_SET_INDEX
 }
 
 asset function Artifacts_ActivationEmote_GetVideo( ItemFlavor emote )
@@ -2097,47 +2126,6 @@ void function Artifacts_DEV_RequestEquipSetByIndex( LoadoutEntry meleeSkinSlot, 
 
 	DEV_RequestSetItemFlavorLoadoutSlot( lcEHI, meleeSkinSlot, configPointer )
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

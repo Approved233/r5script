@@ -133,7 +133,7 @@ void function StoryEventAboutDialog_SetEvent( ItemFlavor event )
 
 void function OnGetTopLevel()
 {
-	UI_SetPresentationType( ePresentationType.BATTLE_PASS )
+	UI_SetPresentationType( ePresentationType.BATTLE_PASS_3 )
 }
 
 void function OnOpen()
@@ -469,9 +469,6 @@ void function PopulateData( entity player )
 
 		file.chapters.push( chapter )
 	}
-
-	if(eventHasNew)
-		Remote_ServerCallFunction( "ClientCallback_SetStoryAboutActiveChapterSeen", ItemFlavor_GetGUID( file.event ) )
 }
 
 void function OnUpdateChallengesRui( entity player )
@@ -837,9 +834,6 @@ void function PrologueButton_OnActivate( var btn )
 {
 	if ( Hud_IsLocked( btn ) || !Hud_IsEnabled( btn ) )
 		return
-
-	Remote_ServerCallFunction( "ClientCallback_MarkStoryPrologueCompleted", ItemFlavor_GetGUID( file.event ) )
-	Remote_ServerCallFunction( "ClientCallback_RefreshEventChallenges" )
 }
 
 void function PlaylistChangeButton_OnActivate( var btn )

@@ -31,6 +31,7 @@ void function RTKAngledProgressBar_InitMetaData( string behaviorType, string str
 void function RTKAngledProgressBar_OnInitialize( rtk_behavior self )
 {
 	self.AddPropertyCallback( "rui", UpdateRuiAsset )
+	self.AddPropertyCallback( "isDoubleSided", UpdateRuiAsset )
 
 	UpdateRuiAsset( self )
 }
@@ -50,6 +51,8 @@ void function UpdateRuiAsset( rtk_behavior self )
 	asset ruiAsset
 	if( self.rtkprops.rui != $"" )
 		ruiAsset = expect asset( self.rtkprops.rui )
+	else if( self.PropGetBool( "isDoubleSided" ) && self.PropGetBool( "isForwardLeaning" ) )
+		ruiAsset = $"ui/rtk_slanted_progressbar_double_forward.rpak"
 	else if( self.PropGetBool( "isDoubleSided" ) )
 		ruiAsset = $"ui/rtk_slanted_progressbar_double.rpak"
 	else if( self.PropGetBool( "isForwardLeaning" ) )

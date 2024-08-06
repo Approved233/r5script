@@ -14,6 +14,7 @@ global function Artifacts_GetComponentSecondaryColor
 global function Artifacts_IsItemFlavorArtifact
 
 
+global function Artifacts_PlayerHasArtifactActive
 global function Artifacts_StoreLoadoutDataOnPlayerEntityStruct
 global function Artifacts_OnWeaponOwnerChanged
 global function Artifact_PrecacheDeathboxModelAndFX 
@@ -78,8 +79,6 @@ global function Artifacts_FX_GetDeathboxSpawnSFX
 
 global function Artifacts_FX_GetBladeControlPoints
 
-global function Artifacts_PlayActivationEmote
-global function Artifacts_PlayerHasArtifactActive
 
 
 
@@ -116,9 +115,6 @@ global function Artifacts_ActivationEmote_GetVideo
 
 
 
-
-
-global function Artifacts_DEV_PlayActivationEmote3PEffects
 
 #endif
 
@@ -264,24 +260,24 @@ const string RAGOLD = "RAGOLD"
 global enum eArtifactSetIndex { 
 	
 	
+
+
+
+
 	RAGOLD = -2,
 	_EMPTY = -1, 
-
 	CELES = 0,
 	DEATH = 1,
 	HISOC = 2,
-
 	MOB = 3,
-
 	STEAM = 4,
 	STECH = 5,
-
 	COUNT = 6 
 }
 
 const int LOADOUT_MELEE_SKIN_ITEM_TYPE_OVERRIDE = eItemType.artifact_component_blade
 const int LOADOUT_MELEE_SKIN_COMPONENT_TYPE_OVERRIDE = eArtifactComponentType.BLADE
-const int ULTIMATE_SET_INDEX = eArtifactSetIndex.CELES
+global const int ULTIMATE_SET_INDEX = eArtifactSetIndex.CELES
 const int BASE_SET_INDEX = eArtifactSetIndex.MOB 
 
 const string BLADE_KEY = "blade"
@@ -327,6 +323,10 @@ global const table<string, int> ARTIFACT_COMPONENT_SETTINGS_KEYS = {
 
 
 
+
+
+
+
 const int ARTIFACT_MAX_LOADOUTS = 3
 const string ONE_P = "1P"
 const string THREE_P = "3P"
@@ -335,9 +335,7 @@ const int BODY_GROUP_INVALID = -1
 const int THEME_BASE = 1 
 const int THEME_SHINY = 2 
 
-const float VFX_FLOURISH_3P_START_DELAY = 1.0 
-const float VFX_FLOURISH_ANIM_DURATION = 3.2 
-global const string VFX_SIGNAL = "ArtifactsFxSignal"
+const string ARTIFACT_EMISSIVE_FX_SIGNAL = "ArtifactsEmissiveFxSignal"
 
 
 const string LOADOUTS_ARTIFACT_INDEX_COMPONENT_TYPE = "artifact_%d_component_%s"
@@ -522,7 +520,7 @@ void function ShArtifacts_LevelInit()
 
 
 
-	RegisterSignal( VFX_SIGNAL )
+	RegisterSignal( ARTIFACT_EMISSIVE_FX_SIGNAL )
 }
 
 void function RegisterArtifactComponentsForWeapon( ItemFlavor artifactWeapon )
@@ -546,9 +544,11 @@ void function RegisterArtifactComponentsForWeapon( ItemFlavor artifactWeapon )
 		componentsInSet.resize( eArtifactComponentType.COUNT )
 
 		string setTheme = GetGlobalSettingsString( componentSet, THEME_NAME )
+		Assert( setTheme in eArtifactSetIndex )
+		int setIndex = eArtifactSetIndex[ setTheme ]
 
 		
-		if ( setTheme != EMPTY && setTheme != RAGOLD )
+		if ( setIndex >= 0 )
 		{
 			Assert( setTheme in eArtifactSetIndex )
 
@@ -642,13 +642,13 @@ void function RegisterArtifactComponentsForWeapon( ItemFlavor artifactWeapon )
 			}
 			else
 			{
-				Assert( setTheme == RAGOLD )
+				Assert( setIndex <= eArtifactSetIndex.RAGOLD )
 				ItemFlavor invalidComponent
 				componentsInSet[ componentType ] = invalidComponent
 			}
 		}
 
-		fileLevel.componentSets[ eArtifactSetIndex[ currentTheme ] ] <- componentsInSet
+		fileLevel.componentSets[ setIndex ] <- componentsInSet
 	}
 
 }
@@ -884,11 +884,8 @@ bool function Artifacts_Loadouts_CheckAndFixMisconfigurations( EHI playerEHI, It
 
 		LoadoutEntry bladeSlot    = Artifacts_Loadouts_GetEntryForConfigIndexAndType( i, eArtifactComponentType.BLADE )
 		ItemFlavor bladeComponent = LoadoutSlot_GetItemFlavor_ForValidation( playerEHI, bladeSlot )
-#if DEV
-			isMisconfigured = Artifacts_IsEmptyComponent( bladeComponent )
-#else
-			isMisconfigured = Artifacts_IsEmptyComponent( bladeComponent ) || !IsItemFlavorUnlockedForLoadoutSlot( playerEHI, bladeSlot, bladeComponent )
-#endif
+
+		isMisconfigured = ( Artifacts_IsBaseArtifactOwned( FromEHI( playerEHI ) ) && Artifacts_IsEmptyComponent( bladeComponent ) ) || !IsItemFlavorUnlockedForLoadoutSlot( playerEHI, bladeSlot, bladeComponent )
 
 		if ( isMisconfigured && IsLobby() )
 		{
@@ -997,9 +994,11 @@ void function Artifacts_StoreLoadoutDataOnPlayerEntityStruct( entity player, ent
 				artifactConfig.blade = LoadoutSlot_GetItemFlavor( ownerEHI, Loadout_MeleeSkin( character ) )
 				artifactConfig.character = character
 
-				Assert( ItemFlavor_GetType( artifactConfig.blade ) == eItemType.artifact_component_blade )
 				if ( ItemFlavor_GetType( artifactConfig.blade ) != eItemType.artifact_component_blade )
-					artifactConfig.blade = fileLevel.componentSets[ BASE_SET_INDEX ][ eArtifactComponentType.BLADE ] 
+				{
+					Warning( "Artifacts: received invalid ItemType for blade GUID." )
+					artifactConfig.blade = fileLevel.componentSets[ BASE_SET_INDEX ][ eArtifactComponentType.BLADE ]
+				} 
 
 				player.p.artifactConfig = artifactConfig
 			}
@@ -1681,12 +1680,28 @@ void function Artifacts_FX_StartWeaponFX( entity weapon, int fxPackageType )
 		if ( !IsValidItemFlavorGUID( weapon.GetItemFlavorGUID() ) )
 			return
 
-		weapon.kv.rendercolor = Artifacts_FX_GetEmissiveAndSmearColor( GetItemFlavorByGUID( weapon.GetItemFlavorGUID() ), true )
+		thread function() : ( weapon ) {
+			weapon.EndSignal( ARTIFACT_EMISSIVE_FX_SIGNAL )
+			weapon.EndSignal( "WeaponDeactivateEvent" )
+
+			vector finalColor = Artifacts_FX_GetEmissiveAndSmearColor( GetItemFlavorByGUID( weapon.GetItemFlavorGUID() ), true )
+			float emissiveFactor = DEACTIVATED_EMISSIVE_FACTOR
+			weapon.kv.rendercolor = finalColor * DEACTIVATED_EMISSIVE_FACTOR
+			while ( emissiveFactor <= ( 1.0 - FLT_EPSILON ) && IsValid( weapon ) )
+			{
+				emissiveFactor = emissiveFactor + 0.05
+				weapon.kv.rendercolor = finalColor * emissiveFactor
+				WaitFrame()
+			}
+			if ( IsValid( weapon ) )
+				weapon.kv.rendercolor = finalColor
+		}()
+
 		return
 	}
 
 	ArtifactFX1PAnd3P fx1P3P = Artifacts_FX_Get1PAnd3PFXArraysForWeapon( weapon, fxPackageType )
-	int fxLen = maxint( fx1P3P.fx1P.len(), fx1P3P.fx1P.len() )
+	int fxLen = maxint( fx1P3P.fx1P.len(), fx1P3P.fx3P.len() )
 	for ( int i = 0; i < fxLen; i++ )
 	{
 		asset onePAsset   = fx1P3P.fx1P.isvalidindex( i ) ? fx1P3P.fx1P[ i ].fxAsset : $""
@@ -1694,27 +1709,32 @@ void function Artifacts_FX_StartWeaponFX( entity weapon, int fxPackageType )
 		Assert( attachName != "" )
 		asset threePAsset = fx1P3P.fx3P.isvalidindex( i ) ? fx1P3P.fx3P[ i ].fxAsset : $""
 
-		if ( fxPackageType == eArtifactFXPackageType.FLOURISH ) 
-		{
 
+			entity player = weapon.GetOwner()
+			bool is3PActive = player.IsThirdPersonShoulderModeOn() || GetConVarInt( "thirdperson_override" ) == 1
+			bool isLocal1PFlourish = ( fxPackageType == eArtifactFXPackageType.FLOURISH && player == GetLocalViewPlayer() && !is3PActive )
+			if ( isLocal1PFlourish )
+			{
 				entity weaponVm = weapon.GetWeaponViewmodel()
 				int fxHandle = StartParticleEffectOnEntity( weaponVm, GetParticleSystemIndex( onePAsset ), FX_PATTACH_POINT_FOLLOW, weaponVm.LookupAttachment( attachName ) )
 				if ( !( fxPackageType in s_fxHandles ) )
 					s_fxHandles[ fxPackageType ] <- []
 				s_fxHandles[ fxPackageType ].append( fxHandle )
-
-
-
-		}
-		else
-		{
+				return
+			}
 
 
 
 
 
-				weapon.PlayWeaponEffect( onePAsset, threePAsset, attachName, true )
-		}
+
+
+
+
+
+
+
+			weapon.PlayWeaponEffect( onePAsset, threePAsset, attachName, true )
 	}
 }
 
@@ -1726,12 +1746,16 @@ void function Artifacts_FX_StopWeaponFX( entity weapon, int fxPackageType )
 		if ( !IsValidItemFlavorGUID( weapon.GetItemFlavorGUID() ) )
 			return
 
+		weapon.Signal( ARTIFACT_EMISSIVE_FX_SIGNAL )
 		weapon.kv.rendercolor = DEACTIVATED_EMISSIVE_FACTOR * Artifacts_FX_GetEmissiveAndSmearColor( GetItemFlavorByGUID( weapon.GetItemFlavorGUID() ), true )
 		return
 	}
 
 
-		if ( fxPackageType == eArtifactFXPackageType.FLOURISH && fxPackageType in s_fxHandles )
+		entity player = weapon.GetOwner()
+		bool is3PActive = player.IsThirdPersonShoulderModeOn() || GetConVarInt( "thirdperson_override" ) == 1
+		bool isLocal1PFlourish = ( fxPackageType == eArtifactFXPackageType.FLOURISH && player == GetLocalViewPlayer() && !is3PActive )
+		if ( isLocal1PFlourish && fxPackageType in s_fxHandles )
 		{
 			array< FXHandle > allFxHandles = clone ( s_fxHandles[ fxPackageType ] )
 			foreach ( FXHandle handle in allFxHandles )
@@ -1752,7 +1776,7 @@ void function Artifacts_FX_StopWeaponFX( entity weapon, int fxPackageType )
 
 
 	ArtifactFX1PAnd3P fx1P3P = Artifacts_FX_Get1PAnd3PFXArraysForWeapon( weapon, fxPackageType )
-	int fxLen = maxint( fx1P3P.fx1P.len(), fx1P3P.fx1P.len() )
+	int fxLen = maxint( fx1P3P.fx1P.len(), fx1P3P.fx3P.len() )
 	for ( int i = 0; i < fxLen; i++ )
 	{
 		asset onePAsset   = ( fx1P3P.fx1P.isvalidindex( i ) && fxPackageType != eArtifactFXPackageType.FLOURISH ) ? fx1P3P.fx1P[ i ].fxAsset : $""
@@ -1801,34 +1825,14 @@ void function Artifacts_FX_ScriptAnimWindowCallback( entity weapon, string param
 	}
 }
 
-void function Artifacts_PlayActivationEmote( entity weapon )
-{
-
-	
-	Assert( IsValid( weapon ) && weapon.GetWeaponSettingBool( eWeaponVar.is_artifact ) )
-	weapon.StartCustomActivityDetailed( "ACT_VM_ARTIFACT_ACTIVATION_EMOTE", (WCAF_INTERRUPTIBLE_ALLOW_WHILE_SPRINTING | WCAF_INTERRUPTIBLE_ALLOW_START_WHILE_SPRINTING | WCAF_TOGGLE | WCAF_KEEPMELEESTATE | WCAF_ISINTERRUPTIBLE), -1.0, "ACT_MP_ARTIFACT_ACTIVATION_EMOTE" )
-	thread function() : ( weapon ) {
-		weapon.EndSignal( VFX_SIGNAL )
-		weapon.EndSignal( "OnDestroy" )
-		weapon.EndSignal( "WeaponDeactivateEvent" )
-		wait VFX_FLOURISH_3P_START_DELAY
-		if ( IsValid( weapon ) )
-			Artifacts_FX_StartWeaponFX( weapon, eArtifactFXPackageType.FLOURISH )
-
-		
-		float customActDuration = weapon.IsInCustomActivity() ? weapon.GetCustomActivityDuration() : VFX_FLOURISH_ANIM_DURATION
-		wait (customActDuration - VFX_FLOURISH_3P_START_DELAY)
-		if ( IsValid( weapon ) )
-			Artifacts_FX_StopWeaponFX( weapon, eArtifactFXPackageType.FLOURISH )
-	}()
-
-}
-
 bool function Artifacts_PlayerHasArtifactActive( entity player )
 {
 	entity activeWeapon = player.GetActiveWeapon( eActiveInventorySlot.mainHand )
 	return ( IsValid( activeWeapon ) && activeWeapon.IsWeaponX() && activeWeapon.GetWeaponSettingBool( eWeaponVar.is_artifact ) )
 }
+
+
+
 
 
 
@@ -2046,6 +2050,42 @@ int function Artifacts_GetComponentChangeGUID( entity player )
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+bool function Artifacts_IsBaseArtifactOwned( entity player = null )
+{
+	array< ItemFlavor > baseSet = fileLevel.componentSets[ BASE_SET_INDEX ]
+
+	if ( baseSet.len() == 0 )
+		return false
+
+	ItemFlavor baseArtifact = baseSet[0]
+
+
+
+
+
+
+
+
+		return GRX_IsItemOwnedByPlayer( baseArtifact )
+
+
+	unreachable
+}
+
+
 array< ItemFlavor > function Artifacts_GetSetItems( int setIndex )
 {
 	return fileLevel.componentSets[ setIndex ]
@@ -2053,18 +2093,7 @@ array< ItemFlavor > function Artifacts_GetSetItems( int setIndex )
 
 bool function Artifacts_IsBaseArtifact( ItemFlavor component )
 {
-	return ItemFlavor_GetType( component ) == eItemType.artifact_component_blade && Artifacts_GetSetIndex( component ) == eArtifactSetIndex.MOB
-}
-
-bool function Artifacts_IsBaseArtifactOwned()
-{
-	array< ItemFlavor > baseSet = Artifacts_GetSetItems( eArtifactSetIndex.MOB )
-
-	if ( baseSet.len() == 0 )
-		return false
-
-	ItemFlavor baseArtifact = baseSet[0]
-	return GRX_IsItemOwnedByPlayer( baseArtifact )
+	return ItemFlavor_GetType( component ) == eItemType.artifact_component_blade && Artifacts_GetSetIndex( component ) == BASE_SET_INDEX
 }
 
 asset function Artifacts_ActivationEmote_GetVideo( ItemFlavor emote )
@@ -2368,47 +2397,6 @@ void function DEV_UpdatePlayerArtifactConfiguration( entity weapon, entity playe
 
 
 
-
-
-
-void function Artifacts_DEV_PlayActivationEmote3PEffects()
-{
-	
-	entity player = GetLocalClientPlayer()
-	if ( !IsValid( player ) )
-		return
-
-	entity artifactWeap = player.GetActiveWeapon( eActiveInventorySlot.mainHand )
-	if ( !IsValid( artifactWeap ) || !artifactWeap.IsWeaponX() || !artifactWeap.GetWeaponSettingBool( eWeaponVar.is_artifact ) )
-		return
-
-	thread function() : ( artifactWeap ) {
-		artifactWeap.EndSignal( "OnDestroy" )
-		artifactWeap.EndSignal( "WeaponDeactivateEvent" )
-		wait VFX_FLOURISH_3P_START_DELAY
-		if ( IsValid( artifactWeap ) )
-		{
-			ArtifactFX1PAnd3P fx1P3P = Artifacts_FX_Get1PAnd3PFXArraysForWeapon( artifactWeap, eArtifactFXPackageType.FLOURISH )
-			int fxLen = fx1P3P.fx3P.len()
-			for ( int i = 0; i < fxLen; i++ )
-			{
-				string attachName = fx1P3P.fx1P.isvalidindex( i ) ? fx1P3P.fx1P[ i ].attachName : fx1P3P.fx3P[ i ].attachName
-				Assert( attachName != "" )
-				asset threePAsset = fx1P3P.fx3P.isvalidindex( i ) ? fx1P3P.fx3P[ i ].fxAsset : $""
-				artifactWeap.PlayWeaponEffect( $"", threePAsset, attachName, true )
-			}
-
-			float customActDuration = artifactWeap.IsInCustomActivity() ? artifactWeap.GetCustomActivityDuration() : VFX_FLOURISH_ANIM_DURATION
-			wait (customActDuration - VFX_FLOURISH_3P_START_DELAY)
-
-			for ( int i = 0; i < fxLen; i++ )
-			{
-				asset threePAsset = fx1P3P.fx3P.isvalidindex( i ) ? fx1P3P.fx3P[ i ].fxAsset : $""
-				artifactWeap.StopWeaponEffect( $"", threePAsset )
-			}
-		}
-	}()
-}
 
 
 

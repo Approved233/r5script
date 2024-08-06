@@ -29,6 +29,10 @@ global function SurveyBeacons_ShouldUseNextZoneSurveyBeaconProp
 
 
 
+
+
+
+
 void function Perk_NextZoneBeaconScan_Init()
 {
 	if ( !(GetCurrentPlaylistVarBool( "disable_perk_beacon_scan", false ) ) )
@@ -100,6 +104,16 @@ bool function SurveyBeacons_UseNewNextZoneBeaconModel()
 {
 	return  GetCurrentPlaylistVarBool("perk_next_zone_beacon_use_new_model", true )
 }
+
+
+
+
+
+
+
+
+
+
 
 
 

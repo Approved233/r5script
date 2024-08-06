@@ -187,12 +187,23 @@ void function OnSurvivalInventoryMenu_Open()
 		SetTabBaseWidth( tabdef, 250 )
 	} 
 
+	string squadPanelName = "SquadPanel"
+
+		if( IsRTKSquadsEnabled() )
+		{
+			TabDef tabdef = AddTab( file.menu, Hud_GetChild( file.menu, "RTKSquadPanel" ), "BUG THIS" )
+			SetTabBaseWidth( tabdef, 160 )
+			squadPanelName = "RTKSquadPanel"
+		}
+		else
+
 	{
 		TabDef tabdef = AddTab( file.menu, Hud_GetChild( file.menu, "SquadPanel" ), "BUG THIS" )
 		SetTabBaseWidth( tabdef, 160 )
 	}
 
-	if ( IsFiringRangeGameMode() )
+
+	if ( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_FIRING_RANGE ) )
 	{
 		TabDef tabdef = AddTab( file.menu, Hud_GetChild( file.menu, "FiringRangeSettingsPanel" ), "#BUTTON_RANGE_CUSTOMIZE" )
 		tabdef.hideSubtabPips = true 
@@ -205,7 +216,7 @@ void function OnSurvivalInventoryMenu_Open()
 	}
 
 	TabData squadData = GetTabDataForPanel( file.menu )
-	TabDef squadDef   = Tab_GetTabDefByBodyName( squadData, "SquadPanel" )
+	TabDef squadDef   = Tab_GetTabDefByBodyName( squadData, squadPanelName )
 	squadDef.title = "#SQUAD"
 
 	SetTabBackground( tabData, Hud_GetChild( file.menu, "TabsBackground" ), eTabBackground.STANDARD )

@@ -4,18 +4,17 @@ global function PlayVideoMenu
 global function SetVideoCompleteFunc
 global function TriggerVideoEnd
 global function IsPlayVideoMenuPlayingVideo
+global function GetIntroVideo
+global function GetIntroAudioEvent
 
 
 
 
 
-
-	global const string INTRO_VIDEO = "intro"
 	global const string WELCOME_VIDEO = "ftu_intro"
 	global const string WELCOME_INT_VIDEO = "ftu_intro_int"
 
 
-global const string INTRO_AUDIO_EVENT = "Apex_Opening_Movie"
 global const string WELCOME_AUDIO_EVENT =  "Apex_Opening_Tutorial"
 
 
@@ -44,6 +43,38 @@ struct
 	bool              holdInProgress = false
 	bool              playingVideo = false
 } file
+
+string function GetIntroVideo()
+{
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		return "intro"
+
+}
+
+string function GetIntroAudioEvent()
+{
+
+
+
+
+
+
+
+	return "Apex_Opening_Movie"
+}
 
 void function InitPlayVideoMenu( var newMenuArg ) 
 {

@@ -4,6 +4,7 @@ global function OnWeaponDeactivate_ability_spike_strip
 global function OnProjectileCollision_ability_spike_strip
 global function OnWeaponTossReleaseAnimEvent_ability_spike_strip
 global function OnWeaponPrimaryAttack_ability_spike_strip
+global function CanReclaimSpikeTrap
 
 
 
@@ -401,6 +402,46 @@ bool function CanDeployOnEnt( entity ent, vector pos )
 
 	return true
 }
+
+bool function CanReclaimSpikeTrap( entity trap )
+{
+	entity totem = trap.GetParent()
+	if( !IsValid( totem ) )
+		return false
+
+	return totem.GetScriptName() != "busy"
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1900,6 +1941,11 @@ void function SpikeStrip_OnUseClient( entity spike, entity player, int useFlags 
 
 void function OnCharacterButtonPressed( entity player )
 {
+
+	if( Perk_QuickPackup_RemoteInteractEnabled() )
+		return
+
+
 	entity useEnt = player.GetUsePromptEntity()
 	if ( !IsValid( useEnt ) || useEnt.GetTargetName() != SPIKE_STRIP_USE_ENTITY_NAME )
 		return
@@ -1925,7 +1971,26 @@ void function SpikeStrip_OnGainFocus( entity ent )
 
 	if ( player == ent.GetOwner() && ent.GetTargetName() == SPIKE_STRIP_USE_ENTITY_NAME )
 	{
-		CustomUsePrompt_SetText( Localize( "#WPN_SPIKES_PICKUP" ) )
+
+		if( Perk_QuickPackup_RemoteInteractEnabled() )
+		{
+
+			bool isRemotePickup = Perk_QuickPackup_IsRemotePickup( ent, player )
+
+			if( isRemotePickup && !CanReclaimSpikeTrap( ent ) )
+			{
+				CustomUsePrompt_SetText( Localize( "#WPN_SPIKES_PICKUP_USE_CANT_RECLAIM_BUSY" ) )
+			}
+			else
+			{
+				CustomUsePrompt_SetText( Localize( "#WPN_SPIKES_PICKUP_USE" ) )
+			}
+		}
+		else
+
+		{
+			CustomUsePrompt_SetText( Localize( "#WPN_SPIKES_PICKUP" ) )
+		}
 		CustomUsePrompt_Show( ent )
 	}
 }

@@ -24,6 +24,7 @@ global struct CurrencyPurchaseData
 global struct CurrencyPurchaseItems
 {
 	string taxNoticeMessage
+	string giftDisclaimer
 	string discountText
 	asset discountImage
 	array<CurrencyPurchaseData> itemsArray
@@ -56,7 +57,7 @@ void function RTKWalletCoinsPurchasePanel_OnInitialize( rtk_behavior self )
 	self.GetPanel().SetBindingRootPath( RTKDataModelType_GetDataPath( RTK_MODELTYPE_MENUS, "walletCoinsPurchasePanel", true ) )
 	RTKWalletCoinsPurchasePanel_SetUpData( self )
 	RTKWalletCoinsPurchasePanel_HandleListener( self )
-	RegisterSignal( "WalletShutDown" )
+	RegisterSignal( "CurrencyPurchaseShutDown" )
 	CurrencyPurchaseItems itemsData
 	file.itemsData = itemsData
 	ShowOffers()
@@ -129,10 +130,9 @@ void function RTKWalletCoinsPurchasePanel_onPressedOffer( int vcPackIndex )
 
 void function RTKWalletCoinsPurchasePanel_OnDestroy( rtk_behavior self )
 {
-	Signal( uiGlobal.signalDummy, "WalletShutDown" )
+	Signal( uiGlobal.signalDummy, "CurrencyPurchaseShutDown" )
 	RTKDataModelType_DestroyStruct( RTK_MODELTYPE_MENUS, "walletCoinsPurchasePanel" )
 	file.vcPacks.clear()
-	OnCloseDLCStore()
 }
 
 void function ShowOffers()
@@ -154,50 +154,25 @@ void function ShowOffers()
 	thread Think()
 }
 
-void function Think(  )
+void function Think()
 {
-	EndSignal( uiGlobal.signalDummy, "WalletShutDown" )
+	EndSignal( uiGlobal.signalDummy, "CurrencyPurchaseShutDown" )
 
-	bool waitingStoreToBeReady = true
+	bool packsInitialized = false
 
 	while ( true )
 	{
-		if ( waitingStoreToBeReady )
+		if ( !packsInitialized && IsDLCStoreInitialized() && IsFullyConnected() )
 		{
-			if ( IsDLCStoreInitialized() )
-			{
-				if ( IsFullyConnected() )
-				{
-					waitingStoreToBeReady = false
-					CallDLCStoreCallback_Safe()
-
-					bool blockVCPanel = GetCurrentPlaylistVarBool( "block_vc_panel", false )
-					if ( !blockVCPanel )
-						InitVCPacks( )
-				}
-			}
-			else
-			{
-				InitDLCStore()
-			}
+			packsInitialized = true
+			bool blockVCPanel = GetCurrentPlaylistVarBool( "block_vc_panel", false )
+			if ( !blockVCPanel )
+				InitVCPacks( )
 		}
 
 		CheckEAPlay()
 
 		WaitFrame()
-	}
-}
-
-void function CallDLCStoreCallback_Safe()
-{
-	if( IsStoreEmpty() == true )
-	{
-		ShowDLCStoreUnavailableNotice()
-		CloseActiveMenu()
-	}
-	else
-	{
-		OnOpenDLCStore()
 	}
 }
 
@@ -260,6 +235,12 @@ void function InitVCPacks()
 	}
 
 	file.itemsData.taxNoticeMessage = ""
+	file.itemsData.giftDisclaimer = ""
+
+	if ( ShouldShowGiftDisclaimer() )
+	{
+		file.itemsData.giftDisclaimer = "#BUY_GIFT_HOLD_LONG"
+	}
 
 
 

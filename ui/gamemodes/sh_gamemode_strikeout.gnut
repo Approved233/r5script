@@ -1,5 +1,3 @@
-global function IsStrikeoutGamemode
-
 
 global function Strikeout_GetMaxSquadStrikes
 
@@ -60,9 +58,6 @@ struct
 	bool respawnDisabled = false
 
 } file
-
-
-
 
 
 
@@ -480,9 +475,6 @@ bool function Strikeout_UI_GetIsRespawnDisabled()
 
 
 
-
-
-
 void function Strikeout_UI_SetLocalClientPlayerSquadStrikes( int strikes )
 {
 	file.localClientPlayerSquadStrikes = strikes
@@ -675,10 +667,4 @@ int function GetPlaylistVar_RespawnDisabledDeathstage()
 {
 	return GetCurrentPlaylistVarInt( "strikeout_respawn_disable_deathstage_close", 4 )
 }
-
-bool function IsStrikeoutGamemode()
-{
-	return GetCurrentPlaylistVarBool( "is_gamemode_strikeout", false )
-}
-
 

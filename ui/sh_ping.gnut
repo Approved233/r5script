@@ -127,14 +127,30 @@ global function ShPing_Init
 
 
 
-
-
 global function PingFlavor_GetInnerIcon
 global function PingFlavor_GetInnerShadowIcon
 global function PingFlavor_GetOuterIcon
 global function PingFlavor_GetOuterShadowIcon
 global function PingFlavor_GetAnimIcon
 global function PingFlavor_GetDrawHeightLine
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1044,9 +1060,34 @@ void function ShPing_Init()
 
 
 
-
-
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1414,6 +1455,163 @@ bool function PingFlavor_GetDrawHeightLine( ItemFlavor flavor )
 
 	return GetGlobalSettingsBool( ItemFlavor_GetAsset( flavor ), "drawHeightLine" )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

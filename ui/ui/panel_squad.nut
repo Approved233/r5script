@@ -205,12 +205,19 @@ void function OnShowSquad( var panel )
 		i++
 	}
 
+	var parentMenu = GetParentMenu( panel )
+
+	if( parentMenu == GetMenu( "DeathScreenMenu" ) && CanRunClientScript() ) 
+	{
+		var headerElement = Hud_GetChild( parentMenu, "Header" )
+		RunClientScript( "DeathScreen_OnSquadShow", headerElement )
+	}
 }
 
 
 bool function CanViewProfile( string otherPlayerUid, string otherPlayerHardware )
 {
-	string hardware = GetUnspoofedPlayerHardware()
+	string hardware = GetPlayerHardware()
 
 	if ( otherPlayerUid == "" )
 		return false
@@ -358,7 +365,7 @@ void function OnOverlayClick( var button )
 	ToolTipData td = Hud_GetToolTipData( button )
 	td.actionHint2 = "#STATUS_PARTY_REQUEST_SENT"
 
-	string hardware = GetUnspoofedPlayerHardware()
+	string hardware = GetPlayerHardware()
 	if ( hardware == playerData.hardware )
 	{
 		
@@ -403,7 +410,7 @@ void function OnOverlayClickRight( var button )
 
 	EmitUISound( "UI_Menu_InviteFriend_Send" )
 
-	string hardware = GetUnspoofedPlayerHardware()
+	string hardware = GetPlayerHardware()
 	if ( hardware == playerData.hardware )
 	{
 		DoInviteToBeFriend( playerData.unspoofedUid )

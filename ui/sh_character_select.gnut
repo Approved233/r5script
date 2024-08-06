@@ -38,8 +38,8 @@ const string REMOTE_SERVERCALL_ON_RESELECT_MENU_CLOSE = "ClientToServer_OnCharac
 global function UI_InitCharacterSelectMenu
 global function UI_RunCharacterSelect
 
-global function UI_SetSpecialCharacterMenu
-global function UI_RunSpecialCharacterSelect
+
+
 
 global function UI_CloseCharacterSelect
 global function ClientToUI_UpdateSquadMute
@@ -180,12 +180,11 @@ global const int NUM_CHARACTER_SELECT_BUTTONS = 50
 
 
 
-
 struct FileForeverStruct
 {
 	var menu
 
-	var specialCharacterSelect
+
 
 }
 FileForeverStruct& fileForever
@@ -332,17 +331,24 @@ struct FileLevelStruct
 
 
 
+
+
+
 }
 
 struct CharacterLists {
 	array<ItemFlavor> shipping
 	array<ItemFlavor> unlocked
+	array<ItemFlavor> unlockedByBattlepass
+	array<ItemFlavor> unlockedByBotMode
+	array<ItemFlavor> unlockableInNewPlayerPass
 	array<ItemFlavor> locked
 	array<ItemFlavor> disabled
 	array<ItemFlavor> all
 }
 
 global function Character_IsCharacterUnlockedForCalevent
+global function Character_IsUnlockedForBattlePassV2
 
 FileLevelStruct& fileLevel
 
@@ -403,10 +409,10 @@ void function UI_InitCharacterSelectMenu( var newMenuArg )
 }
 
 
-void function UI_SetSpecialCharacterMenu( var specialCharMenu )
-{
-	fileForever.specialCharacterSelect = specialCharMenu
-}
+
+
+
+
 
 
 bool function UI_ShouldShowToggleMuteFooter()
@@ -1487,6 +1493,22 @@ bool function CharacterSelectSkinSelectionIsEnabled()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function UI_RunCharacterSelect( bool isBrowseMode, bool menuEntsExist )
 {
 	if ( !isBrowseMode )
@@ -1509,24 +1531,31 @@ void function UI_RunCharacterSelect( bool isBrowseMode, bool menuEntsExist )
 
 
 
-void function UI_RunSpecialCharacterSelect( bool isBrowseMode, bool menuEntsExist )
-{
-	if ( !isBrowseMode )
-		CloseAllMenus()
 
-	fileLevel.isBrowseMode = isBrowseMode
-	fileLevel.isBrowseModeStartTime = UITime()
 
-	if ( !CanRunClientScript() )
-		return
 
-	if ( !menuEntsExist )
-		SetBlurEnabled( true )
 
-	FlashGameWindow()
-	RunClientScript( "OpenCharacterSelectClientSetup", fileForever.menu )
-	AdvanceMenu( GetMenu( "SpecialCharacterSelectMenu" ) )
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2183,17 +2212,91 @@ void function UI_CloseCharacterSelect()
 	SetBlurEnabled( false )
 	if ( GetActiveMenu() == fileForever.menu
 
-			|| GetActiveMenu() == fileForever.specialCharacterSelect
+
 
 			)
 		CloseActiveMenu()
 	else if ( MenuStack_Contains( fileForever.menu ) )
+	{
+		CloseMenu( fileForever.menu )
 		MenuStack_Remove( fileForever.menu )
+	}
 
-	else if ( MenuStack_Contains( fileForever.specialCharacterSelect ) )
-		MenuStack_Remove( fileForever.specialCharacterSelect )
+
+
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5264,7 +5367,42 @@ bool function IsCharacterReselectEnabled()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 bool function Character_IsCharacterUnlockedForCalevent( ItemFlavor characterItemFlavor )
 {
 	return TempUnlock_IsCharacterUnlocked( characterItemFlavor )
+}
+
+bool function Character_IsUnlockedForBattlePassV2( entity player, ItemFlavor charFlav )
+{
+	
+	
+
+
+		ItemFlavor ornull currentBPV2Flav = GetActiveBattlePassV2()
+		bool ownsEliteBP = false
+		if ( currentBPV2Flav != null )
+		{
+			expect ItemFlavor( currentBPV2Flav )
+			ownsEliteBP = DoesPlayerOwnEliteBattlePass( player, currentBPV2Flav )
+		}
+
+		
+		
+		return ownsEliteBP
+
+
+
+
 }

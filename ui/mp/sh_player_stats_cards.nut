@@ -687,7 +687,10 @@ void function StatCard_ConstructRankedBadges( var panel, entity player, string r
 	}
 	else
 	{
-		StatsCard_ConstructRankBadgesForSingleBadgeShared( rui, player, rankedPeriodRef )
+		if ( Ranked_IsRankedV2FirstSplit( rankedPeriodItemFlavor ) && Ranked_GetCurrentActiveRankedPeriod() != rankedPeriodItemFlavor && GetCurrentPlaylistVarBool( "rankv2_show_single_season", true ) )
+			StatsCard_ConstructRankBadgesForDoubleBadgeShared( rui, player, rankedPeriodRef )
+		else
+			StatsCard_ConstructRankBadgesForSingleBadgeShared( rui, player, rankedPeriodRef )
 	}
 }
 
@@ -711,7 +714,6 @@ void function StatsCard_ConstructRankBadgesForDoubleBadgeShared( var rui, entity
 {
 	ItemFlavor rankedPeriodItemFlavor = GetItemFlavorByGUID( ConvertItemFlavorGUIDStringToGUID( rankedPeriodRef ) )
 	int itemType                      = ItemFlavor_GetType( rankedPeriodItemFlavor )
-	Assert( itemType != eItemType.ranked_2pt0_period, "Ranked 2.0 Periods do NOT support double-badges" )
 
 	RuiSetBool( rui, "twoBadgeMode", true )
 	RuiSetString( rui, "rankedSplitTextLabel", Localize( "#RANKED_SPLIT_1" ) )
@@ -720,7 +722,9 @@ void function StatsCard_ConstructRankBadgesForDoubleBadgeShared( var rui, entity
 	var firstSplitBadgeRui  = CreateNestedRankedBadge( rui, "battlePassLevelBadge" )
 	var secondSplitBadgeRui = CreateNestedRankedBadge( rui, "battlePassLevelBadge2" )
 
-	if ( itemType == eItemType.calevent_rankedperiod )
+	if ( itemType == eItemType.ranked_2pt0_period )
+		Ranked_ConstructDoubleRankBadgeForStatsCardRankedV2( firstSplitBadgeRui, secondSplitBadgeRui, player, rankedPeriodRef )
+	else if ( itemType == eItemType.calevent_rankedperiod )
 		Ranked_ConstructDoubleRankBadgeForStatsCard( firstSplitBadgeRui, secondSplitBadgeRui, player, rankedPeriodRef )
 
 		else

@@ -315,7 +315,7 @@ void function UpdateMythicSkinInfo()
 	ItemFlavor characterSkin = LoadoutSlot_GetItemFlavor( LocalClientEHI(), Loadout_CharacterSkin( characterFlav ) )
 	ItemFlavor previewSkin   = expect ItemFlavor( Mythics_GetSkinTierForCharacter( characterFlav, file.activeMythicSkinTier - 1 ) )
 	bool isEquipped          = ( characterSkin == previewSkin )
-	bool isOwned             = GRX_IsItemOwnedByPlayer( characterFlav )
+	bool isOwned             = Loadout_IsCharacterUnlockedForPlayer( player, characterFlav )
 	bool isTier2Completed    = ownedEvolvedSkinCount > 0
 	bool isTier3Completed    = ownedEvolvedSkinCount == challengeTierCount
 
@@ -521,7 +521,13 @@ void function UpdateCharacterSkinsGiftFooter( InputDef footer )
 {
 	bool alwaysOwnsChar = ( ItemFlavor_GetGRXMode( GetTopLevelCustomizeContext() ) == eItemFlavorGRXMode.NONE )
 
-	if ( alwaysOwnsChar )
+	bool isNPPLegend = false
+
+
+	isNPPLegend = NPP_IsNPPLegend( GetTopLevelCustomizeContext() )
+
+
+	if ( alwaysOwnsChar || isNPPLegend )
 	{
 		footer.gamepadLabel = ""
 		footer.mouseLabel = ""
@@ -538,7 +544,7 @@ void function UpdateCharacterSkinsGiftFooter( InputDef footer )
 		footer.input = KEY_H
 	}
 
-	if ( IsCharacterLocked( GetTopLevelCustomizeContext() ) )
+	if ( !Character_IsCharacterOwnedByPlayer( GetTopLevelCustomizeContext() ) )
 	{
 		footer.gamepadLabel = Localize( "#BACK_BUTTON_UNLOCK" )
 		footer.mouseLabel = Localize( "#BACK_BUTTON_UNLOCK" )

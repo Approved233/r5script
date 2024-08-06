@@ -3,8 +3,6 @@
 const string CONTROL_MODE_MOVER_SCRIPTNAME = "control_mover"
 
 global function Control_Init
-global function Control_RegisterNetworking
-
 
 
 
@@ -305,10 +303,6 @@ global const int CONTROL_TEAMSCORE_LOCKOUTBROKEN = 50
 
 
 
-
-
-
-
 const int CONTROL_VICTORY_FLAGS_UNKNOWN = 0
 const int CONTROL_VICTORY_FLAGS_SCORE = ( 1 << 1 )
 const int CONTROL_VICTORY_FLAGS_LOCKOUT = ( 1 << 2 )
@@ -554,20 +548,6 @@ enum eControlMRBPlacementState
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 struct ControlAnnouncementData
 {
 	bool isInitialized = false
@@ -606,14 +586,9 @@ struct {
 	bool isLockout = false
 	bool isRampUp = false
 
+	bool hasCamera = false
 	vector cameraLocation
 	vector cameraAngles
-
-
-
-
-
-
 
 
 
@@ -788,12 +763,12 @@ global enum eControlStat {
 
 void function Control_Init()
 {
+	if ( !GameMode_IsActive( eGameModes.CONTROL ) )
+		return
+
 
 		AddCallback_EntitiesDidLoad( EntitiesDidLoad )
 
-
-	if ( !Control_IsModeEnabled() )
-		return
 
 	
 
@@ -814,20 +789,7 @@ void function Control_Init()
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+		TimedEvents_Init()
 		CausticTT_SetGasFunctionInvertedValue( true )
 		PrecacheScriptString( "Control_SetUsableVehicleBase" )
 		PrecacheScriptString( CONTROL_MODE_MOVER_SCRIPTNAME )
@@ -966,6 +928,7 @@ void function Control_Init()
 
 
 
+		Control_ScoreboardSetup()
 
 		SetCustomScreenFadeAsset( $"ui/screen_fade_control.rpak" )
 		ClApexScreens_SetCustomApexScreenBGAsset( $"rui/rui_screens/banner_c_control" )
@@ -992,8 +955,7 @@ void function Control_Init()
 		AddCallback_GameStateEnter( eGameState.Playing, Control_OnGamestateEnterPlaying_Client )
 		AddCallback_GameStateEnter( eGameState.Prematch, Control_OnGamestateEnterPreMatch_Client )
 		AddCallback_GameStateEnter( eGameState.WinnerDetermined, Control_OnGamestateEnterWinnerDetermined_Client )
-		AddCallback_GameStateEnter( eGameState.Resolution, Control_OnGamestateEnterResolution_Client )
-		GameMode_OverrideCompletedResolutionCleanupFunc( Control_OnGamestateEnterResolution_Client )
+		ClGameState_SetResolutionCleanupFunc( Control_OnGamestateEnterResolution_Client )
 		AddCallback_OnCharacterSelectMenuClosed( Control_OnCharacterSelectMenuClosed )
 
 		
@@ -1037,32 +999,21 @@ void function Control_Init()
 			Waypoints_RegisterCustomType( WAYPOINT_CONTROL_MRB, InstanceWPControlMRB)
 
 
-
-
-
-
-
-			thread Control_CLUpdateCrowdNoiseMeterThread()
-
-
+	Control_RegisterNetworking()
 }
 
 
 void function EntitiesDidLoad()
 {
 
+		
+		array<entity> jumpTowerFlags = GetEntArrayByScriptName( "jump_tower_flag" )
+		foreach( flag in jumpTowerFlags )
+			flag.Destroy()
 
 
 
-
-
-		if( Control_IsModeEnabled() )
-		{
-			
-			array<entity> jumpTowerFlags = GetEntArrayByScriptName( "jump_tower_flag" )
-			foreach( flag in jumpTowerFlags )
-				flag.Destroy()
-		}
+		Control_UpdateCrowdNoiseMeter() 
 
 }
 
@@ -1070,9 +1021,6 @@ void function EntitiesDidLoad()
 
 void function Control_RegisterNetworking()
 {
-	if ( !Control_IsModeEnabled() )
-		return
-
 
 
 
@@ -1142,7 +1090,7 @@ void function Control_RegisterNetworking()
 bool function Control_ShouldShow2DMapIcons()
 {
 	
-	return !MiniMapIsDisabled() && !Control_IsModeEnabled()
+	return !MiniMapIsDisabled() && !GameMode_IsActive( eGameModes.CONTROL )
 }
 
 
@@ -2170,463 +2118,6 @@ float function Control_GetMRBAirdropDelay()
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 void function Control_SetHomeBaseBadPlacesForMRBForAlliance( int alliance, array < vector > locations )
 {
 	if ( alliance == ALLIANCE_A )
@@ -2638,11 +2129,6 @@ void function Control_SetHomeBaseBadPlacesForMRBForAlliance( int alliance, array
 		file.allianceBBlockedHomeBasePositionsForMRB.extend( locations )
 	}
 }
-
-
-
-
-
 
 
 
@@ -2915,19 +2401,6 @@ void function Control_PingObjectiveFromObjID( int objID )
 		}
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -6334,6 +5807,17 @@ bool function Control_Client_IsOnObjective( entity wp, entity player )
 
 
 
+void function Control_UpdateCrowdNoiseMeter()
+{
+
+
+
+	thread Control_CLUpdateCrowdNoiseMeterThread()
+
+}
+
+
+
 void function Control_CLUpdateCrowdNoiseMeterThread()
 {
 	Assert( IsNewThread(), "Must be threaded off" )
@@ -6604,9 +6088,6 @@ bool function Control_IsObjectiveWaypoint( entity waypoint )
 
 
 
-
-
-
 entity function Control_GetStarterPingFromTraceBlockerPing( entity pingedEnt, int playerTeam )
 {
 	entity starterPing = null
@@ -6655,7 +6136,7 @@ bool function Control_IsControlObjectiveCommsAction( int commsAction, entity sub
 {
 	bool isControlObjectiveCommsAction = false
 
-	if ( Control_IsModeEnabled() )
+	if ( GameMode_IsActive( eGameModes.CONTROL ) )
 	{
 		if ( commsAction == eCommsAction.PING_CONTROL_OBJECTIVE_ATTACK || commsAction == eCommsAction.PING_CONTROL_OBJECTIVE_DEFEND )
 		{
@@ -6761,6 +6242,8 @@ int function Control_GetNumOwnedObjectivesByAlliance( int alliance )
 
 	return numOwnedObjectives
 }
+
+
 
 
 
@@ -8870,10 +8353,6 @@ bool function Control_IsValidRespawnChoice( int respawnChoice )
 
 
 
-
-
-
-
 void function UICallback_Control_SpawnButtonClicked( int respawnChoice )
 {
 	if ( !Control_IsValidRespawnChoice( respawnChoice ) )
@@ -9132,7 +8611,7 @@ void function UICallback_Control_OnResolutionChanged()
 	if ( !IsValid( player ) )    
 		return
 
-	if ( !Control_IsModeEnabled() )
+	if ( !GameMode_IsActive( eGameModes.CONTROL ) )
 		return
 
 	if ( !player.GetPlayerNetBool( "control_IsPlayerOnSpawnSelectScreen" ) )
@@ -9235,10 +8714,10 @@ void function Control_UpdatePlayerInfo_thread( var elem )
 			break
 
 
-		if ( IsRevTakeover() && ( AllianceProximity_GetAllianceFromTeam( player.GetTeam() ) == ALLIANCE_B ) )
-		{
-			Hud_Hide( elem )
-		}
+
+
+
+
 
 
 		RuiSetImage( rui, "playerPortrait", CharacterClass_GetCharacterLockedPortrait( character ) )
@@ -9501,6 +8980,7 @@ void function Control_CameraInputManager_Thread( entity player )
 	entity cameraMover = CreateClientsideScriptMover( $"mdl/dev/empty_model.rmdl", cameraPosition, cameraAngles )
 	entity camera      = CreateClientSidePointCamera( cameraPosition, cameraAngles, 70.0 )
 	player.SetMenuCameraEntity( camera )
+	player.SetMenuCameraBloomAmountOverride( GetMapBloomSettings().control )
 	camera.SetTargetFOV( 70.0, true, EASING_CUBIC_INOUT, 0.0 )
 	camera.SetParent( cameraMover, "", false )
 
@@ -9818,7 +9298,7 @@ void function UICallback_Control_ReportMenu_OnClosed()
 	if ( !IsValid( player ) )    
 		return
 
-	if ( !Control_IsModeEnabled() )
+	if ( !GameMode_IsActive( eGameModes.CONTROL ) )
 		return
 
 	if ( !player.GetPlayerNetBool( "control_IsPlayerOnSpawnSelectScreen" ) )
@@ -9872,7 +9352,7 @@ const float CONTROL_BUTTON_PRESS_BUFFER = 0.5
 void function Control_OpenCharacterSelect()
 {
 	
-	if ( !Control_IsModeEnabled() )
+	if ( !GameMode_IsActive( eGameModes.CONTROL ) )
 		return
 
 	
@@ -10610,28 +10090,6 @@ void function OnVehicleBaseSpawned( entity vehicleBase )
 	if ( vehicleBase.GetScriptName() != "Control_SetUsableVehicleBase" )
 		return
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -11669,17 +11127,17 @@ vector function Control_GetTeamColor( int team )
 	bool isFriendly = team == AllianceProximity_GetAllianceFromTeam( GetLocalViewPlayer().GetTeam() )
 
 
-		if ( IsRevTakeover() )
-		{
-			if( team != SHADOWARMY_REVENANT_ALLIANCE )
-			{
-				return SrgbToLinear( GetKeyColor( COLORID_ALLIANCE_0 ) / 255.0 )
-			}
-			else
-			{
-				return SrgbToLinear( GetKeyColor( COLORID_ALLIANCE_1 ) / 255.0 )
-			}
-		}
+
+
+
+
+
+
+
+
+
+
+
 
 	if ( Control_IsPlayerPrivateMatchObserver( GetLocalClientPlayer() ) )
 		isFriendly = team == ALLIANCE_A
@@ -11695,7 +11153,21 @@ vector function Control_GetTeamColor( int team )
 
 string function Control_GetTeamName( int team )
 {
-	string teamName = Survival_GetTeamName( team )
+	entity localViewPlayer = GetLocalViewPlayer()
+	int playerTeam = localViewPlayer.GetTeam()
+	string teamName
+
+	if ( playerTeam == TEAM_SPECTATOR || playerTeam == TEAM_UNASSIGNED )
+	{
+		array< int > teams = AllianceProximity_GetTeamsInAlliance( team )
+		teamName = Survival_GetTeamName( ( teams.len() > 0 )? teams[0]: 0 )
+	}
+	else
+	{
+		bool isFriendly = team == AllianceProximity_GetAllianceFromTeam( localViewPlayer.GetTeam() )
+
+		teamName =  Localize( isFriendly ? "#ALLIES" : "#ENEMIES" )
+	}
 
 	return teamName
 }
@@ -12923,6 +12395,14 @@ float function Control_GetEXPPercentToNextTier( entity player )
 
 
 
+
+
+
+
+
+
+
+
 bool function Control_IsActiveWeaponUnHolstered( entity player )
 {
 	if ( !IsValid( player ) )
@@ -13220,6 +12700,9 @@ void function ServerCallback_Control_DisplayLockoutUnavailableWarning()
 		RuiSetGameTime( mapScoreTrackerRui, "lastLockoutBlockedMessageDisplayTime", currentTime )
 	}
 }
+
+
+
 
 
 
@@ -15286,26 +14769,10 @@ int function Control_GetMRBPlacementStateFromHomeBasePositionChecks( int current
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 void function Control_PrintSpawningDebug( entity player, int respawnChoice, entity entityToSpawnOn, bool didFunctionHaveEntToSpawnOn, string message )
 {
 	
-	if ( !Control_IsModeEnabled() )
+	if ( !GameMode_IsActive( eGameModes.CONTROL ) )
 		return
 
 	

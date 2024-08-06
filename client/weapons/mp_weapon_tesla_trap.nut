@@ -372,6 +372,14 @@ void function MpWeaponTeslaTrap_Init()
 		RegisterMinimapPackage( "prop_script", eMinimapObject_prop_script.ARC_TRAP, MINIMAP_ARC_TRAP_RUI, RegisterTeslaTrapMinimapRui, $"ui/in_world_minimap_tesla_trap.rpak", RegisterTeslaTrapMinimapRui )
 
 
+		
+
+
+
+
+
+
+
 	
 	file.balance_teslaTrapRange	= GetCurrentPlaylistVarFloat( "tesla_trap_range_override", TESLA_TRAP_PLACEMENT_RANGE_MAX_UPDATE )
 	file.balance_teslaTrapSelfRepair = GetCurrentPlaylistVarBool( "tesla_trap_self_repair_override", false )
@@ -3360,6 +3368,12 @@ void function OnFocusTrapChanged( entity player, entity newEnt )
 
 
 
+
+
+
+
+
+
 int function TeslaTrap_LinkTrapSort( entity trapA, entity trapB )
 {
 	TeslaTrapSortingData trapASort = file.trapSortingData[ trapA ]
@@ -3576,6 +3590,29 @@ void function TeslaTrap_OntriggerDestroyed( entity trigger )
 	thread RefreshTrapTriggerMinimapConnection( endTrap )
 }
 
+
+void function TeslaTrap_OnGainFocus( entity ent )
+{
+	if ( !IsValid( ent ) )
+		return
+
+	entity player = GetLocalViewPlayer()
+	if ( !IsValid( player ) )
+		return
+
+	if ( player == ent.GetOwner() && ent.GetTargetName() == "tesla_trap" )
+	{
+		CustomUsePrompt_SetText( Localize( "#QUICK_PACKUP_PROMPT" ) )
+		CustomUsePrompt_Show( ent )
+	}
+}
+
+void function TeslaTrap_OnLoseFocus( entity ent )
+{
+	CustomUsePrompt_ClearForAny()
+}
+
+
 void function TeslaTrap_OnPropScriptCreated( entity ent )
 {
 	switch ( ent.GetScriptName() )
@@ -3594,6 +3631,9 @@ void function TeslaTrap_OnPropScriptCreated( entity ent )
 			thread TeslaTrap_CreateHUDMarker( ent )
 			AddEntityCallback_GetUseEntOverrideText( ent, TeslaTrap_UseTextOverride )
 			SetCallback_CanUseEntityCallback( ent, TeslaTrap_CanUse )
+
+			SetCallback_ShouldUseBlockReloadCallback( ent, Perk_QuickPackup_ShoudUseBlockReload )
+
 			break
 	}
 }
@@ -4331,7 +4371,7 @@ bool function TeslaTrap_CanLink_ObjectPlacer( vector trapPos, vector trapUp, ent
 	entity parentOfParent = placementInfo.parentTo
 
 
-	if ( Control_IsModeEnabled() )
+	if ( GameMode_IsActive( eGameModes.CONTROL ) )
 	{
 		if ( IsValid( otherParent ) && otherParent.GetScriptName() == CONTROL_FUNC_BRUSH_GEO_NAME )
 			otherParent = null

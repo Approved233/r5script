@@ -561,6 +561,13 @@ void function PrelaunchValidation( bool autoContinue = false )
 
 
 
+
+
+
+
+
+
+
 	bool hasPermission = HasPermission()
 	PrintLaunchDebugVal( "hasPermission", hasPermission )
 	if ( !hasPermission )
@@ -668,6 +675,46 @@ void function PrelaunchValidation( bool autoContinue = false )
 		SetLaunchState( eLaunchState.WAIT_TO_CONTINUE, Localize( unavailableString ), Localize( "#MAINMENU_RETRY" ) )
 		return
 	}
+
+
+
+	if ( HasConVar( "eosScriptDoTest") ) 
+	{
+		bool eosScriptDoTest = GetConVarBool( "eosScriptDoTest" )
+		bool eosIsActive = GetConVarBool( "eosIsActive" )
+		PrintLaunchDebugVal( "eosScriptDoTest", eosScriptDoTest )
+		PrintLaunchDebugVal( "eosIsActive", eosIsActive )
+
+		if ( eosScriptDoTest && eosIsActive )
+		{
+#if SPINNER_DEBUG_INFO
+			SetSpinnerDebugInfo( "isAntiCheatReady" )
+#endif
+			float startTimeAntiCheat = UITime()
+
+			while (true)
+			{
+				bool isAntiCheatReady = false
+
+				string eosJWT = GetConVarString( "eosJWT" )
+				if ( eosJWT != "" )
+					isAntiCheatReady = true
+
+				PrintLaunchDebugVal( "isAntiCheatReady", isAntiCheatReady )
+
+				if ( isAntiCheatReady )
+					break
+				if ( UITime() - startTimeAntiCheat > 10.0 )
+				{
+					SetLaunchState( eLaunchState.WAIT_TO_CONTINUE, Localize( "#UNABLE_TO_CONNECT" ) + ":1", Localize( "#MAINMENU_RETRY" ) )
+					return
+				}
+
+				WaitFrame()
+			}
+		}
+	}
+
 
 
 
@@ -784,7 +831,6 @@ void function PrelaunchValidation( bool autoContinue = false )
 		return
 	}
 
-
 	if ( GetConVarBool( "kepler_isEnabled" ) )
 	{
 #if SPINNER_DEBUG_INFO
@@ -804,7 +850,6 @@ void function PrelaunchValidation( bool autoContinue = false )
 			WaitFrame()
 		}
 	}
-
 
 	if ( autoContinue )
 		LaunchMP()

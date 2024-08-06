@@ -34,8 +34,14 @@ global function GladiatorCardBadge_GetRewardParentChallengeTier
 
 
 
+
+
+
+
+
 global function GetBadgeData
 global function CreateNestedGladiatorCardBadge
+global function GladiatorCardStatTracker_GetBackgroundImage
 
 
 
@@ -70,12 +76,14 @@ global function SendMenuGladCardPreviewString
 
 
 
+
 global function Loadout_GladiatorCardFrame
 global function Loadout_GladiatorCardStance
 global function Loadout_GladiatorCardBadge
 global function Loadout_GladiatorCardBadgeTier
 global function Loadout_GladiatorCardStatTracker
 global function Loadout_GladiatorCardStatTrackerValue
+global function Loadout_GladiatorCardStatTrackerArt
 global function GladiatorCardFrame_GetSortOrdinal
 global function GladiatorCardFrame_GetCharacterFlavor
 global function GladiatorCardFrame_HasStoryBlurb
@@ -91,9 +99,11 @@ global function GladiatorCardBadge_IsGeneralStat
 global function GladiatorCardBadge_GetStatInt
 global function GladiatorCardBadge_IsValidStatRef
 global function GladiatorCardStatTracker_GetSortOrdinal
+global function GladiatorCardStatTrackerArt_GetSortOrdinal
 global function GladiatorCardStatTracker_GetCharacterFlavor
 global function GladiatorCardStatTracker_GetFormattedValueText
 global function GladiatorCardStatTracker_IsSharedBetweenCharacters
+global function GladiatorCardStatTracker_GetTrackerType
 global function GladiatorCardBadge_ShouldHideIfLocked
 global function GladiatorCardBadge_IsTheEmpty
 global function GladiatorCardTracker_IsTheEmpty
@@ -106,6 +116,7 @@ global function GetPlayerBadgeDataInteger
 
 global function GladiatorCardStatTracker_GetColor0
 global function GladiatorCardBadge_DoesStatSatisfyValue
+
 
 
 
@@ -127,10 +138,9 @@ global const int GLADIATOR_CARDS_NUM_TRACKERS = 3
 
 global const int GLADIATOR_CARDS_NUM_FRAME_KEY_COLORS = 3
 
-const bool GLADCARD_CC_DEBUG_PRINTS_ENABLED = false
-
 const int POST_GAME_BADGE_COUNT = 16
 const string POST_GAME_BADGES_PVAR_FORMAT_STRING = "lastGameBadgeGUID[%d]"
+
 
 
 
@@ -156,6 +166,7 @@ global enum eGladCardPresentation
 	BACK,
 	_MARK_BACK_END,
 }
+
 
 global enum eGladCardDisplaySituation
 {
@@ -210,6 +221,13 @@ global enum eGladCardLifestateOverride
 	DEAD = 2,
 }
 
+global enum eTrackerType
+{
+	STAT,
+	ART,
+	BOTH,
+}
+
 global enum eGladCardPreviewCommandType
 {
 	CHARACTER,
@@ -217,7 +235,8 @@ global enum eGladCardPreviewCommandType
 	FRAME,
 	STANCE,
 	BADGE,
-	TRACKER,
+	TRACKER_STAT,
+	TRACKER_ART,
 	RANKED_SHOULD_SHOW,
 	RANKED_DATA,
 
@@ -228,6 +247,7 @@ global enum eGladCardPreviewCommandType
 	RANKED_DATA_PREV,
 	MELEE_SKIN,
 }
+
 
 
 
@@ -383,22 +403,34 @@ global struct GladCardBadgeDisplayData
 
 
 
+
+
+
+
+
+
 struct FileStruct_LifetimeLevel
 {
-	table<ItemFlavor, LoadoutEntry>             loadoutCharacterFrameSlotMap
-	table<ItemFlavor, LoadoutEntry>             loadoutCharacterStanceSlotMap
-	table<ItemFlavor, array<LoadoutEntry> >     loadoutCharacterBadgesSlotListMap
-	table<ItemFlavor, array<LoadoutEntry> >     loadoutCharacterBadgesTierSlotListMap
-	table<ItemFlavor, array<LoadoutEntry> >     loadoutCharacterTrackersSlotListMap
-	table<ItemFlavor, array<LoadoutEntry> >     loadoutCharacterTrackersValueSlotListMap
+	table<ItemFlavor, LoadoutEntry>         loadoutCharacterFrameSlotMap
+	table<ItemFlavor, LoadoutEntry>         loadoutCharacterStanceSlotMap
+	table<ItemFlavor, array<LoadoutEntry> > loadoutCharacterBadgesSlotListMap
+	table<ItemFlavor, array<LoadoutEntry> > loadoutCharacterBadgesTierSlotListMap
+	table<ItemFlavor, array<LoadoutEntry> > loadoutCharacterTrackersSlotListMap
+	table<ItemFlavor, array<LoadoutEntry> > loadoutCharacterTrackersValueSlotListMap
+	table<ItemFlavor, array<LoadoutEntry> > loadoutCharacterTrackersArtSlotListMap
+
+	table<ItemFlavor, bool> trackerArtFlavors 
 
 	table<ItemFlavor, int> cosmeticFlavorSortOrdinalMap
+	table<ItemFlavor, int> cosmeticFlavorSortOrdinalMapArt
 
-	var currentMenuGladCardPanel
+	table<string, var> currentMenuGladCardPanel
 
 
 
-		string currentMenuGladCardArgName
+		table <string, string> currentMenuGladCardArgName
+
+
 
 
 
@@ -467,7 +499,11 @@ void function ShGladiatorCards_LevelInit()
 
 
 
+
+
+
 	AddCallback_OnItemFlavorRegistered( eItemType.character, OnItemFlavorRegistered_Character )
+	AddCallback_OnPreAllItemFlavorsRegistered( BuildTrackerArtLoadouts )
 
 
 
@@ -486,18 +522,44 @@ void function ShGladiatorCards_LevelInit()
 
 void function ShGladiatorCards_LevelShutdown()
 {
-	if ( fileLevel.currentMenuGladCardPanel != null )
+	if ( fileLevel.currentMenuGladCardPanel.len() > 0 )
 	{
+		table<string, var> currentMenuGladCardPanelClone = clone fileLevel.currentMenuGladCardPanel
+		foreach ( string playerUID, panel in currentMenuGladCardPanelClone )
+		{
+			if ( panel != null )
+			{
+				if ( typeof( fileLevel.currentMenuGladCardPanel[ playerUID ] ) == "rtk_panel" )
+				{
+					RuiDestroyNestedIfAlive( RTKPanel_GetPersistentRui( expect rtk_panel( panel ) ), fileLevel.currentMenuGladCardArgName[ playerUID ] )
+				}
+				else
+				{
+					if ( Hud_GetRui( panel ) != null )
+					{
+						RuiDestroyNestedIfAlive( Hud_GetRui( panel ), fileLevel.currentMenuGladCardArgName[ playerUID ] )
+					}
+				}
+			}
 
-		if ( typeof( fileLevel.currentMenuGladCardPanel ) == "rtk_panel" )
-			RuiDestroyNestedIfAlive( RTKPanel_GetPersistentRui( expect rtk_panel( fileLevel.currentMenuGladCardPanel ) ), fileLevel.currentMenuGladCardArgName )
-		else
-
-			RuiDestroyNestedIfAlive( Hud_GetRui( fileLevel.currentMenuGladCardPanel ), fileLevel.currentMenuGladCardArgName )
-		fileLevel.currentMenuGladCardPanel = null
-		fileLevel.currentMenuGladCardArgName = ""
+			delete fileLevel.currentMenuGladCardPanel[ playerUID ]
+			delete fileLevel.currentMenuGladCardArgName[ playerUID ]
+		}
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -900,18 +962,20 @@ var function CreateNestedGladiatorCardBadge( var parentRui, string argName, EHI 
 
 void function SetupMenuGladCard( var panel, string argName, bool isForLocalPlayer )
 {
-	fileLevel.currentMenuGladCardPanel = panel
-	fileLevel.currentMenuGladCardArgName = argName
+	string playerUID = GetPlayerUID()
+
+	fileLevel.currentMenuGladCardPanel[ playerUID ] <- panel
+	fileLevel.currentMenuGladCardArgName[ playerUID ] <- argName
 	RunClientScript( "UIToClient_SetupMenuGladCard", panel, argName, isForLocalPlayer, false )
 }
 
 
-void function SetupMenuGladCardRTK( rtk_panel panel, string argName, bool isForLocalPlayer )
+void function SetupMenuGladCardRTK( rtk_panel panel, string argName, bool isForLocalPlayer, string playerUID, int situation, int presentation )
 {
-	fileLevel.currentMenuGladCardPanel = panel
-	fileLevel.currentMenuGladCardArgName = argName
+	fileLevel.currentMenuGladCardPanel[ playerUID ] <- panel
+	fileLevel.currentMenuGladCardArgName[ playerUID ] <- argName
 	if ( CanRunClientScript() )
-		RunClientScript( "UIToClient_SetupMenuGladCardRTK", panel, argName, isForLocalPlayer, false )
+		RunClientScript( "UIToClient_SetupMenuGladCardRTK", panel, argName, isForLocalPlayer, playerUID, panel == null, situation, presentation )
 	else
 		printl( "Can't show RTK gladiator card without the client VM!" )
 }
@@ -924,8 +988,8 @@ void function SetupMenuGladCardRTK( rtk_panel panel, string argName, bool isForL
 void function SendMenuGladCardPreviewCommand( int previewType, int index, ItemFlavor ornull flavOrNull, int dataInteger = -1 )
 {
 	Assert( CanRunClientScript() )
-	Assert( fileLevel.currentMenuGladCardPanel != null )
-	Assert( fileLevel.currentMenuGladCardArgName != "" )
+	Assert( fileLevel.currentMenuGladCardPanel.len() > 0 )
+	Assert( fileLevel.currentMenuGladCardArgName.len() > 0 )
 	int guid = 0
 	if ( flavOrNull != null )
 		guid = ItemFlavor_GetGUID( expect ItemFlavor(flavOrNull) )
@@ -937,8 +1001,8 @@ void function SendMenuGladCardPreviewCommand( int previewType, int index, ItemFl
 void function SendMenuGladCardPreviewString( int previewType, int index, string previewName )
 {
 	Assert( CanRunClientScript() )
-	Assert( fileLevel.currentMenuGladCardPanel != null )
-	Assert( fileLevel.currentMenuGladCardArgName != "" )
+	Assert( fileLevel.currentMenuGladCardPanel.len() > 0 )
+	Assert( fileLevel.currentMenuGladCardArgName.len() > 0 )
 	RunClientScript( "UIToClient_HandleMenuGladCardPreviewString", previewType, index, previewName )
 }
 
@@ -949,9 +1013,12 @@ void function ShGladiatorCards_UIShutdown()
 {
 	if ( CanRunClientScript() )
 	{
-		
-		fileLevel.currentMenuGladCardPanel = null
-		fileLevel.currentMenuGladCardArgName = ""
+		table<string, var> tableClone = clone fileLevel.currentMenuGladCardPanel
+		foreach ( string playerUID, var panel in tableClone )
+		{
+			delete fileLevel.currentMenuGladCardPanel[ playerUID ]
+			delete fileLevel.currentMenuGladCardArgName[ playerUID ]
+		}
 		RunClientScript( "UIToClient_SetupMenuGladCard", null, "", true, true )
 	}
 }
@@ -961,6 +1028,81 @@ void function ShGladiatorCards_UIShutdown()
 const float LOADING_COVER_FADE_TIME = 0.13
 const float LOADING_COVER_HOLD_TIME = 0.48
 const float LOADING_COVER_OUT_TIME = LOADING_COVER_FADE_TIME + LOADING_COVER_HOLD_TIME
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1431,12 +1573,22 @@ void function OnItemFlavorRegistered_Character( ItemFlavor characterClass )
 	}
 
 	array<ItemFlavor> trackerList = RegisterReferencedItemFlavorsFromArray( characterClass, "gcardStatTrackers", "flavor" )
+	foreach ( int index, ItemFlavor tracker in clone trackerList )
+	{
 
 
 
 
+		switch ( GladiatorCardStatTracker_GetTrackerType( tracker ) )
+		{
+			case eTrackerType.ART:
+				trackerList.fastremovebyvalue( tracker )
+				
 
-
+			case eTrackerType.BOTH:
+				fileLevel.trackerArtFlavors[ tracker ] <- true 
+		}
+	}
 
 
 
@@ -1457,40 +1609,41 @@ void function OnItemFlavorRegistered_Character( ItemFlavor characterClass )
 	MakeItemFlavorSet( trackerList, fileLevel.cosmeticFlavorSortOrdinalMap, setShouldContainANonGRXItem )
 	fileLevel.loadoutCharacterTrackersSlotListMap[characterClass] <- []
 	fileLevel.loadoutCharacterTrackersValueSlotListMap[characterClass] <- []
+	fileLevel.loadoutCharacterTrackersArtSlotListMap[characterClass] <- []
 
 	for ( int trackerIndex = 0; trackerIndex < GLADIATOR_CARDS_NUM_TRACKERS; trackerIndex++ )
 	{
-		LoadoutEntry entry = RegisterLoadoutSlot( eLoadoutEntryType.ITEM_FLAVOR, "gcard_tracker_" + trackerIndex + "_for_" + ItemFlavor_GetGUIDString( characterClass ), eLoadoutEntryClass.CHARACTER )
-		entry.category     = eLoadoutCategory.GCARD_TRACKERS
+		LoadoutEntry statEntry = RegisterLoadoutSlot( eLoadoutEntryType.ITEM_FLAVOR, "gcard_tracker_" + trackerIndex + "_for_" + ItemFlavor_GetGUIDString( characterClass ), eLoadoutEntryClass.CHARACTER )
+		statEntry.category     = eLoadoutCategory.GCARD_TRACKER_STATS
 #if DEV
-			entry.pdefSectionKey = "character " + ItemFlavor_GetGUIDString( characterClass )
-			entry.DEV_name       = ItemFlavor_GetCharacterRef( characterClass ) + " GCard Tracker " + trackerIndex
+			statEntry.pdefSectionKey = "character " + ItemFlavor_GetGUIDString( characterClass )
+			statEntry.DEV_name       = ItemFlavor_GetCharacterRef( characterClass ) + " GCard Tracker Stat " + trackerIndex
 #endif
-		entry.stryderCharDataArrayIndex = ePlayerStryderCharDataArraySlots.BANNER_TRACKER1 + 2 * trackerIndex
-		entry.validItemFlavorList       = trackerList
-		entry.defaultItemFlavor         = entry.validItemFlavorList[ 0 ]
-		entry.isSlotLocked              = bool function( EHI playerEHI ) {
+		statEntry.stryderCharDataArrayIndex = ePlayerStryderCharDataArraySlots.BANNER_TRACKER1_STAT + 2 * trackerIndex
+		statEntry.validItemFlavorList       = trackerList
+		statEntry.defaultItemFlavor         = trackerList[ 0 ]
+		statEntry.isSlotLocked              = bool function( EHI playerEHI ) {
 			return !IsLobby()
 		}
-		entry.associatedCharacterOrNull = characterClass
-		entry.networkTo                 = eLoadoutNetworking.PLAYER_GLOBAL
-		entry.networkVarName            = "GladiatorCardTracker" + trackerIndex
+		statEntry.associatedCharacterOrNull = characterClass
+		statEntry.networkTo                 = eLoadoutNetworking.PLAYER_GLOBAL
+		statEntry.networkVarName            = "GladiatorCardTrackerStat" + trackerIndex
 
 
 
-		fileLevel.loadoutCharacterTrackersSlotListMap[characterClass].append( entry )
+		fileLevel.loadoutCharacterTrackersSlotListMap[characterClass].append( statEntry )
 
 		LoadoutEntry valueEntry = RegisterLoadoutSlot( eLoadoutEntryType.INTEGER, "gcard_tracker_" + trackerIndex + "_value_for_" + ItemFlavor_GetGUIDString( characterClass ), eLoadoutEntryClass.CHARACTER )
-		valueEntry.category     = eLoadoutCategory.GCARD_TRACKER_TIER
+		valueEntry.category     = eLoadoutCategory.GCARD_TRACKER_STAT_VALUE
 #if DEV
 			valueEntry.pdefSectionKey = "character " + ItemFlavor_GetGUIDString( characterClass )
-			valueEntry.DEV_name       = ItemFlavor_GetCharacterRef( characterClass ) + " GCard Tracker" + trackerIndex + " Value"
+			valueEntry.DEV_name       = ItemFlavor_GetCharacterRef( characterClass ) + " GCard Tracker Stat " + trackerIndex + " Value"
 #endif
 		valueEntry.stryderCharDataArrayIndex = ePlayerStryderCharDataArraySlots.BANNER_TRACKER1_VALUE + 2 * trackerIndex
 		
 		valueEntry.associatedCharacterOrNull = characterClass
 		valueEntry.networkTo                 = eLoadoutNetworking.PLAYER_GLOBAL
-		valueEntry.networkVarName            = "GladiatorCardTracker" + trackerIndex + "Value"
+		valueEntry.networkVarName            = "GladiatorCardTrackerStat" + trackerIndex + "Value"
 
 
 
@@ -1507,9 +1660,137 @@ void function OnItemFlavorRegistered_Character( ItemFlavor characterClass )
 
 
 
-
 	}
 }
+
+
+
+void function BuildTrackerArtLoadouts()
+{
+	array< ItemFlavor > trackerArtFlavors = []
+	foreach ( ItemFlavor tracker, bool _ in fileLevel.trackerArtFlavors )
+		trackerArtFlavors.append( tracker )
+
+
+		if ( IsLobby() )
+		{
+			ItemFlavor empty = trackerArtFlavors[0]
+			Assert( GladiatorCardTracker_IsTheEmpty( empty ) )
+			trackerArtFlavors.fastremovebyvalue( empty )
+			trackerArtFlavors.sort( SortTrackerArtFlavors )
+			trackerArtFlavors.insert( 0, empty ) 
+		}
+
+	MakeItemFlavorSet( trackerArtFlavors, fileLevel.cosmeticFlavorSortOrdinalMapArt, false )
+	foreach ( ItemFlavor characterClass, array< LoadoutEntry > _ in fileLevel.loadoutCharacterTrackersSlotListMap )
+	{
+		for ( int trackerIndex = 0; trackerIndex < GLADIATOR_CARDS_NUM_TRACKERS; trackerIndex++ )
+		{
+			LoadoutEntry artEntry = RegisterLoadoutSlot( eLoadoutEntryType.ITEM_FLAVOR, "gcard_tracker_art_" + trackerIndex + "_for_" + ItemFlavor_GetGUIDString( characterClass ), eLoadoutEntryClass.CHARACTER )
+			artEntry.category = eLoadoutCategory.GCARD_TRACKER_ART
+#if DEV
+				artEntry.pdefSectionKey = "character " + ItemFlavor_GetGUIDString( characterClass )
+				artEntry.DEV_name = ItemFlavor_GetCharacterRef( characterClass ) + " GCard Tracker Art " + trackerIndex
+#endif
+			artEntry.stryderCharDataArrayIndex = ePlayerStryderCharDataArraySlots.BANNER_TRACKER1_ART + 1 * trackerIndex
+			artEntry.validItemFlavorList       = trackerArtFlavors
+			artEntry.defaultItemFlavor         = trackerArtFlavors[ 0 ]
+			artEntry.isSlotLocked              = bool function( EHI playerEHI ) {
+				return !IsLobby()
+			}
+			artEntry.associatedCharacterOrNull = characterClass
+			artEntry.networkTo                 = eLoadoutNetworking.PLAYER_GLOBAL
+			artEntry.networkVarName            = "GladiatorCardTrackerArt" + trackerIndex
+
+
+
+			fileLevel.loadoutCharacterTrackersArtSlotListMap[characterClass].append( artEntry )
+		}
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2902,7 +3183,8 @@ void function OnItemFlavorRegistered_Character( ItemFlavor characterClass )
 int function GetPlayerBadgeDataInteger( EHI playerEHI, ItemFlavor badge, int badgeIndex, ItemFlavor ornull character, bool showOneTierHigherThanIsUnlocked = false )
 {
 
-		if ( playerEHI != LocalClientEHI() )
+		bool enableUseSlotInteger = !GetCurrentPlaylistVarBool( "update_match_badge", false )
+		if ( ( enableUseSlotInteger && !IsLobby() ) || playerEHI != LocalClientEHI() )
 		{
 			LoadoutEntry tierSlot = Loadout_GladiatorCardBadgeTier( expect ItemFlavor(character), badgeIndex )
 			return LoadoutSlot_GetInteger( playerEHI, tierSlot )
@@ -2918,8 +3200,24 @@ int function GetPlayerBadgeDataInteger( EHI playerEHI, ItemFlavor badge, int bad
 
 
 
+
+
+
+
+
+
+
+
 			if ( GRX_IsItemOwnedByPlayer_AllowOutOfDateData( badge , FromEHI( LocalClientEHI() ) ) )
+			{
 				grxTier = GRX_GetItemTier( ItemFlavor_GetGRXIndex( badge ) )
+			}
+#if DEV
+			else
+			{
+				printt( "GetPlayerBadgeDataInteger GRX badge not owned by player[Client|UI]", FromEHI( playerEHI ), ItemFlavor_GetAssetName( badge ) )
+			}
+#endif
 
 
 		if ( !GladiatorCardBadge_IsGRXWithStat( badge ) )
@@ -3060,6 +3358,12 @@ LoadoutEntry function Loadout_GladiatorCardStatTracker( ItemFlavor characterClas
 	return fileLevel.loadoutCharacterTrackersSlotListMap[characterClass][trackerIndex]
 }
 
+
+
+LoadoutEntry function Loadout_GladiatorCardStatTrackerArt( ItemFlavor characterClass, int trackerIndex )
+{
+	return fileLevel.loadoutCharacterTrackersArtSlotListMap[characterClass][trackerIndex]
+}
 
 
 
@@ -3735,6 +4039,16 @@ bool function GladiatorCardStatTracker_IsSharedBetweenCharacters( ItemFlavor fla
 
 
 
+int function GladiatorCardStatTracker_GetTrackerType( ItemFlavor tracker )
+{
+	Assert( ItemFlavor_GetType( tracker ) == eItemType.gladiator_card_stat_tracker )
+	string typeString = GetGlobalSettingsString( ItemFlavor_GetAsset( tracker ), "trackerType" )
+	Assert( typeString in eTrackerType )
+	return eTrackerType[ typeString ]
+}
+
+
+
 int function GladiatorCardStatTracker_GetSortOrdinal( ItemFlavor flavor )
 {
 	Assert( ItemFlavor_GetType( flavor ) == eItemType.gladiator_card_stat_tracker )
@@ -3742,6 +4056,14 @@ int function GladiatorCardStatTracker_GetSortOrdinal( ItemFlavor flavor )
 	return fileLevel.cosmeticFlavorSortOrdinalMap[flavor]
 }
 
+
+
+int function GladiatorCardStatTrackerArt_GetSortOrdinal( ItemFlavor flavor )
+{
+	Assert( ItemFlavor_GetType( flavor ) == eItemType.gladiator_card_stat_tracker )
+
+	return fileLevel.cosmeticFlavorSortOrdinalMapArt[flavor]
+}
 
 
 
@@ -3763,6 +4085,7 @@ ItemFlavor ornull function GladiatorCardStatTracker_GetCharacterFlavor( ItemFlav
 string function GladiatorCardStatTracker_GetStatRef( ItemFlavor flavor, ItemFlavor character )
 {
 	Assert( ItemFlavor_GetType( flavor ) == eItemType.gladiator_card_stat_tracker )
+	Assert( GladiatorCardStatTracker_GetTrackerType( flavor ) != eTrackerType.ART )
 
 	string statRef = GetGlobalSettingsString( ItemFlavor_GetAsset( flavor ), "statRef" )
 	statRef = replace( statRef, "%char%", ItemFlavor_GetGUIDString( character ) )
@@ -3786,6 +4109,7 @@ string function GladiatorCardStatTracker_GetValueSuffix( ItemFlavor flavor )
 asset function GladiatorCardStatTracker_GetBackgroundImage( ItemFlavor flavor )
 {
 	Assert( ItemFlavor_GetType( flavor ) == eItemType.gladiator_card_stat_tracker )
+	Assert( GladiatorCardStatTracker_GetTrackerType( flavor ) != eTrackerType.STAT )
 
 	return GetGlobalSettingsAsset( ItemFlavor_GetAsset( flavor ), "backgroundImage" )
 }
@@ -3808,7 +4132,11 @@ string function GladiatorCardStatTracker_GetFormattedValueText( entity player, I
 	if ( GladiatorCardTracker_IsTheEmpty( flavor ) )
 		return ""
 
-	string statRef  = GladiatorCardStatTracker_GetStatRef( flavor, character )
+	Assert( GladiatorCardStatTracker_GetTrackerType( flavor ) != eTrackerType.ART )
+	if ( GladiatorCardStatTracker_GetTrackerType( flavor ) == eTrackerType.ART )
+		return ""
+
+	string statRef = GladiatorCardStatTracker_GetStatRef( flavor, character )
 
 	StatEntry statEntry = GetStatEntryByRef( statRef )
 
@@ -3983,4 +4311,245 @@ int function GladiatorCardBadge_GetRewardParentChallengeTier( ItemFlavor parentC
 	Assert( false, "GladiatorCardBadge_GetRewardParentChallengeTier called to search a challenge that does not reward the searched for Item Flavor." )
 	return 0
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

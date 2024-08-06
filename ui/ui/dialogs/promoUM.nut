@@ -9,6 +9,11 @@ global function PromoDialog_OpenToPage
 global function PromoDialog_CanShow
 global function PromoDialog_GetAllGifts
 global function PromoDialog_RemoveFromCache
+
+
+global function PromoDialog_UpdateBattlepassPromo
+
+
 #if DEV
 global function DEV_SetHasViewedMOTDThisSession
 #endif
@@ -25,6 +30,7 @@ const string PROMO_PREVIEW_BUTTON_NAME = "PromoPreviewButton"
 const float MIN_ACCEPTABLE_LOAD_TIME_SECONDS = 10
 const float MAX_ACCEPTABLE_LOAD_TIME_SECONDS = 20
 const float LOAD_TIME_INCREASE_FACTOR = 1.2 
+
 struct PromoDialogPageData
 {
 	asset  image = $""
@@ -35,6 +41,7 @@ struct PromoDialogPageData
 	string linkType = ""
 	string linkText = ""
 	string trackingId = ""
+	int messageType = eBattlepassUMType.NONE
 }
 
 enum eTransType
@@ -90,6 +97,7 @@ struct
 	bool pageChangeInputsRegistered
 	bool hasViewedMOTDThisSession = false
 
+	bool hasBattlepassContent = false
 	bool hasHijackContent = false
 	bool isPromoVisible = true
 
@@ -173,7 +181,7 @@ void function PromoDialogUM_OnOpen()
 	SetGamepadCursorEnabled( file.menu, true )
 	UpdateNumPages()
 
-	if ( !file.hasHijackContent )
+	if ( !file.hasHijackContent || !file.hasBattlepassContent )
 	{
 		file.hasViewedMOTDThisSession = true
 
@@ -218,6 +226,11 @@ void function PromoDialogUM_OnClose()
 	{
 		file.hasHijackContent = false
 		RunClientScript( "SetIsPromoImageHijacked", false )
+	}
+
+	if ( file.hasBattlepassContent )
+	{
+		file.hasBattlepassContent = false
 	}
 
 	SocialEventUpdate()
@@ -731,9 +744,20 @@ void function PromoDialog_InitPages()
 {
 	file.pages.clear()
 
+	string targetLocation = UM_LOCATION_PROMO_UM
+	if ( file.hasBattlepassContent )
+	{
+		targetLocation = UM_LOCATION_BATTLEPASS
+	}
+
 	UMData um = EADP_UM_GetPromoData()
 	foreach ( int i, UMAction action in um.actions )
 	{
+		if ( !IsValidUMAction( action, targetLocation ) )
+		{
+			continue
+		}
+
 		PromoDialogPageData newPage
 		newPage.trackingId = action.trackingId
 		foreach ( int j, UMItem item in action.items )
@@ -764,9 +788,27 @@ void function PromoDialog_InitPages()
 				if ( file.hasHijackContent )
 					newPage.image = GetPromoImage( newPage.imageName )
 			}
+			else if ( item.name == "MessageType" )
+			{
+				if ( item.value == "message" )
+				{
+					newPage.messageType = eBattlepassUMType.MESSAGE
+				}
+				else if ( item.value == "deeplink" )
+				{
+					newPage.messageType = eBattlepassUMType.DEEPLINK
+				}
+			}
 		}
+
+		if ( file.hasBattlepassContent && newPage.messageType == eBattlepassUMType.NONE ) 
+		{
+			continue
+		}
+
 		file.pages.append( newPage )
 	}
+
 	Promo_OnShow( null )
 }
 
@@ -782,7 +824,12 @@ bool function PromoDialog_HasPages()
 
 bool function PromoDialog_CanShow()
 {
-	return (IsLobby() && IsFullyConnected() && GetActiveMenu() == GetMenu( "LobbyMenu" ) && IsTabPanelActive( GetPanel( "PlayPanel" ) ))
+	if ( file.hasBattlepassContent )
+	{
+		return ( IsLobby() && IsFullyConnected() )
+	}
+
+	return ( IsLobby() && IsFullyConnected() && GetActiveMenu() == GetMenu( "LobbyMenu" ) && IsTabPanelActive( GetPanel( "PlayPanel" ) ))
 }
 
 bool function IsFirstPromoDialogView()
@@ -1020,6 +1067,8 @@ void function UpdatePageRui()
 
 void function UpdatePreviewButtonRui()
 {
+	array<PromoDialogPageData> pages = file.pages
+
 	if ( !file.hasHijackContent )
 	{
 		RuiSetInt( file.promoPreviewActiveIndicatorRui, "activePageIndex", file.activePageIndex )
@@ -1028,12 +1077,12 @@ void function UpdatePreviewButtonRui()
 
 		
 		Hud_SetWidth( file.promoPreviewButtons, ContentScaledXAsInt( 242 * file.numPages ) )
-		Hud_SetVisible( file.promoPreviewActiveIndicator, bool( file.pages.len() ) )
+		Hud_SetVisible( file.promoPreviewActiveIndicator, bool( pages.len() ) )
 
 		file.promoPaksWanted = file.numPages
 		for ( int i = 0; i < file.numPages; i++ )
 		{
-			PromoDialogPageData page = file.pages[i]
+			PromoDialogPageData page = pages[i]
 			var rui = file.promoPreviewButtonsRui[i]
 			RuiSetBool( rui, "isPageActive", true )
 
@@ -1211,6 +1260,12 @@ void function PromoDialog_RemoveFromCache( int viewedGifts )
 	}
 
 	inbox.activeInfo = null
+}
+
+
+void function PromoDialog_UpdateBattlepassPromo( bool val )
+{
+	file.hasBattlepassContent = val
 }
 
 

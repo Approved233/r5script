@@ -12,6 +12,8 @@ global struct CurrencyDescriptionData
 global struct WalletInventoryPanelItems
 {
 	array<CurrencyDescriptionData> itemsArray
+	string escrowInfo
+	string escrowBalance
 }
 
 void function RTKWalletInventoryPanel_OnInitialize( rtk_behavior self )
@@ -51,7 +53,28 @@ void function RTKWalletInventoryPanel_SetUp()
 			apexCoinsData.total = currencyTotal
 			apexCoinsData.description = ( currencyTotal >= 0 ) ? Localize( "#CURRENCIES_TOOLTIP_PREMIUM" ) : Localize( "#CURRENCIES_TOOLTIP_NEGATIVE" )
 			nextExpirationAmount = GRX_GetNextCurrencyExpirationAmt( GRX_CURRENCIES[GRX_CURRENCY_PREMIUM] )
-			apexCoinsData.expirationInfo = ( nextExpirationAmount > 0 ) ? Localize( "#CURRENCIES_TOOLTIP_EXPIRATION", nextExpirationAmount, ( GRX_GetNextCurrencyExpirationTime(GRX_CURRENCIES[GRX_CURRENCY_PREMIUM]) - GetUnixTimestamp() ) / SECONDS_PER_DAY ) : ""
+
+			if ( nextExpirationAmount > 0 )
+			{
+				DisplayTime dt = SecondsToDHMS( GRX_GetNextCurrencyExpirationTime(GRX_CURRENCIES[GRX_CURRENCY_PREMIUM]) - GetUnixTimestamp() )
+				apexCoinsData.expirationInfo = ( dt.days > 0 ) ? Localize( "#CURRENCIES_TOOLTIP_EXPIRATION", LocalizeAndShortenNumber_Int( nextExpirationAmount, 6, 0 ), dt.days ) : Localize( "#CURRENCIES_TOOLTIP_EXPIRATION_LAST_DAY", LocalizeAndShortenNumber_Int( nextExpirationAmount, 6, 0 ), format( "%02i:%02i", dt.hours, dt.minutes ) )
+			}
+			else
+			{
+				apexCoinsData.expirationInfo = ""
+			}
+
+			if ( !Escrow_IsPlayerTrusted() && HasEscrowBalance() )
+			{
+				itemsData.escrowBalance = Localize( "#CURRENCIES_TOOLTIP_ESCROW_BALANCE", GRXCurrency_GetPlayerBalance( player , GRX_CURRENCIES[GRX_CURRENCY_ESCROW] ) )
+				itemsData.escrowInfo = Localize( "#CURRENCIES_TOOLTIP_ESCROW_INFO" )
+			}
+			else
+			{
+				itemsData.escrowBalance = ""
+				itemsData.escrowInfo = ""
+			}
+
 			itemsData.itemsArray.append( apexCoinsData )
 
 			CurrencyDescriptionData craftingMetalsData
@@ -84,7 +107,17 @@ void function RTKWalletInventoryPanel_SetUp()
 			exoticShardsData.total = currencyTotal
 			exoticShardsData.description = ( currencyTotal >= 0 ) ? Localize( "#CURRENCIES_WALLET_EXOTIC" ) : Localize( "#CURRENCIES_WALLET_NEGATIVE_EXOTIC" )
 			nextExpirationAmount = GRX_GetNextCurrencyExpirationAmt( GRX_CURRENCIES[GRX_CURRENCY_EXOTIC] )
-			exoticShardsData.expirationInfo = ( nextExpirationAmount > 0 ) ? Localize( "#CURRENCIES_WALLET_EXPIRATION_EXOTIC", nextExpirationAmount, ( GRX_GetNextCurrencyExpirationTime(GRX_CURRENCIES[GRX_CURRENCY_EXOTIC]) - GetUnixTimestamp() ) / SECONDS_PER_DAY ) : ""
+
+			if ( nextExpirationAmount > 0 )
+			{
+				DisplayTime dt = SecondsToDHMS( GRX_GetNextCurrencyExpirationTime(GRX_CURRENCIES[GRX_CURRENCY_EXOTIC]) - GetUnixTimestamp() )
+				exoticShardsData.expirationInfo = ( dt.days > 0 ) ?  Localize( "#CURRENCIES_WALLET_EXPIRATION_EXOTIC", LocalizeAndShortenNumber_Int( nextExpirationAmount, 6, 0 ) , dt.days ) : Localize( "#CURRENCIES_WALLET_EXPIRATION_EXOTIC_LAST_DAY", LocalizeAndShortenNumber_Int( nextExpirationAmount, 6, 0 ), format( "%02i:%02i", dt.hours, dt.minutes ) )
+			}
+			else
+			{
+				exoticShardsData.expirationInfo = ""
+			}
+
 			itemsData.itemsArray.append( exoticShardsData )
 
 			rtk_struct walletInventoryPanel = RTKDataModelType_GetOrCreateStruct( RTK_MODELTYPE_MENUS, "walletInventoryPanel", "WalletInventoryPanelItems" )

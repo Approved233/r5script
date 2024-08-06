@@ -349,6 +349,50 @@ bool function MobileRespawn_ConditionalCheck( string ref, entity player )
 }
 
 
+bool function MobileRespawnBeacon_PLV_FastMRB_Enabled()
+{
+	bool fastMRB_Enabled = GetCurrentPlaylistVarBool( "mobilerespawnbeacon_fastmrb_enabled", false )
+	return( fastMRB_Enabled )
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

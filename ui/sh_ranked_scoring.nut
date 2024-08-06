@@ -488,6 +488,7 @@ int function Ranked_GetPenaltyPointsForAbandon( SharedRankedDivisionData current
 
 
 
+
 void function LoadLPBreakdownFromPersistance ( RankLadderPointsBreakdown breakdown , entity player)
 {
 	

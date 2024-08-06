@@ -1,6 +1,7 @@
 global function InitMiniPromo
 global function MiniPromo_Start
 global function MiniPromo_Stop
+global function GetPackInfoToolTip
 
 
 
@@ -191,8 +192,13 @@ void function UpdateValidityOfPages( array<MiniPromoPageData> pages )
 			case "storeOfferShop":
 			case "rumble":
 			case "rankedrumble":
-			page.isValid = true
+			case "newplayerpassinfo":
+			case "newplayerchallengeinfo":
+				page.isValid = true
 				break
+
+				case "newplayerpass":
+					page.isValid = NPP_IsNPPActive( GetLocalClientPlayer() )
 
 			case "url":
 				page.isValid = true 
@@ -252,6 +258,11 @@ array<MiniPromoPageData> function InitPages()
 
 	foreach ( int i, UMAction action in um.actions )
 	{
+		if ( !IsValidUMAction( action, UM_LOCATION_PROMO_MINI ) )
+		{
+			continue
+		}
+
 		MiniPromoPageData newPage
 		newPage.trackingId = action.trackingId
 		foreach ( int j, UMItem item in action.items )
@@ -312,7 +323,13 @@ bool function IsLinkFormatValid( string linkType, array<string> linkData )
 		return true
 	else if ( linkType == "storemilestoneevent" )
 		return true
-	else if ( linkType == "rumble" )
+	else if ( linkType == "rumble" || linkType == "rankedrumble" )
+		return true
+	else if ( linkType == "challenges" )
+		return true
+	else if ( linkType == "newplayerpassinfo" )
+		return true
+	else if ( linkType == "newplayerchallengeinfo" )
 		return true
 
 	return false

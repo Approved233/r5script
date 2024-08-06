@@ -18,10 +18,10 @@ global function Stats_CountSetBitsInCharacterBitfield
 
 bool function Stats_IsValidMapForStats()
 {
-	if ( IsSurvivalTraining() )
+	if ( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_TRAINING ) )
 		return false
 
-	if ( IsFiringRangeGameMode() )
+	if ( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_FIRING_RANGE ) )
 		return false
 
 	if ( IsLobby() )

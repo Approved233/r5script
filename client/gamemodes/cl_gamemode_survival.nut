@@ -110,6 +110,8 @@ global function SetNextCircleDisplayCustomClear
 global function SetGamestateCountdown
 global function SetGamestateCountdownClear
 
+global function NextCircleClosingStatusChanged
+
 global function SetPreVictoryScreenCallback
 global function SetChampionScreenRuiAsset
 global function SetChampionScreenSound
@@ -133,6 +135,8 @@ global function Dev_SpoofMatchData
 global function CircleAnnouncementsEnable
 global function CircleBannerAnnouncementsEnable
 global function Survival_SetVictorySoundPackageFunction
+global function Survival_SetCustomRingAnnouncementCallback
+global function Survival_SetCustomRingClosingAnnouncementCallback
 global function GetAnnouncementSubtextString
 
 global function GetVictorySquadFormationActivity
@@ -152,6 +156,28 @@ global function Cl_GetPlaylistUIRules
 
 global function SetEvoArmorModifier
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+global function UseDynamicSquadTag
+global function SquadTag_GetOrCreateRui
+global function SquadTag_Destroy
+global function SquadTag_SetVisibility
+global function SquadTag_SetRuiArgs
 
 global struct NextCircleDisplayCustomData
 {
@@ -231,6 +257,18 @@ global const string ORDNANCEMENU_BIND_COMMAND = "+strafe"
 global const string GADGETSLOT_BIND_COMMAND = "+scriptCommand6"
 
 const asset SOLO_DEATH_SCREEN_RUI = $"ui/header_data_solo.rpak"
+
+
+
+
+
+
+
+global const vector UNITFRAME_SIZE = <260, 50, 0>
+global const vector UNITFRAME_SIZE_NX = <383, 80, 0>
+global const float UNITFRAME_SPACING = 16
+
+const float LOCALCLIENT_UNITFRAME_VERTICAL_OFFSET = 130.0 
 
 global struct SummaryDisplayData
 {
@@ -384,17 +422,31 @@ struct
 	]
 
 
+	array<vector> quadsPodiumPositions = [
+		<25, 0, -8>,
+		<-25, 0, -8>,
+		<75, -28, -8>,
+		<-75, -28, -8>,
+	]
 
 
 
 
 
 
+	var dynamicSquadTagRui
 
+	void functionref( int ) customRingAnnouncementCallback = null
+	void functionref( int ) customRingClosingAnnouncementCallback = null
 } file
 
 void function ClGamemodeSurvival_Init()
 {
+	if ( GameMode_IsActive( eGameModes.SURVIVAL ) )
+	{
+		Fullmap_SetupScoreboard()
+	}
+
 	Sh_ArenaDeathField_Init()
 	ClSurvivalCommentary_Init()
 	ObjectiveResourceSystem_Init()
@@ -551,6 +603,9 @@ void function ClGamemodeSurvival_Init()
 
 	AddCallback_OnGameStateChanged( OnGameStateChanged )
 
+	AddCallback_OnGameStateChanged( OnGameStateChanged_AbortPrepopulatingCache )
+
+
 	if ( GetCurrentPlaylistVarBool( "inventory_counter_enabled", true ) )
 		AddCallback_LocalPlayerPickedUpLoot( TryUpdateInventoryCounter )
 
@@ -703,6 +758,10 @@ void function Cl_Survival_AddClient( entity player )
 
 	if ( GetCurrentPlaylistVarBool( "compass_flat_enabled", true ) )
 	{
+
+
+
+
 
 
 
@@ -1033,7 +1092,19 @@ void function Survival_MinimapPackage_ObjectiveAreaInit( entity ent, var rui )
 		case "surveyZone":
 			RuiSetBool( rui, "blink", false )
 			RuiSetColorAlpha( rui, "objColor", SrgbToLinear( TEAM_COLOR_PARTY / 255.0 ), SAFE_ZONE_ALPHA )  
+
+
+			thread Perk_RingExpert_MonitorEnemyPresence( ent, rui, false )
+
 			break
+
+
+		case "enemyMonitorZone":
+			RuiSetBool( rui, "blink", false )
+			RuiSetColorAlpha( rui, "objColor", SrgbToLinear( TEAM_COLOR_PARTY / 255.0 ), SAFE_ZONE_ALPHA )  
+			thread Perk_RingExpert_MonitorEnemyPresence( ent, rui, true )
+			break
+
 
 
 
@@ -1162,19 +1233,19 @@ void function Survival_MinimapPackage_ObjectiveAreaInit( entity ent, var rui )
 			break
 
 
-		case SHADOWARMY_MAP_EVAC_AREA:
-			RuiSetColorAlpha( rui, "objColor", SrgbToLinear( COLOR_YELLOW / 255.0 ), 0.05 )
-			RuiSetColorAlpha( rui, "objBorderColor", SrgbToLinear( COLOR_YELLOW / 255.0 ), 0.15 )
-			RuiSetBool( rui, "blink", false )
-			RuiSetBool( rui, "borderBlink", false )
-			break
 
-		case SHADOWARMY_LEGEND_START_AREA:
-			RuiSetColorAlpha( rui, "objColor", SrgbToLinear( COLOR_RED / 255.0 ), 0.05 )
-			RuiSetColorAlpha( rui, "objBorderColor", SrgbToLinear( COLOR_RED / 255.0 ), 0.15 )
-			RuiSetBool( rui, "blink", false )
-			RuiSetBool( rui, "borderBlink", false )
-			break
+
+
+
+
+
+
+
+
+
+
+
+
 
 		case "poispawn_landingcircle_minimap":
 			RuiSetColorAlpha( rui, "objColor", SrgbToLinear( COLOR_CYAN / 255.0 ), 0.12 )
@@ -1192,7 +1263,6 @@ void function Survival_MinimapPackage_ObjectiveAreaInit( entity ent, var rui )
 			break
 	}
 }
-
 
 void function CLSurvival_RegisterNetworkFunctions()
 {
@@ -1361,7 +1431,7 @@ void function SquadLeader_UpdateUnitFrameRui( entity player, var rui )
 	bool isTeamLeader = false
 	float scale = 1.0
 
-		if( Control_IsModeEnabled() )
+		if( GameMode_IsActive( eGameModes.CONTROL ) )
 		{
 			isTeamLeader = GradeFlagsHas( player, eTargetGrade.EXP_LEADER )
 			icon = $"rui/hud/gametype_icons/control/control_ratings"
@@ -1369,14 +1439,14 @@ void function SquadLeader_UpdateUnitFrameRui( entity player, var rui )
 		}
 
 
-		if ( GunGame_IsModeEnabled() )
+		if ( GameModeVariant_IsActive( eGameModeVariants.FREEDM_GUNGAME ) )
 		{
 			isTeamLeader = GunGame_IsPlayerAhead( player )
 			icon = $"rui/gamemodes/tdm/gungame_squad_mvp_icon"
 		}
 
 
-		if ( IsFiringRangeGameMode() )
+		if ( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_FIRING_RANGE ) )
 		{
 			isTeamLeader = RangeMaster_CL_Get() == player
 			icon = $"rui/hud/gametype_icons/firingrange_leader_icon"
@@ -1412,7 +1482,7 @@ void function Status_UpdatePlayerUnitFrameRui( entity player, var rui )
 	float alpha = 0
 
 
-	if (IsHeatwaveMode())
+	if ( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_HEATWAVE ) )
 	{
 		icon = Heatwave_getHeatStatusIcon()
 		bgColor = SrgbToLinear(Heatwave_getHeatStatusColor())
@@ -1562,6 +1632,11 @@ void function UpdateDpadHud( entity player )
 		maxAmmoCount = lootData.inventorySlotCount
 
 		entity gadgetWeapon = player.GetNormalWeapon( WEAPON_INVENTORY_SLOT_GADGET )
+		if ( !IsValid( gadgetWeapon ) )
+		{
+			
+			gadgetWeapon = player.GetOffhandWeapon( WEAPON_INVENTORY_SLOT_GADGET )
+		}
 		if ( IsValid( gadgetWeapon ) )
 		{
 			ammo = gadgetWeapon.GetWeaponPrimaryClipCount()
@@ -1807,6 +1882,15 @@ string function GetRingClosingString(int roundNumber)
 	return Localize( "#" + GameRules_GetGameMode().toupper() + "_CIRCLE_STATUS_ROUND_CLOSING_FINAL" )
 }
 
+void function Survival_SetCustomRingAnnouncementCallback( void functionref( int ) customRingAnnouncementCallback )
+{
+	file.customRingAnnouncementCallback = customRingAnnouncementCallback
+}
+
+void function Survival_SetCustomRingClosingAnnouncementCallback( void functionref( int ) customRingClosingAnnouncementCallback  )
+{
+	file.customRingClosingAnnouncementCallback = customRingClosingAnnouncementCallback
+}
 
 string function GetAnnouncementSubtextString(int roundNumber)
 {
@@ -1822,7 +1906,7 @@ void function NextCircleStartTimeChanged( entity player, float new )
 	if ( !CircleAnnouncementsEnabled() )
 		return
 
-	if ( IsStrikeoutGamemode() ) 
+	if ( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_STRIKEOUT ) ) 
 	{
 		if ( new <= file.lastSavedCircleStartTime + 0.5 ) 
 			return
@@ -1872,25 +1956,32 @@ void function NextCircleStartTimeChanged( entity player, float new )
 
 	if ( GamePlaying() && CircleBannerAnnouncementsEnabled() )
 	{
-		if ( !GetCurrentPlaylistVarBool( "deathfield_starts_after_ship_flyout", true ) && !GetCurrentPlaylistVarBool( "sur_circle_start_paused", false ) && SURVIVAL_GetCurrentDeathFieldStage() == 0 )
-			return 
+		if ( file.customRingAnnouncementCallback != null )
+		{
+			file.customRingAnnouncementCallback( roundNumber )
+		}
+		else
+		{
+			if ( !GetCurrentPlaylistVarBool( "deathfield_starts_after_ship_flyout", true ) && !GetCurrentPlaylistVarBool( "sur_circle_start_paused", false ) && SURVIVAL_GetCurrentDeathFieldStage() == 0 )
+				return 
 
-		roundString = GetAnnouncementSubtextString(roundNumber)
+			roundString = GetAnnouncementSubtextString(roundNumber)
 
-		float duration = 7.0
+			float duration = 7.0
 
-		AnnouncementData announcement
-		announcement = Announcement_Create( "" )
-		Announcement_SetSubText( announcement, roundString )
-		Announcement_SetHeaderText( announcement, "#SURVIVAL_CIRCLE_WARNING" )
-		Announcement_SetDisplayEndTime( announcement, new )
-		Announcement_SetStyle( announcement, ANNOUNCEMENT_STYLE_CIRCLE_WARNING )
-		Announcement_SetSoundAlias( announcement, CIRCLE_CLOSING_IN_SOUND )
-		Announcement_SetPurge( announcement, true )
-		Announcement_SetPriority( announcement, 200 ) 
-		Announcement_SetDuration( announcement, duration )
+			AnnouncementData announcement
+			announcement = Announcement_Create( "" )
+			Announcement_SetSubText( announcement, roundString )
+			Announcement_SetHeaderText( announcement, "#SURVIVAL_CIRCLE_WARNING" )
+			Announcement_SetDisplayEndTime( announcement, new )
+			Announcement_SetStyle( announcement, ANNOUNCEMENT_STYLE_CIRCLE_WARNING )
+			Announcement_SetSoundAlias( announcement, CIRCLE_CLOSING_IN_SOUND )
+			Announcement_SetPurge( announcement, true )
+			Announcement_SetPriority( announcement, 200 ) 
+			Announcement_SetDuration( announcement, duration )
 
-		AnnouncementFromClass( GetLocalViewPlayer(), announcement )
+			AnnouncementFromClass( GetLocalViewPlayer(), announcement )
+		}
 	}
 	file.lastSavedCircleStartTime = new
 }
@@ -1998,7 +2089,7 @@ void function EquipmentChanged( entity player, string equipSlot, int new )
 
 		if ( armorCapacity >= 0 )
 		{
-			RuiSetInt( file.pilotRui, "armorShieldCapacity", armorCapacity )
+			RuiTrackInt( file.pilotRui, "armorShieldCapacity", player, RUI_TRACK_SHIELD_HEALTH_MAX_INT )
 		}
 			if ( data.lootType == eLootType.ARMOR )
 			{
@@ -2049,8 +2140,7 @@ void function EquipmentChanged( entity player, string equipSlot, int new )
 		if ( PlayerHasUnitFrame( player ) )
 		{
 			var rui = GetUnitFrame( player ).rui
-
-			RuiSetInt( rui, "armorShieldCapacity", armorCapacity )
+			RuiTrackInt( rui, "armorShieldCapacity", player, RUI_TRACK_SHIELD_HEALTH_MAX_INT )
 		}
 	}
 
@@ -2277,9 +2367,9 @@ void function ToggleFireSelect( entity player )
 
 
 
-
-
-
+	int akimboState = player.GetAkimboState()
+	if( akimboState == AKIMBO_STATE_ACTIVE || akimboState == AKIMBO_STATE_SINGLE || akimboState == AKIMBO_STATE_OFFHAND )
+		SetAkimboToggleInput( true )
 
 }
 
@@ -2287,13 +2377,19 @@ void function ServerCallback_SUR_PingMinimap( vector origin, float duration, flo
 {
 	asset altIcon = $""
 
-	if ( airdropType == eAirdropType.CRAFTING_REPLICATOR )
-		altIcon = $"rui/hud/ping/hex_pulse"
+
+		if ( airdropType == eAirdropType.CRAFTING_REPLICATOR )
+			altIcon = $"rui/hud/ping/hex_pulse"
 
 
 
 
 
+
+
+
+		if( airdropType == eAirdropType.FREESPAWN )
+			altIcon = $"rui/hud/ping/default_pulse"
 
 
 	vector color = ColorPalette_GetColorFromID(colorID)
@@ -2782,7 +2878,7 @@ void function UpdateWaitingForPlayersMuteHint()
 		return
 
 	string muteString = ""
-	if ( SquadMuteIntroEnabled() && !IsSoloMode() )
+	if ( SquadMuteIntroEnabled() && !GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_SOLOS ) )
 		muteString = Localize( IsSquadMuted() ? "#CHAR_SEL_BUTTON_UNMUTE" : "#CHAR_SEL_BUTTON_MUTE" )
 	RuiSetString( s_overlayRui, "squadMuteHint", muteString )
 }
@@ -2814,8 +2910,8 @@ void function Survival_RunCharacterSelection_Thread()
 	FlagWait( "ClientInitComplete" )
 
 
-		if ( IsShadowArmyGamemode() )
-			FlagWait( "AllianceAssignmentComplete" )
+
+
 
 
 	if ( !Survival_CharacterSelectEnabled() )
@@ -2836,7 +2932,7 @@ void function Survival_RunCharacterSelection_Thread()
 
 	bool isShowingAllSquadsGladCardIntro = GetCurrentPlaylistVarBool( "survival_enable_all_squads_intro", false )
 	bool isShowingSquadGladCardIntro = GetCurrentPlaylistVarBool( "survival_enable_squad_intro", true )
-	bool isShowingChampGladCardIntro = GetCurrentPlaylistVarBool( "survival_enable_gladiator_intros", true )
+	bool isShowingChampGladCardIntro = GetCurrentPlaylistVarBool( "survival_enable_gladiator_intros", true ) && GetConVarBool( "show_champion_screen" )
 	bool isShowingMVPGladCardIntro = GetCurrentPlaylistVarBool( "survival_enable_mvp_intros", false )
 
 	
@@ -2891,6 +2987,11 @@ void function Survival_RunCharacterSelection_Thread()
 	CloseCharacterSelectMenu()
 
 	TryStartIntroPodiumSequence()
+
+	bool shouldResetCameras = GetCurrentPlaylistVarBool( "survival_is_using_podiums", false )
+
+	if ( shouldResetCameras )
+		CharacterSelect_RestorePlayerView()
 }
 
 void function TryStartIntroPodiumSequence()
@@ -2907,11 +3008,16 @@ void function TryStartIntroPodiumSequence()
 		
 		bool shouldDisplaySetTeamOrAlliance = GetCurrentPlaylistVarBool( "podium_intro_screen_use_set_team_or_alliance", false )
 		
+		bool shouldPickChampionSquad = GetCurrentPlaylistVarBool( "survival_is_using_podiums", false )
+		bool isChampionTeam = false
+		
 		int teamOrAllianceToDisplay = AllianceProximity_IsUsingAlliances() ?  AllianceProximity_GetAllianceFromTeamWithObserverCorrection( player.GetTeam() ) : player.GetTeam()
 		array < int > availableTeamsOrAlliances = AllianceProximity_IsUsingAlliances() ? AllianceProximity_GetAllAlliances() : GetAllTeams()
 
 		for ( int index = 0; index < introPodiumSequenceCount; index++ )
 		{
+			isChampionTeam = false
+
 			if ( shouldDisplaySetTeamOrAlliance ) 
 			{
 				if ( availableTeamsOrAlliances.len() > 0 )
@@ -2933,12 +3039,27 @@ void function TryStartIntroPodiumSequence()
 				{
 					if ( availableTeamsOrAlliances.len() > 0 )
 					{
-						teamOrAllianceToDisplay = availableTeamsOrAlliances.pop()
+						if (shouldPickChampionSquad)
+						{
+							entity championPlayer = FromEHI( GetGlobalNetInt( "championEEH" ) )
+
+							if (IsValid( championPlayer ))
+							{
+								teamOrAllianceToDisplay = championPlayer.GetTeam()
+								isChampionTeam = true
+								if ( availableTeamsOrAlliances.contains( teamOrAllianceToDisplay ) ) 
+								{
+									availableTeamsOrAlliances.fastremovebyvalue( teamOrAllianceToDisplay )
+								}
+							}
+							else
+								teamOrAllianceToDisplay = INVALID_TEAM_OR_ALLIANCE
+						}
+						else
+							teamOrAllianceToDisplay = availableTeamsOrAlliances.pop()
 					}
 					else
-					{
 						teamOrAllianceToDisplay = INVALID_TEAM_OR_ALLIANCE
-					}
 				}
 			}
 
@@ -2948,7 +3069,7 @@ void function TryStartIntroPodiumSequence()
 				break
 			}
 
-			thread ShowMatchStartSequence(  teamOrAllianceToDisplay, introPodiumDuration )
+			thread ShowMatchStartSequence(  teamOrAllianceToDisplay, introPodiumDuration, false, false, isChampionTeam )
 
 			wait introPodiumDuration
 
@@ -2960,6 +3081,7 @@ void function TryStartIntroPodiumSequence()
 		}
 	}
 }
+
 void function OnGameStateChanged( int newVal )
 {
 	int gamestate = newVal
@@ -2996,7 +3118,7 @@ void function OnGameStateChanged( int newVal )
 	RuiSetBool( gamestateRui, "gamestateIsPlaying", gamestateIsPlaying )
 	RuiSetBool( gamestateRui, "gamestateWaitingForPlayers", gamestateWaitingForPlayers )
 	RuiSetInt( gamestateRui, "gamestate", gamestate )
-	RuiSetBool( gamestateRui, "isFiringRange", IsFiringRangeGameMode() || IsSurvivalTraining() || IsEventFinale() )
+	RuiSetBool( gamestateRui, "isFiringRange", GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_FIRING_RANGE ) || GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_TRAINING ) || IsEventFinale() )
 
 	if ( file.pilotRui != null )
 	{
@@ -3017,11 +3139,30 @@ void function OnGameStateChanged( int newVal )
 		if ( gamestate > eGameState.Playing )
 			graphAlpha = 0.0
 
-		string currentPlaylist = GetCurrentPlaylistName()
-		if ( currentPlaylist == "survival_training" || currentPlaylist == "survival_firingrange" )
+		if ( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_FIRING_RANGE ) || GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_TRAINING ) )
 			graphAlpha = 1.0
 
 		RuiSetFloat( netGraphRui, "graphAlpha", graphAlpha )
+	}
+
+	
+	if ( UseDynamicSquadTag() )
+		SquadTag_SetRuiArgs()
+}
+
+
+void function OnGameStateChanged_AbortPrepopulatingCache( int newVal )
+{
+	int gamestate = newVal
+	
+	switch ( gamestate )
+	{
+		case eGameState.Prematch:
+		case eGameState.Playing:
+			
+			break;
+		default:
+			PrePopulateGladiatorCardCache_Abort()
 	}
 }
 
@@ -3033,8 +3174,10 @@ void function OnGamestatePrematch()
 	Minimap_UpdateMinimapVisibility( GetLocalClientPlayer() )
 
 	
-	if ( IsSoloMode() )
+	if ( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_SOLOS ) )
 		DeathScreen_SetDataRuiAssetForGamemode( SOLO_DEATH_SCREEN_RUI )
+
+	PrePopulateGladiatorCardCache()
 }
 
 
@@ -3070,7 +3213,7 @@ void function ChangeHUDVisibilityWhenInCryptoDrone( bool isInCryptoDrone = false
 
 	RuiSetBool( GetUltimateRui(), "isVisible", isInCryptoDrone ? false : GetHudDefaultVisibility() )
 
-	if (IsHardcoreSurvival())
+	if ( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_HARDCORE ) )
 		return
 
 	RuiSetBool( GetWeaponRui(), "isVisible", isInCryptoDrone ? false : GetHudDefaultVisibility() )
@@ -3106,6 +3249,20 @@ void function ServerCallback_PlayerBootsOnGround()
 	SetConVarFloat( "dof_variable_blur", 0.0 )
 }
 
+void function NextCircleClosingStatusChanged( string status )
+{
+	array<var> ruis  = [ ClGameState_GetRui() ]
+	var cameraRui    = GetCameraCircleStatusRui()
+
+	if ( IsValid( cameraRui ) )
+		ruis.append( cameraRui )
+
+	foreach ( rui in ruis )
+	{
+		RuiSetString( rui, "roundClosingStatusString", status )
+	}
+}
+
 void function ServerCallback_AnnounceCircleClosing()
 {
 	if ( !CircleAnnouncementsEnabled() )
@@ -3114,18 +3271,31 @@ void function ServerCallback_AnnounceCircleClosing()
 	float duration            = 4.0
 	string circleClosingSound = "survival_circle_close_alarm_02"
 
-		if ( IsFallLTM() || IsShadowRoyaleMode() )
-			circleClosingSound = "survival_circle_close_alarm_02_ss"
 
 
-	AnnouncementData announcement = Announcement_Create( Localize( "#SURVIVAL_CIRCLE_STARTING" ) )
-	Announcement_SetSoundAlias( announcement, circleClosingSound )
-	Announcement_SetStyle( announcement, ANNOUNCEMENT_STYLE_CIRCLE_WARNING )
-	Announcement_SetPurge( announcement, true )
-	Announcement_SetOptionalTextArgsArray( announcement, [ "true" ] )
-	Announcement_SetPriority( announcement, 200 ) 
-	announcement.duration = duration
-	AnnouncementFromClass( GetLocalViewPlayer(), announcement )
+
+
+
+
+
+
+
+	if ( file.customRingClosingAnnouncementCallback != null )
+	{
+		int roundNumber = (SURVIVAL_GetCurrentDeathFieldStage() + 1)
+		file.customRingClosingAnnouncementCallback( roundNumber )
+	}
+	else
+	{
+		AnnouncementData announcement = Announcement_Create( Localize( "#SURVIVAL_CIRCLE_STARTING" ) )
+		Announcement_SetSoundAlias( announcement, circleClosingSound )
+		Announcement_SetStyle( announcement, ANNOUNCEMENT_STYLE_CIRCLE_WARNING )
+		Announcement_SetPurge( announcement, true )
+		Announcement_SetOptionalTextArgsArray( announcement, [ "true" ] )
+		Announcement_SetPriority( announcement, 200 ) 
+		announcement.duration = duration
+		AnnouncementFromClass( GetLocalViewPlayer(), announcement )
+	}
 }
 
 void function Sur_OnBleedoutStarted( entity victim, float endTime )
@@ -3138,7 +3308,7 @@ void function Sur_OnBleedoutStarted( entity victim, float endTime )
 
 	bool isDownedInfinite = false
 
-		isDownedInfinite = IsStrikeoutGamemode()
+		isDownedInfinite = GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_STRIKEOUT )
 
 
 	RuiSetBool( file.pilotRui, "isDownedInfinite", isDownedInfinite )
@@ -3164,6 +3334,11 @@ bool function DontCreatePlayerRuisForEnemies( entity ent )
 
 	if ( ent.GetNetworkedClassName() == "npc_frag_drone" && ent.Minimap_GetCustomState() == eMinimapObject_npc.LOOT_TICK_GH )
 		return true
+
+
+
+
+
 
 
 	if ( ent.IsPlayer() || ent.IsNPC() )
@@ -3586,13 +3761,13 @@ void function ShowChampionVictoryScreen( int winningTeam )
 	bool shouldPlayChampionScreenSound = true
 
 		
-		if ( Control_IsModeEnabled() )
+		if ( GameMode_IsActive( eGameModes.CONTROL ) )
 			shouldPlayChampionScreenSound = false
 
 
 
 		
-		if ( GameRules_GetGameMode() == GAMEMODE_FREEDM )
+		if ( GameMode_IsActive( eGameModes.FREEDM ) )
 			shouldPlayChampionScreenSound = false
 
 
@@ -3759,7 +3934,7 @@ void function OnGamestateResolution()
 		return
 
 
-	if ( ShGameModeExplore_IsActive() )
+	if ( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_EXPLORE ) )
 		return
 
 
@@ -3899,8 +4074,11 @@ int function VictorySequence_GetPlayerTeamFromEHI( EHI playerEHI )
 	return playerTeam
 }
 
-void function ShowMatchStartSequence( int teamOrAlliance, float camera_move_duration = DEFAULT_PODIUM_DURATION, bool placementMode = false, bool isDevTest = false )
+void function ShowMatchStartSequence( int teamOrAlliance, float camera_move_duration = DEFAULT_PODIUM_DURATION, bool placementMode = false, bool isDevTest = false, bool isChampionTeam = false )
 {
+	entity player = GetLocalClientPlayer()
+	EndSignal( player, "OnDestroy" )
+
 #if !DEV
 		placementMode = false
 #endif
@@ -3922,16 +4100,28 @@ void function ShowMatchStartSequence( int teamOrAlliance, float camera_move_dura
 		return
 	}
 
-	entity player 				= GetLocalClientPlayer()
 	int playerTeam 				= player.GetTeam()
 	bool isSpectator 			= playerTeam == TEAM_SPECTATOR || playerTeam == TEAM_UNASSIGNED
-	int playerAlliance 			= AllianceProximity_GetAllianceFromTeamWithObserverCorrection( playerTeam )
 	int playerEncodedEHandle 	= player.GetEncodedEHandle()
 
-	bool isFriendly = AllianceProximity_IsUsingAlliances() ? playerAlliance == teamOrAlliance : playerTeam == teamOrAlliance
+	
+	bool isFriendly = AllianceProximity_IsUsingAlliances() ? AllianceProximity_GetAllianceFromTeamWithObserverCorrection( playerTeam ) == teamOrAlliance : ( playerTeam == teamOrAlliance )
+
+	array<int> offsetArray
 
 
 
+
+
+
+		if ( BigTDM_IsModeEnabled() )
+		{
+			offsetArray = [
+				80, 84, 76,
+				80, 84, 76,
+				73, 80, 86,
+				73, 80, 86 ]
+		}
 
 
 	
@@ -3940,14 +4130,11 @@ void function ShowMatchStartSequence( int teamOrAlliance, float camera_move_dura
 	if ( IsSquadDataPersistenceEmpty( player ) && !isDevTest )
 		Remote_ServerCallFunction( "ClientCallback_Sur_RequestSquadDataPersistence" )
 
-	if ( IsValid ( player ) )
-	{
-		ScreenFade( player, 0, 0, 0, 255, 0.4, 0.0, FFADE_IN | FFADE_PURGE )
+	ScreenFade( player, 0, 0, 0, 255, 0.4, 0.0, FFADE_IN | FFADE_PURGE )
 
-		
-		if ( IsEmoteEnabledForPodiumScreen() )
-			EmitSoundOnEntity( player, "Ctrl_Duck_Pregame_Podium_Emotes" )
-	}
+	
+	if ( IsEmoteEnabledForPodiumScreen() )
+		EmitSoundOnEntity( player, "Ctrl_Duck_Pregame_Podium_Emotes" )
 
 	
 	asset defaultModel                = GetGlobalSettingsAsset( DEFAULT_PILOT_SETTINGS, "bodyModel" )
@@ -4001,194 +4188,205 @@ void function ShowMatchStartSequence( int teamOrAlliance, float camera_move_dura
 	int squadSize = GetExpectedSquadSize()
 	int maxPlayersToShow = GamemodeUtility_GetMaxPlayersToShowOnPodium()
 
-	if ( IsValid ( player ) )
+	printf( "VICTORY: Getting platform model" )
+	platformModel = CreateClientSidePropDynamic( file.victorySequencePosition + victoryPlatformModelData.originOffset, victoryPlatformModelData.modelAngles, victoryPlatformModelData.modelAsset )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	cleanupEnts.append( platformModel )
+	int playersOnPodium = 0
+
+	
+	foreach ( effectData in file.victoryEffectData )
 	{
-		printf( "VICTORY: Getting platform model" )
-		platformModel = CreateClientSidePropDynamic( file.victorySequencePosition + victoryPlatformModelData.originOffset, victoryPlatformModelData.modelAngles, victoryPlatformModelData.modelAsset )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-		cleanupEnts.append( platformModel )
-		int playersOnPodium = 0
-
-		
-		foreach ( effectData in file.victoryEffectData )
+		if ( effectData.effect != $"" && !effectData.endMatchOnly )
 		{
-			if ( effectData.effect != $"" && !effectData.endMatchOnly )
-			{
-				StartParticleEffectInWorld( GetParticleSystemIndex( effectData.effect ), effectData.position, effectData.angles )
-			}
+			StartParticleEffectInWorld( GetParticleSystemIndex( effectData.effect ), effectData.position, effectData.angles )
 		}
+	}
 
-		
-		VictorySequenceOrderLocalPlayerFirst( player ) 
+	
+	VictorySequenceOrderLocalPlayerFirst( player ) 
 
-		
-		file.introPodiumRui = CreateFullscreenRui( ENTRY_PODIUM_RUI )
-		RuiSetBool( file.introPodiumRui, "isFriendly", isFriendly )
-		RuiSetString( file.introPodiumRui, "gameModeString", GetCurrentPlaylistVarString( "name", "#PLAYLIST_UNAVAILABLE" ) )
-		RuiSetString( file.introPodiumRui, "mapNameString", GetCurrentPlaylistVarString( "map_name", "#PLAYLIST_UNAVAILABLE" ) )
+	
+	file.introPodiumRui = CreateFullscreenRui( ENTRY_PODIUM_RUI )
+	RuiSetBool( file.introPodiumRui, "isFriendly", isFriendly )
+	RuiSetString( file.introPodiumRui, "gameModeString", GetCurrentPlaylistVarString( "name", "#PLAYLIST_UNAVAILABLE" ) )
+	RuiSetString( file.introPodiumRui, "mapNameString", GetCurrentPlaylistVarString( "map_name", "#PLAYLIST_UNAVAILABLE" ) )
 
-		string podiumTitle = ( isFriendly )? Localize( "#THE_ALLIANCE"): Localize( "#THE_ENEMY_TEAM")
-		string podiumDesc = ( isFriendly )? Localize( "#THE_ALLIANCE_DESC"): Localize( "#THE_ENEMY_TEAM_DESC")
+	bool isSurvivalUsingPodium = GetCurrentPlaylistVarBool( "survival_is_using_podiums", false )
 
-		if( isSpectator )
-		{
-			if( AllianceProximity_IsUsingAlliances() )
-				podiumTitle = Localize( "#TEAM_NUMBERED", ( teamOrAlliance + 1 ) )
-			else
-				Localize( "#TEAM_NUMBERED", ( teamOrAlliance - 1 ) )
+	string podiumTitle = ( isFriendly && !isChampionTeam )? Localize( "#THE_ALLIANCE"): isSurvivalUsingPodium ? Localize( "#GLADIATOR_CARD_INTRO_CHAMPION_SQUAD") : Localize( "#THE_ENEMY_TEAM")
+	string podiumDesc = ( isFriendly && !isChampionTeam )? Localize( "#THE_ALLIANCE_DESC"): isSurvivalUsingPodium ? Localize( "#GLADIATOR_CARD_INTRO_SLAYER_BOUNTY", XpEventTypeData_GetAmount( eXPType.KILL_CHAMPION_MEMBER )) : Localize( "#THE_ENEMY_TEAM_DESC")
 
-			podiumDesc = ""
-		}
+	if( isSpectator )
+	{
+		if( AllianceProximity_IsUsingAlliances() )
+			podiumTitle = Localize( "#TEAM_NUMBERED", ( teamOrAlliance + 1 ) )
+		else
+			Localize( "#TEAM_NUMBERED", ( teamOrAlliance - 1 ) )
 
-		RuiSetString( file.introPodiumRui, "title", podiumTitle )
-		RuiSetString( file.introPodiumRui, "desc", podiumDesc )
+		podiumDesc = ""
+	}
 
-		
-		int teamOfCurrentPlayer = -1
-		int squadFormationIndex = 0
-		int teamIndex
+	RuiSetString( file.introPodiumRui, "title", podiumTitle )
+	RuiSetString( file.introPodiumRui, "desc", podiumDesc )
 
-		
-		array<bool> isFilledPodiumSpotsArray = []
-		isFilledPodiumSpotsArray.resize( maxPlayersToShow, false )
+	
+	int teamOfCurrentPlayer = -1
+	int squadFormationIndex = 0
+	int teamIndex
 
-		
-		array<int> uniqueTeamNumbers = []
-		
-		if ( isFriendly && !isSpectator )
-			uniqueTeamNumbers.append( playerTeam )
+	
+	array<bool> isFilledPodiumSpotsArray = []
+	isFilledPodiumSpotsArray.resize( maxPlayersToShow, false )
 
-		array < entity > localTeamPlayersArray = GamemodeUtility_GetLocalTeamPlayers( isFriendly )
+	
+	array<int> uniqueTeamNumbers = []
+	
+	if ( isFriendly && !isSpectator )
+		uniqueTeamNumbers.append( playerTeam )
+
+	array < entity > localTeamPlayersArray = GamemodeUtility_GetLocalTeamPlayers( isFriendly )
 
 #if DEV
-			foreach( entity teamPlayer in localTeamPlayersArray )
-			{
-				int teamPlayerTeam = teamPlayer.GetTeam()
-				Assert( teamPlayerTeam != TEAM_SPECTATOR && teamPlayerTeam != TEAM_UNASSIGNED, "GamemodeUtility_GetLocalTeamPlayers is returning Spectators or players on an Invalid Team" )
-			}
+		foreach( entity teamPlayer in localTeamPlayersArray )
+		{
+			int teamPlayerTeam = teamPlayer.GetTeam()
+			Assert( teamPlayerTeam != TEAM_SPECTATOR && teamPlayerTeam != TEAM_UNASSIGNED, "GamemodeUtility_GetLocalTeamPlayers is returning Spectators or players on an Invalid Team" )
+		}
 #endif
 
-		entity mvp = PickMVP(localTeamPlayersArray)
+	entity mvp
 
-		foreach ( int i, entity teamPlayer in localTeamPlayersArray )
+	if (isChampionTeam)
+		mvp = FromEHI( GetGlobalNetInt( "championEEH" ) )
+	else
+		mvp = PickMVP(localTeamPlayersArray)
+
+	foreach ( int i, entity teamPlayer in localTeamPlayersArray )
+	{
+		if ( i >= maxPlayersToShow )
+			break
+
+		teamOfCurrentPlayer = teamPlayer.GetTeam()
+		
+		
+		if ( teamOfCurrentPlayer == TEAM_SPECTATOR || teamOfCurrentPlayer == TEAM_UNASSIGNED )
+			continue
+
+		int eHandle = teamPlayer.GetEncodedEHandle()
+		if ( !EHIHasValidScriptStruct( eHandle ) )
+			continue
+
+		string playerName = GetPlayerNameUnlessAnonymized( eHandle )
+
+		if ( !LoadoutSlot_IsReady( eHandle, loadoutSlotCharacter ) )
+			continue
+
+		ItemFlavor character = LoadoutSlot_GetItemFlavor( eHandle, loadoutSlotCharacter )
+
+		if ( !LoadoutSlot_IsReady( eHandle, Loadout_CharacterSkin( character ) ) )
+			continue
+
+		ItemFlavor characterSkin = LoadoutSlot_GetItemFlavor( eHandle, Loadout_CharacterSkin( character ) )
+
+		if ( !uniqueTeamNumbers.contains( teamOfCurrentPlayer ) )
+			uniqueTeamNumbers.append( teamOfCurrentPlayer )
+
+		teamIndex = uniqueTeamNumbers.find( teamOfCurrentPlayer )
+
+		
+		for ( int index = 0; index < squadSize; ++index)
 		{
-			if ( i >= maxPlayersToShow )
+			squadFormationIndex = index + teamIndex * squadSize
+			if ( squadFormationIndex < isFilledPodiumSpotsArray.len() && !isFilledPodiumSpotsArray[squadFormationIndex])
+			{
+				isFilledPodiumSpotsArray[squadFormationIndex] = true
 				break
-
-			teamOfCurrentPlayer = teamPlayer.GetTeam()
-			
-			
-			if ( teamOfCurrentPlayer == TEAM_SPECTATOR || teamOfCurrentPlayer == TEAM_UNASSIGNED )
-				continue
-
-			int eHandle = teamPlayer.GetEncodedEHandle()
-			if ( !EHIHasValidScriptStruct( eHandle ) )
-				continue
-
-			string playerName = GetPlayerNameUnlessAnonymized( eHandle )
-
-			if ( !LoadoutSlot_IsReady( eHandle, loadoutSlotCharacter ) )
-				continue
-
-			ItemFlavor character = LoadoutSlot_GetItemFlavor( eHandle, loadoutSlotCharacter )
-
-			if ( !LoadoutSlot_IsReady( eHandle, Loadout_CharacterSkin( character ) ) )
-				continue
-
-			ItemFlavor characterSkin = LoadoutSlot_GetItemFlavor( eHandle, Loadout_CharacterSkin( character ) )
-
-			if ( !uniqueTeamNumbers.contains( teamOfCurrentPlayer ) )
-				uniqueTeamNumbers.append( teamOfCurrentPlayer )
-
-			teamIndex = uniqueTeamNumbers.find( teamOfCurrentPlayer )
-
-			
-			for ( int index = 0; index < squadSize; ++index)
-			{
-				squadFormationIndex = index + teamIndex * squadSize
-				if ( squadFormationIndex < isFilledPodiumSpotsArray.len() && !isFilledPodiumSpotsArray[squadFormationIndex])
-				{
-					isFilledPodiumSpotsArray[squadFormationIndex] = true
-					break
-				}
 			}
-			vector pos = GetVictorySquadFormationPosition( file.victorySequencePosition, file.victorySequenceAngles, squadFormationIndex )
+		}
+		vector pos = GetVictorySquadFormationPosition( file.victorySequencePosition, file.victorySequenceAngles, squadFormationIndex )
 
-			
-			entity characterNode = CreateScriptRef( pos, characterAngles )
-			characterNode.SetParent( platformModel, "", true )
-			entity characterModel = CreateClientSidePropDynamic( pos, characterAngles, defaultModel )
-			SetForceDrawWhileParented( characterModel, true )
-			characterModel.MakeSafeForUIScriptHack()
-			CharacterSkin_Apply( characterModel, characterSkin )
-			cleanupEnts.append( characterModel )
-			file.eHandleToIntroPodiumCharacterModelTable[ eHandle ] <- characterModel
+		
+		entity characterNode = CreateScriptRef( pos, characterAngles )
+		characterNode.SetParent( platformModel, "", true )
+		entity characterModel = CreateClientSidePropDynamic( pos, characterAngles, defaultModel )
+		SetForceDrawWhileParented( characterModel, true )
+		characterModel.MakeSafeForUIScriptHack()
+		CharacterSkin_Apply( characterModel, characterSkin )
+		cleanupEnts.append( characterModel )
+		file.eHandleToIntroPodiumCharacterModelTable[ eHandle ] <- characterModel
 
 #if DEV
-				if ( GetBugReproNum() == 1111 )
-				{
-					var topo = CreateRUITopology_Worldspace( OffsetPointRelativeToVector( pos, < 0, -50, 0 >, characterModel.GetForwardVector() ), characterAngles + <0, 180, 0>, 1000, 500 )
-					var rui  = RuiCreate( $"ui/dev_blue_screen.rpak", topo, RUI_DRAW_WORLD, 1000 )
+			if ( GetBugReproNum() == 1111 )
+			{
+				var topo = CreateRUITopology_Worldspace( OffsetPointRelativeToVector( pos, < 0, -50, 0 >, characterModel.GetForwardVector() ), characterAngles + <0, 180, 0>, 1000, 500 )
+				var rui  = RuiCreate( $"ui/dev_blue_screen.rpak", topo, RUI_DRAW_WORLD, 1000 )
+				characterModel.Hide()
+			}
+			else if ( GetBugReproNum() == 2222 )
+			{
+				if ( i == 0 )
 					characterModel.Hide()
-				}
-				else if ( GetBugReproNum() == 2222 )
-				{
-					if ( i == 0 )
-						characterModel.Hide()
-				}
+			}
 #endif
 
+		
+		foreach ( func in s_callbacks_OnIntroPodiumCharacterModelSpawned )
+			func( characterModel, character, eHandle)
+
+		
+		characterModel.SetParent( characterNode, "", false )
+		string victoryAnim = GetVictorySquadFormationActivity( characterModel, eHandle )
+		characterModel.SetupForSequenceTransitions()
+		characterModel.Anim_Play( victoryAnim )
+		characterModel.Anim_EnableUseAnimatedRefAttachmentInsteadOfRootMotion()
+
+		bool halloweenMode = false
+
+
+
+
+
+
+
+		if ( halloweenMode )
+		{
 			
-			foreach ( func in s_callbacks_OnIntroPodiumCharacterModelSpawned )
-				func( characterModel, character, eHandle)
-
-			
-			characterModel.SetParent( characterNode, "", false )
-			string victoryAnim = GetVictorySquadFormationActivity( characterModel, eHandle )
-			characterModel.SetupForSequenceTransitions()
-			characterModel.Anim_Play( victoryAnim )
-			characterModel.Anim_EnableUseAnimatedRefAttachmentInsteadOfRootMotion()
-
-			if ( IsFallLTM() || IsShadowRoyaleMode() )
-			{
-				
-				float duration    = characterModel.GetSequenceDuration( victoryAnim )
-				float initialTime = RandomFloatRange( 0, duration )
-				characterModel.Anim_SetInitialTime( initialTime )
-			}
-
-
+			float duration    = characterModel.GetSequenceDuration( victoryAnim )
+			float initialTime = RandomFloatRange( 0, duration )
+			characterModel.Anim_SetInitialTime( initialTime )
+		}
 
 #if DEV
-				if ( GetBugReproNum() == 1111 || GetBugReproNum() == 2222 )
-				{
-					playersOnPodium++
-					continue
-				}
+			if ( GetBugReproNum() == 1111 || GetBugReproNum() == 2222 )
+			{
+				playersOnPodium++
+				continue
+			}
 #endif
 
-			
-			bool createOverheadRui = true
+		
+		bool createOverheadRui = true
 
 
 
@@ -4196,23 +4394,36 @@ void function ShowMatchStartSequence( int teamOrAlliance, float camera_move_dura
 
 
 
-			
+		
 
-			if ( createOverheadRui )
+		if ( createOverheadRui )
+		{
+			int offset = 78
+
+
+				if ( BigTDM_IsModeEnabled() )
+				{
+					if ( offsetArray.len() > squadFormationIndex )
+					{
+						offset = offsetArray[squadFormationIndex]
+					}
+				}
+
+
+
+
+
+
+
+			entity overheadEnt = CreateClientSidePropDynamic( pos + (AnglesToUp( file.victorySequenceAngles ) * offset), <0, 0, 0>, $"mdl/dev/empty_model.rmdl" )
+			overheadEnt.Hide()
+			var overheadRui = RuiCreate( $"ui/winning_squad_member_overhead_name.rpak", clGlobal.topoFullScreen, RUI_DRAW_HUD, 0 )
+			RuiSetString( overheadRui, "playerName", playerName )
+			RuiTrackFloat3( overheadRui, "position", overheadEnt, RUI_TRACK_ABSORIGIN_FOLLOW )
+			overHeadRuis.append( overheadRui )
+
+			if ( !isSurvivalUsingPodium || isChampionTeam )
 			{
-				int offset = 78
-
-
-
-
-
-				entity overheadEnt = CreateClientSidePropDynamic( pos + (AnglesToUp( file.victorySequenceAngles ) * offset), <0, 0, 0>, $"mdl/dev/empty_model.rmdl" )
-				overheadEnt.Hide()
-				var overheadRui = RuiCreate( $"ui/winning_squad_member_overhead_name.rpak", clGlobal.topoFullScreen, RUI_DRAW_HUD, 0 )
-				RuiSetString( overheadRui, "playerName", playerName )
-				RuiTrackFloat3( overheadRui, "position", overheadEnt, RUI_TRACK_ABSORIGIN_FOLLOW )
-				overHeadRuis.append( overheadRui )
-
 				if ( teamPlayer == mvp )
 				{
 					var overheadMVPRui = RuiCreate( $"ui/mvp_banner_podium_screen.rpak", clGlobal.topoFullScreen, RUI_DRAW_HUD, 0 )
@@ -4221,97 +4432,97 @@ void function ShowMatchStartSequence( int teamOrAlliance, float camera_move_dura
 					overHeadRuis.append( overheadMVPRui )
 				}
 			}
-
-			playersOnPodium++
 		}
 
-		
-		VictoryCameraPackage victoryCameraPackage = GetVictoryCameraPackage()
+		playersOnPodium++
+	}
 
-		vector camera_offset_start = victoryCameraPackage.camera_offset_start
-		vector camera_offset_end   = victoryCameraPackage.camera_offset_end
-		vector camera_focus_offset = victoryCameraPackage.camera_focus_offset
-		float camera_fov           = victoryCameraPackage.camera_fov
+	
+	VictoryCameraPackage victoryCameraPackage = GetVictoryCameraPackage()
 
-		vector camera_start_pos = OffsetPointRelativeToVector( file.victorySequencePosition, camera_offset_start, AnglesToForward( file.victorySequenceAngles ) )
-		vector camera_end_pos   = OffsetPointRelativeToVector( file.victorySequencePosition, camera_offset_end, AnglesToForward( file.victorySequenceAngles ) )
-		vector camera_focus_pos = OffsetPointRelativeToVector( file.victorySequencePosition, camera_focus_offset, AnglesToForward( file.victorySequenceAngles ) )
+	vector camera_offset_start = victoryCameraPackage.camera_offset_start
+	vector camera_offset_end   = victoryCameraPackage.camera_offset_end
+	vector camera_focus_offset = victoryCameraPackage.camera_focus_offset
+	float camera_fov           = victoryCameraPackage.camera_fov
 
-		vector camera_start_angles = VectorToAngles( camera_focus_pos - camera_start_pos )
-		vector camera_end_angles   = VectorToAngles( camera_focus_pos - camera_end_pos )
+	vector camera_start_pos = OffsetPointRelativeToVector( file.victorySequencePosition, camera_offset_start, AnglesToForward( file.victorySequenceAngles ) )
+	vector camera_end_pos   = OffsetPointRelativeToVector( file.victorySequencePosition, camera_offset_end, AnglesToForward( file.victorySequenceAngles ) )
+	vector camera_focus_pos = OffsetPointRelativeToVector( file.victorySequencePosition, camera_focus_offset, AnglesToForward( file.victorySequenceAngles ) )
 
-		entity cameraMover = CreateClientsideScriptMover( $"mdl/dev/empty_model.rmdl", camera_start_pos, camera_start_angles )
-		entity camera      = CreateClientSidePointCamera( camera_start_pos, camera_start_angles, camera_fov )
-		player.SetMenuCameraEntity( camera )
-		camera.SetTargetFOV( camera_fov, true, EASING_CUBIC_INOUT, 0.0 )
-		camera.SetParent( cameraMover, "", false )
-		cleanupEnts.append( camera )
+	vector camera_start_angles = VectorToAngles( camera_focus_pos - camera_start_pos )
+	vector camera_end_angles   = VectorToAngles( camera_focus_pos - camera_end_pos )
 
-		
-		GetLightEnvironmentEntity().ScaleSunSkyIntensity( file.victorySunIntensity, file.victorySkyIntensity )
+	entity cameraMover = CreateClientsideScriptMover( $"mdl/dev/empty_model.rmdl", camera_start_pos, camera_start_angles )
+	entity camera      = CreateClientSidePointCamera( camera_start_pos, camera_start_angles, camera_fov )
+	player.SetMenuCameraEntity( camera )
+	camera.SetTargetFOV( camera_fov, true, EASING_CUBIC_INOUT, 0.0 )
+	camera.SetParent( cameraMover, "", false )
+	cleanupEnts.append( camera )
 
-		
-		
-		cameraMover.NonPhysicsMoveTo( camera_end_pos, camera_move_duration, 0.0, camera_move_duration / 2.0 )
-		cameraMover.NonPhysicsRotateTo( camera_end_angles, camera_move_duration, 0.0, camera_move_duration / 2.0 )
-		cleanupEnts.append( cameraMover )
+	
+	GetLightEnvironmentEntity().ScaleSunSkyIntensity( file.victorySunIntensity, file.victorySkyIntensity )
 
-		wait camera_move_duration 
+	
+	
+	cameraMover.NonPhysicsMoveTo( camera_end_pos, camera_move_duration, 0.0, camera_move_duration / 2.0 )
+	cameraMover.NonPhysicsRotateTo( camera_end_angles, camera_move_duration, 0.0, camera_move_duration / 2.0 )
+	cleanupEnts.append( cameraMover )
+
+	wait camera_move_duration 
 
 #if DEV
-			if ( placementMode )
+		if ( placementMode )
+		{
+			if ( IsValid( platformModel ) )
+				platformModel.SetParent( cameraMover, "", true )
+
+			while( true )
 			{
-				if ( IsValid( platformModel ) )
-					platformModel.SetParent( cameraMover, "", true )
+				vector pos        = cameraMover.GetOrigin()
+				vector ang        = cameraMover.GetAngles()
+				vector flatAngles = FlattenAngles( ang )
 
-				while( true )
+				vector forward = AnglesToForward( flatAngles )
+				vector right   = AnglesToRight( flatAngles )
+				vector up      = <0, 0, 1>
+
+
+				float LTrig = InputGetAxis( ANALOG_L_TRIGGER ) * InputGetAxis( ANALOG_L_TRIGGER )
+				float RTrig = InputGetAxis( ANALOG_R_TRIGGER ) * InputGetAxis( ANALOG_R_TRIGGER )
+
+				float moveSpeed = 800.0 + (LTrig * 5000.0)
+				moveSpeed *= max( 1.0 - RTrig, 0.0005 )
+
+				float rotateSpeed = 2.0 + (LTrig * 10.0)
+				rotateSpeed *= max( 1.0 - RTrig, 0.0005 )
+
+				float XStick = fabs( InputGetAxis( ANALOG_LEFT_X ) ) * InputGetAxis( ANALOG_LEFT_X )
+				float YStick = fabs( InputGetAxis( ANALOG_LEFT_Y ) ) * InputGetAxis( ANALOG_LEFT_Y )
+
+				if ( InputGetAxis( ANALOG_LEFT_Y ) > 0.15 || InputGetAxis( ANALOG_LEFT_Y ) < -0.15 )
+					pos += forward * YStick * -moveSpeed
+				if ( InputGetAxis( ANALOG_LEFT_X ) > 0.15 || InputGetAxis( ANALOG_LEFT_X ) < -0.15 )
+					pos += right * XStick * moveSpeed
+				if ( InputIsButtonDown( BUTTON_STICK_LEFT ) )
+					pos += up * moveSpeed * 0.1
+				if ( InputIsButtonDown( BUTTON_STICK_RIGHT ) )
+					pos -= up * moveSpeed * 0.1
+
+				if ( InputGetAxis( ANALOG_RIGHT_X ) > 0.15 || InputGetAxis( ANALOG_RIGHT_X ) < -0.15 )
 				{
-					vector pos        = cameraMover.GetOrigin()
-					vector ang        = cameraMover.GetAngles()
-					vector flatAngles = FlattenAngles( ang )
-
-					vector forward = AnglesToForward( flatAngles )
-					vector right   = AnglesToRight( flatAngles )
-					vector up      = <0, 0, 1>
-
-
-					float LTrig = InputGetAxis( ANALOG_L_TRIGGER ) * InputGetAxis( ANALOG_L_TRIGGER )
-					float RTrig = InputGetAxis( ANALOG_R_TRIGGER ) * InputGetAxis( ANALOG_R_TRIGGER )
-
-					float moveSpeed = 800.0 + (LTrig * 5000.0)
-					moveSpeed *= max( 1.0 - RTrig, 0.0005 )
-
-					float rotateSpeed = 2.0 + (LTrig * 10.0)
-					rotateSpeed *= max( 1.0 - RTrig, 0.0005 )
-
-					float XStick = fabs( InputGetAxis( ANALOG_LEFT_X ) ) * InputGetAxis( ANALOG_LEFT_X )
-					float YStick = fabs( InputGetAxis( ANALOG_LEFT_Y ) ) * InputGetAxis( ANALOG_LEFT_Y )
-
-					if ( InputGetAxis( ANALOG_LEFT_Y ) > 0.15 || InputGetAxis( ANALOG_LEFT_Y ) < -0.15 )
-						pos += forward * YStick * -moveSpeed
-					if ( InputGetAxis( ANALOG_LEFT_X ) > 0.15 || InputGetAxis( ANALOG_LEFT_X ) < -0.15 )
-						pos += right * XStick * moveSpeed
-					if ( InputIsButtonDown( BUTTON_STICK_LEFT ) )
-						pos += up * moveSpeed * 0.1
-					if ( InputIsButtonDown( BUTTON_STICK_RIGHT ) )
-						pos -= up * moveSpeed * 0.1
-
-					if ( InputGetAxis( ANALOG_RIGHT_X ) > 0.15 || InputGetAxis( ANALOG_RIGHT_X ) < -0.15 )
-					{
-						float yaw = ang.y + (InputGetAxis( ANALOG_RIGHT_X ) * -rotateSpeed)
-						ang = ClampAngles( < ang.x, yaw, ang.z > )
-					}
-
-					cameraMover.NonPhysicsMoveTo( pos, 0.1, 0.0, 0.0 )
-					cameraMover.NonPhysicsRotateTo( ang, 0.1, 0.0, 0.0 )
-
-					printt( "SetVictorySequenceLocation(" + (platformModel.GetOrigin() - victoryPlatformModelData.originOffset) + ", " + ClampAngles( < 0, camera.GetAngles().y + 180, 0 > ) + " )" )
-
-					WaitFrame()
+					float yaw = ang.y + (InputGetAxis( ANALOG_RIGHT_X ) * -rotateSpeed)
+					ang = ClampAngles( < ang.x, yaw, ang.z > )
 				}
+
+				cameraMover.NonPhysicsMoveTo( pos, 0.1, 0.0, 0.0 )
+				cameraMover.NonPhysicsRotateTo( ang, 0.1, 0.0, 0.0 )
+
+				printt( "SetVictorySequenceLocation(" + (platformModel.GetOrigin() - victoryPlatformModelData.originOffset) + ", " + ClampAngles( < 0, camera.GetAngles().y + 180, 0 > ) + " )" )
+
+				WaitFrame()
 			}
+		}
 #endif
-	}
 }
 
 void function ShowVictorySequence( bool placementMode = false, bool isDevTest = false )
@@ -4535,18 +4746,38 @@ void function ShowVictorySequence( bool placementMode = false, bool isDevTest = 
 			characterModel.SetParent( characterNode, "", false )
 			string victoryAnim = GetVictorySquadFormationActivity( characterModel, data.eHandle )
 			characterModel.SetupForSequenceTransitions()
+
+
+			if ( NewPlayerBotQueueAreEnabled() )
+			{
+				ItemFlavor characterClass = LoadoutSlot_GetItemFlavor( data.eHandle, loadoutSlotCharacter )
+				array<ItemFlavor> emotesList = RegisterReferencedItemFlavorsFromArray( characterClass, "emotes", "flavor" )
+				entity teamPlayer = GetEntityFromEncodedEHandle( data.eHandle )
+				if ( IsValid( teamPlayer ) && teamPlayer.IsBot() )
+				{
+					string anim3p = CharacterQuip_GetAnim3p( emotesList.getrandom(), characterClass )
+					victoryAnim = anim3p
+				}
+			}
+
+
 			characterModel.Anim_Play( victoryAnim )
 			characterModel.Anim_EnableUseAnimatedRefAttachmentInsteadOfRootMotion()
 
-			if ( IsFallLTM() || IsShadowRoyaleMode() )
+			bool halloweenMode = false
+
+
+
+
+
+
+			if ( halloweenMode )
 			{
 				
 				float duration    = characterModel.GetSequenceDuration( victoryAnim )
 				float initialTime = RandomFloatRange( 0, duration )
 				characterModel.Anim_SetInitialTime( initialTime )
 			}
-
-
 
 #if DEV
 				if ( GetBugReproNum() == 1111 || GetBugReproNum() == 2222 )
@@ -4580,12 +4811,10 @@ void function ShowVictorySequence( bool placementMode = false, bool isDevTest = 
 				overHeadRuis.append( overheadRui )
 			}
 
-
 			if ( WillCelebrateNEEVictory() )
 			{
 				DoNEECelebration_Thread( pos, characterAngles )
 			}
-
 
 			playersOnPodium++
 		}
@@ -4727,8 +4956,8 @@ void function ShowVictorySequence( bool placementMode = false, bool isDevTest = 
 			}
 
 			SetSquadDataToLocalTeam()
-
 			ShowDeathScreen( initialTab )
+			HandleRankAndCupSummaryTab()
 			EnableDeathScreenTab( eDeathScreenPanel.SPECTATE, false )
 			EnableDeathScreenTab( eDeathScreenPanel.DEATH_RECAP, !IsAlive( player ) )
 			SwitchDeathScreenTab( eDeathScreenPanel.SQUAD_SUMMARY )
@@ -4737,6 +4966,7 @@ void function ShowVictorySequence( bool placementMode = false, bool isDevTest = 
 		{
 			SetSquadDataToLocalTeam()
 			ShowDeathScreen( initialTab )
+			HandleRankAndCupSummaryTab()
 			EnableDeathScreenTab( eDeathScreenPanel.SPECTATE, false )
 			EnableDeathScreenTab( eDeathScreenPanel.DEATH_RECAP, true )
 			SwitchDeathScreenTab( eDeathScreenPanel.SQUAD_SUMMARY )
@@ -4765,9 +4995,21 @@ void function ShowVictorySequence( bool placementMode = false, bool isDevTest = 
 			if ( effectData.summaryAudioEventName != "" )
 				EmitSoundOnEntity( player, effectData.summaryAudioEventName )
 
-
 	Signal( player, "PodiumVictoryFinished" )
+}
 
+void function HandleRankAndCupSummaryTab()
+{
+	bool showRankedSummary = Ranked_ShowRankedSummary()
+	bool showCupSummary = Cups_ShowCupSummary()
+	if ( showRankedSummary && !showCupSummary )
+	{
+		EnableDeathScreenTab( eDeathScreenPanel.RANK, true )
+	}
+	else if ( showCupSummary && Cups_IsCupForLatestMatchActive( GetLocalClientPlayer() ) )
+	{
+		EnableDeathScreenTab( eDeathScreenPanel.CUP, true )
+	}
 }
 
 entity function GetPodiumScreenCharacterModelForEHI( int playerEHI )
@@ -4889,14 +5131,14 @@ VictoryCameraPackage function GetVictoryCameraPackage()
 	else
 	{
 
-
-
-
-
-
-
-
-
+			if( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_QUADS ) )
+			{
+				victoryCameraPackage.camera_offset_start = <0, 380, 80>
+				victoryCameraPackage.camera_offset_end = <0, 300, 65>
+				victoryCameraPackage.camera_focus_offset = <0, 0, 36>
+				victoryCameraPackage.camera_fov = 35.5
+			}
+			else
 
 			{
 				
@@ -4920,7 +5162,7 @@ vector function GetVictorySquadFormationPosition( vector mainPosition, vector an
 	if ( index == 0 && !isLargeTeam )
 	{
 
-
+		if ( !GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_QUADS ) )
 
 		{
 			return mainPosition - <0, 0, 8>
@@ -4985,7 +5227,7 @@ vector function GetVictorySquadFormationPosition( vector mainPosition, vector an
 	}
 
 
-		if ( Control_IsModeEnabled() )
+		if ( GameMode_IsActive( eGameModes.CONTROL ) )
 		{
 			int groupOffsetIndex = index / 3
 			int internalGroupOffsetIndex = index % 3
@@ -5007,14 +5249,14 @@ vector function GetVictorySquadFormationPosition( vector mainPosition, vector an
 
 
 
-
-
-
-
-
-
-
-
+	if ( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_QUADS ) )
+	{
+		if ( index >= 0 && index < GetExpectedSquadSize() )
+		{
+			vector quadsPodiumOffsetPoint = file.quadsPodiumPositions[index]
+			return OffsetPointRelativeToVector( mainPosition, quadsPodiumOffsetPoint, AnglesToForward( angles ) )
+		}
+	}
 
 
 	int countBack = (index + 1) / 2
@@ -5032,28 +5274,28 @@ string function GetVictorySquadFormationActivity( entity characterModel, int eHa
 {
 
 
-			entity playerEnt = GetEntityFromEncodedEHandle( eHandle )
-			bool shouldGetShadowAnim = false
 
 
 
 
 
 
-				shouldGetShadowAnim = IsShadowRoyaleMode() && IsPlayerShadowZombie( playerEnt )
 
 
-			if ( shouldGetShadowAnim )
-			{
-				bool animExists = characterModel.LookupSequence( "ACT_VICTORY_DANCE" ) != -1
-				if ( animExists )
-					return "ACT_VICTORY_DANCE"
-				else
-				{
-					Assert( characterModel.LookupSequence( "ACT_MP_MENU_LOBBY_SELECT_IDLE" ) != -1, "Unable to find victory idle for " + characterModel )
-					return "ACT_MP_MENU_LOBBY_SELECT_IDLE"
-				}
-			}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5098,12 +5340,15 @@ void function HealthkitButton_Down( entity player )
 
 
 
-	if ( !IsFiringRangeGameMode() )
+
+
+	if ( !GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_FIRING_RANGE ) )
 	{
 		int ms = PlayerMatchState_GetFor( player )
 		if ( ms < ePlayerMatchState.NORMAL )
 			return
 	}
+
 
 	if ( player.ContextAction_IsInVehicle() )
 			return
@@ -5218,7 +5463,16 @@ void function GadgetSlot_Down( entity player )
 
 	string equipRef = EquipmentSlot_GetLootRefForSlot( player, "gadgetslot" )
 	if ( equipRef == "" )
+	{
+
+
+
+
+
+
+
 		return
+	}
 	else
 	{
 		if( SURVIVAL_Loot_GetLootDataByRef( equipRef ).lootType == eLootType.GADGET )
@@ -5292,6 +5546,8 @@ void function OnPlayerConnectionStateChanged( entity player )
 	}
 }
 
+
+
 void function OnPlayerMatchStateChanged( entity player, int newState )
 {
 	switch ( newState )
@@ -5304,6 +5560,7 @@ void function OnPlayerMatchStateChanged( entity player, int newState )
 		case ePlayerMatchState.NORMAL:
 		case ePlayerMatchState.STAGING_AREA:
 			Minimap_SetSizeScale( 1.0 )
+			PrePopulateGladiatorCardCache_ReducePriority() 
 			break
 	}
 
@@ -5317,13 +5574,13 @@ void function UICallback_OpenCharacterSelectMenu()
 	if ( IsAlive( player ) && player.ContextAction_IsMeleeExecution() )
 		return
 
-	if( IsFiringRangeGameMode() && !FiringRange_IsCharacterSwitchingEnabled() )
+	if( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_FIRING_RANGE ) && !FiringRange_IsCharacterSwitchingEnabled() )
 		return
 
 	if( !CharacterSelect_Menu_ShouldOpen( player ) )
 		return
 
-	if ((( GetGameState() < eGameState.PickLoadout && !IsSurvivalTraining()) || IsCharacterReselectEnabled() ) &&
+	if ((( GetGameState() < eGameState.PickLoadout && !GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_TRAINING )) || IsCharacterReselectEnabled() ) &&
 		   !player.ContextAction_IsMeleeExecution())
 	{
 		OpenCharacterSelectMenu( true, IsCharacterReselectEnabled() )
@@ -5338,7 +5595,7 @@ void function UICallback_QueryPlayerCanBeRespawned()
 
 	int penaltyLength = 0
 	bool penaltyMayBeActive
-	if ( IsRankedGame() )
+	if ( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_RANKED ) )
 	{
 		penaltyMayBeActive = Ranked_IsPlayerAbandoning( player ) 
 		penaltyLength = SharedRanked_GetAbandonPenaltyLength( player )
@@ -5392,7 +5649,7 @@ void function UICallback_DieAndChangeCharacters()
 	entity player = GetLocalClientPlayer()
 
 
-		if ( Control_IsModeEnabled() )
+		if ( GameMode_IsActive( eGameModes.CONTROL ) )
 		{
 			
 			if ( player.GetPlayerNetBool( "control_IsPlayerOnSpawnSelectScreen" )  )
@@ -5494,7 +5751,7 @@ void function ServerCallback_PromptSayThanks( entity playerBeingAddressed )
 {
 
 		
-		if ( Valentines_S15_ILoveYouEasterEggEnabled() )
+		if ( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_VALENTINES_S15 ) && Valentines_S15_ILoveYouEasterEggEnabled() )
 		{
 			if ( !ShouldMuteCommsActionForCooldown( GetLocalViewPlayer(), eCommsAction.REPLY_LOVE_YOU, null ) )
 				AddOnscreenPromptFunction( "quickchat", CreateQuickchatFunction( eCommsAction.REPLY_LOVE_YOU, playerBeingAddressed ), 6.0, Localize( "#PING_SAY_LOVE_YOU", playerBeingAddressed.GetPlayerName() ) )
@@ -5512,7 +5769,7 @@ void function ServerCallback_PromptSayThanksRevive( entity playerBeingAddressed 
 {
 
 		
-		if ( Valentines_S15_ILoveYouEasterEggEnabled() )
+		if ( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_VALENTINES_S15 ) && Valentines_S15_ILoveYouEasterEggEnabled() )
 		{
 			if ( !ShouldMuteCommsActionForCooldown( GetLocalViewPlayer(), eCommsAction.REPLY_LOVE_YOU, null ) )
 				AddOnscreenPromptFunction( "quickchat", CreateQuickchatFunction( eCommsAction.REPLY_LOVE_YOU, playerBeingAddressed ), 6.0, Localize( "#PING_SAY_LOVE_YOU", playerBeingAddressed.GetPlayerName() ) )
@@ -5574,7 +5831,7 @@ bool function CanReportPlayer( entity target )
 
 		case 1: 
 			
-			return CrossplayUserOptIn() ? true : target.GetUnspoofedHardware() == GetLocalClientPlayer().GetUnspoofedHardware()
+			return CrossplayUserOptIn() ? true : target.GetHardwareName() == GetLocalClientPlayer().GetHardwareName()
 		case 2: 
 			break
 
@@ -5962,4 +6219,243 @@ string function Cl_GetPlaylistUIRules()
 {
 	string playlist = GetCurrentPlaylistName()
 	return GetPlaylistVarString( playlist, "ui_rules", "" )
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+bool function UseDynamicSquadTag()
+{
+	return GetCurrentPlaylistVarBool( SURVIVAL_HUD_SQUADTAG_PVAR, false )
+}
+
+bool function SquadTag_UseTeamColor()
+{
+	return GetCurrentPlaylistVarBool( SURVIVAL_HUD_SQUADTAG_USETEAMCOLOR_PVAR, false )
+}
+
+bool function SquadTag_ShowTeamIcon()
+{
+	return GetCurrentPlaylistVarBool( SURVIVAL_HUD_SQUADTAG_SHOWTEAMICON_PVAR, false )
+}
+
+var function SquadTag_GetOrCreateRui()
+{
+	if ( file.dynamicSquadTagRui == null || !RuiIsAlive( file.dynamicSquadTagRui ) )
+	{
+		file.dynamicSquadTagRui = CreatePermanentCockpitPostFXRui( SURVIVAL_HUD_SQUADTAG, HUD_Z_BASE )
+	}
+
+	return file.dynamicSquadTagRui
+}
+
+void function SquadTag_Destroy()
+{
+	if ( file.dynamicSquadTagRui != null )
+		RuiDestroyIfAlive( file.dynamicSquadTagRui )
+
+	file.dynamicSquadTagRui = null
+}
+
+void function SquadTag_SetVisibility( bool isVisible )
+{
+	var squadTagRui = SquadTag_GetOrCreateRui()
+	RuiSetBool( squadTagRui, "isVisible", isVisible )
+}
+
+void function SquadTag_SetRuiArgs()
+{
+	entity player
+	string teamName
+	asset teamIcon
+	bool isUsingAlliances = AllianceProximity_IsUsingAlliances()
+	bool show = false
+
+	if( IsPrivateMatch() )
+	{
+		entity clientPlayer = GetLocalClientPlayer()
+		entity currentObserverTarget = clientPlayer.GetObserverTarget()
+
+		if ( clientPlayer.GetTeam() != TEAM_SPECTATOR )
+			return
+
+		if ( !IsValid( currentObserverTarget ) || currentObserverTarget.GetTeam() == TEAM_SPECTATOR )
+			return
+
+		teamName = PrivateMatch_GetTeamName( currentObserverTarget.GetTeam() )
+		player = currentObserverTarget
+		show = true
+	}
+	else
+	{
+		player = GetLocalViewPlayer()
+		int team
+
+		if ( isUsingAlliances )
+			team = AllianceProximity_GetAllianceFromTeam( player.GetTeam() )
+		else
+			team = player.GetTeam() - TEAM_IMC
+
+		if ( !IsValid( player ) || player.GetTeam() == TEAM_SPECTATOR )
+			return
+
+		teamIcon = Teams_GetTeamIcon( team )
+		teamName = Teams_GetTeamName( team )
+		show = UseDynamicSquadTag()
+	}
+
+	var squadTagRui = SquadTag_GetOrCreateRui()
+
+	if( show )
+	{
+		RuiSetString( squadTagRui, "teamNameString", teamName )
+		RuiSetImage( squadTagRui, "teamNameIcon", teamIcon )
+		RuiSetBool( squadTagRui, "shouldShowTeamName", true )
+		RuiSetBool( squadTagRui, "shouldShowTeamIcon", SquadTag_ShowTeamIcon() )
+		RuiSetBool( squadTagRui, "gamestateIsPlaying", GamePlaying() )
+
+		if( !SquadTag_UseTeamColor() )
+			RuiSetColorAlpha( squadTagRui, "teamColor", <244,244,244>/255, 1.0 )
+		else
+			RuiSetColorAlpha( squadTagRui, "teamColor", Teams_GetTeamColor( player.GetTeam() ), 1.0 )
+
+		
+		float verticalOffset = LOCALCLIENT_UNITFRAME_VERTICAL_OFFSET 
+
+
+
+
+
+
+
+		
+		float unitframeSlotSize = UNITFRAME_SIZE.y + UNITFRAME_SPACING
+#if PC_PROG_NX_UI
+		unitframeSlotSize = UNITFRAME_SIZE_NX.y + UNITFRAME_SPACING
+#endif
+
+		int teamId = player.GetTeam()
+		array<entity> teamPlayers = GetPlayerArrayOfTeam( teamId )
+		verticalOffset -= ( unitframeSlotSize * ( teamPlayers.len() - 1 ) )
+
+		RuiSetFloat( squadTagRui, "verticalOffset", verticalOffset )
+		SquadTag_SetVisibility( true )
+	}
+	else
+	{
+		RuiSetBool( squadTagRui, "shouldShowTeamName", false )
+		SquadTag_SetVisibility( false )
+	}
 }

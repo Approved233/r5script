@@ -484,7 +484,7 @@ void function LoadoutSelectionMenu_CloseLoadoutMenu()
 		Remote_ServerCallFunction( "ClientCallback_LoadoutSelection_OnLoadoutSelectMenuClose" )
 
 
-			if ( CanRunClientScript() && Control_IsModeEnabled() )
+			if ( CanRunClientScript() && GameMode_IsActive( eGameModes.CONTROL ) )
 				RunClientScript( "UICallback_Control_Loadouts_OnClosed" )
 
 	}

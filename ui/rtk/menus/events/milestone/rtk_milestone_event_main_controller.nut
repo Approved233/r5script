@@ -50,6 +50,7 @@ global struct RTKMilestoneEventPanelModel
 	vector trackerProgressBarColor
 	vector trackerProgressBarBGColor
 	bool eventShopHasMilestonePack
+	bool hasGuaranteedPack
 }
 
 global struct RTKMilestoneCarouselPanelInfo
@@ -223,7 +224,7 @@ void function SetUpButtons( rtk_behavior self )
 		{
 			return
 		}
-		OpenMilestonePackInfoDialog( null, file.activeEvent )
+		OpenMilestonePackInfoDialog()
 	} )
 }
 
@@ -332,7 +333,7 @@ void function BuildPurchaseButtonDataModel( rtk_struct trackingPanelModel )
 	giftButtonModel.state = GetEventGiftButtonState( singlePurchaseOffers )
 
 	
-	if ( file.willTriggerMilestonePackOpen || file.isAutoOpeningMilestonePacks )
+	if ( file.willTriggerMilestonePackOpen || file.isAutoOpeningMilestonePacks || GRX_AreOffersDirty() )
 		giftButtonModel.state = eEventGiftingButtonState.UNAVAILABLE
 
 	rtk_struct giftButtonData = RTKStruct_GetOrCreateScriptStruct( trackingPanelModel, "giftButtonData", "RTKMilestoneGiftButtonData" )
@@ -342,7 +343,7 @@ void function BuildPurchaseButtonDataModel( rtk_struct trackingPanelModel )
 	purchaseButtonModel.state = GetEventPurchaseButtonState( singlePurchaseOffers )
 
 	
-	if ( file.willTriggerMilestonePackOpen || file.isAutoOpeningMilestonePacks )
+	if ( file.willTriggerMilestonePackOpen || file.isAutoOpeningMilestonePacks || GRX_AreOffersDirty() )
 		purchaseButtonModel.state = eEventPackPurchaseButtonState.UNAVAILABLE
 
 	rtk_struct purchaseButtonData = RTKStruct_GetOrCreateScriptStruct( trackingPanelModel, "purchaseButtonData", "RTKMilestonePurchaseButtonData" )
@@ -443,7 +444,7 @@ void function BuildMilestoneRewardsItemsInfo( rtk_struct trackingPanelModel )
 void function AutoAdvanceFeaturedItems_Tracking()
 {
 	EndSignal( uiGlobal.signalDummy, "EndAutoAdvanceFeaturedItems" )
-	if ( !GRX_IsInventoryReady() || !GRX_AreOffersReady() )
+	if ( !GRX_IsInventoryReady() || !GRX_AreOffersReady( false ) )
 		return
 
 	BuildMilestoneCarouselInfo( file.trackingModel, file.featuredItems[file.currentCarouselItemIndex] )
@@ -518,7 +519,11 @@ void function BuildMilestoneCarouselInfo( rtk_struct milestoneEventModel, ItemFl
 		RTKStruct_SetValue( carouselInfo, itemInfo )
 		if ( IsValidItemFlavorGUID( ItemFlavor_GetGUID( item ) ) )
 		{
-			RunClientScript( "UIToClient_ItemPresentation", ItemFlavor_GetGUID( item ) , -1, 1.19, Battlepass_ShouldShowLow( item ), null, true, "collection_event_ref", false, true, false, false )
+			bool isNxHH = false
+#if PC_PROG_NX_UI
+				isNxHH = IsNxHandheldMode()
+#endif
+			RunClientScript( "UIToClient_ItemPresentation", ItemFlavor_GetGUID( item ) , -1, 1.19, Battlepass_ShouldShowLow( item ), null, true, "collection_event_ref", isNxHH, true, false, false )
 		}
 	}
 }
@@ -564,7 +569,7 @@ void function TryOpenMilestoneRewardPack()
 	
 	
 	
-	if ( !GRX_IsInventoryReady() || !GRX_AreOffersReady() )
+	if ( !GRX_IsInventoryReady() )
 	{
 		return
 	}
@@ -604,7 +609,7 @@ void function ResetCarouselVars()
 
 void function OnGRXStateChanged()
 {
-	bool ready = GRX_IsInventoryReady() && GRX_AreOffersReady() && IsPersistenceAvailable()
+	bool ready = GRX_IsInventoryReady() && GRX_AreOffersReady( false ) && IsPersistenceAvailable()
 
 	if ( !ready )
 	{

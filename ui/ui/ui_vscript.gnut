@@ -356,6 +356,10 @@ void function UICodeCallback_UIInit()
 	DeathBoxListPanel_VMInit()
 	SurvivalGroundList_LevelInit()
 	ShLoadscreen_Init()
+
+
+
+
 }
 
 
@@ -463,3 +467,17 @@ void function RemoveUICallback_NXOperationModeChanged( void functionref() callba
 	uiGlobal.nxOperationModeChangedCallbacks.removebyvalue( callbackFunc )
 }
 #endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+      

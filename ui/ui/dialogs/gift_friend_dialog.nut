@@ -102,6 +102,14 @@ void function OpenGiftingDialog( GRXScriptOffer offer )
 	HudElem_SetRuiArg( file.dialogContent, "isBattlePass",  ItemFlavor_IsBattlepass( offer.output.flavors[0] ) )
 	HudElem_SetRuiArg( file.purchaseButton, "buttonText", Localize( "#BUY_GIFT" ) )
 
+	if ( !Escrow_IsPlayerTrusted() && HasEscrowBalance() )
+	{
+		HudElem_SetRuiArg( file.dialogContent, "giftHold", Localize( "#BUY_GIFT_HOLD" ) )
+	}
+	else
+	{
+		HudElem_SetRuiArg( file.dialogContent, "giftHold", "" )
+	}
 	string offerTitle = Localize( offer.titleText )
 
 	if ( offerTitle.len() == 0 )
@@ -288,7 +296,7 @@ void function Gifting_AlphabetizeFriends()
 
 void function GiftPurchase_OnActive( var button )
 {
-	if ( Hud_IsLocked( button ) || UI_OperationQueueHasGRXOperations() )
+	if ( Hud_IsLocked( button ) || GRX_QueuedOperationMayDirtyOffers() )
 	{
 		EmitUISound( "menu_deny" )
 		return
@@ -303,7 +311,7 @@ void function GiftPurchase_OnActive( var button )
 		return
 	}
 
-	if ( GRX_IsInventoryReady() && !GRX_CanAfford( offer.prices[0], 1 ) )
+	if ( GRX_IsInventoryReady() && !GRX_CanAfford( offer.prices[0], 1, !Escrow_IsPlayerTrusted() ) )
 	{
 		OpenVCPopUp( null )
 		return
@@ -340,12 +348,6 @@ void function FriendButton_OnActivate( var button )
 	HudElem_SetRuiArg( button, "isProcessing", file.isProcessingSelection )
 
 	string alias = file.originalOffer.offerAlias
-
-	if( !GetConVarBool( "steam_useProperHardware" ) )
-	{
-		if ( activeFriend.activePresence.hardware == HARDWARE_PC_STEAM )
-			activeFriend.activePresence.hardware = HARDWARE_PC
-	}
 
 	GetGiftOfferEligibility( alias, activeFriend.activePresence.hardware, activeFriend.activeNucleusPersonaId, activeFriend.eadpData.eaid )
 }
@@ -779,51 +781,13 @@ void function HandleGiftPurchaseOperation( GRXScriptOffer offer )
 				EmitUISound( purchaseSound )
 				thread Delayed_CloseMenuAfterPurchase( 1.0, true )
 			}
-
-			
-
-				if ( !CalEvent_IsActive( GetItemFlavorByAsset( $"settings/itemflav/calevent/s20rc01/reward_campaign.rpak" ), GetUnixTimestamp() ) )
-				{
-					return
-				}
-
-				if ( DoesStatSatisfyValue( GetLocalClientPlayer(), GetStatEntryByRef( "stats.s20ce01_gifting_campaign_total_count" ), S20_ANNIVERSARY_GIFTING_CAMPAIGN_GOAL ) )
-				{
-					return
-				}
-
-				
-				if ( GRXOffer_ContainsBattlePassPack( offer ) || GRXOffer_ContainsPresaleBattlePass( offer ) )
-				{
-					Remote_ServerCallFunction( "ClientCallback_UpdateGiftingCampaignCount", 0, 0, true )
-					return
-				}
-
-				
-				if ( price.quantities[0] == 0 )
-				{
-					int guid = ItemFlavor_GetGUID( offer.output.flavors[0] )
-
-					for ( int count = 0; count < S20_ANNIVERSARY_GIFTING_CAMPAIGN_ITEM_COUNT; ++count )
-					{
-						int pvar = GetPersistentVarAsInt( "s20ace_gifting_campaign_items[" + count + "]" )
-
-						if ( pvar == guid )
-						{
-							break
-						}
-						else if ( pvar == 0 )
-						{
-							Remote_ServerCallFunction( "ClientCallback_UpdateGiftingCampaignCount", guid, count, false )
-							break
-						}
-					}
-				}
-
 		}
 
 		else
 		{
+			
+			
+			file.wasNotificationReceived = true
 			purchaseSound = "menu_deny"
 			state = ePurchaseDialogStatus.FINISHED_FAILURE
 			HudElem_SetRuiArg( file.purchaseButton, "processingState", state )
@@ -972,12 +936,23 @@ void function UpdatePurchaseButton()
 	if ( !GRX_IsInventoryReady() || Hud_IsLocked( file.purchaseButton ) )
 		return
 
-	if ( !GRX_CanAfford( file.elegibleFriendOffer.prices[0], 1 ) )
+	if ( !Escrow_IsPlayerTrusted() && HasEscrowBalance() )
 	{
-		HudElem_SetRuiArg( file.purchaseButton, "buttonText", Localize( "#CONFIRM_GET_PREMIUM" ) )
+		if ( !GRX_CanAfford( file.elegibleFriendOffer.prices[0], 1, true ) )
+		{
+			HudElem_SetRuiArg( file.purchaseButton, "buttonText", Localize( "#BUY_GIFT_PENDING" ) )
+			Hud_SetLocked( file.purchaseButton, true )
+		}
 	}
 	else
 	{
-		HudElem_SetRuiArg( file.purchaseButton, "buttonText", Localize( "#BUY_GIFT" ) )
+		if ( !GRX_CanAfford( file.elegibleFriendOffer.prices[0], 1, false ) )
+		{
+			HudElem_SetRuiArg( file.purchaseButton, "buttonText", Localize( "#CONFIRM_GET_PREMIUM" ) )
+		}
+		else
+		{
+			HudElem_SetRuiArg( file.purchaseButton, "buttonText", Localize( "#BUY_GIFT" ) )
+		}
 	}
 }

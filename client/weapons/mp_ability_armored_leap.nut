@@ -902,6 +902,7 @@ void function ArmoredLeap_Master_Thread( entity player, vector endPoint, vector 
 {
 	EndSignal( player, "OnDeath" )
 	EndSignal( player, "OnDestroy" )
+	EndSignal( player, "NewcastlePassiveEnd" )
 	EndSignal( player, "BleedOut_OnStartDying" )
 	EndSignal( player, "ArmoredLeap_LeapComplete")
 	EndSignal( player, "DeathTotem_PreRecallPlayer" )
@@ -1533,6 +1534,7 @@ void function ArmoredLeap_UpdateLKP_Thread( entity player, vector airPoint, vect
 {
 	Assert ( IsNewThread(), "Must be threaded off." )
 	player.EndSignal( "OnDestroy" )
+	EndSignal( player, "NewcastlePassiveEnd" )
 	player.EndSignal( "ArmoredLeap_StartTravelGroundPhase" )
 	player.EndSignal( "ArmoredLeap_EndTravelAirHoverPhase" )
 	player.EndSignal( "ArmoredLeap_Interrupted" )
@@ -1555,6 +1557,7 @@ void function ArmoredLeap_LaunchPrep_Thread( entity player, vector endPoint, vec
 {
 	EndSignal( player, "OnDeath" )
 	EndSignal( player, "OnDestroy" )
+	EndSignal( player, "NewcastlePassiveEnd" )
 	EndSignal( player, "BleedOut_OnStartDying" )
 	EndSignal( player, "DeathTotem_PreRecallPlayer" )
 	EndSignal( player, "Interrupted" )
@@ -1617,6 +1620,7 @@ void function ArmoredLeap_LaunchHoverPrep_Thread( entity player, vector endPoint
 {
 	EndSignal( player, "OnDeath" )
 	EndSignal( player, "OnDestroy" )
+	EndSignal( player, "NewcastlePassiveEnd" )
 	EndSignal( player, "BleedOut_OnStartDying" )
 	EndSignal( player, "DeathTotem_PreRecallPlayer" )
 	EndSignal( player, "Interrupted" )
@@ -1691,6 +1695,7 @@ void function ArmoredLeap_LaunchToAirPosition( entity player, entity mover, vect
 {
 	EndSignal( player, "OnDeath" )
 	EndSignal( player, "OnDestroy" )
+	EndSignal( player, "NewcastlePassiveEnd" )
 	EndSignal( player, "BleedOut_OnStartDying" )
 	EndSignal( player, "ArmoredLeap_AirLaunchComplete" )
 	EndSignal( player, "DeathTotem_PreRecallPlayer" )
@@ -1820,6 +1825,7 @@ void function ArmoredLeap_SlamToGroundPosition( entity player, entity mover, vec
 {
 	player.EndSignal( "OnDeath" )
 	player.EndSignal( "OnDestroy" )
+	EndSignal( player, "NewcastlePassiveEnd" )
 	EndSignal( player, "BleedOut_OnStartDying" )
 	EndSignal( player, "ArmoredLeap_GroundDiveComplete" )
 	EndSignal( player, "ArmoredLeap_LeapComplete" )
@@ -2013,6 +2019,7 @@ void function ArmoredLeap_ReturnControlToPlayerAfterDelay( entity player, float 
 {
 	EndSignal( player, "OnDeath" )
 	EndSignal( player, "OnDestroy" )
+	EndSignal( player, "NewcastlePassiveEnd" )
 	EndSignal( player, "BleedOut_OnStartDying" )
 	EndSignal( player, "DeathTotem_PreRecallPlayer" )
 	EndSignal( player, "Interrupted" )
@@ -2055,6 +2062,7 @@ void function ArmoredLeap_CameraRecoveryDelay( entity player, float delay )
 {
 	EndSignal( player, "OnDeath" )
 	EndSignal( player, "OnDestroy" )
+	EndSignal( player, "NewcastlePassiveEnd" )
 	EndSignal( player, "BleedOut_OnStartDying" )
 	EndSignal( player, "DeathTotem_PreRecallPlayer" )
 	EndSignal( player, "Interrupted" )
@@ -2380,6 +2388,8 @@ void function ArmoredLeap_CheckForUpdraft_Thread( entity player )
 
 
 #endif
+
+
 
 
 
@@ -7475,6 +7485,12 @@ const float CASTLE_WALL_INTERCEPT_OVERHEAD_MIN_HEIGHT 		= 120
 const float CASTLE_WALL_INTERCEPT_OVERHEAD_MAX_BACK_DIST 	= 150
 const float CASTLE_WALL_LOW_CENTER_OFFSET					= 15
 const float CASTLE_WALL_MAIN_INTERCEPT_RANGE_EXTENTION		= 50
+
+
+
+
+
+
 
 
 

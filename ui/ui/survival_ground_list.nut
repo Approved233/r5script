@@ -245,6 +245,7 @@ void function OnMenuShow()
 	RunClientScript( "UICallback_UpdatePlayerInfo", Hud_GetChild( fileVM.menu, "PlayerInfo" ) )
 	RunClientScript( "UICallback_UpdateTeammateInfo", Hud_GetChild( fileVM.menu, "TeammateInfo0" ), false )
 	RunClientScript( "UICallback_UpdateTeammateInfo", Hud_GetChild( fileVM.menu, "TeammateInfo1" ), false )
+	RunClientScript( "UICallback_UpdateTeammateInfo", Hud_GetChild( fileVM.menu, "TeammateInfo2" ), false )
 
 
 
@@ -267,6 +268,99 @@ void function OpenSurvivalGroundListMenu()
 	CloseAllMenus()
 	AdvanceMenu( fileVM.menu )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

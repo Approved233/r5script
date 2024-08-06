@@ -4,6 +4,7 @@ global function InitSquadPanelInventory
 global function InitCharacterDetailsPanel
 global function InitLegendPanelInventory
 global function InitInventoryFooter
+global function InitSquadFooter
 
 global function SurvivalGroundItem_SetGroundItemCount
 global function SurvivalGroundItem_SetGroundItemHeader
@@ -39,6 +40,7 @@ global function ClientToUI_UpdateInventoryDpadTooltip
 global function TranslateBackpackGridPosition
 
 global function ClientCallback_SetTempButtonRef
+global function ClientCallback_SetTempButtonIcon
 global function ClientCallback_SetTempBoolMouseDragAllowed
 global function ClientCallback_StartEquipmentExtendedUse
 
@@ -91,6 +93,7 @@ struct
 
 	string tempButtonRef
 	bool   tempBoolMouseDragAllowed
+	asset tempButtonIcon = $""
 
 	table<var, void functionref( var, var, var, int ) > onMouseDropCallbacks
 	array<var>                                          allDropSlots
@@ -236,6 +239,29 @@ void function InitInventoryFooter( var panel )
 #endif
 }
 
+void function InitSquadFooter( var panel )
+{
+	var parentMenu = GetParentMenu( panel )
+
+	if( parentMenu != GetMenu( "DeathScreenMenu" ) ) 
+	{
+		AddPanelFooterOption( panel, LEFT, BUTTON_BACK, false, "", "", TryToggleMap )
+
+		AddPanelFooterOption( panel, LEFT, KEY_M, false, "", "", TryToggleMap, PROTO_ShouldInventoryFooterHack )
+		AddPanelFooterOption( panel, LEFT, KEY_TAB, false, "", "", TryCloseSurvivalInventory, PROTO_ShouldInventoryFooterHack )
+
+		AddPanelFooterOption( panel, LEFT, BUTTON_B, true, "#B_BUTTON_BACK", "#B_BUTTON_BACK" )
+#if DEV
+			AddPanelFooterOption( panel, LEFT, BUTTON_STICK_LEFT, true, "#LEFT_STICK_DEV_MENU", "#DEV_MENU", OpenDevMenu )
+#endif
+		AddPanelFooterOption( panel, RIGHT, BUTTON_START, true, "#HINT_SYSTEM_MENU_GAMEPAD", "#HINT_SYSTEM_MENU_KB", TryOpenSystemMenu )
+	}
+	else
+	{
+		InitDeathScreenPanelFooter( panel, eDeathScreenPanel.SQUAD)
+	}
+}
+
 
 void function RegisterDropSlot( var button, void functionref( var, var, var, int ) dropFunc )
 {
@@ -301,9 +327,34 @@ void function OnSurvivalQuickInventoryPanel_Show( var panel )
 		}
 
 
-	RunClientScript( "UICallback_UpdatePlayerInfo", Hud_GetChild( file.mainInventoryPanel, "PlayerInfo" ) )
+	var smallPlayerInfo   = Hud_GetChild( file.mainInventoryPanel, "smallPlayerInfo" )
+	var largePlayerInfo   = Hud_GetChild( file.mainInventoryPanel, "PlayerInfo" )
+	var TeammateInfo0     = Hud_GetChild( file.mainInventoryPanel, "TeammateInfo0" )
+	float screenSizeYFrac =  GetScreenSize().height / 1080.0
+
+	bool showPlayerInfo   = false
+	int TeammateInfo0YPos = Hud_GetBaseY( TeammateInfo0 )
+
+
+
+	if( GetMaxTeamSizeForPlaylist( GetCurrentPlaylistName() ) > 3 )
+	{
+		RunClientScript( "UICallback_UpdateTeammateInfo", smallPlayerInfo, false )
+		TeammateInfo0YPos +=  int( -110 * screenSizeYFrac ) 
+	}
+	else
+	{
+		RunClientScript( "UICallback_UpdatePlayerInfo", largePlayerInfo )
+		showPlayerInfo = true
+	}
+
+	Hud_SetVisible( smallPlayerInfo, !showPlayerInfo )
+	Hud_SetVisible( largePlayerInfo, showPlayerInfo )
+	Hud_SetY( TeammateInfo0, TeammateInfo0YPos )
+
 	RunClientScript( "UICallback_UpdateTeammateInfo", Hud_GetChild( file.mainInventoryPanel, "TeammateInfo0" ), false )
 	RunClientScript( "UICallback_UpdateTeammateInfo", Hud_GetChild( file.mainInventoryPanel, "TeammateInfo1" ), false )
+	RunClientScript( "UICallback_UpdateTeammateInfo", Hud_GetChild( file.mainInventoryPanel, "TeammateInfo2" ), false )
 	RunClientScript( "UICallback_UpdateUltimateInfo", Hud_GetChild( file.mainInventoryPanel, "PlayerUltimate" ) )
 
 	UpdateMouseDropGroundSizes()
@@ -656,9 +707,23 @@ bool function OnRequestButtonPressed ( var button )
 	RunClientScript( "UICallback_PingRequestButton", button )
 	return true
 }
+
+
+
 void function OnRequestButtonClick( var button )
 {
-	OnRequestButtonPressed( button )
+	string weaponButtonName = "MainWeapon0"
+	if ( Hud_GetHudName( button ) == "MainWeaponChargeUp1" )
+	{
+		weaponButtonName = "MainWeapon1"
+	}
+
+	array<var> buttons = GetElementsByClassname( GetParentMenu( Hud_GetParent( button ) ), "SurvivalEquipment" )
+	foreach( equipButton in buttons )
+	{
+		if ( Hud_GetHudName( equipButton ) == weaponButtonName )
+			OnEquipmentButtonClick( equipButton )
+	}
 }
 
 void function OnRequestButtonCommand( var button, string command )
@@ -1397,6 +1462,10 @@ void function ClientCallback_SetTempButtonRef( string ref )
 	file.tempButtonRef = ref
 }
 
+void function ClientCallback_SetTempButtonIcon( asset icon )
+{
+	file.tempButtonIcon = icon
+}
 
 LootData function GetLootDataFromButton( var button, int index )
 {
@@ -1408,6 +1477,11 @@ LootData function GetLootDataFromButton( var button, int index )
 	if ( SURVIVAL_Loot_IsRefValid( file.tempButtonRef ) )
 	{
 		data = SURVIVAL_Loot_GetLootDataByRef( file.tempButtonRef )
+	}
+	if ( index <= -1 && file.tempButtonIcon != $"" )
+	{
+		data.hudIcon = file.tempButtonIcon
+		file.tempButtonIcon = $""
 	}
 
 	return data

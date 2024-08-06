@@ -4,7 +4,6 @@ const string DEFAULT_LAYOUT = SURVIVAL + "00"
 const string CUSTOM_MATCH_SUMMARY_CHANGED_SIGNAL = "CustomMatch_SummaryChanged"
 
 const int MAX_CACHE_SIZE = 8
-const int MAX_TEAM_SIZE = 3 
 
 enum eSummaryType
 {

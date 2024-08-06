@@ -29,7 +29,6 @@ global function Entitlement_GetSKUStoreApexCoinCardBaseImage
 
 
 
-
 #if DEV
 global function DEV_OpenHijackedEntitlementRedeemPopup
 #endif
@@ -136,50 +135,6 @@ void function Entitlements_LevelInit()
 
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -841,21 +796,13 @@ void function UICodeCallback_ActivateRootPanel()
 {
 	if ( GetActiveMenu() != null )
 	{
-		printt( "ActivateRootPanel: " + GetActiveMenuName())
+		printt( "ActivateRootPanel: " + GetActiveMenuName() )
+		if ( GetActiveMenuName() != "LobbyMenu" )
+			return
 	}
 
-	bool showLobbyTab = false
-	if ( GetActiveMenu() != null && GetActiveMenuName() != "VCPopUp" )
-		showLobbyTab = true
-
-	if ( GetActiveMenu() != null && GetActiveMenuName() != "LobbyMenu" )
-		CloseActiveMenu()
-
-	if( showLobbyTab )
-	{
-		TabData lobbyTabData = GetTabDataForPanel( GetMenu( "LobbyMenu" ) )
-		ActivateTab( lobbyTabData, Tab_GetTabIndexByBodyName( lobbyTabData, "PlayPanel" ) )	
-	}	
+	TabData lobbyTabData = GetTabDataForPanel( GetMenu( "LobbyMenu" ) )
+	ActivateTab( lobbyTabData, Tab_GetTabIndexByBodyName( lobbyTabData, "PlayPanel" ) )
 }
 
 void function UICodeCallback_GRXFirstPartyBundlePurchased( string bundleEnum )

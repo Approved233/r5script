@@ -13,6 +13,7 @@ global function UICodeCallback_LevelShutdown
 global function UICodeCallback_FullyConnected
 global function UICodeCallback_OnConnected
 global function UICodeCallback_OnFocusChanged
+global function Menus_SetNavigateBackDisabled
 global function UICodeCallback_NavigateBack
 global function UICodeCallback_ToggleInGameMenu
 global function UICodeCallback_ToggleInventoryMenu
@@ -65,6 +66,7 @@ global function UICodeCallback_EadpSearchRequestFinished
 global function UICodeCallback_EadpFriendsChanged
 global function UICodeCallback_EadpClubMemberPresence
 global function UICodeCallback_EadpInviteDataChanged
+global function ShowPendingPurchaseDialog
 
 
 
@@ -183,6 +185,7 @@ global function IncrementNumDialogFlowDialogsDisplayed
 global function OpenDevMenu
 global function DEV_SetLoadScreenFinished
 global function AutomateUi
+global function AutomateUiWaitForPostmatch
 global function DEV_AdvanceToBattlePassMilestoneMenu
 #endif
 
@@ -240,6 +243,12 @@ struct
 
 	bool hasInitializedOnce = false
 	bool currencyDialogShowed = false
+
+
+
+
+
+	bool navigateBackDisabled = false
 } file
 
 
@@ -307,7 +316,7 @@ void function UICodeCallback_ToggleInGameMenu()
 	
 	if ( MenuStack_Contains( GetMenu( "CharacterSelectMenu" ) )
 
-			|| MenuStack_Contains( GetMenu( "SpecialCharacterSelectMenu" ) )
+
 
 			|| MenuStack_Contains( GetMenu( "PrivateMatchSpectCharSelectMenu" ) ) )
 		return
@@ -333,11 +342,18 @@ void function UICodeCallback_ToggleInGameMenu()
 		else
 		{
 
-				if ( Control_IsModeEnabled() )
+				if ( GameMode_IsActive( eGameModes.CONTROL ) )
 				{
 					if ( UI_IsSpawnMapOpen() || LoadoutSelectionMenu_IsLoadoutMenuOpen() )
 						return
 				}
+
+
+
+
+
+
+
 
 
 			CloseActiveMenu()
@@ -366,7 +382,7 @@ void function ToggleInventoryOrOpenOptions()
 
 	bool doesPCUseHoldandIsDown = false
 
-		doesPCUseHoldandIsDown = IsFiringRangeGameMode()
+		doesPCUseHoldandIsDown = GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_FIRING_RANGE )
 
 	while ( ( InputIsButtonDown( BUTTON_START ) || ( InputIsButtonDown( KEY_ESCAPE ) && doesPCUseHoldandIsDown ) ) && UITime() < endTIme )
 	{
@@ -402,14 +418,14 @@ void function ToggleInventoryOrOpenOptions()
 		}
 
 
-			if ( Control_IsModeEnabled() )
+			if ( GameMode_IsActive( eGameModes.CONTROL ) )
 			{
 				if ( UI_IsSpawnMapOpen() || LoadoutSelectionMenu_IsLoadoutMenuOpen() )
 					return
 			}
 
 
-		if( IsFiringRangeGameMode() && !IsControllerModeActive() && !InputIsButtonDown( KEY_TAB ) )
+		if( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_FIRING_RANGE ) && !IsControllerModeActive() && !InputIsButtonDown( KEY_TAB ) )
 		{
 			RunClientScript( "UICallback_OpenCharacterSelectMenu" )
 			return
@@ -453,6 +469,21 @@ void function ToggleInventoryOrOpenOptions()
 					RunClientScript( "PrivateMatch_OpenGameStatusMenu" )
 					
 				}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 			if ( SURVIVAL_IsAnInventoryMenuOpened() )
@@ -547,7 +578,7 @@ void function UICodeCallback_ToggleInventoryMenu()
 		return
 
 
-	thread ToggleInventoryOrOpenRangeSettings()
+	thread ToggleInventoryOrOpenOtherSettings()
 
 
 
@@ -562,22 +593,26 @@ void function UICodeCallback_ToggleInventoryMenu()
 
 
 
-void function ToggleInventoryOrOpenRangeSettings()
+void function ToggleInventoryOrOpenOtherSettings()
 {
 	float startTime = UITime()
 	float duration  = 0.3
 	float endTIme   = startTime + duration
 
-	if ( !IsFiringRangeGameMode() )
+
+
+
+	if ( !GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_FIRING_RANGE ) )
+
 	{
-		if ( !GetActiveMenu() )
-		{
-			RunClientScript( "PROTO_OpenInventoryOrSpecifiedMenu", GetLocalClientPlayer() )
-		}
-		else
-		{
-			CloseAllMenus()
-		}
+			if ( !GetActiveMenu() )
+			{
+				RunClientScript( "PROTO_OpenInventoryOrSpecifiedMenu", GetLocalClientPlayer() )
+			}
+			else
+			{
+				CloseAllMenus()
+			}
 		return
 	}
 
@@ -593,7 +628,6 @@ void function ToggleInventoryOrOpenRangeSettings()
 		}
 	}
 
-
 	while ( (pcKeyIsValid && InputIsButtonDown( pcKeycode )) && UITime() < endTIme )
 	{
 		WaitFrame()
@@ -608,7 +642,16 @@ void function ToggleInventoryOrOpenRangeSettings()
 
 	if ( UITime() >= endTIme && pcKeyIsValid && InputIsButtonDown( pcKeycode ) )
 	{
-		RangeCustomizationMenu()
+
+
+
+
+
+
+
+		{
+			RangeCustomizationMenu()
+		}
 	}
 	else
 	{
@@ -659,7 +702,7 @@ void function ToggleMapOrOpenRangeSettings()
 	float duration  = 0.3
 	float endTIme   = startTime + duration
 
-	if ( !IsFiringRangeGameMode() )
+	if ( !GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_FIRING_RANGE ) )
 	{
 		RunClientScript( "ClientToUI_ToggleScoreboard" )
 		return
@@ -785,7 +828,7 @@ void function UIFullyConnectedInitialization_ForLevel( string levelname )
 	Assert( gameModeString == GetConVarString( "mp_gamemode" ) )
 	Assert( gameModeString != "" )
 
-	int gameModeId        = GameMode_GetGameModeId( gameModeString )
+	int gameModeId        = GameMode_FindByDevName( gameModeString )
 	int mapId             = -1
 	int difficultyLevelId = 0
 	int roundId           = 0
@@ -830,7 +873,7 @@ void function UIFullyConnectedInitialization()
 
 		Perks_Init()
 		Perk_BeaconScan_Init()
-		Perk_ExtraBinLoot_Init()
+		Perk_BannerCrafting_Init()
 		Perk_CarePackageInsight_Init()
 		Perk_ExtraFirepower_Init()
 		Perk_KillBoostUlt_Init()
@@ -847,12 +890,18 @@ void function UIFullyConnectedInitialization()
 
 
 
+	Perk_QuickPackup_Init()
+	Perk_RingExpert_Init()
+	Perk_ScoutExpert_Init()
 
 
 
 
 
-		StorePanelCollectionEvent_LevelInit()
+
+
+
+
 
 
 	StorePanelThemedShopEvent_LevelInit()
@@ -904,16 +953,19 @@ void function UIFullyConnectedInitialization()
 	ShBattlepassPresaleVoucher_LevelInit()
 	ShBattlepassPurchasableXP_LevelInit()
 
-		ShEventAbilities_Init()
+
 
 	Sh_Boosts_Init()
 	ShMusic_LevelInit()
 	ShBattlePass_LevelInit()
 
+	ShNPP_LevelInit()
+
+
 	ShCups_LevelInit()
 
 
-
+	ShRankedRumble_Init()
 
 
 
@@ -926,20 +978,20 @@ void function UIFullyConnectedInitialization()
 	MenuScene_Init()
 	MeleeShared_Init()
 	MeleeSyncedShared_Init()
-
 	ShArtifacts_LevelInit()
+
+
 
 	ShPing_Init()
 	ShQuickchat_Init()
 	ShChallenges_LevelInit_PreStats()
 	Sh_Challenge_Sets_Init()
 
-
+	Sh_Challenge_Tiles_Init()
+	Sh_Narrative_Season_Init()
 
 	AutogenStats_Init()
-
 	Sh_Kepler_Init()
-
 
 	ShRewardSetTracker_LevelInit()
 
@@ -1031,11 +1083,9 @@ void function UICodeCallback_LevelShutdown()
 	VideoChannelManager_OnLevelShutdown()
 	ImagePakLoad_OnLevelShutdown()
 	ShGRX_LevelShutdown()
-
 	Kepler_LevelShutdown()
 
 
-	StorePanelCollectionEvent_LevelShutdown()
 
 	StorePanelThemedShopEvent_LevelShutdown()
 	StorePanelHeirloomShopEvent_LevelShutdown()
@@ -1066,8 +1116,16 @@ void function UICodeCallback_LevelShutdown()
 }
 
 
+void function Menus_SetNavigateBackDisabled( bool disabled )
+{
+	file.navigateBackDisabled = disabled
+}
+
 void function UICodeCallback_NavigateBack()
 {
+	if ( file.navigateBackDisabled )
+		return
+
 	var activeMenu = GetActiveMenu()
 	if ( activeMenu == null )
 		return
@@ -1506,6 +1564,15 @@ void function UpdateMenusOnConnectThread( string levelname )
 
 
 		LobbyPlaylist_ClearSelectedPlaylist()
+
+
+	if ( isLobby && FTUEFlow_IsInFTUEFlow( GetLocalClientPlayer() ) )
+	{
+		
+		LobbyPlaylist_ClearSelectedPlaylist()
+		LobbyPlaylist_ClearSelectedUISlot()
+	}
+
 
 	if ( isLobby )
 	{
@@ -1962,12 +2029,22 @@ void function ShowGameSummaryIfNeeded()
 		}
 
 
-		if ( Ranked_GetXProgMergedPersistenceData( GetLocalClientPlayer(), RANKED_SHOW_RANKED_SUMMARY_PERSISTENCE_VAR_NAME ) != 0 )
+		bool showRankedSummary = Ranked_ShowRankedSummary()
+		bool showCupSummary = Cups_ShowCupSummary()
+		if ( showRankedSummary && !showCupSummary )
 		{
 #if DEV
 				printt( "Postgame menu debug: Calling OpenRankedSummary( true )" )
 #endif
 			OpenRankedSummary( true )
+		}
+
+		if ( showCupSummary && Cups_IsCupForLatestMatchActive( GetLocalClientPlayer() ) )
+		{
+#if DEV
+				printt( "Postgame menu debug: Calling OpenCupsSummary()" )
+#endif
+			OpenCupsSummary()
 		}
 
 		
@@ -2062,11 +2139,27 @@ void function DialogFlow()
 	bool persistenceAvailable = IsPersistenceAvailable()
 	bool hasActiveBattlePass = GetActiveBattlePass() != null
 
-	if ( DialogFlow_ShouldOpenPromoDialog() )
+
+	bool isFTUEDialogFlow = FTUEFlow_ShouldShowFTUEPopup()
+
+	if ( DialogFlow_ShouldOpenPromoDialog() && !isFTUEDialogFlow )
+
+
+
 	{
 		
 		OpenPromoDialogIfNewUM()
 	}
+
+	else if ( isFTUEDialogFlow )
+	{
+		FTUEFlow_DialogFlow()
+	}
+	else if ( FTUEFlow_GetFTUEFlowStage() == eFTUEFlowStage.POST_BOT_MATCH_1 && !GetLocalClientPlayer().GetPersistentVar( "hasSeenNPPInfoDialog" ) )
+	{
+		OpenNewPlayerPassInfo()
+	}
+
 
 	if ( DisplayQueuedRewardsGiven() )
 	{
@@ -2280,6 +2373,18 @@ void function ShowPremiumCurrencyDialog( bool dialogFlow )
 	file.currencyDialogShowed = true
 }
 
+void function ShowPendingPurchaseDialog()
+{
+	ConfirmDialogData dialogData
+
+	if ( IsSteamDelayFulfilment() )
+	{
+		dialogData.headerText = Localize("#STEAM_DELAY_FULFILMENT")
+		dialogData.messageText = Localize( "#STEAM_DELAY_FULFILMENT_DESC")
+	}
+
+	OpenOKDialogFromData( dialogData )
+}
 
 var function GetTopNonDialogMenu()
 {
@@ -2418,6 +2523,10 @@ void function InitMenus()
 	var crossProgressionDialog = AddMenu( "CrossProgressionDialog", $"resource/ui/menus/dialog_cross_progression.menu", InitCrossProgressionDialog )
 	var tabbedModal = AddMenu( "TabbedModal", $"resource/ui/menus/tabbed_modal.menu", RTKTabbedModal_InitTabbedModal )
 
+
+		var panelImageButtonModal = AddMenu( "PanelImageButtonModal", $"resource/ui/menus/panel_image_button_modal.menu", RTKPanelImageButtonModal_InitPanelImageButtonModal )
+
+
 	
 	
 	
@@ -2430,24 +2539,37 @@ void function InitMenus()
 	AddPanel( lobbyMenu, "PlayPanel", InitPlayPanel )
 
 	var seasonPanel = AddPanel( lobbyMenu, "SeasonPanel", InitSeasonPanel )
-	AddPanel( seasonPanel, "QuestPanel", InitQuestPanel )
-	AddPanel( seasonPanel, "PassPanel", InitPassPanel )
+
+
+
+
+
+		AddPanel( seasonPanel, "RTKBattlepassPanel", InitBattlepassPanel )
+
+
+
+		AddPanel( seasonPanel, "RTKNewplayerpassPanel", InitNewplayerpassPanel )
+
+
+
+	AddMenu( "NewPlayerPassInfoMenu", $"resource/ui/menus/new_player_pass_info.menu", NewPlayerPassInfoInitMenu )
+
 
 	var eventPanel = AddPanel( lobbyMenu, "EventPanel", InitEventPanel )
 	AddPanel( eventPanel, "RTKEventsPanel", InitRTKEventsPanel )
 	AddPanel( eventPanel, "ThemedShopPanel", ThemedShopPanel_Init )
 
-		AddPanel( eventPanel, "CollectionEventPanel", CollectionEventPanel_Init )
 
 
 
 
+		var challengesPanel = AddPanel( lobbyMenu, "ChallengesPanel", InitChallengesPanel )
+		AddMenu( "ChallengesGenericInspectMenu", $"resource/ui/menus/rtk_challenges_generic_inspect.menu", InitChallengesGenericInspectMenu )
+		AddMenu( "ChallengesKeyArtInspectMenu", $"resource/ui/menus/rtk_challenges_key_art_inspect.menu", InitChallengesKeyArtInspectMenu )
 
 
 
-		AddPanel( lobbyMenu, "ChallengesPanel", void function( var panel ) : () {
-			InitAllChallengesPanel( panel, false )
-		} )
+
 
 
 	var armoryPanel = AddPanel( lobbyMenu, "ArmoryPanel", InitArmoryPanel )
@@ -2481,6 +2603,9 @@ void function InitMenus()
 		AddPanel( storePanel, STORE_MYTHIC_SHOP, InitStoreItemShop )
 
 
+		AddPanel( storePanel, RTK_APEX_PACKS_PANEL, InitApexPacksPanelFooterOptions )
+
+
 
 	AddMenu( "GiftInfoDialog", $"resource/ui/menus/dialogs/gift_information_dialog.menu", InitGiftInformationDialog )
 	AddMenu( "TwoFactorInfoDialog", $"resource/ui/menus/dialogs/two_factor_information_dialog.menu", InitTwoFactorInformationDialog )
@@ -2488,6 +2613,8 @@ void function InitMenus()
 	AddMenu( "StoreInspectMenu", $"resource/ui/menus/store_inspect.menu", InitStoreInspectMenu )
 	AddMenu( "StoreMythicInspectMenu", $"resource/ui/menus/store_mythic_inspect.menu", InitStoreMythicInspectMenu )
 	AddMenu( "ArtifactsInspectMenu", $"resource/ui/menus/artifacts_inspect.menu", InitArtifactsInspectMenu )
+
+
 
 	var storeOfferSetItemsMenu = AddMenu( "StoreOfferSetItemsMenu", $"resource/ui/menus/store_offer_set_items.menu", InitStoreOfferSetItemsMenu )
 	AddPanel( storeOfferSetItemsMenu, "StoreOfferSetItemsPanel", InitStoreOfferSetItemsPanel )
@@ -2610,13 +2737,8 @@ void function InitMenus()
 		AddPanel( customizeCharacterMenu, "LegendMeleePanel", InitRTKLegendMeleePanel )
 		AddPanel( customizeCharacterMenu, "LegendLorePanel", InitRTKLegendLorePanel )
 
-
-			var meleeCustomizationMenu = AddMenu( "MeleeCustomizationMenu", $"resource/ui/menus/customize_melee.menu", InitMeleeCustomizationMenu )
-			
-
-			AddPanel( meleeCustomizationMenu, "ArtifactCustomizationPanel", InitMeleeCustomizationPanel )
-
-
+		var meleeCustomizationMenu = AddMenu( "MeleeCustomizationMenu", $"resource/ui/menus/customize_melee.menu", InitMeleeCustomizationMenu )
+		AddPanel( meleeCustomizationMenu, "ArtifactCustomizationPanel", InitMeleeCustomizationPanel )
 
 
 	var customizeWeaponMenu = AddMenu( "CustomizeWeaponMenu", $"resource/ui/menus/customize_weapon.menu", InitCustomizeWeaponMenu )
@@ -2699,19 +2821,36 @@ void function InitMenus()
 
 	AddMenu( "CharacterSelectMenu", $"resource/ui/menus/character_select.menu", UI_InitCharacterSelectMenu )
 
-	AddMenu( "SpecialCharacterSelectMenu", $"resource/ui/menus/special_character_select.menu", InitSpecialCharacterSelectMenu )
+
 
 
 	var deathScreenMenu = AddMenu( "DeathScreenMenu", $"resource/ui/menus/death_screen.menu", InitDeathScreenMenu )
 	AddPanel( deathScreenMenu, "DeathScreenGenericScoreboardPanel", InitTeamsScoreboardPanel )
 	AddPanel( deathScreenMenu, "DeathScreenRecap", InitDeathScreenRecapPanel )
 	AddPanel( deathScreenMenu, "DeathScreenSpectate", InitDeathScreenSpectatePanel )
-	AddPanel( deathScreenMenu, "DeathScreenSquadSummary", InitDeathScreenSquadSummaryPanel )
+
+	AddPanel( deathScreenMenu, "DeathScreenSquadSummary", DeathScreenSquadSummary_RTKInitialize )
+
+
+
+
+		AddPanel( deathScreenMenu, "RTKDeathScreenSquadPanel", InitRTKSquadPanel )
+
 	AddPanel( deathScreenMenu, "DeathScreenSquadPanel", InitSquadPanelInventory )
+
+
+		AddPanel( deathScreenMenu, "DeathScreenRankedMatchSummaryPanel", InitRTKRankedMatchSummary )
+
+
+		AddPanel( deathScreenMenu, "DeathScreenPostGameCupsPanel", InitRTKPostGameCups )
+
 	AddPanel( deathScreenMenu, "DeathScreenKillreplay", InitDeathScreenKillreplayPanel )
 
 	var postGameRankedMenu = AddMenu( "PostGameRankedMenu", $"resource/ui/menus/post_game_ranked.menu", InitPostGameRankedMenu )
 	AddPanel( postGameRankedMenu, "MatchSummaryPanel", InitPostGameRankedSummaryPanel )
+
+	var postGameCupsMenu = AddMenu( "PostGameCupsMenu", $"resource/ui/menus/post_game_cups.menu", InitPostGameCupsMenu )
+	AddPanel( postGameCupsMenu, "PostGameCupsPanel", InitPostGameCupsPanel )
 
 	AddMenu( "RankedInfoMenu", $"resource/ui/menus/ranked_info.menu", InitRankedInfoMenu )
 	AddMenu( "RankedInfoMoreMenu", $"resource/ui/menus/ranked_info_more.menu", InitRankedInfoMoreMenu ) 
@@ -2733,7 +2872,12 @@ void function InitMenus()
 	var inventoryMenu = AddMenu( "SurvivalInventoryMenu", $"resource/ui/menus/survival_inventory.menu", InitSurvivalInventoryMenu )
 	AddPanel( inventoryMenu, "SurvivalQuickInventoryPanel", InitSurvivalQuickInventoryPanel )
 	AddPanel( inventoryMenu, "GenericScoreboardPanel", InitTeamsScoreboardPanel )
+
+		AddPanel( inventoryMenu, "RTKSquadPanel", InitRTKSquadPanel )
+
+
 	AddPanel( inventoryMenu, "SquadPanel", InitSquadPanelInventory )
+
 
 	var rangeSettingsPanel = AddPanel( inventoryMenu, "FiringRangeSettingsPanel", InitFiringRangeSettingsPanel )
 	AddPanel( rangeSettingsPanel, "FiringRangeSettingsGeneralPanel", InitFiringRangeSettingsGeneralPanel )
@@ -2753,16 +2897,9 @@ void function InitMenus()
 	AddMenu( "Notifications", $"resource/ui/menus/notifications.menu", InitNotificationsMenu )
 
 	var postGameMenu = AddMenu( "PostGameMenu", $"resource/ui/menus/postgame.menu", InitPostGameMenu )
-
-
-
-		AddPanel( postGameMenu, "PostGameGeneral", InitRTKPostGameSummary )
-
+	AddPanel( postGameMenu, "PostGameGeneral", InitRTKPostGameSummary )
 
 		AddPanel( postGameMenu, "PostGameWeapons", InitRTKPostGameWeaponsPanel )
-
-
-		AddPanel( postGameMenu, "PostGameCups", InitRTKPostGameCups )
 
 
 	AddMenu( "Dialog", $"resource/ui/menus/dialog.menu", InitDialogMenu )
@@ -2885,6 +3022,10 @@ void function InitMenus()
 	AddMenu( "PostGameBattlePassMenu", $"resource/ui/menus/post_game_battlepass.menu", InitPostGameBattlePassMenu )
 	AddMenu( "BattlePassAboutPage1", $"resource/ui/menus/dialogs/battle_pass_about_1.menu", InitAboutBattlePass1Dialog )
 
+		AddMenu( "RTKBattlePassMoreInfoMenu", $"resource/ui/menus/dialogs/rtk_battlepass_more_info.menu", InitRTKBattlePassMoreInfoMenu )
+		AddMenu( "RTKBattlepassPurchaseMenu", $"resource/ui/menus/dialogs/rtk_battlepass_purchase.menu", InitRTKBattlePassPurchaseMenu )
+
+
 
 	AddMenu( "CollectionEventAboutPage", $"resource/ui/menus/dialogs/collection_event_about.menu", CollectionEventAboutPage_Init )
 
@@ -2903,6 +3044,11 @@ void function InitMenus()
 
 		
 		
+
+
+
+
+
 
 
 
@@ -3607,7 +3753,7 @@ void function AddNetPanelDiagnostics()
 			text += "(isCurrentlyShown) "
 		}
 		AddNetPanelText( text )
-	}			
+	}
 }
 #endif
 
@@ -4323,5 +4469,10 @@ bool function AutomateUi(float delayFactor = 1)
 	}
 
 	return false
+}
+
+bool function AutomateUiWaitForPostmatch()
+{
+	return GetConVarBool( "ui_automation_wait_for_postmatch" )
 }
 #endif

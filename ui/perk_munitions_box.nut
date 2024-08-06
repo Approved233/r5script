@@ -50,10 +50,18 @@ global function Perk_SwapMunitionsBoxAndSkirmisherPerks
 
 
 
+
+
+
 void function Perk_MunitionsBox_Init()
 {
 	if ( GetCurrentPlaylistVarBool( "disable_perk_munitions_box", false ) )
 		return
+
+
+
+
+
 
 	PerkInfo munitionsBox
 	munitionsBox.perkId          = ePerkIndex.MUNITIONS_BOX
@@ -188,6 +196,74 @@ bool function MunitionsBox_BoostOpenerLoot()
 {
 	return GetCurrentPlaylistVarBool( "munitions_box_boost_opener_loot", false )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

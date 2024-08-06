@@ -37,6 +37,9 @@ void function InitMiscCustomizeMenu( var newMenuArg )
 
 void function MiscCustomizeMenu_OnOpen()
 {
+	ItemFlavor character = LoadoutSlot_GetItemFlavor( LocalClientEHI(), Loadout_Character() )
+	SetTopLevelCustomizeContext( character )
+
 	AddCallback_OnTopLevelCustomizeContextChanged( file.menu, MiscCustomizeMenu_Update )
 	MiscCustomizeMenu_Update( file.menu )
 

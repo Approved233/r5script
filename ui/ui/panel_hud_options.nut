@@ -105,8 +105,13 @@ void function InitHudOptionsPanel( var panel )
 	AddButtonEventHandler( laserSight, UIE_CHANGE, OnLaserSightSettingChanged )
 
 
+	SetupSettingsButton( Hud_GetChild( contentPanel, "SwitchEnemyHealthBar" ), "#HUD_SETTING_ENEMYHEALTHBAR", "#HUD_SETTING_ENEMYHEALTHBAR_DESC", $"rui/menu/settings/settings_hud" )
 
 
+
+	SetupSettingsButton( Hud_GetChild( contentPanel, "SwitchEnemyHighlight" ), "#HUD_SETTING_ENEMYHIGHLIGHT", "#HUD_SETTING_ENEMYHIGHLIGHT_DESC", $"rui/menu/settings/settings_hud" )
+	var enemyHighlightingOnOFF = Hud_GetChild( contentPanel, "SwitchEnemyHighlight" )
+	AddButtonEventHandler( enemyHighlightingOnOFF, UIE_CHANGE, OnEnemyHighlightingOnOffChanged )
 
 
 
@@ -151,6 +156,12 @@ void function InitHudOptionsPanel( var panel )
 		AddButtonEventHandler( button, UIE_CHANGE, OnDisableVoiceChatSettingChanged )
 #endif
 
+
+	SetupSettingsSlider( Hud_GetChild( contentPanel, "ObserverSlowSpeed" ), "Observer Slow Speed", "Sets the slowest speed of the observer camera.", $"rui/menu/settings/settings_hud")
+	SetupSettingsSlider( Hud_GetChild( contentPanel, "ObserverBaseSpeed" ), "Observer Base Speed", "Sets the base movement speed of the observer camera.", $"rui/menu/settings/settings_hud")
+	SetupSettingsSlider( Hud_GetChild( contentPanel, "ObserverFastSpeed" ), "Observer Fast Speed", "Sets the fastest speed of the observer camera.", $"rui/menu/settings/settings_hud")
+
+
 	AddPanelFooterOption( panel, LEFT, BUTTON_B, true, "#B_BUTTON_BACK", "#B_BUTTON_BACK" )
 	AddPanelFooterOption( panel, LEFT, BUTTON_BACK, true, "#BACKBUTTON_RESTORE_DEFAULTS", "#RESTORE_DEFAULTS", OpenConfirmRestoreHUDDefaultsDialog )
 	AddPanelFooterOption( panel, LEFT, BUTTON_X, true, "#BUTTON_SHOW_CREDITS", "#SHOW_CREDITS", ShowCredits, CreditsVisible )
@@ -168,6 +179,8 @@ void function InitHudOptionsPanel( var panel )
 	file.conVarDataList.append( CreateSettingsConVarData( "hud_setting_showButtonHints", eConVarType.INT ) )
 	file.conVarDataList.append( CreateSettingsConVarData( "hud_setting_accessibleChat", eConVarType.INT ) )
 	file.conVarDataList.append( CreateSettingsConVarData( "hud_setting_damageIndicatorStyle", eConVarType.INT ) )
+	file.conVarDataList.append( CreateSettingsConVarData( "hud_setting_showEnemyHealthBar", eConVarType.INT ) )
+	file.conVarDataList.append( CreateSettingsConVarData( "hud_setting_showEnemyHighlight", eConVarType.INT ) )
 	file.conVarDataList.append( CreateSettingsConVarData( "hud_setting_damageTextStyle", eConVarType.INT ) )
 	file.conVarDataList.append( CreateSettingsConVarData( "hud_setting_pingAlpha", eConVarType.FLOAT ) )
 	file.conVarDataList.append( CreateSettingsConVarData( "hud_setting_minimapRotate", eConVarType.INT ) )
@@ -185,6 +198,12 @@ void function InitHudOptionsPanel( var panel )
 
 	file.conVarDataList.append( CreateSettingsConVarData( "hudchat_play_text_to_speech", eConVarType.INT ) )
 	file.conVarDataList.append( CreateSettingsConVarData( "CrossPlay_user_optin", eConVarType.BOOL ) )
+
+
+	file.conVarDataList.append( CreateSettingsConVarData( "roamingcam_forwardSpeed", eConVarType.INT ) )
+	file.conVarDataList.append( CreateSettingsConVarData( "roamingcam_forwardSpeed_slow", eConVarType.INT ) )
+	file.conVarDataList.append( CreateSettingsConVarData( "roamingcam_forwardSpeed_fast", eConVarType.INT ) )
+
 
 
 
@@ -238,6 +257,8 @@ void function RestoreHUDDefaults()
 	SetConVarToDefault( "hud_setting_showWeaponFlyouts" )
 	SetConVarToDefault( "hud_setting_adsDof" )
 	SetConVarToDefault( "hud_setting_damageIndicatorStyle" )
+	SetConVarToDefault( "hud_setting_showEnemyHealthBar" )
+	SetConVarToDefault( "hud_setting_showEnemyHighlight" )
 	SetConVarToDefault( "hud_setting_damageTextStyle" )
 	SetConVarToDefault( "hud_setting_pingAlpha" )
 	SetConVarToDefault( "hud_setting_streamerMode" )
@@ -279,6 +300,12 @@ void function RestoreHUDDefaults()
 
 
 		SetConVarToDefault( "hudchat_visibility" )
+
+
+
+	SetConVarToDefault( "roamingcam_forwardSpeed" )
+	SetConVarToDefault( "roamingcam_forwardSpeed_slow" )
+	SetConVarToDefault( "roamingcam_forwardSpeed_fast" )
 
 
 	SaveSettingsConVars( file.conVarDataList )
@@ -354,18 +381,11 @@ void function OnHudOptionsPanel_Show( var panel )
 
 
 
-
-
-
-
-
-
 	HudOptionsShowButton( contentPanel, "LaserSightOptions", "SwitchFirstPersonReticleOptions", "SwchColorBlindMode" )
 
 	
 	Hud_SetPinSibling( Hud_GetChild( contentPanel, "SwchColorBlindMode" ), "AccessibilityHeader" )
 	Hud_SetPinSibling( Hud_GetChild( contentPanel, "AccessibilityHeader" ), "LaserSightOptions" )
-
 
 
 	CheckVoiceChatVolumeSetting()
@@ -379,6 +399,23 @@ void function OnHudOptionsPanel_Show( var panel )
 	Hud_SetLocked( holdToSprint, autoSprintEnabled )
 	Hud_SetLocked( Hud_GetChild( holdToSprint, "LeftButton" ), autoSprintEnabled )
 	Hud_SetLocked( Hud_GetChild( holdToSprint, "RightButton" ), autoSprintEnabled )
+
+
+	
+#if DEV
+		bool showObserverControls = GetCurrentPlaylistVarBool( "private_match", false ) && GetCurrentPlaylistVarBool( "has_extended_observer_controls", true );
+#else
+		bool showObserverControls = GetCurrentPlaylistVarBool( "private_match", false ) && GetCurrentPlaylistVarBool( "has_extended_observer_controls", false );
+#endif
+	Hud_SetVisible( Hud_GetChild( contentPanel, "ObserverHeader" ), showObserverControls )
+	Hud_SetVisible( Hud_GetChild( contentPanel, "ObserverHeaderText" ), showObserverControls )
+	Hud_SetVisible( Hud_GetChild( contentPanel, "ObserverSlowSpeed" ), showObserverControls )
+	Hud_SetVisible( Hud_GetChild( contentPanel, "TextEntryObserverSlowSpeed" ), showObserverControls )
+	Hud_SetVisible( Hud_GetChild( contentPanel, "ObserverBaseSpeed" ), showObserverControls )
+	Hud_SetVisible( Hud_GetChild( contentPanel, "TextEntryObserverBaseSpeed" ), showObserverControls )
+	Hud_SetVisible( Hud_GetChild( contentPanel, "ObserverFastSpeed" ), showObserverControls )
+	Hud_SetVisible( Hud_GetChild( contentPanel, "TextEntryObserverFastSpeed" ), showObserverControls )
+
 
 	SettingsPanel_SetContentPanelHeight( contentPanel )
 	ScrollPanel_Refresh( panel )
@@ -453,7 +490,7 @@ void function UpdateCrossplaySettingAvailable()
 	var button = file.crossplayButton
 
 	bool inMixedParty = false
-	string hardware = GetUnspoofedPlayerHardware()
+	string hardware = GetPlayerHardware()
 	Party myParty = GetParty()
 	foreach ( p in myParty.members )
 	{
@@ -520,17 +557,20 @@ void function OnLaserSightSettingChanged( var btn )
 }
 
 
+void function OnEnemyHighlightingOnOffChanged( var btn )
+{
+	int index = Hud_GetDialogListSelectionIndex( btn )
 
+	if ( IsLobby() )
+	{
+		return
+	}
 
-
-
-
-
-
-
-
-
-
+	if ( index == 0 )
+		RunClientScript( "SetEnemyHighLightOnOff", "Off" )
+	else if ( index == 1 )
+		RunClientScript( "SetEnemyHighLightOnOff", "On" )
+}
 
 
 void function OnAutoSprintChanged( var btn )

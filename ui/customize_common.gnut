@@ -208,6 +208,39 @@ const array<vector> skydiveSmokeColors = [
 ]
 global function GetSkydiveSmokeColorForTeam
 
+const array<string> thematicTeamNames = [
+	"#TEAM_1",
+	"#TEAM_2",
+	"#TEAM_3",
+	"#TEAM_4",
+	"#TEAM_5",
+	"#TEAM_6",
+	"#TEAM_7",
+	"#TEAM_8",
+	"#TEAM_9",
+	"#TEAM_10",
+	"#TEAM_11",
+	"#TEAM_12",
+	"#TEAM_13",
+	"#TEAM_14",
+	"#TEAM_15",
+	"#TEAM_16",
+	"#TEAM_17",
+	"#TEAM_18",
+	"#TEAM_19",
+	"#TEAM_20",
+	"#TEAM_21",
+	"#TEAM_22",
+	"#TEAM_23",
+	"#TEAM_24",
+	"#TEAM_25",
+	"#TEAM_26"
+]
+global function UseThematicTeamNames
+
+
+
+
 
 
 
@@ -250,6 +283,19 @@ vector function GetSkydiveSmokeColorForTeam( int team )
 	vector teamSkyDiveColor = skydiveSmokeColors[ team % skydiveSmokeColors.len() ]
 	return teamSkyDiveColor
 }
+
+bool function UseThematicTeamNames()
+{
+	return GetCurrentPlaylistVarBool( SURVIVAL_HUD_USETHEMATICTEAMNAMES_PVAR, false )
+}
+
+
+
+
+
+
+
+
 
 
 void function CustomizeButton_UpdateAndMarkForUpdating( var button,
@@ -648,7 +694,7 @@ int function CanEquipCanBuyCharacterItemCheck( ItemFlavor flav )
 	ItemFlavor character = GetTopLevelCustomizeContext()
 	Assert( ItemFlavor_GetType( character ) == eItemType.character )
 
-	if ( !GRX_IsItemOwnedByPlayer_AllowOutOfDateData( character, null ) )
+	if ( !Character_IsCharacterOwnedByPlayer( character, null ) )
 		return eItemCanEquipCanBuyStatus.CANNOT_EQUIP_CANNOT_BUY
 
 	if ( ItemFlavor_GetType( flav ) == eItemType.character_execution && CharacterExecution_IsNotEquippable( flav ) )
@@ -752,10 +798,17 @@ void function CustomizeButton_OnRightOrDoubleClick( var button )
 	CustomizeButtonContext cbc = fileLevel.activeCustomizeButtons[button]
 	CustomizeMenus_UpdateActionContext( button )
 
+	ItemFlavor character = GetTopLevelCustomizeContext()
+
+		if ( NPP_ShouldDisableGRXForNPPLegend( GetLocalClientPlayer(), character ) )
+		{
+			EmitUISound( "menu_deny" )
+			return
+		}
+
+
 	if ( cbc.getItemCanEquipCanBuyStatusFunc != null && cbc.getItemCanEquipCanBuyStatusFunc( cbc.itemFlavor ) == eItemCanEquipCanBuyStatus.CANNOT_EQUIP_CANNOT_BUY )
 	{
-		ItemFlavor character = GetTopLevelCustomizeContext()
-
 		PurchaseDialogConfig pdc
 		pdc.flav = character
 		pdc.quantity = 1
@@ -1141,6 +1194,21 @@ void function UpdateCustomizeItemButton( CustomizeButtonContext cbc, bool justAd
 		RuiSetBool( rui, "displayShimmer", false )
 	}
 
+	if ( ItemFlavor_GetType( cbc.itemFlavor ) == eItemType.gladiator_card_stat_tracker )
+	{
+		if ( GetTrackerUIContext() == eTrackerType.ART )
+		{
+			RuiSetImage( rui, "buttonImage", GladiatorCardStatTracker_GetBackgroundImage( cbc.itemFlavor ) )
+			RuiSetString( rui, "trackerValue", "" )
+			RuiSetString( rui, "buttonText", "" )
+		}
+		else
+		{
+			RuiSetString( rui, "trackerValue", GladiatorCardStatTracker_GetFormattedValueText( GetLocalClientPlayer(), GetTopLevelCustomizeContext(), cbc.itemFlavor ) )
+			RuiSetImage( rui, "buttonImage", $"" )
+		}
+	}
+
 	
 	
 	
@@ -1179,12 +1247,16 @@ void function UpdateCustomizeItemButton( CustomizeButtonContext cbc, bool justAd
 
 	
 	bool isOwned = false
-	if ( ItemFlavor_GetGRXMode( cbc.itemFlavor ) == GRX_ITEMFLAVORMODE_NONE )
+	foreach ( loadoutEntry in cbc.loadoutEntries )
 	{
-		foreach ( loadoutEntry in cbc.loadoutEntries )
-			isOwned = isOwned || IsItemFlavorUnlockedForLoadoutSlot( LocalClientEHI(), loadoutEntry, cbc.itemFlavor, false, true )
+		if ( IsItemFlavorUnlockedForLoadoutSlot( LocalClientEHI(), loadoutEntry, cbc.itemFlavor, false, true ) )
+		{
+			isOwned = true
+			break
+		}
 	}
-	else 
+
+	if ( !isOwned && ItemFlavor_GetGRXMode( cbc.itemFlavor ) != GRX_ITEMFLAVORMODE_NONE )
 	{
 		if ( !GRX_AreOffersReady() || !GRX_IsInventoryReady() )
 		{
@@ -1194,9 +1266,6 @@ void function UpdateCustomizeItemButton( CustomizeButtonContext cbc, bool justAd
 			return 
 		}
 
-		
-		Hud_SetEnabled( cbc.button, true )
-		RuiSetBool( rui, "isLoading", false )
 		
 		isOwned = GRX_IsItemOwnedByPlayer( cbc.itemFlavor )
 
@@ -1225,6 +1294,8 @@ void function UpdateCustomizeItemButton( CustomizeButtonContext cbc, bool justAd
 		}
 	}
 
+	Hud_SetEnabled( cbc.button, true )
+	RuiSetBool( rui, "isLoading", false )
 	Hud_SetLocked( cbc.button, !isOwned )
 
 	if ( cbc.customButtonUpdateFunc != null )
@@ -1307,7 +1378,10 @@ void function ActionButton_OnClick( var button )
 
 	expect CustomizeButtonContext( cbc )
 
-	if ( cbc.getItemCanEquipCanBuyStatusFunc != null && cbc.getItemCanEquipCanBuyStatusFunc( cbc.itemFlavor ) == eItemCanEquipCanBuyStatus.CANNOT_EQUIP_CANNOT_BUY )
+	bool cbcIsCannotEquipCannotBuy  = ( cbc.getItemCanEquipCanBuyStatusFunc != null && cbc.getItemCanEquipCanBuyStatusFunc( cbc.itemFlavor ) == eItemCanEquipCanBuyStatus.CANNOT_EQUIP_CANNOT_BUY )
+	bool cbcItemIsEquipped = IsItemInCBCEquipped( cbc )
+
+	if ( cbcIsCannotEquipCannotBuy || ( cbcItemIsEquipped && !fileLevel.isParentItemOwned ) )
 	{
 		ItemFlavor character = GetTopLevelCustomizeContext()
 
@@ -1377,7 +1451,20 @@ void function UpdateActionButton()
 	expect CustomizeButtonContext( cbc )
 	ItemFlavor item = cbc.itemFlavor
 
-	fileLevel.isParentItemOwned = IsParentItemOwned( cbc )
+	entity player		 = GetLocalClientPlayer()
+	ItemFlavor topFlav	 = GetTopLevelCustomizeContext()
+	bool customizingChar = ( ItemFlavor_GetType( topFlav ) == eItemType.character )
+
+
+		if ( customizingChar && NPP_ShouldDisableGRXForNPPLegend( player, topFlav ) )
+		{
+			Hud_SetVisible( fileLevel.actionButton, false )
+			return
+		}
+
+
+	fileLevel.isParentItemOwned = customizingChar ? !Loadout_IsCharacterStillPurchasableByPlayer( player, topFlav ) : GRX_IsItemOwnedByPlayer( topFlav, player )
+	bool isParentUnlocked		= customizingChar ? Loadout_IsCharacterUnlockedForPlayer( player, topFlav ) : true
 	bool isOwned                = GRX_IsItemOwnedByPlayer_AllowOutOfDateData( item )
 	bool isEquipped             = IsItemInCBCEquipped( cbc )
 	bool isVisible              = !fileLevel.isParentItemOwned || !isOwned || (isOwned && !isEquipped)
@@ -1393,12 +1480,14 @@ void function UpdateActionButton()
 	string buttonText
 	bool controllerActive = IsControllerModeActive()
 
-	if ( !fileLevel.isParentItemOwned )
+	if ( !fileLevel.isParentItemOwned && !isParentUnlocked )
 		buttonText = controllerActive ? "#X_BUTTON_UNLOCK_LEGEND" : "#UNLOCK_LEGEND"
-	else if ( !isOwned )
+	else if ( !isOwned && isParentUnlocked )
 		buttonText = controllerActive ? "#X_BUTTON_UNLOCK" : "#UNLOCK"
-	else
+	else if ( !isEquipped && isParentUnlocked )
 		buttonText = controllerActive ? "#X_BUTTON_EQUIP" : "#EQUIP"
+	else if ( !fileLevel.isParentItemOwned ) 
+		buttonText = controllerActive ? "#X_BUTTON_UNLOCK_LEGEND" : "#UNLOCK_LEGEND"
 
 	if ( controllerActive && !fileLevel.isXButtonRegistered && !CustomizeMenus_IsFocusedItem() )
 	{
@@ -1570,6 +1659,7 @@ asset function CustomizeMenu_GetRewardButtonImage( ItemFlavor flavor )
 			}
 			break
 
+		case eItemType.account_flag:
 		case eItemType.battlepass:
 		case eItemType.image_2d:
 		case eItemType.skydive_emote:
@@ -1667,9 +1757,9 @@ asset function CustomizeMenu_GetRewardButtonImage( ItemFlavor flavor )
 			buttonImage = $"rui/menu/buttons/battlepass/sticker"
 			break
 
-		case eItemType.event_ability:
-			buttonImage = ItemFlavor_GetIcon( flavor )
-			break
+
+
+
 
 
 		case eItemType.artifact_component_deathbox:

@@ -56,7 +56,6 @@ global function CreateNestedArenasRankedRui
 
 
 
-
 global function ArenasRanked_GetNumPlacementMatchesRequired
 global function ArenasRanked_GetNumPlacementMatchesCompleted
 global function ArenasRanked_HasFinishedPlacementMatches
@@ -70,7 +69,6 @@ global function ArenasRanked_HasFinishedPlacementMatches
 
 
 
-global function IsArenasRankedPlaylist
 global function ArenasRanked_SetupMenuGladCardForUIPlayer
 global function ArenasRanked_SetupMenuGladCardFromCommunityUserInfo		
 global function ArenasRanked_ManageDialogFlow
@@ -989,11 +987,6 @@ int function GetPlayerArenasRankScore( entity player )
 
 
 
-
-
-
-
-
 var function GetArenasRankedPersistenceData( entity player, string persistenceField )
 {
 #if DEV
@@ -1351,6 +1344,11 @@ bool function IsArenasRankedInSeason()
 
 
 
+
+
+
+
+
 array<SharedRankedTierData> function ArenasRanked_GetTiers()
 {
 	return file.rankedTiers
@@ -1423,9 +1421,11 @@ void function ArenasRanked_SetupMenuGladCardFromCommunityUserInfo( CommunityUser
 
 void function ArenasRanked_SetupMenuGladCard_internal( int ladderPos, int rankScore )
 {
-	int rankShouldShow = IsArenasRankedPlaylist( LobbyPlaylist_GetSelectedPlaylist() ) ? 1 : 0
-	SendMenuGladCardPreviewCommand( eGladCardPreviewCommandType.ARENAS_RANKED_SHOULD_SHOW, rankShouldShow, null )
-	SendMenuGladCardPreviewCommand( eGladCardPreviewCommandType.ARENAS_RANKED_DATA, ladderPos, null, rankScore )
+
+
+
+
+
 }
 
 bool function ArenasRanked_ManageDialogFlow( bool rankedSplitChangeAudioPlayed = false )
@@ -1455,11 +1455,6 @@ bool function ArenasRanked_NeedToNotifySplitReset()
 string function ArenasRanked_GetSplitResetAcknowledgePersistenceField()
 {
 	return file.arenasRankedSplitResetAcknowledgePersistenceField
-}
-
-bool function IsArenasRankedPlaylist( string playlist )
-{
-	return GetPlaylistVarBool( playlist, "is_arenas_ranked", false )
 }
 
 bool function ArenasRanked_ShouldUpdateWithComnunityUserInfo( int score, int ladderPosition )

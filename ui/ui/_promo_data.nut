@@ -1,11 +1,24 @@
 global function InitPromoData
 global function GetPromoImage
 global function OpenPromoLink
+global function IsValidUMAction
 
 #if DEV
 global function DEV_PrintUMPromoData
 #endif
 
+
+global const string UM_LOCATION_PROMO_UM   = ""
+global const string UM_LOCATION_PROMO_MINI = ""
+global const string UM_LOCATION_BATTLEPASS = "battlepass"
+global const string UM_LOCATION_NEW_PLAYER_BATTLEPASS = "new_player_battlepass"
+
+global enum eBattlepassUMType
+{
+	NONE = 0,
+	MESSAGE = 1,
+	DEEPLINK = 2
+}
 
 struct
 {
@@ -39,26 +52,71 @@ asset function GetPromoImage( string identifier )
 	return image
 }
 
-void function OpenPromoLink( string linkType, string link, string fromPageId = "")
+void function OpenPromoLink( string linkType, string link, string fromPageId = "" )
 {
-	
+#if DEV
+	printt( "### OpenPromoLink - linkType:", linkType, "- link:", link, "- fromPageId:", fromPageId )
+#endif
+
 	switch ( linkType )
 	{
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 		case "battlepass":
 			EmitUISound( "UI_Menu_Accept" )
-			JumpToSeasonTab( "PassPanel" )
+			JumpToSeasonTab( "RTKBattlepassPanel" )
+			break
+
+		case "battlepass_milestone":
+			EmitUISound( "UI_Menu_Accept" )
+			JumpToSeasonTab( "RTKBattlepassPanel" )
+			OpenBattlePassMilestoneDialog()
 			break
 
 		case "battlepass_level":
-
 			EmitUISound( "UI_Menu_Accept" )
-			JumpToSeasonTab( "PassPanel" )
+			JumpToSeasonTab( "RTKBattlepassPanel" )
 			BattlePass_PurchaseButton_OnActivate( null )
+			break
+
+		case "progression_modifiers":
+			EmitUISound( "UI_Menu_Accept" )
+			OpenProgressionModifiersMenu()
+			break
+
+		case "battlepass_purchase_premium":
+			OpenBattlepassPurchaseMenu( ePassPurchaseTab.PREMIUM )
+			break
+
+		case "battlepass_purchase_plus":
+			OpenBattlepassPurchaseMenu( ePassPurchaseTab.PREMIUMPLUS )
+			break
+
+
+
+		case "newplayerpass":
+			if ( NPP_IsNPPActive( GetLocalClientPlayer() ) )
+			{
+				EmitUISound( "UI_Menu_Accept" )
+				JumpToSeasonTab( "RTKNewplayerpassPanel" )
+			}
 			break
 
 		case "challenges":
 			EmitUISound( "UI_Menu_Accept" )
-			JumpToChallenges( link );
+			JumpToChallenges( link )
 			break
 
 		case "playapex":
@@ -78,10 +136,11 @@ void function OpenPromoLink( string linkType, string link, string fromPageId = "
 
 		case "storecharacter":
 			EmitUISound( "UI_Menu_Accept" )
+			entity player = GetLocalClientPlayer()
 			if ( IsValidItemFlavorCharacterRef( link ) )
 			{
 				ItemFlavor character = GetItemFlavorByCharacterRef( link )
-				if ( GRX_IsInventoryReady( GetLocalClientPlayer() ) && GRX_IsItemOwnedByPlayer( character )  )
+				if ( GRX_IsInventoryReady( player ) && Loadout_IsCharacterUnlockedForPlayer( player, character )  )
 					JumpToCharactersTab()
 				else
 					JumpToCharacterCustomize( character )
@@ -89,7 +148,7 @@ void function OpenPromoLink( string linkType, string link, string fromPageId = "
 			else if ( IsValidItemFlavorGUID( ConvertItemFlavorGUIDStringToGUID( link ) ) )
 			{
 				ItemFlavor character = GetItemFlavorByGUID( ConvertItemFlavorGUIDStringToGUID( link ) )
-				if ( GRX_IsInventoryReady( GetLocalClientPlayer() ) && GRX_IsItemOwnedByPlayer( character ) )
+				if ( GRX_IsInventoryReady( player ) && Loadout_IsCharacterUnlockedForPlayer( player, character ) )
 					JumpToCharactersTab()
 				else
 					JumpToCharacterCustomize( character )
@@ -216,11 +275,48 @@ void function OpenPromoLink( string linkType, string link, string fromPageId = "
 
 		case "rankedrumble":
 
-
-
+			EmitUISound( "UI_Menu_Accept" )
+			RankedRumble_JumpToRumblePage()
 
 			break
+
+
+		case "newplayerpasstutorial":
+			UI_OpenFeatureTutorialDialog( NEW_PLAYER_PASS_TUTORIAL )
+			break
+
+		case "newplayerpassinfo":
+			OpenNewPlayerPassInfo()
+			break
+
+		case "newplayerchallengeinfo":
+			OpenChallengesInfo()
+			break
+
 	}
+}
+
+string function GetLocationFromUMAction( UMAction action )
+{
+	foreach ( UMItem item in action.items )
+	{
+		if ( item.name == "Location" )
+		{
+			return item.value
+		}
+	}
+
+	return ""
+}
+
+bool function IsValidUMAction( UMAction action, string uiLocation )
+{
+	if ( GetLocationFromUMAction( action ) == uiLocation )
+	{
+		return true
+	}
+
+	return false
 }
 
 #if DEV

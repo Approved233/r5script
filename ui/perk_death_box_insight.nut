@@ -55,11 +55,22 @@ void function Perk_DeathBoxInsight_Init()
 
 
 
+	PerkInfo ammuvision
+	ammuvision.perkId = ePerkIndex.AMMUVISION
 
 
 
 
 
+
+
+	Perks_RegisterClassPerk( ammuvision )
+
+}
+
+
+void function OnActivate_Ammuvision( entity player, string characterName )
+{
 
 
 
@@ -68,29 +79,20 @@ void function Perk_DeathBoxInsight_Init()
 
 }
 
+void function OnDeactivate_Ammuvision( entity player )
+{
 
 
 
 
 
 
+}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+bool function Ammuvision_ClassPerk_Enabled()
+{
+	return Perks_S22UpdateEnabled() && GetCurrentPlaylistVarBool( "perks_ammuvision_enabled", true )
+}
 
 
 

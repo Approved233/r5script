@@ -27,10 +27,10 @@ global function LoadoutSlot_GetInteger
 global function LoadoutSlot_WaitForItemFlavor
 global function LoadoutSlot_GetUsableFavorites
 global function LoadoutSlot_GetFavorites
-
 global function LoadoutSlot_GetBackups
-
 global function LoadoutSlot_GetRawStorageContents
+
+
 
 
 
@@ -56,6 +56,7 @@ global function RemoveCallback_ItemFlavorLoadoutSlotDidChange_SpecificPlayer
 
 global function RequestSetItemFlavorLoadoutSlot
 global function RequestSetItemFlavorLoadoutSlot_WithDuplicatePrevention
+global function RequestSetItemFlavorLoadoutSlot_AllLegends
 global function RequestSetItemFlavorFavoritesSlot
 global function RequestClearItemFlavorFavoritesSlot
 global function RequestSetFavoredQuip
@@ -66,6 +67,9 @@ global function GetValidItemFlavorsForLoadoutSlot
 global function IsItemFlavorUnlockedForLoadoutSlot
 global function IsItemFlavorGRXUnlockedForLoadoutSlot
 global function IsItemFlavorGRXUnlockedForLoadoutSlotHelper
+global function Loadout_IsCharacterUnlockedForPlayer
+global function Loadout_IsCharacterOwnedByPlayerIngoringUnlockSources
+global function Loadout_IsCharacterStillPurchasableByPlayer
 global function GetUnlockedItemFlavorsForLoadoutSlot
 global function GetRandomGoodItemFlavorForLoadoutSlot
 global function GetMostPlayedCharacterItemFlavor
@@ -168,18 +172,18 @@ global enum eLoadoutCategory
 	GCARD_STANCES,
 	GCARD_BADGES,
 	GCARD_BADGE_TIER,
-	GCARD_TRACKERS,
-	GCARD_TRACKER_TIER,
+	GCARD_TRACKER_ART,
+	GCARD_TRACKER_STATS,
+	GCARD_TRACKER_STAT_VALUE,
 	CHARACTER_FAVORED_QUIPS,
 	CHARACTER_SKYDIVE_EMOTES,
 	SKYDIVE_TRAIL,
 	STICKERS,
 	CHARACTER_QUIPS,
+	DEATHBOX,
+	ARTIFACT_CONFIGURATIONS,
 
-		DEATHBOX,
 
-
-		ARTIFACT_CONFIGURATIONS,
 
 
 	OTHER,
@@ -197,18 +201,18 @@ global const table< int, string > LOADOUT_CATEGORIES_TO_NAMES_MAP = {
 	[eLoadoutCategory.GCARD_STANCES] = "gcard_stances",
 	[eLoadoutCategory.GCARD_BADGES] = "gcard_badges",
 	[eLoadoutCategory.GCARD_BADGE_TIER] = "gcard_badge_tier",
-	[eLoadoutCategory.GCARD_TRACKERS] = "gcard_trackers",
-	[eLoadoutCategory.GCARD_TRACKER_TIER] = "gcard_tracker_tier",
+	[eLoadoutCategory.GCARD_TRACKER_ART] = "gcard_tracker_art",
+	[eLoadoutCategory.GCARD_TRACKER_STATS] = "gcard_tracker_stats",
+	[eLoadoutCategory.GCARD_TRACKER_STAT_VALUE] = "gcard_tracker_stat_value",
 	[eLoadoutCategory.CHARACTER_FAVORED_QUIPS] = "character_favored_quips",
 	[eLoadoutCategory.CHARACTER_SKYDIVE_EMOTES] = "character_skydive_emotes",
 	[eLoadoutCategory.SKYDIVE_TRAIL] = "skydive_trail",
 	[eLoadoutCategory.STICKERS] = "stickers",
 	[eLoadoutCategory.CHARACTER_QUIPS] = "character_quips",
-
 	[eLoadoutCategory.DEATHBOX] = "deathbox",
-
-
 	[eLoadoutCategory.ARTIFACT_CONFIGURATIONS] = "artifact_weapons",
+
+
 
 
 	[eLoadoutCategory.OTHER] = "other",
@@ -273,10 +277,8 @@ global struct LoadoutEntry
 
 	int maxFavoriteCount = 0 
 	
-
 	int backupCount = 0 
 	array<string> ornull backupPdefKeys = null 
-
 
 	
 	int           networkTo = eLoadoutNetworking.PLAYER_EXCLUSIVE
@@ -328,6 +330,9 @@ const asset LOADOUT_BOT_CHARACTERS_DATATABLE = $"datatable/bot_loadout/bot_loado
 const asset LOADOUT_BOT_BADGES_DATATABLE = $"datatable/bot_loadout/bot_loadout_badges.rpak"
 const asset LOADOUT_BOT_STATTRACKERS_DATATABLE = $"datatable/bot_loadout/bot_loadout_stat_trackers.rpak"
 const asset LOADOUT_BOT_GENERIC_ASSET_INFO_DATATABLE = $"datatable/bot_loadout/bot_loadout_generic_asset_info.rpak"
+
+
+const string TRACKERS_2PT0_MIGRATION_PVAR = "hasMigratedLoadoutTrackers"
 
 struct BotLoadoutInfoBadge
 {
@@ -430,13 +435,10 @@ void function ShLoadouts_LevelInit_Begin()
 
 
 
-		Remote_RegisterServerFunction( "ClientCallback_loadouts_set", "int", INT_MIN, INT_MAX, "int", INT_MIN, INT_MAX )
+		Remote_RegisterServerFunction( "ClientCallback_loadouts_set", "int", INT_MIN, INT_MAX, "int", INT_MIN, INT_MAX, "bool" )
 		Remote_RegisterServerFunction( "ClientCallback_favorites_set", "int", INT_MIN, INT_MAX, "int", INT_MIN, INT_MAX, "int", INT_MIN, INT_MAX )
 		Remote_RegisterServerFunction( "ClientCallback_favorites_clear", "int", INT_MIN, INT_MAX, "int", INT_MIN, INT_MAX )
-
-
 		Remote_RegisterServerFunction( LOADOUT_CLIENT_CALLBACK_TOGGLE_DEATHBOX, "int", 0, INT_MAX, "int", 0, INT_MAX, "int", 0, INT_MAX ) 
-
 
 
 
@@ -555,9 +557,7 @@ void function ShLoadouts_LevelInit_Finish()
 {
 
 		Remote_RegisterClientFunction( "ServerToClient_LoadoutSlotDidChange", "entity", "int", 0, fileLevel.loadoutSlotEntries.len() )
-
 		Remote_RegisterClientFunction( LOADOUT_SERVER_CALLBACK_DEATHBOX_TOGGLED, "int", 0, INT_MAX, "int", 0, INT_MAX, "int", 0, INT_MAX ) 
-
 		int batchMax = fileLevel.loadoutSlotEntries.len() + 1
 		Remote_RegisterClientFunction( "ServerToClient_LoadoutSlotDidChangeBatch", "entity",
 			"int", 0, batchMax, "int", 0, batchMax, "int", 0, batchMax, "int", 0, batchMax, "int", 0, batchMax, "int", 0, batchMax, "int", 0, batchMax, "int", 0, batchMax,
@@ -721,7 +721,6 @@ void function ShLoadouts_LevelInit_Finish()
 				entry.favoritePdefKeys = favorites
 			}
 
-
 			if ( entry.backupCount > 0 )
 			{
 				Assert( ( entry.backupCount != 0 && entry.maxFavoriteCount == 0 )
@@ -735,7 +734,6 @@ void function ShLoadouts_LevelInit_Finish()
 				}
 				entry.backupPdefKeys = backups
 			}
-
 		}
 
 		if ( entry.associatedCharacterOrNull != null )
@@ -925,7 +923,6 @@ array<ItemFlavor> function LoadoutSlot_GetFavorites( EHI playerEHI, LoadoutEntry
 	return items
 }
 
-
 array<ItemFlavor> function LoadoutSlot_GetBackups( EHI playerEHI, LoadoutEntry entry )
 {
 	array<ItemFlavor> items
@@ -957,7 +954,6 @@ array<ItemFlavor> function LoadoutSlot_GetBackups( EHI playerEHI, LoadoutEntry e
 
 	return items
 }
-
 
 array<ItemFlavor> function LoadoutSlot_GetUsableFavorites( EHI playerEHI, LoadoutEntry entry )
 {
@@ -1186,6 +1182,13 @@ void function RemoveCallback_ItemFlavorLoadoutSlotDidChange_SpecificPlayer( EHI 
 
 
 
+void function RequestSetItemFlavorLoadoutSlot_AllLegends( EHI playerEHI, LoadoutEntry entry, ItemFlavor itemFlavor )
+{
+	Assert( entry.category == eLoadoutCategory.GCARD_TRACKER_ART )
+
+	_Shared_RequestSetItemFlavorLoadoutSlot( playerEHI, entry, itemFlavor, true )
+}
+
 void function RequestSetItemFlavorLoadoutSlot_WithDuplicatePrevention( EHI playerEHI, array<LoadoutEntry> loadoutEntries, ItemFlavor itemFlavor, int slotIndex = 0 )
 {
 	if ( loadoutEntries.len() > 1 )
@@ -1209,6 +1212,11 @@ void function RequestSetItemFlavorLoadoutSlot_WithDuplicatePrevention( EHI playe
 }
 void function RequestSetItemFlavorLoadoutSlot( EHI playerEHI, LoadoutEntry entry, ItemFlavor itemFlavor )
 {
+	_Shared_RequestSetItemFlavorLoadoutSlot( playerEHI, entry, itemFlavor, false )
+}
+
+void function _Shared_RequestSetItemFlavorLoadoutSlot( EHI playerEHI, LoadoutEntry entry, ItemFlavor itemFlavor, bool setForAllLegends )
+{
 #if LOADOUTS_DBG
 		DEV_LoadoutsDebug( entry )
 #endif
@@ -1219,11 +1227,9 @@ void function RequestSetItemFlavorLoadoutSlot( EHI playerEHI, LoadoutEntry entry
 
 
 	Assert( playerEHI == LocalClientEHI(), "Tried to use RequestSetLoadoutSlot on a different player" )
-
-	int seqNum            = 0
 	int slotContentsIndex = ConvertItemFlavorToLoadoutSlotContentsIndex( entry, itemFlavor )
 
-	Remote_ServerCallFunction( "ClientCallback_loadouts_set", entry.entryIndex, slotContentsIndex )
+	Remote_ServerCallFunction( "ClientCallback_loadouts_set", entry.entryIndex, slotContentsIndex, setForAllLegends )
 }
 
 void function RequestSetItemFlavorFavoritesSlot( EHI playerEHI, LoadoutEntry entry, ItemFlavor itemFlavor, int favIndex )
@@ -1490,7 +1496,7 @@ bool function IsItemFlavorGRXUnlockedForLoadoutSlot( EHI playerEHI, ItemFlavor i
 		default:
 			if ( ItemFlavor_GetType( itemFlavor ) == eItemType.character )
 			{
-				return Character_IsCharacterUnlockedForCalevent( itemFlavor ) || GRX_IsItemOwnedByPlayer_AllowOutOfDateData( itemFlavor, FromEHI( playerEHI ) )
+				return Loadout_IsCharacterUnlockedForPlayer( FromEHI( playerEHI ), itemFlavor )
 			}
 			else
 			{
@@ -1498,6 +1504,43 @@ bool function IsItemFlavorGRXUnlockedForLoadoutSlot( EHI playerEHI, ItemFlavor i
 			}
 	}
 	unreachable
+}
+
+bool function Loadout_IsCharacterUnlockedForPlayer( entity player, ItemFlavor charFlav )
+{
+	if ( Character_IsCharacterUnlockedForCalevent( charFlav ) )
+	{
+		return true
+	}
+	else if ( Character_IsUnlockedForBattlePassV2( player, charFlav ) )
+	{
+		return true
+	}
+	else if ( GRX_IsItemOwnedByPlayer_AllowOutOfDateData( charFlav, player ) )
+	{
+		return true
+	}
+
+	return false
+}
+
+bool function Loadout_IsCharacterOwnedByPlayerIngoringUnlockSources( entity player, ItemFlavor charFlav )
+{
+	if ( GRX_IsItemOwnedByPlayer_AllowOutOfDateData( charFlav, player ) )
+	{
+		return true
+	}
+
+	return false
+}
+
+bool function Loadout_IsCharacterStillPurchasableByPlayer( entity player, ItemFlavor charFlav )
+{
+	Assert( IsLobby() )
+	if ( GRX_IsItemOwnedByPlayer( charFlav, player ) )
+		return false
+
+	return true
 }
 
 
@@ -1715,8 +1758,6 @@ array<LoadoutEntry> function GetAllLoadoutSlots()
 
 
 
-
-
 void function ShLoadouts_OnPlayerEHICreated( EHI player, bool thisCallIsHappeningBecauseTheUIVMReset = false )
 {
 	EHIScriptStruct ehiss = GetEHIScriptStruct( player )
@@ -1768,8 +1809,6 @@ void function ShLoadouts_OnPlayerEHICreated( EHI player, bool thisCallIsHappenin
 		}
 
 }
-
-
 
 
 
@@ -2019,12 +2058,10 @@ int function GetLoadoutSlotContentsIndexInternal( EHI playerEHI, LoadoutEntry en
 
 
 
-
 			if ( !IsLobby() && entry.defaultItemFlavor.guid == DEFAULT_MELEE_WEAPON_SKIN_GUID && IsValidItemFlavorGUID( slotContentsIndex ) && ItemFlavor_GetType( GetItemFlavorByGUID( slotContentsIndex ) ) == Artifacts_Loadouts_GetMeleeSkinNetVarOverrideType( false ) )
 			{
 				return slotContentsIndex 
 			}
-
 		}
 		else
 		{
@@ -2409,6 +2446,54 @@ int function GetLoadoutSlotContentsIndexFromNetworkVar( EHI playerEHI, LoadoutEn
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function RefreshLoadoutSlotInternal( EHI playerEHI, LoadoutEntry entry, table<LoadoutEntry, bool> ornull refreshedSlotsSet, array<int> ornull queuedSlotsIndicesForRpc, bool isDependent )
 {
 #if LOADOUTS_DBG
@@ -2433,8 +2518,6 @@ void function RefreshLoadoutSlotInternal( EHI playerEHI, LoadoutEntry entry, tab
 
 
 	int slotContentsIndex = GetLoadoutSlotContentsIndexInternal( playerEHI, entry )
-
-
 
 
 
@@ -3494,6 +3577,25 @@ bool function IsContentsIndexValidForLoadoutSlot( EHI playerEHI, LoadoutEntry en
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 array<string> ornull function GetLoadoutSlotForceResetTo( LoadoutEntry entry )
 {
 #if LOADOUTS_DBG
@@ -3533,23 +3635,13 @@ bool function IsLoadoutSlotLocked( EHI playerEHI, LoadoutEntry entry )
 			return false
 #endif
 
-
-	if ( GetCurrentPlaylistVarBool( "winter_express_loadout_changeable_at_anytime", false ) )
-		return false
-
-
-
-		if ( GetCurrentPlaylistVarBool( "control_loadout_changeable_at_anytime", false ) )
-			return false
-
-
-
-		if ( GetCurrentPlaylistVarBool( "freedm_loadout_changeable_at_anytime", false ) )
-			return false
-
-
 	return entry.isSlotLocked( playerEHI )
 }
+
+
+
+
+
 
 
 
@@ -3666,8 +3758,6 @@ void function DEV_LoadoutsDebug( LoadoutEntry entry )
 		printt("LoadoutsDebug: " + func1 + " called " + func0 + " for LoadoutEntry "+ entry.DEV_name)
 }
 #endif
-
-
 
 
 

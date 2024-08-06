@@ -14,8 +14,10 @@ global struct RTKBattlePassRewardButton_Properties
 
 	bool isOwned = false
 	bool isTall = false
+	bool isRumble = false
 
 	int flavGUID = 0
+	int tier = 0
 }
 
 void function RTKBattlePassRewardButton_InitMetaData( string behaviorType, string structType )
@@ -70,7 +72,7 @@ void function BattlePassRewardButton_OnActivate( rtk_behavior self )
 	}
 	else if ( ItemFlavor_GetType( item.flav ) == eItemType.gladiator_card_badge )
 	{
-		int badgeDataInteger = 0
+		int badgeDataInteger = item.tier
 
 		string grxRef = GetGlobalSettingsString( ItemFlavor_GetAsset( item.flav ), "grxRef" )
 
@@ -232,6 +234,8 @@ BattlePassReward function GetBattlePassRewardItemFlav( rtk_behavior self )
 		item.flav = GetItemFlavorByGUID( self.PropGetInt( "flavGUID" ) )
 		item.isOwned = self.PropGetBool( "isOwned" )
 		item.isTall = self.PropGetBool( "isTall" )
+		item.isRumble = self.PropGetBool( "isRumble" )
+		item.tier = self.PropGetInt("tier")
 	}
 	return item
 }

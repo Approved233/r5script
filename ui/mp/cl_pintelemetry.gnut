@@ -44,6 +44,11 @@ global function PIN_UIInteraction_OnScroll
 global function PIN_UIInteraction_OnChallengeTracked
 global function PIN_UIInteraction_OnBattlepassPageChange
 global function PIN_UIInteraction_OnBattlepassItemSelected
+
+global function PIN_UIInteraction_OnBattlepassV2ItemSelected
+global function PIN_UIInteraction_OnBattlepassV2TrackSelected
+global function PIN_UIInteraction_OnBattlepassV2PaginationScroll
+
 global function PIN_UIInteraction_PersonalisedStoreReveal
 
 global function PIN_PageView_EventsTab
@@ -54,6 +59,12 @@ global function PIN_PageView_StoreMilestone
 global function PIN_PageView_StoreMilestoneOffer
 global function PIN_PageView_StoreMilestoneInfoPage
 global function PIN_PageView_StoreMilestoneViewPurchasePanel
+global function PIN_PageView_ImageButtonModal
+
+global function PIN_PageView_ChallegeMainMenu
+global function PIN_PageView_ChallegeMainMenuTile
+global function PIN_PageView_ChallegeMenuBlock
+global function PIN_PageView_ChallegeMenuInspectChallenge
 
 global function SetCurrentHubForPIN
 global function SetCurrentTabForPIN
@@ -216,10 +227,18 @@ table function PIN_GetSpecialMetaData( bool isDialog, table metaData, string men
 	if ( metaData[ "hub_name" ] == "PassPurchaseMenu" || metaData[ "hub_name" ] == "BattlePassAboutPage1")
 	{
 		metaData[ "hub_name" ] = "SeasonPanel"
-		if ( "tab_name" in metaData )
-			metaData[ "tab_name" ] = "PassPanel"
-		else
-			metaData[ "tab_name" ] <- "PassPanel"
+
+
+
+
+
+
+
+			if ( "tab_name" in metaData )
+				metaData[ "tab_name" ] = "RTKBattlepassPanel"
+			else
+				metaData[ "tab_name" ] <- "RTKBattlepassPanel"
+
 	}
 	else if ( metaData[ "hub_name" ] == "ConfirmPurchaseDialog" || metaData[ "hub_name" ] == "StoreInspectMenu" || metaData[ "hub_name" ] == "ConfirmPackBundlePurchaseDialog" )
 	{
@@ -1130,6 +1149,68 @@ void function PIN_UIInteraction_OnBattlepassItemSelected( string fromName, strin
 }
 
 
+void function PIN_UIInteraction_OnBattlepassV2ItemSelected( string pgid, string modelNameString, int openDuration, string offerName )
+{
+	AddPINTelemetryEvent( "page_view",
+		PIN_StandardHeader(),
+		{
+			pgid = pgid
+			fromid = modelNameString
+			pgdur = openDuration
+			sdur = PIN_GetSessionDuration()
+			action = "Prize Inspect"
+			offname = offerName
+		}
+	)
+}
+
+
+
+void function PIN_UIInteraction_OnBattlepassV2TrackSelected(  string pgid, string trackName, string passModelName, int secondsOnPage, int trackIndex, string trackLevel )
+{
+	AddPINTelemetryEvent( "ui_interaction",
+		PIN_StandardHeader(),
+		{
+			pgid = pgid
+			mdur = secondsOnPage
+			sdur = PIN_GetSessionDuration()
+			action = "selection"
+			object_id = "track_selector"
+			hub_name = "seasonal"
+			tab_name = passModelName
+			interaction_attr = {
+				track = trackIndex
+				track_level = trackLevel
+				track_name = trackName
+			}
+		}
+	)
+}
+
+
+
+void function PIN_UIInteraction_OnBattlepassV2PaginationScroll( string pgid, string passModelName, int newPage, int openDuration )
+{
+	AddPINTelemetryEvent( "ui_interaction",
+		PIN_StandardHeader(),
+		{
+			pgid = pgid
+			mdur = openDuration
+			sdur = PIN_GetSessionDuration()
+			action = "scrolling"
+			object_id = "prize_track"
+			hub_name = "seasonal"
+			tab_name = passModelName
+			interaction_attr = {
+				scroll_page = newPage
+			}
+		}
+	)
+}
+
+
+
+
 
 void function PIN_UIInteraction_PersonalisedStoreInteraction( string menuName, string objectName, int slotNumber, string offerSelectorName, string offerName )
 {
@@ -1442,6 +1523,131 @@ void function PIN_PageView_StoreMilestoneViewPurchasePanel( string menuName, int
 			click_type		= clickType
 
 			event			= milestoneName
+		}
+	)
+}
+
+
+
+void function PIN_PageView_ImageButtonModal( string menuName, float openDuration )
+{
+	if ( openDuration < 1.0 )
+		return
+
+	table<string, string> metaData
+
+	AddPINTelemetryEvent( "page_view",
+		PIN_StandardHeader(),
+		{
+			ldur = 0
+			pgdur = int( openDuration )
+			pgid = menuName.tolower()
+			fromid = ""
+			type = "popup"
+			meta = metaData
+		}
+	)
+}
+
+
+
+void function PIN_PageView_ChallegeMainMenu( string menuName, int openDuration, string fromId, string clickType )
+{
+	if ( openDuration < 1.0 )
+		return
+	table<string, string> metaData
+	metaData["hub_name"] <- "challenges"
+	metaData["tab_name"] <- "challenges"
+	AddPINTelemetryEvent( "page_view",
+		PIN_StandardHeader(),
+		{
+			ldur = 0
+			pgdur = openDuration
+			pgid = menuName.tolower()
+			fromid = fromId.tolower()
+			type = "menu"
+			meta = metaData
+			click_type		= clickType
+			ui_version = 0
+		}
+	)
+}
+
+
+
+void function PIN_PageView_ChallegeMainMenuTile( string menuName, int openDuration, string fromId, string clickType, string challenge_tile )
+{
+	if ( openDuration < 1.0 )
+		return
+	table<string, string> metaData
+	metaData["hub_name"] <- "challenges"
+	metaData["tab_name"] <- "challenges"
+	AddPINTelemetryEvent( "page_view",
+		PIN_StandardHeader(),
+		{
+			ldur = 0
+			pgdur = openDuration
+			pgid = menuName.tolower()
+			fromid = fromId.tolower()
+			type = "menu"
+			meta = metaData
+			click_type		= clickType
+			challenge_tile  = challenge_tile
+			ui_version = 0
+		}
+	)
+}
+
+
+
+void function PIN_PageView_ChallegeMenuBlock( string menuName, int openDuration, string fromId, string clickType, string challenge_tile, string challenge_block )
+{
+	if ( openDuration < 1.0 )
+		return
+	table<string, string> metaData
+	metaData["hub_name"] <- "challenges"
+	metaData["tab_name"] <- "challenges"
+	AddPINTelemetryEvent( "page_view",
+		PIN_StandardHeader(),
+		{
+			ldur = 0
+			pgdur = openDuration
+			pgid = menuName.tolower()
+			fromid = fromId.tolower()
+			type = "menu"
+			meta = metaData
+			click_type		= clickType
+			challenge_tile  = challenge_tile
+			challenge_block = challenge_block
+			ui_version = 0
+		}
+	)
+}
+
+
+
+void function PIN_PageView_ChallegeMenuInspectChallenge( string menuName, int openDuration, string fromId, string clickType, string challenge_tile, string challenge_block, string challenge_id, bool is_narrative_challenge )
+{
+	if ( openDuration < 1.0 )
+		return
+	table<string, string> metaData
+	metaData["hub_name"] <- "challenges"
+	metaData["tab_name"] <- "challenges"
+	AddPINTelemetryEvent( "page_view",
+		PIN_StandardHeader(),
+		{
+			ldur = 0
+			pgdur = openDuration
+			pgid = menuName.tolower()
+			fromid = fromId.tolower()
+			type = "menu"
+			meta = metaData
+			click_type				= clickType
+			challenge_tile  		= challenge_tile.tolower()
+			challenge_block 		= challenge_block.tolower()
+			challenge_id 		    = challenge_id
+			is_narrative_challenge  = is_narrative_challenge
+			ui_version = 0
 		}
 	)
 }

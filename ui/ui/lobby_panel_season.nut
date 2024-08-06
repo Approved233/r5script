@@ -28,7 +28,7 @@ struct
 void function InitSeasonPanel( var panel )
 {
 	file.panel = panel
-	SetPanelTabTitle( panel, "#SEASON_HUB" )
+	SetPanelTabTitle( panel, "#PASSES_HUB" )
 	AddPanelEventHandler( panel, eUIEvent.PANEL_SHOW, SeasonPanel_OnShow )
 	AddPanelEventHandler( panel, eUIEvent.PANEL_HIDE, SeasonPanel_OnHide )
 }
@@ -52,24 +52,6 @@ void function SeasonPanel_OnShow( var panel )
 		AddCallbackAndCallNow_OnGRXInventoryStateChanged( OnGRXSeasonUpdate )
 		AddCallbackAndCallNow_OnGRXOffersRefreshed( OnGRXSeasonUpdate )
 		file.callbacksAdded = true
-	}
-
-	entity player = GetLocalClientPlayer()
-
-	if ( !IsValid( player ) )
-		return
-
-	ItemFlavor currentSeason = GetLatestSeason( GetUnixTimestamp() )
-	string seasonString = ItemFlavor_GetCalEventRef( currentSeason )
-	bool isNewSeason = player.GetPersistentVar( "lastHubResetSeason" ) != seasonString
-	if ( isNewSeason )
-	{
-		if ( !storeInspect_JumpingToBPFromBPStorePurchase )
-		{
-			AdvanceMenu( GetMenu( "BattlePassAboutPage1" ) )
-		}
-
-		Remote_ServerCallFunction( "ClientCallback_SetSeasonalHubButtonClickedSeason" )
 	}
 
 	if ( GetLastMenuNavDirection() == MENU_NAV_FORWARD )
@@ -105,7 +87,7 @@ array<var> function GetAllMenuPanelsSorted( var menu )
 
 int function SortMenuPanelsByPlaylist( var a, var b )
 {
-	string playlistVal = GetCurrentPlaylistVarString( "season_panel_order", "PassPanel|QuestPanel|ChallengesPanel" )
+	string playlistVal = GetCurrentPlaylistVarString( "season_panel_order", "PassPanel|ChallengesPanel" )
 	if ( playlistVal == "" )
 		return 0
 
@@ -122,6 +104,7 @@ int function SortMenuPanelsByPlaylist( var a, var b )
 void function OnGRXSeasonUpdate()
 {
 	TabData tabData = GetTabDataForPanel( file.panel )
+	bool hasSubTab = false
 
 	if ( !GRX_IsInventoryReady() || !GRX_AreOffersReady() )
 	{
@@ -160,6 +143,26 @@ void function OnGRXSeasonUpdate()
 			bool enableTab = true
 
 			tabDef.title = GetPanelTabTitle( tabDef.panel )
+
+
+			if ( Hud_GetHudName( tabDef.panel ) == "RTKBattlepassPanel" )
+			{
+				ItemFlavor ornull activePass = GetActiveBattlePassV2()
+				showTab = activePass != null
+				enableTab = showTab
+			}
+
+
+
+			if ( Hud_GetHudName( tabDef.panel ) == "RTKNewplayerpassPanel" )
+			{
+				ItemFlavor ornull activePass = NPP_GetPlayerActiveNPP( GetLocalClientPlayer() )
+				showTab = activePass != null
+				enableTab = showTab
+			}
+
+
+			hasSubTab = hasSubTab || showTab
 			SetTabDefVisible( tabDef, showTab )
 			SetTabDefEnabled( tabDef, enableTab )
 		}
@@ -178,8 +181,10 @@ void function OnGRXSeasonUpdate()
 			if ( GetLastMenuNavDirection() == MENU_NAV_FORWARD )
 				activeIndex = 0
 
-			while( (!IsTabIndexEnabled( tabData, activeIndex ) || !IsTabIndexVisible( tabData, activeIndex ) || activeIndex == INVALID_TAB_INDEX) && activeIndex > numTabs )
+			while( (!IsTabIndexEnabled( tabData, activeIndex ) || !IsTabIndexVisible( tabData, activeIndex ) || activeIndex == INVALID_TAB_INDEX) && activeIndex < numTabs )
+			{
 				activeIndex++
+			}
 		}
 		else if ( storeInspect_JumpingToBPFromBPStorePurchase )
 		{
@@ -202,7 +207,7 @@ void function OnGRXSeasonUpdate()
 			if ( GetLastMenuNavDirection() == MENU_NAV_FORWARD )
 				activeIndex = numTabs - 1
 
-			while( (!IsTabIndexEnabled( tabData, activeIndex ) || !IsTabIndexVisible( tabData, activeIndex ) || activeIndex == INVALID_TAB_INDEX) && activeIndex < numTabs )
+			while( activeIndex < numTabs && (!IsTabIndexEnabled( tabData, activeIndex ) || !IsTabIndexVisible( tabData, activeIndex ) || activeIndex == INVALID_TAB_INDEX) && activeIndex >= 0 )
 				activeIndex--
 		}
 		file.isFirstSessionOpen = false
@@ -210,6 +215,8 @@ void function OnGRXSeasonUpdate()
 		bool wasPanelActive = IsTabActive( tabData )
 		if ( !wasPanelActive && file.isOpened  )
 			ActivateTab( tabData, activeIndex )
+
+		UpdateSeasonTabVisibility( hasSubTab )
 	}
 }
 
@@ -225,7 +232,14 @@ void function JumpToSeasonTab( string activateSubPanel = "" )
 		CloseActiveMenu()
 
 	TabData lobbyTabData = GetTabDataForPanel( GetMenu( "LobbyMenu" ) )
-	ActivateTab( lobbyTabData, Tab_GetTabIndexByBodyName( lobbyTabData, "SeasonPanel" ) )
+	if ( IsTabIndexEnabled( lobbyTabData, Tab_GetTabIndexByBodyName( lobbyTabData, "SeasonPanel" ) ) )
+	{
+		ActivateTab( lobbyTabData, Tab_GetTabIndexByBodyName( lobbyTabData, "SeasonPanel" ) )
+	}
+	else
+	{
+		ActivateTab( lobbyTabData, Tab_GetTabIndexByBodyName( lobbyTabData, "PlayPanel" ) )
+	}
 
 	if ( activateSubPanel == "" )
 		return
@@ -238,5 +252,12 @@ void function JumpToSeasonTab( string activateSubPanel = "" )
 		return
 	}
 
-	ActivateTab( tabData, tabIndex )
+	if ( IsTabIndexEnabled( tabData, tabIndex ) )
+	{
+		ActivateTab( tabData, tabIndex )
+	}
+	else
+	{
+		ActivateTab( lobbyTabData, Tab_GetTabIndexByBodyName( lobbyTabData, "PlayPanel" ) )
+	}
 }

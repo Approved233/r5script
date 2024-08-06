@@ -7,21 +7,17 @@
 
 global function Settings_Init
 
-global table<string, string> GAMETYPE_TEXT = {}
-
-global table<string, string> GAMETYPE_DESC = {}
 
 
 
 
-
-global table<string, array<int> > GAMETYPE_COLOR = {}
 
 global string GAMETYPE
+global int  GAMETYPE_ID
+
 global int MAX_TEAMS
 global int MAX_PLAYERS
 global int MAX_TEAM_PLAYERS
-global string GAMEDESC_CURRENT
 
 
 
@@ -350,6 +346,8 @@ global const BURN_METER_RADAR_JAMMER_EASE_OFF_TIME = 1.0
 void function Settings_Init()
 {
 	level.teams <- [ TEAM_IMC, TEAM_MILITIA ]
+
+
 
 
 

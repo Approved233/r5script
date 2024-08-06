@@ -20,6 +20,9 @@ global function Cups_GetVisibleEvents
 
 
 
+
+
+
 #if DEV
 global function Cups_GrantAllCupRewards
 global function Cups_UnregisterFromCup
@@ -34,6 +37,9 @@ global function DEV_Cups_ClearCupsLastMatchPlayedData
 #endif
 
 const int CUPS_MMR_BUCKET_INVALID = -1
+
+
+
 
 
 
@@ -394,6 +400,66 @@ array< SettingsAssetGUID > function Cups_GetVisibleEvents()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #if DEV
 bool function Cups_GrantAllCupRewards( SettingsAssetGUID cupID )
 {
@@ -418,13 +484,7 @@ bool function Cups_UnregisterFromAllCups()
 
 
 
-	entity player = GetLocalClientPlayer()
-	if ( !IsValid( player ) ) return false
-
-	foreach ( UserCupEntryData cupEntryData in Cups_GetPlayersFullPCupData( player ) )
-	{
-		Cups_UnregisterFromCup( cupEntryData.cupID )
-	}
+	Remote_ServerCallFunction( "ClientCallback_DeleteAllCupEntries" )
 
 	return true
 }

@@ -132,7 +132,6 @@ array<ItemFlavor> function RewardCampaign_GetCurrentTempUnlockChallenges( entity
 		expect ItemFlavor( campaignEvent )
 		expect ItemFlavor( tempUnlockEvent )
 
-		
 		array<ItemFlavor> collectionFlavs = RewardCampaign_GetChallengeCollections( campaignEvent )
 		if ( collectionFlavs.len() < 1 )
 		{
@@ -189,7 +188,6 @@ array<ItemFlavor> function RewardCampaign_GetChallengeCollections( ItemFlavor re
 
 	return challengeCollections
 }
-
 
 ItemFlavor ornull function RewardCampaign_GetChallengeCollection( ItemFlavor rewardCampaignFlav )
 {

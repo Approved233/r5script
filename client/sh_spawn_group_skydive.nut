@@ -14,8 +14,13 @@ global function SpawnGroupSkydive_SetCallback_GetSquadSpawnDelay
 
 
 
+
+
+
+
 global function SpawnSquadSkyDive_GetRemainingRespawnsForAllPlayersInSquad
 global function SpawnGroupSkydive_ShouldTeamHavePoolOfRespawns
+
 
 
 
@@ -27,6 +32,7 @@ const int RESPAWN_ALL_DEAD_PLAYERS_TOGETHER_SPAWNGROUP_IDX = TEAM_INVALID
 struct
 {
 	float functionref( int ) GetSquadSpawnDelay_Callback
+
 
 
 
@@ -63,6 +69,22 @@ void function ShSpawnSquadSkyDive_Init()
 
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -662,6 +684,162 @@ int function SpawnSquadSkyDive_GetRemainingRespawnsForAllPlayersInSquad( int tea
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 float function SpawnGroupSkydive_GetSquadSpawnDelay( int team )
 {
 	float spawnDelay = GetCurrentPlaylistVarFloat( "respawn_cooldown", 5.0 )
@@ -678,6 +856,14 @@ void function SpawnGroupSkydive_SetCallback_GetSquadSpawnDelay( float functionre
 	Assert( file.GetSquadSpawnDelay_Callback == null )
 	file.GetSquadSpawnDelay_Callback = func
 }
+
+
+
+
+
+
+
+
 
 
 
@@ -720,3 +906,19 @@ float function SpawnGroupSkydive_MinSpawnCooldownTime()
 {
 	return GetCurrentPlaylistVarFloat( "spawn_group_skydive_min_respawn_cooldown", 1.0 )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

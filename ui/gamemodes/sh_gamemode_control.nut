@@ -3,8 +3,6 @@
 const string CONTROL_MODE_MOVER_SCRIPTNAME = "control_mover"
 
 global function Control_Init
-global function Control_RegisterNetworking
-
 
 
 
@@ -367,10 +365,6 @@ global const int CONTROL_TEAMSCORE_LOCKOUTBROKEN = 50
 
 
 
-
-
-
-
 #if DEV
 const float SPAWNPOINT_RADIUS = 20
 const float SPAWNPOINT_HEIGHT = 128
@@ -554,20 +548,6 @@ enum eControlTimedEventType
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 struct ControlAnnouncementData
 {
 	bool isInitialized = false
@@ -606,14 +586,9 @@ struct {
 	bool isLockout = false
 	bool isRampUp = false
 
+	bool hasCamera = false
 	vector cameraLocation
 	vector cameraAngles
-
-
-
-
-
-
 
 
 
@@ -788,12 +763,12 @@ global enum eControlStat {
 
 void function Control_Init()
 {
-
-
-
-
-	if ( !Control_IsModeEnabled() )
+	if ( !GameMode_IsActive( eGameModes.CONTROL ) )
 		return
+
+
+
+
 
 	
 
@@ -1024,32 +999,8 @@ void function Control_Init()
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	Control_RegisterNetworking()
 }
-
-
-
-
 
 
 
@@ -1070,9 +1021,6 @@ void function Control_Init()
 
 void function Control_RegisterNetworking()
 {
-	if ( !Control_IsModeEnabled() )
-		return
-
 
 
 
@@ -1505,475 +1453,10 @@ array< featureTutorialTab > function Control_PopulateAboutText()
 		tabs.append( tab4 )
 
 
+	GameMode_AboutDialog_AppendRequeueTab(tabs)
+
 	return tabs
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -7467,22 +6950,6 @@ bool function Control_IsSpawnWaypointIndexAnObjective( int waypointIndex )
 {
 	return waypointIndex == eControlWaypointTypeIndex.OBJECTIVE_A || waypointIndex == eControlWaypointTypeIndex.OBJECTIVE_B || waypointIndex == eControlWaypointTypeIndex.OBJECTIVE_C
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

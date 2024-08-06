@@ -272,6 +272,9 @@ void function MpAbilityCryptoDrone_Init()
 
 
 
+
+
+
 }
 
 
@@ -2606,6 +2609,53 @@ void function CryptoDrone_WeaponInputThink( entity player, entity weapon )
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function Camera_OnCreate( entity player, int statusEffect, bool actuallyChanged )
 {
 	if ( player != GetLocalViewPlayer() )
@@ -2794,7 +2844,11 @@ void function Camera_OnEndView( entity player, int statusEffect, bool actuallyCh
 		
 		
 
-		Minimap_CommonCleanup( file.fakePlayerMarkerRui )
+		if ( file.fakePlayerMarkerRui != null )
+		{
+			Minimap_CommonCleanup( file.fakePlayerMarkerRui )
+			file.fakePlayerMarkerRui = null
+		}
 		Minimap_StopTrackVehicleData()
 
 
@@ -2997,6 +3051,12 @@ void function TempUpdateRuiDistance( entity player )
 
 
 
+
+
+
+
+
+
 				if ( (targetString != "") && useInputPressed )
 					RuiSetGameTime( file.cameraRui, "playerAttemptedUse", Time() )
 			}
@@ -3057,6 +3117,7 @@ bool function PlayerCanUseCamera( entity ownerPlayer, bool needsValidCamera )
 
 	return true
 }
+
 
 
 
@@ -3923,7 +3984,7 @@ bool function AutoReloadWhileInCryptoDroneCameraView()
 float function GetNeurolinkRange( entity player )
 {
 
-	if( IsValid( player ) && player.HasPassive( ePassives.PAS_PAS_UPGRADE_ONE ) ) 
+	if( IsValid( player ) && player.HasPassive( ePassives.PAS_PAS_UPGRADE_ONE ) && !player.GetPlayerNetBool( "isDoingEMPSequence" ) ) 
 		file.neurolinkRange = GetCurrentPlaylistVarFloat( "crypto_neurolink_range", EMP_RANGE ) * EMP_RANGE_UPGRADE_MULTIPLIER
 
 	return file.neurolinkRange

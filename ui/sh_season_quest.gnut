@@ -95,15 +95,12 @@ global function Comic_GetPreviewImage
 global function SeasonQuest_GetComicPagesIconForIndex
 
 global function SeasonQuest_GetMissionIconForMissionIndex
-global function TryDisplayTreasureBoxRewards
 global function DisplayTreasureBoxRewards
-global function DisplayQuestMissionRewards
 global function TryDisplayQuestFinalRewards
 global function DisplayQuestFinalRewards
 global function SeasonQuest_AcknowledgeHaveStartedQuest
 global function SeasonQuest_AcknowledgeQuestComicRead
 global function SeasonQuest_AcknowledgeQuestMissionRead
-global function FillTooltipDataForMissionButton
 global function PopulateRewardButtonWithArtifact
 global function PopulateRewardButtonWithLore
 global function IsSelectedPlaylistQuestMission
@@ -143,11 +140,9 @@ struct {
 } file
 
 const string FUNCNAME_DoGotTreasurePackNotify = "SCB_DoGotTreasurePackNotify"
-const string FUNCNAME_UpdatePanelData = "SCB_UpdateQuestPanelData"
 void function SeasonQuest_RegisterNetworking()
 {
 	Remote_RegisterClientFunction( FUNCNAME_DoGotTreasurePackNotify )
-	Remote_RegisterUIFunction( FUNCNAME_UpdatePanelData )
 }
 
 const string CC_TreasureBoxDisplayAcknowledged = "ClientCallback_TreasureBoxDisplayAcknowledged"
@@ -324,33 +319,6 @@ int function SeasonQuest_GetStatusForMissionIndex( entity player, ItemFlavor que
 
 	return eQuestMissionStatus.LAUNCHABLE
 }
-
-
-void function FillTooltipDataForMissionButton( entity player, ItemFlavor quest, int missionIndex, ToolTipData tt )
-{
-	int packsInSeason = SeasonQuest_GetTreasurePacksMaxCount( quest )
-	int packIndexRequiredForMission = SeasonQuest_GetTreasurePackIndexRequiredForMission( quest, missionIndex )
-	int packsFoundRequired = (packIndexRequiredForMission + 1)
-	int packsFound = SeasonQuest_GetTreasurePacksCountForPlayer( player, quest )
-	if ( packsFound < packsFoundRequired )
-		tt.titleText = Localize( "#QUEST_MISSION_TOOLTIP_PACKS", string( packsFoundRequired - packsFound ) )
-	else
-		tt.titleText = ""
-
-	int timeNow = GetUnixTimestamp()
-	int unlockTime = SeasonQuest_GetUnlockTimeForMissionIndex( quest, missionIndex )
-	int delta = (unlockTime - timeNow)
-	if ( delta < 0 )
-	{
-		tt.descText = "#QUEST_MISSION_TOOLTIP_AVAILABLE_NOW"
-		return
-	}
-
-	int days = (delta / SECONDS_PER_DAY)
-	int hours = (delta - (days * SECONDS_PER_DAY)) / SECONDS_PER_HOUR
-	tt.descText = Localize( "#QUEST_MISSION_TOOLTIP_AVAILABLE_DAYS", string( days ), string( hours ) )
-}
-
 
 
 
@@ -599,10 +567,6 @@ string function BuildPersistentVarName( ItemFlavor quest, string varName )
 }
 
 
-int function GetPersistentQuestVarInt( entity player, ItemFlavor quest, string varName )
-{
-	return player.GetPersistentVarAsInt( BuildPersistentVarName( quest, varName ) )
-}
 
 
 
@@ -730,23 +694,6 @@ int function GetPersistentQuestVarInt( entity player, ItemFlavor quest, string v
 
 
 
-
-
-
-
-
-
-
-void function TryDisplayTreasureBoxRewards()
-{
-	WaitEndFrame()
-	if ( !IsConnected() )
-		return
-	if ( !IsPersistenceAvailable() )
-		return
-
-	DisplayTreasureBoxRewards()
-}
 
 bool function DisplayTreasureBoxRewards()
 {
@@ -829,36 +776,6 @@ bool function DisplayTreasureBoxRewards()
 	}
 
 	return false
-}
-
-
-bool function DisplayQuestMissionRewards( ItemFlavor quest, int missionIndex )
-{
-	array<BattlePassReward> rewards
-	ItemFlavorBag rewardBag = SeasonQuest_GetMissionRewardsForIndex( quest, missionIndex )
-	foreach( int index, ItemFlavor reward in rewardBag.flavors )
-	{
-		rewards.append( ItemFlavorBagToBattlePassRewardByIndex( rewardBag, index ) )
-	}
-
-	if ( rewards.len() == 0 )
-		return false
-
-	bool isForBattlePass = false
-	bool isForQuest = true
-
-	ShowRewardCeremonyDialog(
-		"",
-		"QUEST_REWARD_SPLASH_TITLE",
-		"",
-		rewards,
-		isForBattlePass,
-		isForQuest,
-		true,
-		true
-	)
-
-	return true
 }
 
 void function TryDisplayQuestFinalRewards()

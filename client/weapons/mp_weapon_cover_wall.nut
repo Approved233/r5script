@@ -4,12 +4,19 @@ global function OnWeaponPrimaryAttack_weapon_cover_wall
 global function OnWeaponActivate_weapon_cover_wall
 global function OnWeaponDeactivate_weapon_cover_wall
 global function OnWeaponAttemptOffhandSwitch_weapon_cover_wall
+global function CanReclaimWall
 
 global function OnCreateClientOnlyModel_weapon_cover_wall
 
 
 
 
+
+
+
+
+
+global function IsEnemyBlockingRemoteReclaim
 
 
 
@@ -397,6 +404,19 @@ entity function GetAmpedWallForBase( entity baseWall )
 
 	return null
 }
+
+
+bool function IsEnemyBlockingRemoteReclaim( entity baseWall )
+{
+	entity owner = baseWall.GetOwner()
+	if( !IsValid( owner ) )
+		return false
+	int team = owner.GetTeam()
+	array<entity> enemies = GetPlayerArrayOfEnemies_Alive( team )
+	array<entity> nearbyEnemies = GetEntitiesFromArrayNearPos( enemies, baseWall.GetOrigin(), Perk_QuickPackup_GetRemotePickupBlockRange() )
+	return nearbyEnemies.len() > 0
+}
+
 
 bool function CanReclaimWall( entity baseWall )
 {
@@ -1551,6 +1571,15 @@ void function PlaceWallWithoutHolstering( entity player )
 
 
 
+
+
+
+
+
+
+
+
+
 bool function CoverWall_CanUse( entity player, entity ent, int useFlags )
 {
 	if ( ! IsValid( player ) )
@@ -1566,10 +1595,7 @@ bool function CoverWall_CanUse( entity player, entity ent, int useFlags )
 	bool currentlyInPlacementMode = IsValid( player.GetActiveWeapon( eActiveInventorySlot.mainHand ) )
 			&& player.GetActiveWeapon( eActiveInventorySlot.mainHand ).GetWeaponClassName() == COVER_WALL_WEAPON_NAME
 
-	TraceResults viewTrace = GetViewTrace( player )
-
 	return ent.GetOwner() == player &&
-			viewTrace.hitEnt == ent &&
 			( currentlyInPlacementMode || SURVIVAL_PlayerAllowedToPickup( player ) ) &&
 			! GradeFlagsHas( ent, eGradeFlags.IS_BUSY )
 }
@@ -1579,7 +1605,7 @@ void function CoverWall_OnPropScriptCreated( entity ent )
 {
 	if ( ent.GetScriptName() == BASE_WALL_SCRIPT_NAME )
 	{
-		
+		SetCallback_CanUseEntityCallback( ent, CoverWall_CanUse )
 		AddEntityCallback_GetUseEntOverrideText( ent, CoverWall_UseTextOverride )
 		AddCallback_OnUseEntity_ClientServer( ent, CoverWall_OnUseWall )
 		
@@ -1599,6 +1625,11 @@ void function CoverWall_OnPropScriptDestroyed( entity ent )
 
 void function OnCharacterButtonPressed( entity player )
 {
+
+	if( Perk_QuickPackup_RemoteInteractEnabled() )
+		return
+
+
 	entity useEnt = player.GetUsePromptEntity()
 	if ( !IsValid( useEnt ) || useEnt.GetScriptName() != BASE_WALL_SCRIPT_NAME )
 		return
@@ -1625,14 +1656,51 @@ string function CoverWall_UseTextOverride( entity ent )
 		CustomUsePrompt_Show( ent )
 		CustomUsePrompt_SetSourcePos( ent.GetOrigin() + < 0, 0, 30 > )
 
-		if ( CanReclaimWall( ent ) )
+
+
+			bool isRemotePickup = Perk_QuickPackup_IsRemotePickup( ent, player )
+			bool blockedByNearbyEnemies = isRemotePickup && IsEnemyBlockingRemoteReclaim( ent )
+
+
+		if ( CanReclaimWall( ent )
+
+			&& !blockedByNearbyEnemies
+
+				)
 		{
+
+			if( Perk_QuickPackup_RemoteInteractEnabled() )
+			{
+				return Localize("#WPN_COVER_WALL_DYNAMIC_RECLAIM_USE")
+			}
+
+
 			CustomUsePrompt_SetText( Localize("#WPN_COVER_WALL_DYNAMIC_RECLAIM") )
 			CustomUsePrompt_SetHintImage( $"rui/hud/character_abilities/rampart_cover_pickup" )
 			CustomUsePrompt_SetLineColor( <0.0, 1.0, 1.0> )
 		}
 		else
 		{
+
+				if( Perk_QuickPackup_RemoteInteractEnabled() )
+				{
+					if( isRemotePickup )
+					{
+						if( blockedByNearbyEnemies )
+						{
+							return Localize( "#WPN_COVER_WALL_DYNAMIC_CANT_RECLAIM_ENEMIES" )
+						}
+						else
+						{
+							return Localize( "#WPN_COVER_WALL_DYNAMIC_CANT_RECLAIM_DAMAGED" )
+						}
+					}
+					else
+					{
+						return Localize( "#WPN_COVER_WALL_DYNAMIC_DESTROY_USE" )
+					}
+				}
+
 			CustomUsePrompt_SetText( Localize("#WPN_COVER_WALL_DYNAMIC_DESTROY") )
 			
 			CustomUsePrompt_SetHintImage( $"" )

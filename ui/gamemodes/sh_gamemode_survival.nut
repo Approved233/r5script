@@ -98,6 +98,8 @@ global function CharSelect_GetOutroTransitionDuration
 
 
 
+
+
 global function GamemodeSurvivalShared_UI_Init
 
 
@@ -165,6 +167,9 @@ enum eUseHealthKitResult
 	DENY_NO_SHIELDS,
 	DENY_FULL,
 	DENY_SPRINTING,
+
+
+
 }
 
 table< int, string > healthKitResultStrings =
@@ -181,6 +186,9 @@ table< int, string > healthKitResultStrings =
 	[eUseHealthKitResult.DENY_NO_SHIELDS] = "#DENY_NO_SHIELDS",
 	[eUseHealthKitResult.DENY_FULL] = "#DENY_FULL",
 	[eUseHealthKitResult.DENY_SPRINTING] = "#DENY_SPRINTING",
+
+
+
 }
 
 global struct TargetKitHealthAmounts
@@ -215,37 +223,10 @@ global enum ePodiumBanner
 	LTM,
 	MIXTAPE,
 
-	SR_LEGENDS,
-	SR_REV,
+
 
 
 	TURBO,
-
-	_COUNT
-}
-
-global enum ePodiumBackground
-{
-	MP_RR_DESERTLANDS_HU = 0,
-	MP_RR_DIVIDED_MOON,
-	MP_RR_CANYONLANDS_HU,
-	MP_RR_OLYMPUS_MU2,
-	MP_RR_TROPICS_ISLAND_MU1,
-	MP_RR_ADQUEDUCT,
-	MP_RR_ARENA_HABITAT,
-	MP_RR_PARTY_CRASHER,
-	MP_RR_ARENA_PHASE_RUNNER,
-	MP_RR_FREEDM_SKULLTOWN,
-	MP_RR_ARENA_SKYGARDER,
-	MP_RR_OLYMPUS_MU1_NIGHT,
-	MP_RR_DESERTLANDS_NIGHT,
-	MP_RR_CANYONLANDS_MU1_NIGHT,
-
-	SR_LEGENDS,
-	SR_REV,
-
-	MP_RR_TROPICS_ISLAND_MU2,
-	MP_RR_THUNDERDOME,
 	_COUNT
 }
 
@@ -270,6 +251,14 @@ struct
 
 
 	VictoryPlatformModelData & victorySequencePlatforData
+
+
+
+
+
+
+
+
 
 
 
@@ -951,15 +940,76 @@ void function UIInputChanged( bool controllerModeActive )
 
 
 
-bool function Survival_IsDropshipClampedToRing()
-{
-	return GetCurrentPlaylistVarBool( "dropship_bounds_clamp_to_ring", false )
-}
 
-float function Survival_GetPlaneMoveSpeed()
-{
-	return GetCurrentPlaylistVarFloat( "survival_plane_move_speed", 2000.0 )
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 float function Survival_GetPlaneJumpDelay()
 {
@@ -970,47 +1020,6 @@ float function Survival_GetPlaneLeaveMapDurationMultiplier()
 {
 	return GetCurrentPlaylistVarFloat( "survival_plane_leave_map_duration_multiplier", 3.0 )
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

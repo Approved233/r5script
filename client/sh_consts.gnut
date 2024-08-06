@@ -44,9 +44,25 @@ global enum eDeathScreenPanel
 	DEATH_RECAP,
 	SCOREBOARD,
 	SQUAD_SUMMARY,
-	SQUAD
-	KILLREPLAY,
+	SQUAD,
+	RANK,
+	CUP,
+	KILLREPLAY
 }
+
+
+
+global enum eFreespawns_AggroType
+{
+	NONE,
+	DAMAGE_CHUNK,
+	DOWNED_ENEMY,
+	KILLED_ENEMY,
+	EXECUTED_ENEMY,
+	PENALTY_ALLYDEATH,
+	COUNT_
+}
+
 
 global struct Cylinder
 {
@@ -111,7 +127,7 @@ global const GAMEMODE_FREELANCE = "freelance"
 global const GAMEMODE_FREEDM = "freedm"
 
 
-global const GAMEMODE_SHADOW_ROYALE = "shadow_royale"
+
 
 
 global const GAMEMODE_WINTER_EXPRESS = "winter_express"
@@ -164,11 +180,11 @@ global const GAMEMODE_THE_HUNT_20 = "the_hunt_20"
 global const GAMEMODE_ARMED_AND_DANGEROUS = "armed_and_dangerous"
 
 
-global const GAMEMODE_SHADOW_ARMY = "shadow_army"
 
 
 
-global const EVENT_ABILITIES = "event_abilities"
+
+
 
 
 
@@ -184,11 +200,15 @@ global const GAMEMODE_SURVIVAL_SOLOS = "survival_solos"
 
 
 
+global const GAMEMODE_SURVIVAL_QUADS = "survival_quads"
 
 
 
+global const GAMEMODE_BIGTEAM_DEATHMATCH = "freedm_bigtdm"
 
 
+
+global const GAMEMODE_SURVIVAL_FREE_RESPAWNS = "survival_free_respawns"
 
 
 global const string PLAYLIST_TRAINING = "survival_training"
@@ -201,6 +221,10 @@ global const int PLAYLIST_ID_NEW_PLAYER_ORIENTATION = 1
 
 
 global const string COMBATRANGE = "combatrange"
+
+
+
+global const string BOTPLAYGROUND = "survival_bot_playground"
 
 
 global const bool R2_SCOREBOARD = false
@@ -405,7 +429,6 @@ global const CLUSTER_ROCKET_FX_TABLE = "exp_rocket_cluster_secondary"
 
 
 
-
 global enum eRespawnStatus
 {
 	NONE,
@@ -420,6 +443,21 @@ global enum eRespawnStatus
 
 
 	_COUNT,
+}
+
+global const table< int, string > respawnStatus_EnumToStringMap = {
+	[ eRespawnStatus.NONE ] = "none",
+	[ eRespawnStatus.WAITING_FOR_PICKUP ] 	= "WAITING_FOR_PICKUP",
+	[ eRespawnStatus.WAITING_FOR_DELIVERY ] = "WAITING_FOR_DELIVERY",
+	[ eRespawnStatus.WAITING_FOR_DROPPOD ] 	= "WAITING_FOR_DROPPOD",
+	[ eRespawnStatus.WAITING_FOR_RESPAWN ] 	= "WAITING_FOR_RESPAWN",
+	[ eRespawnStatus.PICKUP_DESTROYED ] 	= "PICKUP_DESTROYED",
+	[ eRespawnStatus.PLAYER_ELIMINATED ] 	= "PLAYER_ELIMINATED",
+	[ eRespawnStatus.SQUAD_ELIMINATED ] 	= "SQUAD_ELIMINATED",
+
+
+
+	[ eRespawnStatus._COUNT ] 	= "_COUNT"
 }
 
 global enum eRespawnStyle
@@ -456,6 +494,14 @@ global enum eDropStyle
 	ZIPLINE_NPC                
 	RANDOM_FROM_YAW        
 	FLYER_PICKUP        
+}
+
+
+global enum eEliminationStyle
+{
+	NONE = 0
+	KILLED
+	SCORE
 }
 
 
@@ -497,6 +543,10 @@ global const ARMOR_TYPE_HEAVY = 1
 
 global const WARPINFXTIME = 2.7
 
+
+
+
+global const EVO_ARMOR_RED_TIER = 4
 
 
 
@@ -564,6 +614,12 @@ global enum PerfIndexClient
 	CarePackagePerkLookatUpdate,
 
 	PrivateLobbyThread,
+
+	PhaseBreach_GetPosition_OLD,
+	PhaseBreach_GetPosition,
+	PhaseBreach_WallToTop,
+	PhaseBreach_ScorePos,
+	PhaseBreach_ScorePos_Generate,
 }
 
 global enum PerfIndexServer
@@ -834,9 +890,8 @@ global enum ePresentationType
 	UNAPPLIED_STICKER,
 	WEAPON_TRIAL_CELEBRATIONS,
 	MELEE_INSPECT,
-
-
-
+	PLAY_QUADS,
+	PLAY_STAGE_B,
 
 	COUNT
 }
@@ -1270,6 +1325,9 @@ global enum eCommsAction
 	PING_ATTACHMENT_HOPUP_SHATTER_ROUNDS,
 	PING_ATTACHMENT_HOPUP_DUAL_SHELL
 	PING_ATTACHMENT_HOPUP_KINETIC_FEEDER
+
+	PING_ATTACHMENT_HOPUP_GUNSHIELD,
+
 	
 	PING_ITEM_COMBO_FULL,
 	PING_ITEM_SHIELD_SMALL,
@@ -1279,6 +1337,9 @@ global enum eCommsAction
 	PING_ITEM_HEALTH_LARGE,
 	PING_ITEM_HEALTH_SYRINGE,
 	PING_ITEM_ULTIMATE_ENERGY,
+
+
+
 
 
 
@@ -1476,8 +1537,8 @@ global enum eCommsAction
 
 
 
-		PING_LOOT_CREEP_INFECTED,
-		PING_LOOT_CREEP_SPIDER,
+
+
 
 
 	PING_VALK_ULT_COME_HERE,
@@ -1531,13 +1592,11 @@ global enum eCommsAction
 	PING_MATERIALS,
 	REPLY_CRAFTING_NEXT_HARVESTER_OR_WORKBENCH,
 	REPLY_CRAFTING_PING_ALL_WORKBENCHES,
-
-		PING_REPLICATOR_NOONE_USED,
-		PING_REPLICATOR_ALL_USED,
-		PING_REPLICATOR_PLAYER_USED,
-		PING_REPLICATOR_TEAMMATE_USED,
-		PING_REPLICATOR_DISPENSER_INCOMING,
-
+	PING_REPLICATOR_NOONE_USED,
+	PING_REPLICATOR_ALL_USED,
+	PING_REPLICATOR_PLAYER_USED,
+	PING_REPLICATOR_TEAMMATE_USED,
+	PING_REPLICATOR_DISPENSER_INCOMING,
 
 	
 	QUICKCHAT_CELEBRATE,
@@ -1653,6 +1712,9 @@ global enum eCommsAction
 	INVENTORY_NEED_HOPUP_DUAL_SHELL,
 	INVENTORY_NEED_HOPUP_KINETIC_FEEDER,
 
+	INVENTORY_NEED_HOPUP_GUNSHIELD,
+
+
 	INVENTORY_NEED_BETTER_ARMOR,
 	INVENTORY_NEED_BETTER_HELMET,
 	INVENTORY_NEED_BETTER_BACKPACK,
@@ -1767,6 +1829,9 @@ global enum eCommsAction
 	SUB_TYPE_BOOSTED_LOADER
 	SUB_TYPE_DUAL_SHELL
 	SUB_TYPE_KINETIC_FEEDER
+
+	SUB_TYPE_GUNSHIELD,
+
 	
 	FLAVOR_WEAPON_KRABER,
 	FLAVOR_WEAPON_MASTIFF,
@@ -1864,6 +1929,9 @@ global enum eCommsAction
 	FLAVOR_ITEM_HEALTH_LARGE,
 	FLAVOR_ITEM_HEALTH_SYRINGE,
 	FLAVOR_ITEM_ULTIMATE_ENERGY,
+
+
+
 	FLAVOR_EQUIPMENT_BACKPACK_1,
 	FLAVOR_EQUIPMENT_BACKPACK_2,
 	FLAVOR_EQUIPMENT_BACKPACK_3,
@@ -1885,8 +1953,8 @@ global enum eCommsAction
 
 
 
-
-
+	INVENTORY_NEED_AKIMBO_P2020,
+	INVENTORY_NEED_AKIMBO_MOZAM,
 
 
 
@@ -2057,17 +2125,17 @@ global enum eCommsAction
 
 
 
-		PING_REDEYED_REV,
-		PING_EVAC_AREA,
-		QUICKCHAT_SKYDIVE_REV_NEARBY,
-		QUICKCHAT_SKYDIVE_SKINBAG_NEARBY,
-		SHADOWARMY_PING_RESPAWN_STATION,
-		PING_LEGEND_START_AREA,
 
 
 
-		PING_RAMPART_TT_VENDING,
 
+
+
+
+
+	PING_RAMPART_TT_VENDING,
+
+	PING_DISTRICT_LAUNCHERS,
 
 
 
@@ -2090,6 +2158,22 @@ global enum eCommsAction
 
 
 		PING_TREASUREHUNT_OBJ_ATTACK,
+
+
+
+
+
+
+
+
+
+
+
+
+		
+		PING_RESET_BIN_GOLD,
+		PING_RESET_BIN_MYTHIC,
+
 
 	_count
 }
@@ -2151,6 +2235,9 @@ global enum eTooltipStyle
 	ACCESSIBLE,
 	CURRENCY,
 	CRAFTING_INFO,
+
+
+
 
 
 
@@ -2292,6 +2379,17 @@ global const bool HAS_ENEMY_NAMES_OVERHEAD = false
 global const asset SURVIVAL_HUD_DPAD_RUI = $"ui/survival_dpad_hud_v2.rpak"
 global const asset SURVIVAL_HUD_WEAPON_RUI = $"ui/weapon_hud_v2.rpak"
 global const asset SURVIVAL_HUD_PLAYER = $"ui/survival_player_hud_v2.rpak"
+
+
+
+
+
+
+global const asset SURVIVAL_HUD_SQUADTAG = $"ui/squad_tag.rpak"
+global const string SURVIVAL_HUD_SQUADTAG_PVAR = "use_dynamic_squad_tag"
+global const string SURVIVAL_HUD_SQUADTAG_USETEAMCOLOR_PVAR = "dynamic_squad_tag_use_team_color"
+global const string SURVIVAL_HUD_SQUADTAG_SHOWTEAMICON_PVAR = "dynamic_squad_tag_show_team_icon"
+global const string SURVIVAL_HUD_USETHEMATICTEAMNAMES_PVAR = "use_thematic_team_names"
 
 global const string HUD_SETTING_LOOTPROMPTSTYLE = "hud_setting_showMedals" 
 
@@ -2585,8 +2683,10 @@ global enum eRarityTier
 	_COUNT,
 }
 
-global const int OBIT_FLAG_HEADSHOT = 1 << 0
-global const int OBIT_FLAG_DOWNED = 1 << 1
+global const int OBIT_FLAG_NONE = 1 << 0
+global const int OBIT_FLAG_HEADSHOT = 1 << 1
+global const int OBIT_FLAG_DOWNED = 1 << 2
+global const int OBIT_FLAG_KILL = 1 << 3
 
 global const table<string, int> ammoColors = {
 	bullet = COLORID_AMMO_SMALL_COLOR
@@ -2601,6 +2701,13 @@ global const table<string, int> ammoColors = {
 	sniper = COLORID_AMMO_SNIPER_COLOR
 	arrows = COLORID_AMMO_ARROWS_COLOR
 }
+
+global const string SYRINGE_REF = "health_pickup_health_small"
+global const string SHIELD_CELL_REF = "health_pickup_combo_small"
+global const string MEDKIT_REF = "health_pickup_health_large"
+global const string SHIELD_BATTERY_REF = "health_pickup_combo_large"
+global const string PHOENIX_KIT_REF = "health_pickup_combo_full"
+global const string ULTIMATE_ACCELERANT_REF = "health_pickup_ultimate"
 
 global struct BurnDamageSettings
 {
@@ -2696,17 +2803,17 @@ global enum ePlayerStryderCharDataArraySlots
 	BANNER_BADGE2_TIER,
 	BANNER_BADGE3,
 	BANNER_BADGE3_TIER,
-	BANNER_TRACKER1,
+	BANNER_TRACKER1_STAT,
 	BANNER_TRACKER1_VALUE,
-	BANNER_TRACKER2,
+	BANNER_TRACKER2_STAT,
 	BANNER_TRACKER2_VALUE,
-	BANNER_TRACKER3,
+	BANNER_TRACKER3_STAT,
 	BANNER_TRACKER3_VALUE,
 	CHARACTER_INTRO_QUIP,
 	MELEE_SKIN,
-	UNUSED20,
-	UNUSED21,
-	UNUSED22,
+	BANNER_TRACKER1_ART,
+	BANNER_TRACKER2_ART,
+	BANNER_TRACKER3_ART,
 	ACCOUNT_LEVEL,
 	ACCOUNT_PROGRESS_INT,
 	UNUSED25, 
@@ -2762,6 +2869,11 @@ global const table< int, string > HARDWARE_TO_MERGED_PLATFORM =
 	[HARDWARE_XBOXONE] = "xb",
 	[HARDWARE_XB5] = "xb"
 }
+
+global const array< string > PLATFORM_LIST =
+[
+	"pc", "ps", "nx", "xb"
+]
 
 
 
@@ -2845,10 +2957,8 @@ global const int TEAM_MMR_BOT_PAIRING_OVERRIDE = -1
 global const string 	POISPAWNING_CURATED_SPAWNPOINT_CLASSNAME 		= "info_poispawning_squadspawn"
 global const string 	POISPAWNING_CURATED_SPAWNPOINT_SCRIPTNAME 		= "poispawning_curated_spawn"
 
-
 global const int GAMEMODE_MAX_SEEN_INDEX = 9
 global const int GAMEMODE_INVALID_INDEX = -1
-
 
 
 global struct DeathFieldData
@@ -2866,6 +2976,17 @@ global struct DeathFieldData
 	float percentDamagePerTick = 0.2
 	bool s_deathFieldSynchronized = false
 }
+
+
+
+
+
+	global const array< int > WEAPONSLOTS_AKIMBO = [ WEAPON_INVENTORY_SLOT_DUALPRIMARY_0, WEAPON_INVENTORY_SLOT_DUALPRIMARY_1  ]
+	global const array< int > FUNCTIONAL_RESTORABLE_WEAPONSLOTS = [ WEAPON_INVENTORY_SLOT_PRIMARY_0, WEAPON_INVENTORY_SLOT_PRIMARY_1, WEAPON_INVENTORY_SLOT_DUALPRIMARY_0, WEAPON_INVENTORY_SLOT_DUALPRIMARY_1 ]
+
+
+
+
 
 
 

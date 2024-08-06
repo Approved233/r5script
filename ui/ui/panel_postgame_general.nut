@@ -109,6 +109,29 @@ global table<string, array< array< int > > > xpDisplayGroups = {
 
 
 
+		treasure_hunt = [
+		[
+			eXPType.MATCH_COMPLETED,
+			eXPType.MATCH_COMPLETED_JOINED_IN_PROGRESS,
+			eXPType.WIN_MATCH,
+			eXPType.SURVIVAL_DURATION,
+			eXPType.KILL,
+			eXPType.OBJECTIVE_CAPTURE_DURATION, 
+		],
+
+		[
+			eXPType.BONUS_FRIEND,
+			eXPType.BONUS_FIRST_KILL,
+		],
+
+		[
+			eXPType.TOTAL_MATCH,
+			eXPType.CHALLENGE_COMPLETED,
+		],
+	],
+
+
+
 		freedm = [
 		[
 			eXPType.MATCH_COMPLETED,
@@ -117,7 +140,6 @@ global table<string, array< array< int > > > xpDisplayGroups = {
 			eXPType.SURVIVAL_DURATION,
 			eXPType.KILL,
 			eXPType.DAMAGE_DEALT,
-			eXPType.OBJECTIVE_CAPTURE_DURATION, 
 		],
 
 		[
@@ -159,6 +181,27 @@ global table<string, array< array< int > > > xpDisplayGroups = {
 				eXPType.CHALLENGE_COMPLETED,
 			],
 		],
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 }
 
@@ -298,7 +341,7 @@ var function DisplayPostGameSummary( bool isFirstTime )
 	Hud_SetVisible( Hud_GetChild( file.panel, "XPProgressBarAccount" ), false )
 	PostGame_ToggleVisibilityContinueButton( false )
 
-	bool showRankedSummary = Ranked_GetXProgMergedPersistenceData( GetLocalClientPlayer(), RANKED_SHOW_RANKED_SUMMARY_PERSISTENCE_VAR_NAME ) != 0
+	bool showRankedSummary = Ranked_ShowRankedSummary()
 	string postMatchSurveyMatchId = string( GetPersistentVar( "postMatchSurveyMatchId" ) )
 	float postMatchSurveySampleRateLowerBound = expect float( GetPersistentVar( "postMatchSurveySampleRateLowerBound" ) )
 	if ( GetActiveBattlePass() == null && !showRankedSummary && isFirstTime && TryOpenSurvey( eSurveyType.POSTGAME, postMatchSurveyMatchId, postMatchSurveySampleRateLowerBound ) )

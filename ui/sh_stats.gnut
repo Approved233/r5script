@@ -121,23 +121,6 @@ global function GetRegisteredStatEnumStruct
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 global function ShStats_GenerateStatLocStringFromStatRef
 global function ShStats_GenerateStatLocStringFromStatRef_Long
 
@@ -250,6 +233,12 @@ void function ShStats_LevelInit()
 	ShStats_Beginner_LevelInit()
 	ShStats_Gameplay_LevelInit()
 	ShStatsDefs_Init()
+
+
+
+
+
+
 }
 
 
@@ -379,19 +368,6 @@ void function RegisterAllStats()
 
 
 
-		CAREER_STATS.s19gh_event_currency_total = RegisterAccumulatedStat_Int( null, "s19gh_event_currency_total", eChallengeGameMode.NON_MODE, CHALLENGES_CALC_DEPENDS )
-
-		CAREER_STATS.s19gh_games_played = RegisterAccumulatedStat_Int( null, "s19gh_games_played", eChallengeGameMode.BATTLE_ROYALE, CHALLENGES_CALC_DEPENDS )
-		CAREER_STATS.s19gh_titan_sword_damage = RegisterAccumulatedStat_Int( null, "s19gh_titan_sword_damage", eChallengeGameMode.BATTLE_ROYALE, CHALLENGES_CALC_DEPENDS )
-		CAREER_STATS.s19gh_titan_sword_kills = RegisterAccumulatedStat_Int( null, "s19gh_titan_sword_kills", eChallengeGameMode.BATTLE_ROYALE, CHALLENGES_CALC_DEPENDS )
-		CAREER_STATS.s19gh_titan_sword_launcher = RegisterAccumulatedStat_Int( null, "s19gh_titan_sword_launcher", eChallengeGameMode.BATTLE_ROYALE, CHALLENGES_CALC_DEPENDS )
-		CAREER_STATS.s19gh_titan_sword_supers = RegisterAccumulatedStat_Int( null, "s19gh_titan_sword_supers", eChallengeGameMode.BATTLE_ROYALE, CHALLENGES_CALC_DEPENDS )
-		CAREER_STATS.s19gh_titan_sword_blocked = RegisterAccumulatedStat_Int( null, "s19gh_titan_sword_blocked", eChallengeGameMode.BATTLE_ROYALE, CHALLENGES_CALC_DEPENDS )
-		CAREER_STATS.s19gh_hopup_red_summons = RegisterAccumulatedStat_Int( null, "s19gh_hopup_red_summons", eChallengeGameMode.BATTLE_ROYALE, CHALLENGES_CALC_DEPENDS )
-		CAREER_STATS.s19gh_hopup_blue_healing = RegisterAccumulatedStat_Int( null, "s19gh_hopup_blue_healing", eChallengeGameMode.BATTLE_ROYALE, CHALLENGES_CALC_DEPENDS )
-		CAREER_STATS.s19gh_hopup_green_damage = RegisterAccumulatedStat_Int( null, "s19gh_hopup_green_damage", eChallengeGameMode.BATTLE_ROYALE, CHALLENGES_CALC_DEPENDS )
-		CAREER_STATS.s19gh_hopup_purple_damage = RegisterAccumulatedStat_Int( null, "s19gh_hopup_purple_damage", eChallengeGameMode.BATTLE_ROYALE, CHALLENGES_CALC_DEPENDS )
-		CAREER_STATS.s19gh_hopup_yellow_time = RegisterAccumulatedStat_Int( null, "s19gh_hopup_yellow_time", eChallengeGameMode.BATTLE_ROYALE, CHALLENGES_CALC_DEPENDS )
 
 
 	
@@ -419,18 +395,34 @@ void function RegisterAllStats()
 	StatsRegister_Beginner()
 
 	
-	StatsRegister_S20()
-
-	
 	StatsRegister_S21()
 
+
+		StatsRegister_S22()
+
+
 	StatsRegister_MetaChallenges()
+
+	StatsRegister_NarrativeChallenges()
+
 
 		CAREER_STATS.gamemode_treasurehunt_objectives_captured = RegisterAccumulatedStat_Int( null, "gamemode_treasurehunt_objectives_captured", eChallengeGameMode.TREASURE_HUNT, CHALLENGES_CALC_DEPENDS )
 
 
+
+		StatsRegister_NewPlayerPass()
+
+
 	StatsRegister_Autogen()
 	StatsRegister_EventShopStats()
+
+
+
+
+
+
+		StatsRegister_ApexCups()
+
 }
 
 
@@ -458,6 +450,79 @@ void function RegisterAllStats()
 
 
  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3602,6 +3667,14 @@ int function ArenasRanked_GetHistoricalPeakLadderPosition( entity player )
 
 	return max
 }
+
+
+
+
+
+
+
+
 
 
 

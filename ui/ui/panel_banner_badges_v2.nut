@@ -273,7 +273,7 @@ ToolTipData function CreateBadgeToolTip( ItemFlavor badge, ItemFlavor ornull cha
 								if ( challengeGoalValue > 1 && !Challenge_IsComplete( player, parentChallengeFlav ) )
 									toolTipData.actionHint1 = format( "%s / %s", FormatAndLocalizeNumber( "1", float( challengeProgressvalue ), true ), FormatAndLocalizeNumber( "1", float( challengeGoalValue ), true ) )
 
-								string parentDesc = Challenge_GetDescription( parentChallengeFlav, 0 )
+								string parentDesc = Challenge_GetDescription( parentChallengeFlav, tier )
 								if ( parentDesc != "" )
 								{
 									toolTipData.descText = Localize( parentDesc )

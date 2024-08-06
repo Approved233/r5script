@@ -33,7 +33,11 @@ const asset SKYWARD_RADIUS_FX = $"P_radius_marker"
 const float SKYWARD_LAUNCH_TIME = 5.0
 const float SKYWARD_LAUNCH_SLOW_TIME = 1.83
 const float SKYWARD_TEAMMATE_ALIGN_TIME = 1
+
+
+
 const float SKYWARD_REFUND_AMOUNT = 0.75
+
 
 
 const float SKYWARD_ALLY_USE_DEBOUNCE_TIME = 1
@@ -1562,7 +1566,7 @@ void function UpdateValkFlightRui( entity player, bool isInAir )
 
 		bool isValk = false
 		if ( LoadoutSlot_IsReady( ToEHI( player ), Loadout_Character() ) )
-			isValk = ItemFlavor_GetAsset( LoadoutSlot_GetItemFlavor( ToEHI( player ), Loadout_Character() ) ) == VALK_ITEMFLAVOR
+			isValk = ItemFlavor_GetAsset( LoadoutSlot_GetItemFlavor( ToEHI( player ), Loadout_Character() ) ) == VALKYRIE_ITEMFLAV
 
 		bool showValkRui = isInAir && isValk
 

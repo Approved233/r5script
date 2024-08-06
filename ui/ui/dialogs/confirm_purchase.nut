@@ -587,12 +587,13 @@ void function AddMultiPackDisclosureCollectionEventPackTab( ItemFlavor pack )
 	var rui = Hud_GetRui( tabPanel )
 
 	string currentEventName = Localize( ItemFlavor_GetLongName( expect ItemFlavor( file.activeCollectionEvent ) ) )
-	string nameText = Localize( "#S20CE01_HEIRLOOM_CHASE" )
+
+	string nameText = Localize( "#BANGALORE_HEIRLOOM_SET_2" )
 
 	RuiSetString( rui, "probabilityDescText", Localize( "#COLLECTION_EVENT_PACK_SUBHEADER", currentEventName ) )
 	RuiSetString( rui, "itemDetailsText3", Localize( "#COLLECTION_EVENT_DISCLAIMER_1", currentEventName ) )
 	RuiSetString( rui, "itemDetailsText4", Localize( "#COLLECTION_EVENT_DISCLAIMER_2", currentEventName ) )
-	RuiSetString( rui, "itemDetailsText5", Localize( "#S20CE04_ABOUT_LINE_4", currentEventName, nameText ) )
+	RuiSetString( rui, "itemDetailsText5", Localize( "#COLLECTION_EVENT_DISCLAIMER_3", currentEventName, nameText ) )
 	RuiSetString( rui, "eventItemDetails", Localize( "#COLLECTION_EVENT_PACK_EVENT_ITEM", currentEventName ) )
 }
 
@@ -828,12 +829,12 @@ void function PurchaseDialog( PurchaseDialogConfig cfg )
 		{
 			var rui                 = Hud_GetRui( file.dialogContent )
 			string currentEventName = Localize( ItemFlavor_GetLongName( expect ItemFlavor( file.activeCollectionEvent ) ) )
-			string nameText = Localize( "#S20CE01_HEIRLOOM_CHASE" )
+			string nameText = Localize( "#BANGALORE_HEIRLOOM_SET_2" )
 
 			RuiSetString( rui, "probabilityDescText", Localize( "#COLLECTION_EVENT_PACK_SUBHEADER", currentEventName ) )
 			RuiSetString( rui, "itemDetailsText3", Localize( "#COLLECTION_EVENT_DISCLAIMER_1", currentEventName ) )
 			RuiSetString( rui, "itemDetailsText4", Localize( "#COLLECTION_EVENT_DISCLAIMER_2", currentEventName ) )
-			RuiSetString( rui, "itemDetailsText5", Localize( "#S20CE04_ABOUT_LINE_4", currentEventName, nameText ) )
+			RuiSetString( rui, "itemDetailsText5", Localize( "#COLLECTION_EVENT_DISCLAIMER_3", currentEventName, nameText ) )
 			RuiSetString( rui, "eventItemDetails", Localize( "#COLLECTION_EVENT_PACK_EVENT_ITEM", currentEventName ) )
 		}
 	}
@@ -865,7 +866,7 @@ void function PurchaseButton_Activate( var button )
 {
 	Assert( file.status == ePurchaseDialogStatus.AWAITING_USER_CONFIRMATION )
 
-	if ( Hud_IsLocked( button ) || UI_OperationQueueHasGRXOperations() )
+	if ( Hud_IsLocked( button ) || GRX_QueuedOperationMayDirtyOffers() )
 		return
 
 	if ( file.state.cfg.isGiftPack && !IsPlayerWithinGiftingLimit() )
@@ -885,18 +886,15 @@ void function PurchaseButton_Activate( var button )
 
 	bool isPremiumOnly = GRX_IsPremiumPrice( price )
 	int quantity       = file.state.cfg.quantity
-	bool canAfford     = GRX_CanAfford( price, quantity )
+	bool canAfford     = ( !Escrow_IsPlayerTrusted() && HasEscrowBalance() ) ? GRX_CanAfford( price, quantity, file.state.cfg.isGiftPack ) : GRX_CanAfford( price, quantity)
 	bool hasPack 	   = GRXOffer_ContainsPack( offer )
 	bool isOnlyPack	   = GRXOffer_ContainsOnlySinglePack( offer )
-
 
 	if ( isPremiumOnly && !canAfford && hasPack )
 	{
 		GotoPremiumStoreTab()
 		return
 	}
-
-	Assert( canAfford )
 
 	if ( isOnlyPack && file.state.cfg.isGiftPack && file.state.cfg.friend == null )
 	{
@@ -1120,7 +1118,6 @@ void function OnPurchaseOperationFinished( int status, GRXScriptOffer offer, Ite
 			{
 				SettingsAssetGUID cupId = RTKApexCupsOverview_GetCupID()
 				Remote_ServerCallFunction( "ClientCallback_ReRollCup", cupId )
-				RTKApexCupsOverview_HideButton()
 			}
 
 	}
@@ -1319,6 +1316,8 @@ void function UpdatePurchaseDialog()
 	HudElem_SetRuiArg( file.dialogContent, "reqsText", prereqText )
 
 
+		if ( file.activeDialog == file.genericPurchaseDialog )
+			HudElem_SetRuiArg( file.dialogContent, "reRollsAmount", "" )
 		if ( file.state.cfg.isCupsReRoll )
 		{
 			SettingsAssetGUID cupId = RTKApexCupsOverview_GetCupID()
@@ -1338,7 +1337,9 @@ void function UpdatePurchaseDialog()
 
 				HudElem_SetRuiArg( file.dialogContent, "qualityText", Localize("#TIME_REMAINING", RTKMutator_FormatTimeLong( remainingTime.tofloat() ) ) )
 
-
+				if ( RankedRumble_IsCupRankedRumble( assetData.itemFlavor ) )
+					HudElem_SetRuiArg( file.dialogContent, "reRollsAmount", Localize( "#CUPS_RANKED_REROLL_DIALOG_AMOUNT" ) )
+				else
 
 					HudElem_SetRuiArg( file.dialogContent, "reRollsAmount", Localize( "#CUPS_REROLL_DIALOG_AMOUNT", assetData.maximumNumberOfReRolls - entry.reRollCount ) )
 

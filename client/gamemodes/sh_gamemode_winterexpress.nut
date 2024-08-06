@@ -1,5 +1,4 @@
 global function WinterExpress_Init
-global function WinterExpress_RegisterNetworking
 global function WinterExpress_IsNarrowWin
 
 
@@ -39,34 +38,6 @@ global function WinterExpress_IsTeamWinning
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#if DEV
-global function PickCommentaryLineFromBucket_WinterExpressCustom
-#endif
-
-
 global enum eWinterExpressRoundState
 {
 	OBJECTIVE_ACTIVE,
@@ -90,6 +61,13 @@ global enum eWinterExpressObjectiveState
 	CONTESTED,
 	CONTROLLED,
 	INACTIVE,
+}
+
+global enum eWinterExpressSpawnMode
+{
+	HOVERTANK,
+	SKYDIVE,
+	STATION_UNSUPPORTED 
 }
 
 
@@ -287,21 +265,10 @@ struct {
 
 void function WinterExpress_Init()
 {
-	if ( !WinterExpress_IsModeEnabled() )
-		return
-
 	file.scoreLimit = GetCurrentPlaylistVarInt( "winter_express_score_limit", 100 )
 	file.roundLimit = GetCurrentPlaylistVarInt( "winter_express_round_limit", 30 )
 
-
 	Remote_RegisterServerFunction( "ClientCallback_WinterExpress_TryRespawnPlayer" )
-
-
-
-
-
-
-
 
 
 
@@ -393,7 +360,9 @@ void function WinterExpress_Init()
 
 		AddCreateCallback( PLAYER_WAYPOINT_CLASSNAME, OnWaypointCreated )
 		AddCallback_GameStateEnter( eGameState.WaitingForPlayers, OnWaitingForPlayers_Client )
-		AddCallback_GameStateEnter( eGameState.PickLoadout, OnPickLoadout )
+		
+		AddCallback_GameStateEnter( eGameState.PickLoadout, DestroyGameStartRuiForGamestate )
+		AddCallback_GameStateEnter( eGameState.Playing, DestroyGameStartRuiForGamestate )
 		AddCallback_GameStateEnter( eGameState.Resolution, WinterExpress_OnResolution )
 		AddCallback_GameStateEnter( eGameState.WinnerDetermined, Client_OnWinnerDetermined )
 		AddCallback_OnPlayerChangedTeam( Client_OnTeamChanged )
@@ -415,14 +384,12 @@ void function WinterExpress_Init()
 		SetAllowGladCard( false )
 
 
+	WinterExpress_RegisterNetworking()
 }
 
 
 void function WinterExpress_RegisterNetworking()
 {
-	if ( !WinterExpress_IsModeEnabled() )
-		return
-
 	Remote_RegisterClientFunction( "ServerCallback_CL_GameStartAnnouncement" )
 
 	Remote_RegisterClientFunction( "ServerCallback_CL_RoundEnded", "int", 0, 128, "int", -2, 10000, "int", 0, 10000 )
@@ -470,7 +437,23 @@ bool function WinterExpress_IsNarrowWin()
 	return GetGlobalNetBool( "WinterExpress_NarrowWin" )
 }
 
+int function WinterExpress_GetSpawnMode()
+{
+	switch ( GetCurrentPlaylistVarString( "winter_express_spawn_mode", "hovertank" ) )
+	{
+		case "hovertank":
+			return eWinterExpressSpawnMode.HOVERTANK
 
+		case "skydive":
+			return eWinterExpressSpawnMode.SKYDIVE
+
+		default:
+			Assert( false, "playlist var \"winter_express_spawn_mode\" set to invalid value! (should be either hovertank or skydive)" )
+			return -1
+	}
+
+	unreachable
+}
 
 
 
@@ -704,242 +687,6 @@ void function Client_OnWinnerDetermined( )
 		SetVictoryScreenTeamName( Localize( Squads_GetSquadNameLong( squadIndex ) ) )
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -3359,7 +3106,7 @@ void function OnWaitingForPlayers_Client()
 	file.gameStartRuiCreated = true
 }
 
-void function OnPickLoadout()
+void function DestroyGameStartRuiForGamestate()
 {
 	if ( file.gameStartRui != null )
 		RuiDestroy( file.gameStartRui )
@@ -3394,7 +3141,7 @@ void function SetupObjectiveWaypoint( entity wp )
 void function WinterExpress_OnPlayerLifeStateChanged( entity player, int oldState, int newState )
 {
 	entity clientPlayer = GetLocalClientPlayer()
-	if ( player != clientPlayer || !IsValid( GetLocalClientPlayer() ))
+	if ( player != clientPlayer || !IsValid( GetLocalClientPlayer() ) || IsWatchingKillReplay() )
 		return
 
 	switch( newState )
@@ -3427,10 +3174,6 @@ void function WinterExpress_ManageCharacterSelectAvailability_Thread()
 			}
 		}
 	)
-
-	
-	if ( !WinterExpress_IsModeEnabled() )
-		return
 
 	
 	float timeUntilSpawn = WinterExpress_GetTimeUntilSpawn()
@@ -3483,7 +3226,7 @@ void function UICallback_WinterExpress_OpenCharacterSelect()
 	entity viewPlayer = GetLocalViewPlayer()
 
 	
-	if ( !WinterExpress_IsModeEnabled() )
+	if ( !GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_WINTEREXPRESS ) )
 		return
 
 	const bool browseMode = true
@@ -4415,6 +4158,8 @@ VictorySoundPackage function GetVictorySoundPackage()
 
 
 
+
+
 void function WinterExpress_PopulateSummaryDataStrings( SquadSummaryPlayerData data )
 {
 	data.modeSpecificSummaryData[0].displayString = "#DEATH_SCREEN_SUMMARY_KILLS"
@@ -4471,6 +4216,7 @@ void function CameraLerpHovertankThread( entity player, vector stationPos, vecto
 	entity cameraMover = CreateClientsideScriptMover( $"mdl/dev/empty_model.rmdl", startPos, startAng )
 	entity camera      = CreateClientSidePointCamera( startPos, startAng, 100 )
 	player.SetMenuCameraEntity( camera )
+	player.SetMenuCameraBloomAmountOverride( GetMapBloomSettings().winterExpress )
 	camera.SetTargetFOV( 100, true, EASING_CUBIC_INOUT, 0.0 )
 	camera.SetParent( cameraMover, "", false )
 
@@ -4492,6 +4238,7 @@ void function CameraLerpHovertankThread( entity player, vector stationPos, vecto
 	if ( isGameStartLerp )
 	{
 		player.SetMenuCameraEntity( camera )
+		player.SetMenuCameraBloomAmountOverride( GetMapBloomSettings().winterExpress )
 		wait 1.5
 	}
 
@@ -4547,6 +4294,7 @@ void function CameraLerpTrainThread( entity player, vector estimatedCameraStart,
 	entity cameraMover = CreateClientsideScriptMover( $"mdl/dev/empty_model.rmdl", estimatedCameraStart, startAng )
 	entity camera      = CreateClientSidePointCamera( estimatedCameraStart, startAng, 100 )
 	player.SetMenuCameraEntity( camera )
+	player.SetMenuCameraBloomAmountOverride( GetMapBloomSettings().winterExpress )
 	camera.SetTargetFOV( 100, true, EASING_CUBIC_INOUT, 0.0 )
 	camera.SetParent( cameraMover, "", false )
 
@@ -4568,6 +4316,7 @@ void function CameraLerpTrainThread( entity player, vector estimatedCameraStart,
 	if ( isGameStartLerp )
 	{
 		player.SetMenuCameraEntity( camera )
+		player.SetMenuCameraBloomAmountOverride( GetMapBloomSettings().winterExpress )
 		wait 1.5
 	}
 

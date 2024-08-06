@@ -604,19 +604,6 @@ void function LeaveMatchWithDialog()
 }
 
 
-void function LeaveMatchWithDialog_Freelance()
-{
-	LeaveMatch_Freelance()
-	ShowLeavingDialog( "Connecting to hub..." )
-}
-
-void function LeaveMatchAndParty_Freelance()
-{
-	LeaveParty()
-	LeaveMatchWithDialog_Freelance()
-}
-
-
 void function ShowLeavingDialog( string header )
 {
 	DialogData dialogData

@@ -92,19 +92,6 @@ void function CacheLobbyBannerEnt()
 {
 	file.lobbyBanners     = GetEntArrayByScriptName( "lobby_banner" )
 	file.lobbyReskinProps = GetEntArrayByScriptName( "event_skin_prop" )
-
-	
-
-
-
-
-
-
-	
-
-
-
-
 }
 
 void function Lobby_OnReadyFX( bool isReady )
@@ -255,11 +242,6 @@ void function SetupEvent1Props()
 	}
 
 	
-	
-
-
-
-
 }
 
 void function SetupEvent2Props()
@@ -277,11 +259,6 @@ void function SetupEvent2Props()
 	}
 
 	
-	
-
-
-
-
 }
 
 void function OnPartyMemberAdded()

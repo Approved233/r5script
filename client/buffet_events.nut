@@ -62,6 +62,44 @@ global function BuffetEvent_GetRewardIconCol
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 global struct BuffetEventBadgeData
 {
 	ItemFlavor& badge
@@ -336,7 +374,7 @@ array<ItemFlavor> function BuffetEvent_GetCurrentChallenges_EXCLUDING_DAILIES( I
 
 	foreach ( string modeName in bemacd.modes )
 	{
-		PlaylistScheduleData scheduleData = Playlist_GetScheduleData( modeName )
+		PlaylistScheduleData scheduleData = Playlist_GetScheduleData_Deprecated( modeName )
 		if ( scheduleData.currentBlock != null )
 		{
 			result.extend( bemacd.modeToChallengesMap[modeName] )
@@ -553,6 +591,43 @@ vector function BuffetEvent_GetRewardIconCol( ItemFlavor event )
 	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_buffet )
 	return GetGlobalSettingsVector( ItemFlavor_GetAsset( event ), "rewardIconColor" )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

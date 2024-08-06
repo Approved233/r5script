@@ -39,6 +39,11 @@ bool function RTKMutator_IsLocalPlayer( string input )
 string function RTKMutator_PlayerDisplayName( string input, string hardware )
 {
 	if ( hardware != "" )
-		return Localize( PlatformIDToIconString( GetHardwareFromName( hardware ) ) ) + " " + input
+		return Localize( PlatformIDToIconString( GetHardwareFromName( hardware ) ) ) + "  " + input
 	return input
+}
+
+bool function RTKMutator_HasStarted( int input )
+{
+	return input < GetUnixTimestamp()
 }

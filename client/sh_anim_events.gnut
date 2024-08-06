@@ -320,9 +320,7 @@ int function ClientCodeCallback_GetScriptAnimSkinIndex( entity captureModel, ent
 	expect ItemFlavor( meleeFlavor )
 	if ( ItemFlavor_GetType( meleeFlavor ) != eItemType.melee_skin ) 
 	{
-
 		Assert( ItemFlavor_GetType( meleeFlavor ) == Artifacts_Loadouts_GetMeleeSkinNetVarOverrideType( false ) )
-
 		return INVALID_SKIN_INDEX
 	}
 

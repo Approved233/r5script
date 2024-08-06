@@ -14,10 +14,13 @@ global function Cups_GetPlayerTierIndexForCup
 global function Cups_GetPlayerTierDataForCup
 global function Cups_RegisterOnLeaderboardChangedCallback
 global function Cups_UnRegisterOnLeaderboardChangedCallback
+global function Cups_RequireUpdateLeaderboard
 global function UICodeCallback_OnLeaderboardDataRetrieved
 global function Cups_RegisterOnServerMessageRecievedCallback
 global function Cups_UnRegisterOnServerMessageRecievedCallback
 global function UICodeCallback_OnServerMessageRecieved
+global function Cups_CalculatePositionPercentageDisplay
+global function Cups_GetProperTabTitleName
 
 
 #if DEV
@@ -36,13 +39,16 @@ global function DEV_Cups_ClearCupsLastMatchPlayedData
 const int CUPS_MMR_BUCKET_INVALID = -1
 
 
+const string APEX_RUMBLE_STRING = "#GAMEMODE_APEX_CUPS_TAB"
+const string RANKED_RUMBLE_STRING = "#GAMEMODE_RANKED_RUMBLE_TAB"
+
 struct {
 	array< void functionref( SettingsAssetGUID, int, array<CupLeaderboardEntry> ) > onLeaderboardChangedCallbacks
 	table< int, array< void functionref( SettingsAssetGUID, string ) > > onServerResponseCallbacks
 
+	bool needUpdateLeaderboard = false
 
 	int dev_MMRBucket = CUPS_MMR_BUCKET_INVALID
-
 } File;
 
 
@@ -180,15 +186,38 @@ ItemFlavor ornull function Cups_GetEligbleCup( ItemFlavor cupEvent )
 		return null
 	}
 
+	SettingsAssetGUID currentRankedCup = ASSET_SETTINGS_UNIQUE_ID_INVALID
+	if ( RankedRumble_IsContainerRankedRumble( cupEvent ) )
+	{
+		
+		ItemFlavor ornull cup = RankedRumble_GetRegisteredCup( expect UserFullCupData( allCupInfo ) )
+		if ( cup != null )
+		{
+			expect ItemFlavor( cup )
+			CupBakeryAssetData cupData = Cups_GetCupBakeryAssetDataFromGUID( ItemFlavor_GetGUID( cup ) )
+			if ( cupData.containerItemFlavor == cupEvent )
+				return cup
+		}
+		currentRankedCup = RankedRumble_GetRankedCupFromContainer( GetLocalClientPlayer(), cupEvent.guid ) 
+	}
+
+
 	foreach ( ItemFlavor cup in CupEvent_GetCups( cupEvent ) )
 	{
-		if ( CupFlavor_HasLevelRequirement( cup ) )
-			if ( CupFlavor_GetLevelRequirement( cup ) > userInfo.charData[ePlayerStryderCharDataArraySlots.ACCOUNT_LEVEL] + 1 )  
-				continue
-
 		if ( CupFlavor_UseMMR( cup ) )
 			if ( CupFlavor_GetMMRBucket( cup ) != Cups_GetUserCupMMRBucketForContainer( cupEvent.guid ) )
 				continue
+
+
+			if ( RankedRumble_IsCupRankedRumble( cup ) )
+			{
+				Assert( !RankedRumble_IsRunningRankedRumble() || currentRankedCup != ASSET_SETTINGS_UNIQUE_ID_INVALID )
+				if ( !RankedRumble_IsCupMatchPlayerPlatform( cup.guid, GetLocalClientPlayer() ) )
+					continue
+				if ( cup.guid != currentRankedCup )
+					continue
+			}
+
 
 		return cup
 	}
@@ -219,7 +248,7 @@ bool function Cups_RegisterForCup( SettingsAssetGUID cupID )
 {
 	if( !GetConVarBool( "cups_enabled" ) ) return false
 
-	printt( "Cups_RegisterForCup" )
+	printt( "Cups_RegisterForCup", cupID )
 
 	int nextCupIndex = Cups_GetNextAvailablePersistentDataSlot( GetLocalClientPlayer() )
 	if( nextCupIndex < 0 )
@@ -253,9 +282,7 @@ int function Cups_GetSquadEligibility( SettingsAssetGUID cupID )
 
 	CupBakeryAssetData cupBakeryData = Cups_GetCupBakeryAssetDataFromGUID( cupID )
 
-
-
-
+	if ( cupBakeryData.isLimitSquadSize )
 	{
 		Party party = GetParty()
 		if( party.members.len() != cupBakeryData.squadSize )
@@ -315,15 +342,15 @@ int function Cups_GetPlayerTierIndexForCup( SettingsAssetGUID cupID )
 		if( cupEntry.cupID != cupID )
 			continue
 
-		for( int i = cupEntry.tierScoreBounds.len() - 1; i > 0; --i )
+		for( int i = 0; i < cupEntry.tierScoreBounds.len(); i++ )
 		{
-			if ( cupEntry.currSquadScore <= cupEntry.tierScoreBounds[i - 1] )
+			if ( cupEntry.currSquadScore >= cupEntry.tierScoreBounds[i] )
 			{
-				printt( "Score: " + cupEntry.currSquadScore + " | Percentile: " + cupEntry.positionPercentage + " | Index: " + i )
+				printt( "Score: " + cupEntry.currSquadScore + " | SquadPosition: " + cupEntry.currSquadPosition + " | LeaderboardCount: " + cupEntry.leaderboardCount + " | Index: " + i )
 				return i
 			}
 		}
-		return 0
+		return cupEntry.tierScoreBounds.len() - 1
 	}
 	return -1
 }
@@ -342,6 +369,7 @@ CupTierData ornull function Cups_GetPlayerTierDataForCup( SettingsAssetGUID cupI
 
 	return null
 }
+
 void function Cups_RegisterOnLeaderboardChangedCallback( void functionref(SettingsAssetGUID, int, array<CupLeaderboardEntry>) callbackFunc )
 {
 	Assert( !File.onLeaderboardChangedCallbacks.contains( callbackFunc ), "Function is already registered for onLeaderboardChanged!" )
@@ -354,13 +382,23 @@ void function Cups_UnRegisterOnLeaderboardChangedCallback( void functionref(Sett
 	File.onLeaderboardChangedCallbacks.fastremovebyvalue( callbackFunc )
 }
 
+void function Cups_RequireUpdateLeaderboard()
+{
+	File.needUpdateLeaderboard = true
+}
+
 void function UICodeCallback_OnLeaderboardDataRetrieved( int cupID, int start, array<CupLeaderboardEntry> entries )
 {
 	if( !GetConVarBool( "cups_enabled" ) ) return
 
-	foreach ( void functionref( SettingsAssetGUID, int, array<CupLeaderboardEntry> ) callback in File.onLeaderboardChangedCallbacks )
+	if( File.needUpdateLeaderboard )
 	{
-		callback( cupID, start, entries )
+		File.needUpdateLeaderboard = false
+
+		foreach ( void functionref( SettingsAssetGUID, int, array<CupLeaderboardEntry> ) callback in File.onLeaderboardChangedCallbacks )
+		{
+			callback( cupID, start, entries )
+		}
 	}
 }
 
@@ -393,6 +431,34 @@ void function UICodeCallback_OnServerMessageRecieved( int messageType, SettingsA
 	}
 }
 
+int function Cups_CalculatePositionPercentageDisplay( SettingsAssetGUID cupID, CupEntry cupEntryData )
+{
+	CupBakeryAssetData cupData = Cups_GetCupBakeryAssetDataFromGUID( cupID )
+	float percent = float( maxint( 1, cupEntryData.currSquadPosition - cupData.topPlacementCount ) ) / maxint( 1, cupEntryData.leaderboardCount - cupData.topPlacementCount )
+	if ( percent > 0.1 )
+		return int( ceil( percent * 10 ) ) * 10
+	else
+		return int( ceil( percent * 100 ) )
+
+	unreachable
+}
+
+string function Cups_GetProperTabTitleName()
+{
+
+	if ( IsPersistenceAvailable() )
+	{
+		int cupId = GetPersistentVarAsInt( "cupslastmatchplayed.cupid" )
+		if ( Cups_IsValidCupID( cupId ) )
+		{
+			if ( RankedRumble_IsCupRankedRumble( GetItemFlavorByGUID( cupId ) ) )
+				return RANKED_RUMBLE_STRING
+		}
+	}
+
+	return APEX_RUMBLE_STRING
+}
+
 
 #if DEV
 bool function Cups_GrantAllCupRewards( SettingsAssetGUID cupID )
@@ -417,12 +483,6 @@ bool function Cups_UnregisterFromAllCups()
 
 
 	RunClientScript( "Cups_UnregisterFromAllCups" )
-
-
-
-
-
-
 
 
 

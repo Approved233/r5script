@@ -250,7 +250,13 @@ int function AllianceProximity_GetMaxNumPlayersPerAlliance()
 	if ( maxPlayers <= 0 )
 		return 0
 
-	if ( GetGameState() < eGameState.Playing && AllianceProximity_ShouldAllTeamsStartOnTheSameAlliance() )
+
+
+
+		bool tooEarlyToCheckMaxNumAlliances = !Flag( "EntitiesDidLoad" ) || GetGameState() < eGameState.Playing
+
+
+	if ( tooEarlyToCheckMaxNumAlliances && AllianceProximity_ShouldAllTeamsStartOnTheSameAlliance() )
 		return maxPlayers
 
 	return maxPlayers / AllianceProximity_GetMaxNumAlliances()
@@ -672,6 +678,7 @@ array< int > function AllianceProximity_GetPopulatedTeamsInAlliance( int allianc
 
 	return teams
 }
+
 
 
 

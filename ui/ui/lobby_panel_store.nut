@@ -58,6 +58,7 @@ global const string PERSONALIZED_STORE_PANEL = "PersonalizedStorePanel"
 global const string STORE_OFFER_SHOP = "StoreItemShop"
 global const string STORE_MYTHIC_SHOP = "StoreMythicShop"
 global const string STORE_SET_ITEM_SHOP = "StoreSetItemShop"
+global const string RTK_APEX_PACKS_PANEL = "ApexPacksPanel"
 
 global struct bpPresaleOfferData
 {
@@ -115,41 +116,6 @@ struct
 	var characterDetailsRui
 
 } s_characters
-
-
-const int STORE_VC_NUM_PACKS = 6
-struct VCPackDef
-{
-	int    entitlementId
-	string priceString
-	string originalPriceString
-	int    price
-	int    base
-	int    bonus
-	int    total
-	asset  image = $""
-
-	bool valid = false
-}
-
-struct
-{
-	bool packsInitialized = false
-
-	array<int>   vcPackEntitlements = [PREMIUM_CURRENCY_10, PREMIUM_CURRENCY_05, PREMIUM_CURRENCY_20, PREMIUM_CURRENCY_40, PREMIUM_CURRENCY_60, PREMIUM_CURRENCY_100]
-	array<int>   vcNewPackEntitlements = [PREMIUM_CURRENCY_10_XPROG, PREMIUM_CURRENCY_05_XPROG, PREMIUM_CURRENCY_20_XPROG, PREMIUM_CURRENCY_40_XPROG, PREMIUM_CURRENCY_60_XPROG, PREMIUM_CURRENCY_100_XPROG]
-	array<int>   vcPackBase = [1000, 500, 2000, 4000, 6000, 10000]
-	array<int>   vcPackBonus = [0, 0, 150, 350, 700, 1500]
-	array<asset> vcPackImage = [$"rui/menu/store/store_coins_t1", $"rui/menu/store/store_coins_t0", $"rui/menu/store/store_coins_t2", $"rui/menu/store/store_coins_t3", $"rui/menu/store/store_coins_t4", $"rui/menu/store/store_coins_t5"]
-	var			 vcPopUpMenu
-	var			 vcPopUpPanel
-
-	VCPackDef[STORE_VC_NUM_PACKS] vcPacks
-
-
-
-
-} s_vc
 
 struct
 {
@@ -265,11 +231,7 @@ void function AddTabsToStoreMenu( var panel, bool reOpen = false )
 {
 	bool showStoreV2 = !reOpen || ( reOpen && GRX_AreStoreSectionsEnabled() ) 
 
-
 	bool sortApexPacksFirst = ( UICodeCallback_IsKeplerInitialized() && Kepler_IsPlayerInVariant( GetLocalClientPlayer(), eKeplerScenario.APEX_TAB_ORDERING, "treatment-a" ) )
-
-
-
 
 	if ( reOpen && file.showStoreV2 == showStoreV2 && sortApexPacksFirst == file.sortApexPacksFirst )
 		return
@@ -279,7 +241,7 @@ void function AddTabsToStoreMenu( var panel, bool reOpen = false )
 	ClearTabs( panel )
 
 	void functionref() addApexPacksTab = void function() : ( panel ) {
-		var tabBody = Hud_GetChild( panel, "LootPanel" )
+		var tabBody = Hud_GetChild( panel, GetConVarBool( "rtk_enableApexPacksScreen" ) ?  GetApexPacksPanelName() : "LootPanel" )
 		AddTab( panel, tabBody, "#MENU_STORE_PANEL_LOOT" )
 	}
 
@@ -434,7 +396,7 @@ void function CallDLCStoreCallback_Safe()
 	if ( !file.openDLCStoreCallbackCalled )
 	{
 		file.openDLCStoreCallbackCalled = true	
-		if( IsStoreEmpty() == true )
+		if( IsStoreEmpty() == true)
 		{
 			ShowDLCStoreUnavailableNotice()
 			file.openDLCStoreCallbackCalled = false
@@ -470,7 +432,7 @@ void function OnGRXStoreUpdate()
 			OnCloseDLCStore()
 		}
 
-		file.openDLCStoreCallbackCalled = false;
+		file.openDLCStoreCallbackCalled = false
 	}
 	else
 	{
@@ -579,9 +541,6 @@ void function OnGRXStoreUpdate()
 		UpdateLootTickTabNewness()
 
 		Hud_SetVisible( Hud_GetChild( file.storePanel, "BusyPanel" ), false )
-
-		if ( GetActiveMenu() == s_vc.vcPopUpMenu )
-			CallDLCStoreCallback_Safe()
 	}
 }
 
@@ -609,58 +568,6 @@ void function UpdateLootTickTabNewness()
 
 
 
-
-void function InitVCPopUp( var newMenuArg )
-{
-	s_vc.vcPopUpMenu = newMenuArg
-
-	SetPopup( newMenuArg, true )
-
-	AddMenuEventHandler( newMenuArg, eUIEvent.MENU_OPEN, OnOpenVCPopUp )
-	AddMenuEventHandler( newMenuArg, eUIEvent.MENU_CLOSE, OnCloseVCPopUp )
-	s_vc.vcPopUpPanel = Hud_GetChild( newMenuArg, "StoreVCPopup" )
-
-	for ( int index = 0; index < STORE_VC_NUM_PACKS; index++ )
-	{
-		var vcButton
-		
-		if ( index == 0 )
-		{
-			vcButton  = Hud_GetChild( s_vc.vcPopUpPanel, "VCButton1Tall" )
-			var vcRui = Hud_GetRui( vcButton )
-
-			RuiSetString( vcRui, "vcOriginalPrice", GetVCPackOriginalPriceString( index ) )
-			RuiSetString( vcRui, "vcPrice", GetVCPackPriceString( index ) )
-			RuiSetString( vcRui, "totalValueDesc", "" )
-			RuiSetString( vcRui, "baseValueDesc", "" )
-			RuiSetString( vcRui, "bonusDesc", "" )
-
-			RuiSetImage( vcRui, "vcImage", GetVCPackImage( index, true ) )
-
-			Hud_AddEventHandler( vcButton, UIE_CLICK, OnVCButtonActivate )
-		}
-		
-
-		vcButton  = Hud_GetChild( s_vc.vcPopUpPanel, "VCButton" + (index + 1) )
-		var vcRui = Hud_GetRui( vcButton )
-
-		RuiSetString( vcRui, "vcOriginalPrice", GetVCPackOriginalPriceString( index ) )
-		RuiSetString( vcRui, "vcPrice", GetVCPackPriceString( index ) )
-		RuiSetString( vcRui, "totalValueDesc", "" )
-		RuiSetString( vcRui, "baseValueDesc", "" )
-		RuiSetString( vcRui, "bonusDesc", "" )
-
-		RuiSetImage( vcRui, "vcImage", GetVCPackImage( index, false ) )
-
-		Hud_AddEventHandler( vcButton, UIE_CLICK, OnVCButtonActivate )
-	}
-
-
-
-
-
-	AddMenuFooterOption( newMenuArg, LEFT, BUTTON_B, true, "#B_BUTTON_CLOSE", "#B_BUTTON_CLOSE" )
-}
 
 bool function IsWalletModalOpened()
 {
@@ -721,15 +628,68 @@ void function OpenWalletModal( int defaultTabType )
 
 void function OnWalletModalOpened()
 {
+	RegisterSignal( "WalletShutDown" )
 	file.isWalletOpened = true
+	thread WalletModalThink()
+}
+
+void function WalletModalThink()
+{
+	EndSignal( uiGlobal.signalDummy, "WalletShutDown" )
+
+	while ( file.isWalletOpened )
+	{
+		int tabType = UI_RTKTabbedModal_GetCurrentTabType()
+
+		if ( tabType == eTabbedModalType.WALLET_APEX_COINS || tabType == eTabbedModalType.WALLET_EXOTIC_SHARDS )
+		{
+			if ( IsDLCStoreInitialized() )
+			{
+				if ( GRX_IsInventoryReady() || GRX_AreOffersReady() )
+					CallDLCStoreCallback_Safe()
+			}
+			else
+			{
+				InitDLCStore()
+			}
+		}
+		else if ( tabType == eTabbedModalType.WALLET_INVENTORY )
+		{
+			if ( file.openDLCStoreCallbackCalled )
+			{
+				OnCloseDLCStore()
+			}
+
+			file.openDLCStoreCallbackCalled = false
+		}
+
+		WaitFrame()
+	}
 }
 
 void function OnWalletModalClosed()
 {
 	file.isWalletOpened = false
 
+	Signal( uiGlobal.signalDummy, "WalletShutDown" )
+
+	if ( file.openDLCStoreCallbackCalled )
+	{
+		OnCloseDLCStore()
+	}
+
+	file.openDLCStoreCallbackCalled = false
+
 	if ( ShouldShowPremiumCurrencyDialog( false, true ) )
+	{
 		ShowPremiumCurrencyDialog( false )
+	}
+
+	if ( IsSteamDelayFulfilment() )
+	{
+		ShowPendingPurchaseDialog()
+		ClearSteamDelayFulfilment()
+	}
 }
 
 void function ToggleApexCoinsWalletModal( var button )
@@ -750,292 +710,6 @@ void function ToggleExoticShardsWalletModal( var button )
 	} else {
 		OpenExoticShardsModal( button )
 	}
-}
-
-void function OnOpenVCPopUp()
-{
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	thread VCPanel_Think( s_vc.vcPopUpPanel )
-}
-
-void function OnCloseVCPopUp()
-{
-
-
-
-
-
-
-
-
-
-
-
-	{
-		OnCloseDLCStore()
-		file.openDLCStoreCallbackCalled = false
-	}
-
-	if ( ShouldShowPremiumCurrencyDialog() )
-		ShowPremiumCurrencyDialog( false )
-}
-
-void function VCPanel_Think( var panel )
-{
-	while ( GetActiveMenu() == s_vc.vcPopUpMenu )
-	{
-		if ( IsDLCStoreInitialized() )
-		{
-			CallDLCStoreCallback_Safe()
-
-			bool blockVCPanel = GetCurrentPlaylistVarBool( "block_vc_panel", false )
-			if ( !blockVCPanel )
-				InitVCPacks( panel )
-		}
-		else
-		{
-			InitDLCStore()
-		}
-
-		var discountPanel = Hud_GetChild( panel, "DiscountPanel" )
-		Hud_SetVisible( discountPanel, Script_UserHasEAAccess() )
-
-			HudElem_SetRuiArg( discountPanel, "discountImage", $"rui/menu/common/ea_access_pc", eRuiArgType.IMAGE )
-
-
-
-
-
-
-
-		WaitFrame()
-	}
-}
-
-
-void function InitVCPacks( var panel )
-{
-	if ( s_vc.packsInitialized )
-		return
-
-	s_vc.packsInitialized = true
-
-	array<int> packEntitlements = []
-	if ( IsNewVCStore() )
-	{
-		printt( "New VC Store." )
-		packEntitlements = clone s_vc.vcNewPackEntitlements
-	}
-	else
-	{
-		printt( "Old VC Store." )
-		packEntitlements = clone s_vc.vcPackEntitlements
-	}
-
-	array<int> vcPriceInts               = GetEntitlementPricesAsInt( packEntitlements )
-	array<string> vcPriceStrings         = GetEntitlementPricesAsStr( packEntitlements )
-	array<string> vcOriginalPriceStrings = GetEntitlementOriginalPricesAsStr( packEntitlements )
-
-	
-	bool useOldVCLayout = false
-	if ( IsConnected() )
-		useOldVCLayout = GetCurrentPlaylistVarBool( "use_old_vc_layout", false )
-
-	for ( int vcPackIndex = 0; vcPackIndex < STORE_VC_NUM_PACKS; vcPackIndex++ )
-	{
-		
-		if ( vcPackIndex == 1 && useOldVCLayout )
-			continue
-
-		VCPackDef vcPack = s_vc.vcPacks[vcPackIndex]
-
-		vcPack.entitlementId = packEntitlements[vcPackIndex]
-		vcPack.price = vcPriceInts[vcPackIndex]
-		vcPack.priceString = vcPriceStrings[vcPackIndex]
-		vcPack.originalPriceString = vcOriginalPriceStrings[vcPackIndex]
-		vcPack.image = ( useOldVCLayout && vcPackIndex == 0 ) ? $"rui/menu/store/store_coins_t1_tall" : s_vc.vcPackImage[vcPackIndex]
-		vcPack.base = s_vc.vcPackBase[vcPackIndex]
-		vcPack.bonus = s_vc.vcPackBonus[vcPackIndex]
-		vcPack.total = vcPack.base + vcPack.bonus
-
-		vcPack.valid = vcPack.priceString != ""
-
-		if ( !vcPack.valid )
-			continue
-
-		var vcButton
-		if ( useOldVCLayout )
-		{
-			if ( vcPackIndex == 0 )
-			{
-				Hud_SetVisible( Hud_GetChild( panel, "VCButton1" ), false )
-				Hud_SetVisible( Hud_GetChild( panel, "VCButton2" ), false )
-
-				vcButton = Hud_GetChild( panel, "VCButton1Tall" )
-				Hud_SetVisible( vcButton, true )
-				Hud_SetNavRight( vcButton, Hud_GetChild( panel, "VCButton3" ) )
-			}
-			else if ( vcPackIndex == 1 )
-			{
-				vcButton = Hud_GetChild( panel, "VCButton" + (vcPackIndex + 1) )
-				Hud_SetVisible( vcButton, false )
-				continue
-			}
-			else if ( vcPackIndex == 2 )
-			{
-				vcButton = Hud_GetChild( panel, "VCButton" + (vcPackIndex + 1) )
-				Hud_SetNavLeft( vcButton, Hud_GetChild( panel, "VCButton1Tall" ) )
-			}
-			else
-			{
-				vcButton = Hud_GetChild( panel, "VCButton" + (vcPackIndex + 1) )
-			}
-		}
-		else
-		{
-			vcButton = Hud_GetChild( panel, "VCButton" + (vcPackIndex + 1) )
-		}
-
-		var vcRui    = Hud_GetRui( vcButton )
-
-		RuiSetString( vcRui, "vcOriginalPrice", GetVCPackOriginalPriceString( vcPackIndex ) )
-		RuiSetString( vcRui, "vcPrice", GetVCPackPriceString( vcPackIndex ) )
-		RuiSetString( vcRui, "totalValueDesc", GetVCPackTotalString( vcPackIndex ) ) 
-		RuiSetString( vcRui, "baseValueDesc", GetVCPackBonusBaseString( vcPackIndex ) ) 
-		RuiSetString( vcRui, "bonusDesc", GetVCPackBonusAddString( vcPackIndex ) ) 
-
-		RuiSetImage( vcRui, "vcImage", GetVCPackImage( vcPackIndex, useOldVCLayout ) )
-
-		
-		
-		Hud_SetEnabled( vcButton, true )
-		Hud_SetLocked( vcButton, false )
-	}
-}
-
-
-void function OnVCButtonActivate( var button )
-{
-	int vcPackIndex = int( Hud_GetScriptID( button ) )
-
-	if ( Hud_IsLocked( button ) )
-	{
-		EmitUISound( "menu_deny" )
-		return
-	}
-
-
-		if ( !PCPlat_IsOverlayAvailable() )
-		{
-			string platname = PCPlat_IsOrigin() ? "ORIGIN" : "STEAM"
-			ConfirmDialogData dialogData
-			dialogData.headerText = ""
-			dialogData.messageText = "#" + platname + "_INGAME_REQUIRED"
-			dialogData.contextImage = $"ui/menu/common/dialog_notice"
-
-			OpenOKDialogFromData( dialogData )
-			return
-		}
-
-		if ( !MeetsAgeRequirements() )
-		{
-			ConfirmDialogData dialogData
-			dialogData.headerText = "#UNAVAILABLE"
-			dialogData.messageText = "#ORIGIN_UNDERAGE_STORE"
-			dialogData.contextImage = $"ui/menu/common/dialog_notice"
-
-			OpenOKDialogFromData( dialogData )
-			return
-		}
-
-
-	PurchaseEntitlement( s_vc.vcPacks[vcPackIndex].entitlementId )
-}
-
-
-string function GetVCPackPriceString( int vcPackIndex )
-{
-	if ( s_vc.vcPacks[vcPackIndex].priceString == "" )
-		return Localize( "#UNAVAILABLE" )
-
-	return s_vc.vcPacks[vcPackIndex].priceString
-}
-
-
-string function GetVCPackOriginalPriceString( int vcPackIndex )
-{
-	return s_vc.vcPacks[vcPackIndex].originalPriceString
-}
-
-
-string function GetVCPackTotalString( int vcPackIndex )
-{
-	int base = s_vc.vcPacks[vcPackIndex].base
-	int bonus = s_vc.vcPacks[vcPackIndex].bonus
-
-	if ( IsConnected() )
-	{
-		base = GetCurrentPlaylistVarInt( format( "vcbutton%d_baseValueDesc", vcPackIndex ), base )
-		bonus = GetCurrentPlaylistVarInt( format( "vcbutton%d_bonusValueDesc", vcPackIndex ), bonus )
-	}
-
-	return GetFormattedValueForCurrency( base + bonus, GRX_CURRENCY_PREMIUM )
-}
-
-
-string function GetVCPackBonusBaseString( int vcPackIndex )
-{
-	
-	
-
-	int base = s_vc.vcPacks[vcPackIndex].base
-	if ( IsConnected() )
-		base = GetCurrentPlaylistVarInt( format( "vcbutton%d_bonusValueDesc", vcPackIndex ), base )
-
-	return Localize( "#STORE_VC_BONUS_BASE", FormatAndLocalizeNumber( "1", float( base ), true ) )
-}
-
-
-string function GetVCPackBonusAddString( int vcPackIndex )
-{
-	if ( s_vc.vcPacks[vcPackIndex].bonus == 0 )
-		return ""
-
-	int bonus = s_vc.vcPacks[vcPackIndex].bonus
-	if ( IsConnected() )
-		bonus = GetCurrentPlaylistVarInt( format( "vcbutton%d_baseValueDesc", vcPackIndex ), bonus )
-
-	return Localize( "#STORE_VC_BONUS_ADD", FormatAndLocalizeNumber( "1", float( bonus ), true ) )
-}
-
-
-asset function GetVCPackImage( int vcPackIndex, bool useOldVCLayout )
-{
-	return ( useOldVCLayout && vcPackIndex == 0 ) ? $"rui/menu/store/store_coins_t1_tall" : s_vc.vcPackImage[vcPackIndex]
 }
 
 
@@ -2534,7 +2208,7 @@ void function JumpToStorePacks()
 {
 	JumpToStoreTab()
 	TabData legendsTabData = GetTabDataForPanel( file.storePanel )
-	ActivateTab( legendsTabData, Tab_GetTabIndexByBodyName( legendsTabData, "LootPanel" ) )
+	ActivateTab( legendsTabData, Tab_GetTabIndexByBodyName( legendsTabData, GetConVarBool( "rtk_enableApexPacksScreen" ) ?  GetApexPacksPanelName() : "LootPanel" ) )
 }
 
 
@@ -2550,6 +2224,19 @@ string function GetMythicShopName()
 	string panelName = ""
 
 		panelName = STORE_MYTHIC_SHOP
+
+
+
+
+	return panelName
+}
+
+string function GetApexPacksPanelName()
+{
+	string panelName = ""
+
+
+		panelName = RTK_APEX_PACKS_PANEL
 
 
 

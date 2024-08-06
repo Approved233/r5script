@@ -3,15 +3,16 @@ global function RTKApexCupHistory_OnInitialize
 global function RTKApexCupHistory_OnDestroy
 global function InitRTKApexCupHistory
 global function RTKApexCupHistory_GetPlayerBreakdownData
+global function RTKApexCupHistory_RegisterOrRerollComplete
 
 global struct  RTKApexCupHistory_Properties
 {
 	rtk_panel buttonList
+	rtk_behavior reRollButton
 }
 
 global struct RTKApexCupMatchesInfo
 {
-	bool isLastMatch
 	bool completed
 	int  score
 	int  matchNumber
@@ -29,11 +30,23 @@ global struct RTKApexCupHistoryModel
 	int totalPoints = -1
 	int totalMatches = 0
 	int matchesCompleted = 0
+	int selectedIdx = 0
 	string noMatchesText = "#CUPS_MATCHHISTORY_NO_MATCHES"
+
+	bool showRerollButton = false
+	string rerollButtonText = ""
 }
+
+struct
+{
+	rtk_behavior ornull activeHistoryBehavior = null
+
+} file
 
 void function RTKApexCupHistory_OnInitialize( rtk_behavior self )
 {
+	file.activeHistoryBehavior = self
+
 	SettingsAssetGUID cupId = RTKApexCupsOverview_GetCupID()
 
 	rtk_struct apexCupsDataModel = RTKDataModelType_CreateStruct( RTK_MODELTYPE_MENUS, "apexCups", "RTKApexCupHistoryModel" )
@@ -43,25 +56,22 @@ void function RTKApexCupHistory_OnInitialize( rtk_behavior self )
 		CupBakeryAssetData cupBakeryData = Cups_GetCupBakeryAssetDataFromGUID( cupId )
 		bool cupStarted = CalEvent_HasStarted( cupBakeryData.containerItemFlavor, GetUnixTimestamp() )
 
+		bool isCupRankedRumble = false
+
+		isCupRankedRumble = RankedRumble_IsCupRankedRumble( cupBakeryData.itemFlavor )
+
+
 		RTKStruct_SetInt( apexCupsDataModel, "apexCup", cupId )
 
-		if ( cupStarted && ( Cups_GetPlayersPDataIndexForCupID(  GetLocalClientPlayer() , cupId) != -1 ))
+		if ( cupStarted )
 		{
-			thread RTKApexCupHistory_GetHistoryData( self )
-		}
-		else if ( cupStarted == false)
-		{
-			self.Message( "OnInitialize - Cup Not Started" )
-			RTKApexCupHistoryModel apexCupHistoryModel
-			apexCupHistoryModel.noMatchesText = "#CUPS_MATCHHISTORY_NOT_STARTED"
-			apexCupHistoryModel.apexCup = cupId
-			RTKStruct_SetValue( apexCupsDataModel, apexCupHistoryModel )
+			thread RTKApexCupHistory_GetHistoryData( self, isCupRankedRumble )
 		}
 		else
 		{
-			self.Message( "OnInitialize - Player Not Registered To Cup" )
+			self.Message( "OnInitialize - Cup Not Started" )
 			RTKApexCupHistoryModel apexCupHistoryModel
-			apexCupHistoryModel.noMatchesText = "#CUPS_MATCHHISTORY_NOT_ENTERED"
+			apexCupHistoryModel.noMatchesText = isCupRankedRumble ? "#RANKED_RUMBLE_MATCHHISTORY_NOT_STARTED" : "#CUPS_MATCHHISTORY_NOT_STARTED"
 			apexCupHistoryModel.apexCup = cupId
 			RTKStruct_SetValue( apexCupsDataModel, apexCupHistoryModel )
 		}
@@ -72,18 +82,29 @@ void function RTKApexCupHistory_OnInitialize( rtk_behavior self )
 	}
 }
 
-void function RTKApexCupHistory_GetHistoryData(rtk_behavior self)
+void function RTKApexCupHistory_GetHistoryData( rtk_behavior self, bool isRankedRumble )
 {
 	EndSignal( self, RTK_ON_DESTROY_SIGNAL )
 
 	SettingsAssetGUID cupId = RTKApexCupsOverview_GetCupID()
 
-	printt( "RTKApexCupHistory_GetHistoryData Cups_GetSquadCupData Start :" +  cupId )
-	while ( Cups_GetSquadCupData( cupId ) == null)
+	printt( "RTKApexCupHistory_GetHistoryData Cups_GetAllUserCupData Start :" +  cupId )
+	while ( !Cups_GetAllUserCupData() )
 	{
 		WaitFrame()
 	}
-	printt( "RTKApexCupHistory_GetHistoryData Cups_GetSquadCupData End :" +  cupId )
+	printt( "RTKApexCupHistory_GetHistoryData Cups_GetAllUserCupData End :" +  cupId )
+
+	if ( Cups_GetSquadCupData( cupId ) == null )
+	{
+		rtk_struct apexCupsDataModel = expect rtk_struct( RTKDataModelType_GetStruct( RTK_MODELTYPE_MENUS, "apexCups", true ) )
+		self.Message( "OnInitialize - Player Not Registered To Cup" )
+		RTKApexCupHistoryModel apexCupHistoryModel
+		apexCupHistoryModel.noMatchesText = isRankedRumble ? "#RANKED_RUMBLE_MATCHHISTORY_NOT_ENTERED" : "#CUPS_MATCHHISTORY_NOT_ENTERED"
+		apexCupHistoryModel.apexCup = cupId
+		RTKStruct_SetValue( apexCupsDataModel, apexCupHistoryModel )
+		return
+	}
 
 	rtk_struct apexCupsDataModel = RTKDataModelType_CreateStruct( RTK_MODELTYPE_MENUS, "apexCups", "RTKApexCupHistoryModel" )
 	RTKApexCupHistoryModel apexCupHistoryModel
@@ -101,11 +122,15 @@ void function RTKApexCupHistory_GetHistoryData(rtk_behavior self)
 
 	apexCupHistoryModel.infoList = GetTimelineData( self, cupEntryData )
 
-	apexCupHistoryModel.playerDataList = RTKApexCupHistory_GetPlayerBreakdownData( self, cupEntryData, 0 )
+	int matchIndex = minint( matchSummaries.len(), cupData.numMatches  ) - 1
+	apexCupHistoryModel.playerDataList = RTKApexCupHistory_GetPlayerBreakdownData( self, cupEntryData, matchIndex )
+	apexCupHistoryModel.selectedIdx = matchIndex
 	if ( apexCupHistoryModel.playerDataList.len() == 0 )
 	{
 		
 		apexCupHistoryModel.apexCup = cupId
+		apexCupHistoryModel.showRerollButton = false
+		apexCupHistoryModel.noMatchesText = isRankedRumble ? "#RANKED_RUMBLE_MATCHHISTORY_NO_MATCHES" : "#CUPS_MATCHHISTORY_NO_MATCHES"
 		RTKStruct_SetValue( apexCupsDataModel, apexCupHistoryModel )
 
 		printt( "RTKApexCupHistory_GetHistoryData No Matches :" +  cupId )
@@ -120,6 +145,18 @@ void function RTKApexCupHistory_GetHistoryData(rtk_behavior self)
 	apexCupHistoryModel.position = cupEntryData.currSquadPosition
 	apexCupHistoryModel.totalPoints = cupEntryData.currSquadScore
 
+	
+	rtk_behavior ornull reRollButton = self.PropGetBehavior( "reRollButton" )
+	if ( reRollButton != null && !Cups_IsCupUseBestTen( cupId ) )
+	{
+		RTKApexCupHistory_InitReroll( apexCupHistoryModel, cupEntryData )
+
+		self.AutoSubscribe( reRollButton, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( cupData, cupEntryData ) {
+			if ( IsValidItemFlavorGUID( cupData.reRollToken.guid ) )
+				OpenApexCupPurchaseRerollDialog( cupData.reRollToken, Localize ( cupData.name ), cupEntryData )
+		} )
+	}
+
 	RTKStruct_SetValue( apexCupsDataModel, apexCupHistoryModel )
 
 	InitTimelineButtons( self )
@@ -127,6 +164,52 @@ void function RTKApexCupHistory_GetHistoryData(rtk_behavior self)
 	RTKApexCupGetPlayerTierData(self, cupId)
 
 	printt( "RTKApexCupHistory_GetHistoryData End :" +  cupId )
+}
+
+void function RTKApexCupHistory_InitReroll( RTKApexCupHistoryModel model, CupEntry cupEntryData )
+{
+	model.showRerollButton = false
+
+	
+	SettingsAssetGUID cupId = RTKApexCupsOverview_GetCupID()
+	if ( !Cups_IsCupActive( cupId ) )
+		return
+
+	
+	CupBakeryAssetData cupData = Cups_GetCupBakeryAssetDataFromGUID( cupId )
+	if ( !Cups_HasParticipated( cupData.containerItemFlavor ) )
+		return
+
+	
+	bool hasRerolls = ( cupData.maximumNumberOfReRolls > cupEntryData.reRollCount ) && ( cupData.maximumNumberOfReRolls > 0 ) && ( cupEntryData.matchSummaryData.len() > 0 )
+	if ( !hasRerolls )
+		return
+
+	
+	array <GRXScriptOffer> offers
+	ItemFlavorPurchasabilityInfo ifpi = GRX_GetItemPurchasabilityInfo( cupData.reRollToken )
+	if ( ifpi.isPurchasableAtAll )
+	{
+		if ( ifpi.craftingOfferOrNull != null )
+			offers.append( GRX_ScriptOfferFromCraftingOffer( expect GRXScriptCraftingOffer( ifpi.craftingOfferOrNull ) ) )
+
+		foreach ( string location, array<GRXScriptOffer> locationOfferList in ifpi.locationToDedicatedStoreOffersMap )
+			foreach ( GRXScriptOffer locationOffer in locationOfferList )
+				if ( locationOffer.offerType != GRX_OFFERTYPE_BUNDLE && locationOffer.output.flavors.len() == 1 )
+					offers.append( locationOffer )
+	}
+
+	
+	if ( offers.len() == 0 || offers[0].prices.len() == 0 )
+		return
+
+	model.showRerollButton = true
+
+	int numTokens = maxint( GRX_GetConsumableCount( ItemFlavor_GetGRXIndex( cupData.reRollToken ) ), 0 )
+	if ( numTokens > cupEntryData.reRollCount )
+		model.rerollButtonText = Localize( "#CUPS_REROLL_DIALOG_HEADER" )
+	else
+		model.rerollButtonText = Localize( "#CUPS_REROLL_BUTTON", GRX_GetFormattedPrice( offers[0].prices[0], 1 ) )
 }
 
 array< RTKApexCupMatchesInfo > function GetTimelineData( rtk_behavior self,  CupEntry cupEntryData )
@@ -148,7 +231,6 @@ array< RTKApexCupMatchesInfo > function GetTimelineData( rtk_behavior self,  Cup
 		int placementPoints = Cups_GetPointsForPlacement( cupData, playerplacement )
 		matchInfo.score = matchSummaries[i].squadCalculatedScore + placementPoints
 		matchInfo.matchNumber = i + 1
-		matchInfo.isLastMatch = i == totalNumMatches - 1
 
 		retInfoList.append(matchInfo)
 	}
@@ -158,7 +240,6 @@ array< RTKApexCupMatchesInfo > function GetTimelineData( rtk_behavior self,  Cup
 		RTKApexCupMatchesInfo matchInfo;
 		matchInfo.completed = false
 		matchInfo.matchNumber = i + 1
-		matchInfo.isLastMatch = i == totalNumMatches - 1
 		retInfoList.append(matchInfo)
 	}
 
@@ -197,9 +278,10 @@ void function SetSelectedMatch( rtk_behavior self , int matchIndex )
 	rtk_array playerDataList_RTK = RTKDataModel_GetArray( "&menus.apexCups.playerDataList" )
 	array< RTKPlayerDataModel > playerDataList_Script = RTKApexCupHistory_GetPlayerBreakdownData(self, cupEntryData, matchIndex)
 	RTKArray_SetValue( playerDataList_RTK, playerDataList_Script )
+	RTKDataModel_SetInt( "&menus.apexCups.selectedIdx", matchIndex )
 }
 
-array< RTKPlayerDataModel > function  RTKApexCupHistory_GetPlayerBreakdownData( rtk_behavior self , CupEntry cupEntryData,  int matchIndex )
+array< RTKPlayerDataModel > function  RTKApexCupHistory_GetPlayerBreakdownData( rtk_behavior self , CupEntry cupEntryData, int matchIndex )
 {
 	SettingsAssetGUID cupId = cupEntryData.cupID
 	CupBakeryAssetData cupData = Cups_GetCupBakeryAssetDataFromGUID( cupId )
@@ -207,7 +289,7 @@ array< RTKPlayerDataModel > function  RTKApexCupHistory_GetPlayerBreakdownData( 
 	array< RTKPlayerDataModel > retPlayerDataList
 
 	array < CupMatchSummary > matchSummaries = cupEntryData.matchSummaryData
-	if ( matchSummaries.len() <= matchIndex )
+	if ( matchIndex < 0 || matchIndex >= matchSummaries.len() )
 	{
 		return retPlayerDataList
 	}
@@ -250,20 +332,39 @@ array< RTKPlayerDataModel > function  RTKApexCupHistory_GetPlayerBreakdownData( 
 			playerDataModel.summaryList.append( newRow )
 		}
 
-		while ( playerDataModel.summaryList.len() < 7 )
+		int retrieveAttempts = 0
+		CommunityUserInfo ornull userInfoOrNull = GetUserInfo( playerData.playerHardware, playerData.playerUID )
+		while ( userInfoOrNull == null )
 		{
-			RTKSummaryBreakdownRowModel newRow = RTKApexCupHistory_NewStatCardRow( playerDataModel.summaryList.len() )
-			playerDataModel.summaryList.append( newRow )
+			retrieveAttempts++
+			if( retrieveAttempts > 10 )
+			{
+				Warning( "Timed out when attempting to retrieve User Info for CupHistory" )
+				break
+			}
+
+			wait 0.2
+
+			userInfoOrNull = GetUserInfo( playerData.playerHardware, playerData.playerUID )
 		}
 
-		CommunityUserInfo userInfo = expect CommunityUserInfo( GetUserInfo( playerData.playerHardware, playerData.playerUID ) )
+		if ( userInfoOrNull != null )
+		{
+			CommunityUserInfo userInfo = expect CommunityUserInfo( userInfoOrNull )
 
-		if ( userInfo.tag != "" )
-			playerDataModel.playerName = Localize("#OBIT_BRACKETED_STRING", userInfo.tag ) + " " + userInfo.name
-		else
-			playerDataModel.playerName = userInfo.name
+			if ( userInfo.tag != "" )
+				playerDataModel.playerName = Localize("#OBIT_BRACKETED_STRING", userInfo.tag ) + " " + userInfo.name
+			else
+				playerDataModel.playerName = userInfo.name
+		}
+
 		playerDataModel.playerHardware = playerData.playerHardware
 		playerDataModel.playerPoints = Localize( "#CUPS_PLAYER_SUMMARY_POINTS_VALUE", totalPlayerPoints.tostring() )
+
+#if DEV
+			if ( !IsValidItemFlavorCharacterRef( playerData.playerLegendName, eValidation.ASSERT ) )
+				playerData.playerLegendName = "character_lifeline"
+#endif
 
 		ItemFlavor characterItemFlav = GetItemFlavorByCharacterRef( playerData.playerLegendName )
 		playerDataModel.playerAssetPath = CharacterClass_GetGalleryPortrait( characterItemFlav )
@@ -274,8 +375,21 @@ array< RTKPlayerDataModel > function  RTKApexCupHistory_GetPlayerBreakdownData( 
 	return retPlayerDataList
 }
 
+void function RTKApexCupHistory_RegisterOrRerollComplete()
+{
+	if ( file.activeHistoryBehavior )
+	{
+		rtk_behavior ornull activeHistoryBehavior = file.activeHistoryBehavior
+		expect rtk_behavior ( activeHistoryBehavior )
+
+		RTKApexCupHistory_OnInitialize( activeHistoryBehavior )
+	}
+}
+
 void function RTKApexCupHistory_OnDestroy( rtk_behavior self )
 {
+	file.activeHistoryBehavior = null
+
 	Signal( self, RTK_ON_DESTROY_SIGNAL )
 	RTKDataModelType_DestroyStruct( RTK_MODELTYPE_MENUS, "apexCups")
 }
@@ -288,6 +402,9 @@ void function InitRTKApexCupHistory( var panel )
 
 int function RTKMutator_ApexCupTimelineSpacing( int timelineWidth , int buttonWidth , int numButtons  )
 {
+	if ( numButtons <= 1 )
+		return 0
+
 	return	(timelineWidth / (numButtons-1) ) - buttonWidth
 }
 

@@ -1628,7 +1628,7 @@ void function EchoLocatorFootstepVFX_Thread( entity echoLocator )
 
 			file.aiVelocity.clear()
 
-			if ( IsFiringRangeGameMode() )
+			if ( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_FIRING_RANGE ) )
 			{
 				foreach ( entity dummy in dummiesAddedToInsideEchoLocatorList )
 				{
@@ -1657,7 +1657,7 @@ void function EchoLocatorFootstepVFX_Thread( entity echoLocator )
 			return
 		}
 
-		if ( IsFiringRangeGameMode() )
+		if ( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_FIRING_RANGE ) )
 		{
 			array<entity> dummies = GetEntArrayByScriptName( FIRING_RANGE_DUMMIE_SCRIPT_NAME )
 

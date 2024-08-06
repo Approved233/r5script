@@ -152,8 +152,14 @@ void function _Show()
 	}
 }
 
-void function RankUpAnimation( int numRanksEarned, int scoreStart, int ladderPosition, int finalScore, bool isProvisionalGraduation = false )
+void function RankUpAnimation( var menu, int numRanksEarned, int scoreStart, int ladderPosition, int finalScore, bool isProvisionalGraduation = false )
 {
+	if ( menu == null )
+		menu = file.menu
+
+	if ( !Hud_HasChild( menu, "MovingBoxBG" ) || !Hud_HasChild( menu, "RewardDisplay" ) )
+		return
+
 	PostGameGeneral_SetDisableNavigateBack( true )
 	file.disableNavigateBack = true
 
@@ -168,15 +174,15 @@ void function RankUpAnimation( int numRanksEarned, int scoreStart, int ladderPos
 
 		if ( numRanksEarned > 0 || isProvisionalGraduation )
 		{
-			Hud_Hide( Hud_GetChild( file.menu, "MovingBoxBG" ) )
-			Hud_Hide( Hud_GetChild( file.menu, "RewardDisplay" ) )
+			Hud_Hide( Hud_GetChild( menu, "MovingBoxBG" ) )
+			Hud_Hide( Hud_GetChild( menu, "RewardDisplay" ) )
 			Hud_Hide( file.continueButton )
 
 			wait 0.1
 
-			Hud_Show( Hud_GetChild( file.menu, "MovingBoxBG" ) )
-			Hud_Show( Hud_GetChild( file.menu, "RewardDisplay" ) )
-			var rewardDisplayRui = Hud_GetRui( Hud_GetChild( file.menu, "RewardDisplay" ) )
+			Hud_Show( Hud_GetChild( menu, "MovingBoxBG" ) )
+			Hud_Show( Hud_GetChild( menu, "RewardDisplay" ) )
+			var rewardDisplayRui = Hud_GetRui( Hud_GetChild( menu, "RewardDisplay" ) )
 			RuiDestroyNestedIfAlive( rewardDisplayRui, "levelUpAnimHandle" )
 
 			if ( GetNextRankedDivisionFromScore( finalScore ) == null ) 
@@ -267,8 +273,8 @@ void function RankUpAnimation( int numRanksEarned, int scoreStart, int ladderPos
 
 			wait RANK_UP_TIME
 
-			Hud_Hide( Hud_GetChild( file.menu, "MovingBoxBG" ) )
-			Hud_Hide( Hud_GetChild( file.menu, "RewardDisplay" ) )
+			Hud_Hide( Hud_GetChild( menu, "MovingBoxBG" ) )
+			Hud_Hide( Hud_GetChild( menu, "RewardDisplay" ) )
 			Hud_Show( file.continueButton )
 		}
 	}
@@ -427,11 +433,6 @@ void function CloseRankedSummary( var button )
 
 void function OpenRankedSummary( bool firstTime )
 {
-
-
-
-
-
 	file.isFirstTime = firstTime
 	AdvanceMenu( file.menu )
 }
@@ -460,7 +461,7 @@ void function Ranked_OnUserInfoUpdatedInPostGame( string hardware, string id )
 	entity uiPlayer    = GetLocalClientPlayer()
 	bool inProvisional = !Ranked_HasCompletedProvisionalMatches(uiPlayer)
 
-	if ( cui.hardware == GetUnspoofedPlayerHardware() && cui.uid == GetPlayerUID() ) 
+	if ( cui.hardware == GetPlayerHardware() && cui.uid == GetPlayerUID() ) 
 	{
 		if ( file.barRuiToUpdate != null  ) 
 		{

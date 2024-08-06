@@ -1,5 +1,7 @@
-global function RTKStore_PopulateOfferSetButtonModel
+global function RTKStore_PopulateOfferArtifactSetButtonModel
+global function RTKStore_PopulateOfferUniversalSetButtonModel
 global function RTKStore_GetSelectedOfferSet
+global function RTKStore_GetGridItemType
 
 global function RTKOfferSetButton_OnInitialize
 global function RTKOfferSetButton_OnDestroy
@@ -8,6 +10,7 @@ global struct RTKOfferSetButton_Properties
 {
 	rtk_behavior buttonBehavior
 	int setIndex
+	int gridItemType
 }
 
 struct PrivateData
@@ -18,9 +21,10 @@ struct PrivateData
 struct
 {
 	int selectedSetIndex
+	int gridItemType
 } file
 
-bool function RTKStore_PopulateOfferSetButtonModel( RTKOfferButtonModel offerSetButtonModel, int setIndex )
+bool function RTKStore_PopulateOfferArtifactSetButtonModel( RTKOfferButtonModel offerSetButtonModel, int setIndex )
 {
 	array< ItemFlavor > setItems = Artifacts_GetSetItems( setIndex )
 	if ( setItems.len() < 2 )
@@ -63,9 +67,56 @@ bool function RTKStore_PopulateOfferSetButtonModel( RTKOfferButtonModel offerSet
 	return true
 }
 
+bool function RTKStore_PopulateOfferUniversalSetButtonModel( RTKOfferButtonModel offerSetButtonModel, int setIndex )
+{
+	array<GRXScriptOffer> offers =  GRX_GetLocationOffers( "universal_set_shop" )
+	array<GRXScriptOffer> bundles =  GRX_GetLocationOffers( "universal_bund_shop" )
+	array< ItemFlavor > setItems = []
+
+	foreach ( offer in offers )
+	{
+		foreach (index, flav in offer.output.flavors )
+		{
+			setItems.push( flav )
+		}
+	}
+
+	GRXScriptOffer firstItemOffer = offers[ 0 ]
+	GRXScriptOffer secondItemOffer = offers[ 1 ]
+
+	
+	ItemFlavor ornull prereq = firstItemOffer.prereq
+	bool locked = ( prereq != null && !GRX_IsItemOwnedByPlayer( expect ItemFlavor( prereq ) ) )
+
+	int numOwned = 0
+	foreach ( ItemFlavor item in setItems )
+	{
+		if ( GRX_IsItemOwnedByPlayer( item ) )
+			numOwned++
+	}
+
+	offerSetButtonModel.imageRef = bundles[ 0 ].imageRef
+	offerSetButtonModel.offerName = bundles[ 0 ].titleText
+	offerSetButtonModel.offerType = Localize( locked ? "#UNIVERSAL_MELEE_SET_LOCKED" : "#UNIVERSAL_MELEE_SET_UNLOCKED" )
+	offerSetButtonModel.purchaseLimit = Localize( "#OWNED_COLLECTED", numOwned, setItems.len() )
+	offerSetButtonModel.priceColor = < 0.596, 0.596, 0.596 >
+	offerSetButtonModel.price = ( numOwned == setItems.len() ) ? Localize( "#SET_OWNED" ) : Localize( "#PER_ITEM", GRX_GetFormattedPrice( secondItemOffer.prices[0], 1 ) )
+	offerSetButtonModel.rarity = eRarityTier.ICONIC
+	offerSetButtonModel.sourceIcon = ItemFlavor_GetSourceIcon( setItems[ 0 ] )
+	offerSetButtonModel.locked = locked
+
+	return true
+}
+
+
 int function RTKStore_GetSelectedOfferSet()
 {
 	return file.selectedSetIndex
+}
+
+int function RTKStore_GetGridItemType()
+{
+	return file.gridItemType
 }
 
 void function RTKOfferSetButton_OnInitialize( rtk_behavior self )
@@ -98,6 +149,7 @@ void function RTKOfferSetButton_OnActivate( rtk_behavior self )
 	RTKStore_SetOverrideStartingSection()
 
 	file.selectedSetIndex = self.PropGetInt( "setIndex" )
+	file.gridItemType = self.PropGetInt( "gridItemType" )
 	AdvanceMenu( GetMenu( "StoreOfferSetItemsMenu" ) )
 }
 

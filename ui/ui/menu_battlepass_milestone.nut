@@ -36,6 +36,12 @@ struct {
 	array<int> milestones
 	int milestoneIndex
 	int currentBPLevel = 0
+
+
+	var discountPanel
+	var taxNoticeMessage
+
+
 }file
 
 void function InitBattlepassMilestoneMenu( var newMenuArg )
@@ -55,6 +61,20 @@ void function InitBattlepassMilestoneMenu( var newMenuArg )
 	file.continueButton      = Hud_GetChild( file.menu, "ContinueButton" )
 	file.premiumToggleButton = Hud_GetChild( file.menu, "LeftToggleButton" )
 	file.bundleToggleButton  = Hud_GetChild( file.menu, "RightToggleButton" )
+
+
+		file.discountPanel	  = Hud_GetChild( file.menu, "DiscountPanel" )
+		if ( Script_UserHasEAAccess() )
+			Hud_Show( file.discountPanel )
+		else
+			Hud_Hide( file.discountPanel )
+
+
+
+
+
+
+
 
 	AddButtonEventHandler( file.purchaseButton, UIE_CLICK, PurchaseButton_OnClick )
 	AddButtonEventHandler( file.continueButton, UIE_CLICK, ContinueButton_OnClick )
@@ -92,13 +112,19 @@ void function BattlepassMilestoneMenu_OnOpen()
 	HudElem_SetRuiArg( file.premiumToggleButton, "buttonText", "#BP_MILESTONE_TOGGLE_PREMIUM" )
 	HudElem_SetRuiArg( file.premiumToggleButton, "isSelected", true )
 
-	HudElem_SetRuiArg( file.bundleToggleButton, "buttonText", "#BP_MILESTONE_TOGGLE_BUNDLE" )
+	HudElem_SetRuiArg( file.bundleToggleButton, "buttonText", "#BP_MILESTONE_TOGGLE_ELITE" )
+
+
+
+
 	HudElem_SetRuiArg( file.bundleToggleButton, "isSelected", false )
 
 	HudElem_SetRuiArg( Hud_GetChild( file.menu, "LeftToggleIndicator" ), "textString", "#BP_MILESTONE_TOGGLE_INDICATOR_LEFT" )
 	HudElem_SetRuiArg( Hud_GetChild( file.menu, "RightToggleIndicator" ), "textString", "#BP_MILESTONE_TOGGLE_INDICATOR_RIGHT" )
 
 	HudElem_SetRuiArg( file.rep2DImage, "isShowingBundleImage", false )
+	HudElem_SetRuiArg( file.rep2DImage, "purchaseDisclaimer", "#BP_MILESTONE_PURCHASE_DISCLAIMER" )
+
 	RuiSetImage( Hud_GetRui( file.rep2DImage ), "tierRepImage", GetGlobalSettingsAsset( ItemFlavor_GetAsset( activeBattlePass ), "milestoneTierRepImage" ) )
 	RuiSetImage( Hud_GetRui( file.rep2DImage ), "bundleRepImage", GetGlobalSettingsAsset( ItemFlavor_GetAsset( activeBattlePass ), "milestoneBundleRepImage" ) )
 
@@ -128,7 +154,7 @@ void function BattlepassMilestoneMenu_OnOpen()
 			file.milestoneIndex = i
 	}
 
-	UI_SetPresentationType( ePresentationType.BATTLE_PASS )
+	UI_SetPresentationType( ePresentationType.BATTLE_PASS_3 )
 	BattlepassMilestone_UpdatePurchaseButtons()
 	BattlepassMilestoneMenu_Update( file.currentBPLevel )
 }
@@ -136,39 +162,42 @@ void function BattlepassMilestoneMenu_OnOpen()
 void function BattlepassMilestoneMenu_Update( int level )
 {
 	const int BUTTON_OFFSET = 24
-	const int BUNDLE_LEVELS = 25
-	const int BUNDLE_PURCHASE_LIMIT = 75
-
 	int targetLevel = level
+	entity player = GetLocalClientPlayer()
 
-	if ( targetLevel > BUNDLE_PURCHASE_LIMIT )
-	{
-		file.isBundleDisabled = true
 
-		ToolTipData toolTip
-		toolTip.titleText = "#BATTLE_PASS_BUNDLE_PROTECT"
-		toolTip.descText = "#BP_MILESTONE_BUNDLE_PROTECT_DESC"
-		Hud_SetToolTipData( file.bundleToggleButton, toolTip )
-	}
-	else
-	{
-		file.isBundleDisabled = false
+	int bpRewardTier = file.isShowingBundle ? eBattlePassV2RewardTier.ELITE : eBattlePassV2RewardTier.PREMIUM
+	ItemFlavor activeBattlePass = expect ItemFlavor( GetActiveBattlePassV2() )
+	file.displayRewards = GetBattlePassV2Rewards( activeBattlePass, level, bpRewardTier, player, true )
 
-		Hud_ClearToolTipData( file.bundleToggleButton )
-	}
 
-	HudElem_SetRuiArg( file.bundleToggleButton, "isBundleDisabled", file.isBundleDisabled )
-	Hud_SetLocked( file.bundleToggleButton, file.isBundleDisabled )
 
-	if ( file.isShowingBundle )
-		targetLevel += BUNDLE_LEVELS
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 	HudElem_SetRuiArg( file.awardHeader, "level", level + 1 )
-
-	entity player = GetLocalClientPlayer()
-	ItemFlavor activeBattlePass = expect ItemFlavor( GetActiveBattlePass() )
-	file.displayRewards = GetBattlePassPremiumRewards( activeBattlePass, targetLevel, player )
-
 	file.displayRewards.sort( SortByQuality )
 	AddUpStackableRewards( file.displayRewards )
 
@@ -237,6 +266,9 @@ void function BattlepassMilestoneMenu_Update( int level )
 
 	HudElem_SetRuiArg( file.rep2DImage, "isShowingBundleImage", file.isShowingBundle )
 
+	HudElem_SetRuiArg( file.rep2DImage, "purchaseDisclaimer", file.isShowingBundle ? "#BP_MILESTONE_PURCHASE_DISCLAIMER_ELITE" : "#BP_MILESTONE_PURCHASE_DISCLAIMER"  )
+
+
 	if ( file.isShowingBundle )
 	{
 		for( int i = 0; i < file.bundleRepLevels.len(); i++ )
@@ -303,7 +335,11 @@ void function BattlepassMilestoneMenu_OnClose()
 
 	if ( file.hasPurchasedBattlepass )
 	{
-		JumpToSeasonTab( "PassPanel" )
+
+		JumpToSeasonTab( "RTKBattlepassPanel" )
+
+
+
 	}
 }
 
@@ -345,7 +381,11 @@ void function PresentItem( ItemFlavor item, int level )
 void function BattlepassMilestone_UpdatePurchaseButtons()
 {
 	entity player = GetLocalClientPlayer()
-	ItemFlavor ornull activeBattlePass = GetPlayerActiveBattlePass( ToEHI( player ) )
+
+	ItemFlavor ornull activeBattlePass = GetPlayerActiveBattlePassV2( ToEHI( player ) )
+
+
+
 
 	if ( activeBattlePass == null || !GRX_IsInventoryReady() || !GRX_AreOffersReady() )
 	{
@@ -360,68 +400,85 @@ void function BattlepassMilestone_UpdatePurchaseButtons()
 
 	if ( !file.isShowingBundle )
 	{
+
 		HudElem_SetRuiArg( file.awardDescText, "textString", "#BP_MILESTONE_AWARDS_DESC_PREMIUM" )
 		HudElem_SetRuiArg( file.premiumToggleButton, "isSelected", true )
 		HudElem_SetRuiArg( file.bundleToggleButton, "isSelected", false )
+		HudElem_SetRuiArg( file.purchaseButton, "offerDesc", "#BP_MILESTONE_TOGGLE_PREMIUM" )
+		HudElem_SetRuiArg( file.purchaseButton, "price", " " + GetEntitlementPricesAsStr( [R5_BATTLEPASS_1] )[0] )
+		Hud_SetLocked( file.purchaseButton, DoesPlayerOwnBattlePassV2Level( player, activeBattlePass, eBattlePassV2RewardTier.PREMIUM ) )
 
-		ItemFlavor basicPurchaseFlav = BattlePass_GetBasicPurchasePack ( activeBattlePass )
 
-		array<GRXScriptOffer> basicPurchaseOffers = GRX_GetItemDedicatedStoreOffers( basicPurchaseFlav, "battlepass" )
 
-		if ( basicPurchaseOffers.len() == 1 )
-		{
-			purchaseOffer = basicPurchaseOffers[0]
-			expect GRXScriptOffer( purchaseOffer )
-			HudElem_SetRuiArg( file.purchaseButton, "offerDesc", "#BP_MILESTONE_TOGGLE_PREMIUM" )
-		}
-		else
-		{
-			Assert( false, "Expected 1 offer for basic pack of " + string( ItemFlavor_GetAsset( activeBattlePass ) ) )
-		}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	}
 	else
 	{
-		HudElem_SetRuiArg( file.awardDescText, "textString", "#BP_MILESTONE_AWARDS_DESC_BUNDLE" )
+
 		HudElem_SetRuiArg( file.premiumToggleButton, "isSelected", false )
 		HudElem_SetRuiArg( file.bundleToggleButton, "isSelected", true )
+		HudElem_SetRuiArg( file.awardDescText, "textString", "#BP_MILESTONE_AWARDS_DESC_PREMIUM" )
+		HudElem_SetRuiArg( file.purchaseButton, "offerDesc", "#BP_MILESTONE_TOGGLE_ELITE" )
+		HudElem_SetRuiArg( file.purchaseButton, "price", " " + GetEntitlementPricesAsStr( [R5_BATTLEPASS_1_PLUS] )[0] )
+		Hud_SetLocked( file.purchaseButton, DoesPlayerOwnBattlePassV2Level( player, activeBattlePass, eBattlePassV2RewardTier.ELITE ) )
 
-		ItemFlavor bundlePurchaseFlav = BattlePass_GetBundlePurchasePack ( activeBattlePass )
 
-		array<GRXScriptOffer> bundlePurchaseOffers = GRX_GetItemDedicatedStoreOffers( bundlePurchaseFlav, "battlepass" )
 
-		if ( bundlePurchaseOffers.len() == 1 )
-		{
-			purchaseOffer = bundlePurchaseOffers[0]
-			expect GRXScriptOffer( purchaseOffer )
-			HudElem_SetRuiArg( file.purchaseButton, "offerDesc", "#BP_MILESTONE_TOGGLE_BUNDLE" )
-		}
-		else
-		{
-			Assert( false, "Expected 1 offer for basic pack of " + string( ItemFlavor_GetAsset( activeBattlePass ) ) )
-		}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	}
-
-	if ( purchaseOffer != null )
-	{
-		expect GRXScriptOffer( purchaseOffer )
-		if ( purchaseOffer.prices.len() == 1)
-		{
-			HudElem_SetRuiArg( file.purchaseButton, "price", " " + GRX_GetFormattedPrice ( purchaseOffer.prices[0] ) )
-		}
-		else
-		{
-			Assert( false, "Expected 1 price for offer of " + purchaseOffer.offerAlias )
-		}
-	}
-
-	bool isOfferPurchasable = DoesPlayerOwnBattlePass( player, activeBattlePass )
-
-	if ( isOfferPurchasable && purchaseOffer != null )
-	{
-		isOfferPurchasable = GRXOffer_IsEligibleForPurchase( expect GRXScriptOffer( purchaseOffer ) )
-	}
-
-	Hud_SetLocked( file.purchaseButton, isOfferPurchasable )
 }
 
 void function PremiumButton_OnClick( var button )
@@ -472,8 +529,10 @@ void function BundleButton_OnClick( var button )
 
 void function BundleButton_OnFocused( var button )
 {
-	if ( file.isBundleDisabled )
-		return
+
+
+
+
 
 	HudElem_SetRuiArg( file.bundleToggleButton, "isFocused", true )
 }
@@ -484,7 +543,11 @@ void function ContinueButton_OnClick( var button )
 
 	if ( file.hasPurchasedBattlepass )
 	{
-		JumpToSeasonTab( "PassPanel" )
+
+		JumpToSeasonTab( "RTKBattlepassPanel" )
+
+
+
 	}
 }
 
@@ -496,7 +559,12 @@ void function PurchaseButton_OnClick( var button )
 		return
 	}
 
-	ItemFlavor ornull activeBattlePass = GetPlayerActiveBattlePass( ToEHI( GetLocalClientPlayer() ) )
+
+	ItemFlavor ornull activeBattlePass = GetPlayerActiveBattlePassV2( ToEHI( GetLocalClientPlayer() ) )
+
+
+
+
 	if ( activeBattlePass == null || !GRX_IsInventoryReady() || !GRX_AreOffersReady() )
 		return
 
@@ -505,21 +573,37 @@ void function PurchaseButton_OnClick( var button )
 	ItemFlavor purchaseFlav
 
 	if ( file.isShowingBundle )
-		purchaseFlav = BattlePass_GetBundlePurchasePack( activeBattlePass )
+	{
+
+		PurchaseEntitlement( R5_BATTLEPASS_1_PLUS )
+
+
+
+	}
 	else
-		purchaseFlav = BattlePass_GetBasicPurchasePack( activeBattlePass )
+	{
 
-	if ( !GRX_GetItemPurchasabilityInfo( purchaseFlav ).isPurchasableAtAll )
-		return
+		PurchaseEntitlement( R5_BATTLEPASS_1 )
 
-	GRXScriptOffer purchaseOffer = GRX_GetItemDedicatedStoreOffers( purchaseFlav, "battlepass" )[0]
 
-	PurchaseDialogConfig pdc
-	pdc.offer = purchaseOffer
-	pdc.quantity = 1
-	pdc.onPurchaseResultCallback = OnBattlePassPurchaseResults
-	pdc.purchaseSoundOverride = "UI_Menu_BattlePass_Purchase"
-	PurchaseDialog( pdc )
+
+	}
+
+
+	return
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 
 void function OnBattlePassPurchaseResults( bool wasSuccessful )
@@ -543,7 +627,11 @@ void function JumpToBattlePassMenuThread( )
 {
 	WaitSignal( uiGlobal.signalDummy, "ConfirmPurchaseClosed" );
 
-	JumpToSeasonTab( "PassPanel" )
+
+	JumpToSeasonTab( "RTKBattlepassPanel" )
+
+
+
 }
 
 array<string> function GetRewardStringsForPIN( )
@@ -726,16 +814,23 @@ bool function OpenBattlePassMilestoneDialog( bool forceShow = false )
 	if ( !IsBattlepassMilestoneEnabled() || !GRX_IsInventoryReady() || !GRX_AreOffersReady() )
 		return false
 
-	ItemFlavor ornull activeBattlePass = GetActiveBattlePass()
+
+	ItemFlavor ornull activeBattlePass = GetActiveBattlePassV2()
+
+
+
+
 	if ( activeBattlePass == null )
 		return false
 
 	expect ItemFlavor( activeBattlePass )
 
-	ItemFlavor basicPurchaseFlav = BattlePass_GetBasicPurchasePack ( activeBattlePass )
-	array<GRXScriptOffer> basicPurchaseOffers = GRX_GetItemDedicatedStoreOffers( basicPurchaseFlav, "battlepass" )
-	if ( basicPurchaseOffers.len() != 1 )
-		return false
+
+
+
+
+
+
 
 	entity player = GetLocalClientPlayer()
 
@@ -780,6 +875,6 @@ bool function OpenBattlePassMilestoneDialog( bool forceShow = false )
 		}()
 	}
 
-	return true
+	return showMilestoneMenu
 }
 

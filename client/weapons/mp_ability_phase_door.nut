@@ -26,6 +26,7 @@ const float PHASE_DOOR_PORTAL_EXTENSION_WIDTH = 2
 
 
 
+
 const string PHASE_DOOR_STOP_VISUAL_EFFECT = "PhaseDoor_StopVisualEffect"
 
 
@@ -82,7 +83,11 @@ const bool PHASE_DOOR_DEBUG_ENABLE_FF_SELF_CHECK = true
 
 global const bool PHASE_DOOR_PORTAL_EXTENSIONS_DEBUG_DRAW = false
 
+#if DEV
 global const bool PHASE_DOOR_LOGGING = true
+#else
+global const bool PHASE_DOOR_LOGGING = false
+#endif
 
 enum ePhaseDoorOrientation
 {
@@ -224,6 +229,12 @@ struct
 
 
 
+
+
+
+
+
+
 #endif
 
 void function MpAbilityPhaseDoor_Init()
@@ -251,7 +262,7 @@ void function MpAbilityPhaseDoor_Init()
 	RegisterSignal( PHASE_DOOR_STOP_VISUAL_EFFECT )
 	AddCreateCallback( "prop_script", OnPropCreated )
 	AddCreateCallback( "prop_dynamic", OnPropCreated )
-	AddOnSpectatorTargetChangedCallback( OnSpectatorTargetChanged )
+	AddCallback_OnViewPlayerChanged( OnViewPlayerChanged )
 
 	StatusEffect_RegisterEnabledCallback( eStatusEffect.phase_door_teleport_visual_effect, StartVisualEffect )
 	StatusEffect_RegisterDisabledCallback( eStatusEffect.phase_door_teleport_visual_effect, StopVisualEffect )
@@ -540,7 +551,7 @@ void function DeactivateClientPreviewFxRui( )
 
 
 
-void function OnSpectatorTargetChanged( entity player, entity prevTarget, entity newTarget )
+void function OnViewPlayerChanged( entity player )
 {
 	if ( file.placementDepthRui != null || file.portalFXInitialized )
 	{
@@ -639,6 +650,27 @@ void function OnProjectileCollision_ability_phase_door( entity projectile, vecto
 #if INTELLIJ_OUTLINE_SECTION_MARKER
 void function _____________CreatePhaseDoor___________________________(){}
 #endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1693,6 +1725,14 @@ bool function PortalStandardChecks( entity player )
 
 
 
+
+
+
+
+
+
+
+
 bool function PortalExtension_CanUseCallback( entity player, entity extension, int useFlags )
 {
 	if ( !IsValid ( player ) || !IsValid( extension ) )
@@ -1712,6 +1752,38 @@ bool function PortalExtension_CanUseCallback( entity player, entity extension, i
 
 	if ( Bleedout_IsBleedingOut( player ) )
 		return false
+
+	if ( GetCurrentPlaylistVarBool( "alter_tac_use_better_rope_fix", true ) )
+	{
+		if ( StatusEffect_HasSeverity( player, eStatusEffect.phase_door_teleport_visual_effect ) )
+			return false
+	}
+	else
+	{
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	}
 
 	return true
 }
@@ -1934,6 +2006,9 @@ void function StartVisualEffect( entity player, int statusEffect, bool actuallyC
 	if ( player != GetLocalViewPlayer() || (GetLocalViewPlayer() == GetLocalClientPlayer() && !actuallyChanged) )
 		return
 
+	if ( StatusEffect_GetSeverity( player, statusEffect ) < 1 )
+		return
+
 	EmitSoundOnEntity( player, PHASE_DOOR_WARPIN_SOUND_1P )
 
 	thread (void function() : ( player, statusEffect ) {
@@ -1995,6 +2070,7 @@ void function StopVisualEffect( entity player, int statusEffect, bool actuallyCh
 
 
 
+
 bool function PhaseDoor_CheckInvalidEnt( entity ent )
 {
 	if ( IsValid( ent ) && (ent.GetScriptName() in file.invalidEntityScriptNames) )
@@ -2016,7 +2092,7 @@ void function _____________BreachKillerChallenge___________________________(){}
 
 bool function IsBreachKillerChallengeEnabled()
 {
-	return GetCurrentPlaylistVarBool( "alter_breach_killer_challenge_enabled", true )
+	return GetCurrentPlaylistVarBool( "alter_breach_killer_challenge_enabled", false )
 }
 
 

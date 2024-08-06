@@ -25,6 +25,7 @@ global struct RTKApexCupLeaderboardModel
 	array < RTKApexCupLeaderboardRow > rows
 	int selectedIdx = 0
 	int showStatTable = -1
+	string headerString = ""
 
 	RTKApexCupTierInfo& tierInfo
 }
@@ -46,6 +47,8 @@ void function RTKApexCupLeaderboard_OnInitialize( rtk_behavior self )
 		Remote_ServerCallFunction( "ClientCallback_GetLeaderboardData", cupId,  1  , NUM_LEADERBOARDROWS )
 		RTKApexCupLeaderboard_OnInitRows( self )
 
+		Cups_RequireUpdateLeaderboard()
+
 		CupBakeryAssetData cupBakeryData = Cups_GetCupBakeryAssetDataFromGUID( cupId )
 		bool cupStarted = CalEvent_HasStarted( cupBakeryData.containerItemFlavor, GetUnixTimestamp() )
 		bool cupFinished = CalEvent_HasFinished( cupBakeryData.containerItemFlavor, GetUnixTimestamp() )
@@ -53,26 +56,16 @@ void function RTKApexCupLeaderboard_OnInitialize( rtk_behavior self )
 		RTKStruct_SetInt( apexCupsDataModel, "cupCalEvent", cupBakeryData.containerItemFlavor.guid )
 		RTKStruct_SetInt( apexCupsDataModel, "apexCup", cupId )
 
+		RTKStruct_SetString( apexCupsDataModel, "headerString", Localize( "#CUPS_LEADERBOARD_HEADER" ) )
+
 		if ( cupStarted )
 		{
 			self.Message( "RTKApexCupLeaderboard OnInitialize - Cup Started" )
-		}
-		else
-		{
-			self.Message( "RTKApexCupLeaderboard OnInitialize - Cup Not Started" )
-		}
-
-		if ( cupStarted && ( Cups_GetPlayersPDataIndexForCupID(  GetLocalClientPlayer() , cupId) != -1 ))
-		{
 			thread RTKApexCupLeaderboard_GetPlayerTierData( self )
 		}
-		else if ( cupStarted == false)
-		{
-			self.Message( "RTKApexCupLeaderboard OnInitialize - Cup Not Started" )
-		}
 		else
 		{
-			self.Message( "RTKApexCupLeaderboard OnInitialize - Player Not Registered To Cup" )
+			self.Message( "RTKApexCupLeaderboard OnInitialize - Cup Not Started" )
 		}
 
 		rtk_behavior ornull infoButton = self.PropGetBehavior( "infoButton" )
@@ -199,6 +192,10 @@ void function RTKApexCupLeaderboard_UpdateLeaderboard( SettingsAssetGUID cupID, 
 	}
 
 	RTKStruct_SetValue( apexCupsDataModel, apexCupLeaderBoardModel )
+
+	
+	RTKStruct_SetInt( apexCupsDataModel, "selectedIdx", 0 )
+	RTKStruct_SetInt( apexCupsDataModel, "showStatTable", 0 )
 }
 
 void function RTKApexCupLeaderboard_GetPlayerTierData( rtk_behavior self )
@@ -206,29 +203,48 @@ void function RTKApexCupLeaderboard_GetPlayerTierData( rtk_behavior self )
 	SettingsAssetGUID cupId = RTKApexCupsOverview_GetCupID()
 	EndSignal( self, RTK_ON_DESTROY_SIGNAL )
 
-	while ( Cups_GetSquadCupData( cupId ) == null )
+	while ( !Cups_GetAllUserCupData() )
 	{
 		WaitFrame()
+	}
+	if ( Cups_GetSquadCupData( cupId ) == null )
+		return
+
+	CupBakeryAssetData cupBakeryData = Cups_GetCupBakeryAssetDataFromGUID( cupId )
+	CupEntryRestrictions restriction = cupBakeryData.entryRestrictions
+	if ( restriction.hasMinRankLimit )
+	{
+		rtk_struct apexCupsDataModel = expect rtk_struct( RTKDataModelType_GetStruct( RTK_MODELTYPE_MENUS, "apexCups", true ) )
+		RTKStruct_SetString( apexCupsDataModel, "headerString", Localize( "#CUPS_LEADERBOARD_RANKED_HEADER", Localize( restriction.minRankString ) ) )
 	}
 
 	RTKApexCupTierInfo tierInfo
 	tierInfo.apexCup = cupId
 
-	if (  Cups_GetSquadCupData( cupId ) )
-	{
-		CupEntry cupEntryData  = expect CupEntry ( Cups_GetSquadCupData( cupId ))
-		tierInfo.currentPoints = cupEntryData.currSquadScore
-		tierInfo.tierIndex     = Cups_GetPlayerTierIndexForCup( cupId )
-		tierInfo.targetPoints  = cupEntryData.tierScoreBounds[ maxint( 0, tierInfo.tierIndex - 1 ) ]
-		tierInfo.lowerBounds   = tierInfo.tierIndex <  cupEntryData.tierScoreBounds.len() ? cupEntryData.tierScoreBounds[tierInfo.tierIndex] : 0
-		tierInfo.isTop100	   = tierInfo.currentPoints > tierInfo.targetPoints
+	CupEntry cupEntryData  = expect CupEntry ( Cups_GetSquadCupData( cupId ))
+	tierInfo.currentPoints = cupEntryData.currSquadScore
+	tierInfo.tierIndex     = Cups_GetPlayerTierIndexForCup( cupId )
 
-		
-		float percent = cupEntryData.positionPercentage
-		if ( percent > 0.1 )
-			tierInfo.positionPercentage = int( ceil( percent * 10 ) ) * 10
-		else
-			tierInfo.positionPercentage = int( ceil( percent * 100 ) )
+	if( cupEntryData.tierScoreBounds.len() > 0 )
+	{
+		tierInfo.targetPoints  = cupEntryData.tierScoreBounds[ maxint( 0, tierInfo.tierIndex - 1 ) ]
+	}
+
+	tierInfo.lowerBounds   = tierInfo.tierIndex <  cupEntryData.tierScoreBounds.len() ? cupEntryData.tierScoreBounds[tierInfo.tierIndex] : 0
+	tierInfo.isTop100	   = tierInfo.tierIndex == 0
+
+	
+	if ( tierInfo.isTop100 )
+		tierInfo.targetPoints = tierInfo.currentPoints
+
+	
+	if ( tierInfo.isTop100 )
+	{
+		tierInfo.positionPercentage = cupEntryData.currSquadPosition
+	}
+	else
+	{
+		tierInfo.positionPercentage = Cups_CalculatePositionPercentageDisplay( cupId, cupEntryData )
 	}
 
 	rtk_struct tierModel = expect rtk_struct( RTKDataModelType_GetStruct( RTK_MODELTYPE_MENUS, "tierInfo", true, [ "apexCups" ] ) )

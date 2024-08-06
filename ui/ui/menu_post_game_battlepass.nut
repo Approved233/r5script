@@ -117,6 +117,7 @@ void function OpenPostGameBattlePassMenu( bool firstTime )
 
 void function OnPostGameBattlePassMenu_Open()
 {
+	printt("[CupUI] OnPostGameBattlePassMenu_Open")
 	ClearGameBattlePassMenu()
 	Lobby_AdjustScreenFrameToMaxSize( Hud_GetChild( file.menu, "ScreenFrame" ), true )
 }
@@ -130,6 +131,7 @@ void function OnPostGameBattlePassMenu_Close()
 
 void function OnPostGameBattlePassMenu_Show()
 {
+	printt("[CupUI] OnPostGameBattlePassMenu_Show")
 
 		UI_SetPresentationType( ePresentationType.WEAPON_CATEGORY )
 
@@ -198,6 +200,7 @@ void function ShowChallengeProgression( ItemFlavor battlePass )
 	
 	if ( file.postGameUpdateComplete )
 		return
+	printt("[CupUI] ShowChallengeProgression 1")
 
 	entity player = GetLocalClientPlayer()
 
@@ -219,7 +222,7 @@ void function ShowChallengeProgression( ItemFlavor battlePass )
 	waitthread WaitToUpdateUntilReady( player )
 	if ( !IsConnected() )
 		return
-
+	printt("[CupUI] ShowChallengeProgression 2")
 	var matchSummaryRui = Hud_GetRui( file.matchSummary )
 	SetSeasonColors( matchSummaryRui )
 
@@ -592,7 +595,7 @@ void function UpdateChallengeProgressbutton( entity player, var button, Challeng
 void function WaitToUpdateUntilReady( entity player )
 {
 	
-	bool showRankedSummary = Ranked_GetXProgMergedPersistenceData( GetLocalClientPlayer(), RANKED_SHOW_RANKED_SUMMARY_PERSISTENCE_VAR_NAME ) != 0
+	bool showRankedSummary = Ranked_ShowRankedSummary()
 	if ( showRankedSummary )
 	{
 		WaitFrame() 
@@ -602,8 +605,10 @@ void function WaitToUpdateUntilReady( entity player )
 		}
 	}
 
-	string postMatchSurveyMatchId = string( UISafeGetPersistentVar( "postMatchSurveyMatchId" ) )
-	float postMatchSurveySampleRateLowerBound = expect float( UISafeGetPersistentVar( "postMatchSurveySampleRateLowerBound" ) )
+	if ( !IsPersistenceAvailable() )
+		return
+	string postMatchSurveyMatchId = string( GetPersistentVar( "postMatchSurveyMatchId" ) )
+	float postMatchSurveySampleRateLowerBound = expect float( GetPersistentVar( "postMatchSurveySampleRateLowerBound" ) )
 	if ( !showRankedSummary && file.isFirstTime && TryOpenSurvey( eSurveyType.POSTGAME, postMatchSurveyMatchId, postMatchSurveySampleRateLowerBound ) )
 	{
 		while ( IsDialog( GetActiveMenu() ) )
@@ -760,7 +765,10 @@ void function OnPostGameBattlePassMenu_Hide()
 	}
 
 	if ( !file.postGameUpdateComplete )
+	{
+		printt("[CupUI] OnPostGameBattlePassMenu_Hide")
 		Signal( uiGlobal.signalDummy, "ShowBPSummary" )
+	}
 }
 
 

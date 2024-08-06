@@ -16,6 +16,9 @@ global function DeathboxNetwork_GetDeathboxAge
 
 
 
+
+
+
 global function DeathboxNetwork_TrackBoxTargets
 global function DeathboxNetwork_UntrackBoxTargets
 global function DeathboxNetwork_UntrackIfTracking
@@ -56,6 +59,11 @@ const int INDEX_WaypointFloat_CreatedTime = 0
 const bool DEBUG_USE_NEW_ANIMS = true
 
 
+
+
+
+
+
 struct deathboxInfo
 {
 	entity waypoint
@@ -77,6 +85,9 @@ struct
 
 
 
+
+
+
 		entity deathboxBeingUsed
 
 		entity trackedDeathbox
@@ -87,6 +98,11 @@ struct
 
 		float  mapIconAppearanceDelay
 
+
+
+
+
+
 } file
 
 
@@ -95,6 +111,20 @@ void function MpWeaponAshDataknife_Init()
 	PrecacheWeapon( ASH_DATAKNIFE_WEAPON_NAME )
 	PrecacheParticleSystem( DEATHBOX_USED_FX )
 	PrecacheParticleSystem( DEATHBOX_KNIFE_FX )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 	if ( UseAlternatePassiveActivation() )
 	{
@@ -123,6 +153,11 @@ void function MpWeaponAshDataknife_Init()
 			AddCallback_OnPassiveChanged( ePassives.PAS_ASH, OnPassiveChanged )
 			AddCreateCallback( PLAYER_WAYPOINT_CLASSNAME, OnWaypointCreated )
 
+			
+
+
+
+
 			file.mapIconAppearanceDelay = GetCurrentPlaylistVarFloat( "ash_passive_map_icon_delay", ASH_DATAKNIFE_MAP_ICON_DELAY_DEFAULT )
 
 	}
@@ -140,13 +175,32 @@ void function OnPassiveChanged( entity player, int passive, bool didHave, bool n
 
 
 
+
+
+
+
+
+
+
+
+
+
 			
 			if ( HasCallback_OnFindFullMapAimEntity( GetDeathboxUnderAim ) )
 				RemoveCallback_OnFindFullMapAimEntity( GetDeathboxUnderAim )
 
+
+
+
+
 	}
 	else if ( nowHas && !didHave )
 	{
+
+
+
+
+
 
 
 
@@ -212,6 +266,108 @@ array<entity> function GetLivingAttackerCount( entity player, entity deathbox )
 
 	return GetPlayerArrayOfTeam_Alive( info.attackerTeam )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -807,6 +963,73 @@ bool function PingDeathboxUnderAim( entity deathbox )
 
 	return true
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

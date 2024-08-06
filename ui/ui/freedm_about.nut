@@ -16,8 +16,10 @@ array< featureTutorialTab > function FreeDM_PopulateAboutText()
 	if ( playlistUiRules != GAMEMODE_FREEDM )
 		return tabs
 
-	if( GetPlaylistVarBool( GamemodeUtility_GetPlaylist(), "freedm_gun_game_active", false ) )
+	if( GameModeVariant_IsActiveForPlaylist( GamemodeUtility_GetPlaylist(), eGameModeVariants.FREEDM_GUNGAME ) )
 		return GunGame_PopulateAboutText()
+
+	GameMode_AboutDialog_AppendRequeueTab(tabs)
 
 	return tabs
 }
@@ -39,6 +41,8 @@ array< featureTutorialTab > function GunGame_PopulateAboutText()
 
 
 
+
+	GameMode_AboutDialog_AppendRequeueTab(tabs)
 
 	return tabs
 }
@@ -69,6 +73,8 @@ array< featureTutorialTab > function TreasureHunt_PopulateAboutText()
 
 	tab1.rules = tab1Rules
 	tabs.append( tab1 )
+
+	GameMode_AboutDialog_AppendRequeueTab(tabs)
 
 	return tabs
 }

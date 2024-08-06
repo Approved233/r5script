@@ -60,6 +60,7 @@ global struct GrenadeIndicatorData
 {
 	vector hitPos
 	vector hitNormal
+	vector hitVelocity
 	entity hitEnt
 }
 
@@ -143,9 +144,11 @@ global struct CupEntry
 	int cupID
 	string squadID
 	int currSquadPosition
+	int leaderboardCount
 	float positionPercentage
 	int currSquadScore
 	int reRollCount
+	bool active
 	array< CupMatchSummary > matchSummaryData
 	array< int > tierScoreBounds
 }
@@ -218,6 +221,8 @@ global struct CommunityUserInfo
 	float lastServerChangeTime
 	string privacySetting
 	array<int> charData
+	int rumbleRankScore
+	int rumbleRankedLadderPos
 }
 
 global struct PartyMember
@@ -229,7 +234,6 @@ global struct PartyMember
 	bool present
 	string eaid
 	int boostCount
-	string unspoofedHardware
 	string unspoofedUID
 }
 
@@ -256,6 +260,15 @@ global struct NetTraceRouteResults
 	int worstRttMs
 	int lastRttMs
 	int averageRttMs
+}
+
+global struct EnemyDotDistanceSqrStruct
+{
+	entity enemy
+	float viewCos
+	float distanceSqr
+	bool inPlayerFOV
+	float score
 }
 
 
@@ -320,6 +333,52 @@ global struct GRXScriptInboxMessage
 	string     senderNucleusPid
 	string     gifterName
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 global struct GRXContainerInfo
@@ -972,13 +1031,13 @@ global struct Friend
 	string id
 	string unspoofedid = ""
 	string hardware
-	string unspoofedHardware = ""
 	string name = "Unknown"
 	string presence = ""
 	int    status = eFriendStatus.OFFLINE
 	bool   ingame = false
 	bool   inparty = false
 	bool   away = false
+	bool   inleaderboard = false
 
 	EadpPresenceData ornull eadpPresenceData
 	EadpPeopleData ornull eadpData

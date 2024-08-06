@@ -42,6 +42,8 @@ global enum eEventLandingPageButtonRedirect
 	COLLECTION_EVENT = 4
 	EVENT_STORE = 5
 	PLAY_MODE = 6
+	VGUI_PRIZE_TRACKER = 7 
+	CUSTOM_DEEPLINK = 8
 }
 
 
@@ -51,6 +53,9 @@ global struct BaseEventLandingPageButtonData
 	string		name
 	asset		backgroundImage
 	int			pageRedirectEnum
+
+	string customDeeplinkType
+	string customDeeplink
 }
 
 
@@ -137,6 +142,8 @@ array<BaseEventLandingPageButtonData> function BaseEvent_GetLandingPageButtonDat
 		}
 		group.backgroundImage = BaseEvent_GetLandingPageBGButtonImage( event )
 		group.pageRedirectEnum = GetSettingsBlockInt( groupBlock, "pageRedirect" )
+		group.customDeeplinkType = GetSettingsBlockString( groupBlock, "customDeeplinkType" )
+		group.customDeeplink = GetSettingsBlockString( groupBlock, "customDeeplink" )
 		groups.append( group )
 	}
 	return groups

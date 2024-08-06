@@ -1,4 +1,3 @@
-
 global function MeleeArtifactDagger_Init
 
 global function OnWeaponActivate_melee_artifact_dagger
@@ -49,4 +48,3 @@ void function OnWeaponOwnerChanged_melee_artifact_dagger( entity weapon, WeaponO
 		Artifacts_OnWeaponOwnerChanged( weapon, owner )
 	}
 }
-      

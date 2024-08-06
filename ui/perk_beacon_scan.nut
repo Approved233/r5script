@@ -27,6 +27,15 @@ global function Perk_BeaconScan_Init
 
 
 
+
+
+
+
+
+
+
+
+
 global struct SurveyBeaconData
 {
 	bool functionref( entity, entity  ) canUseFunc
@@ -54,12 +63,27 @@ struct
 
 
 
+
+
+
+
+
+
+
+
+
+
 } file
 
 void function Perk_BeaconScan_Init()
 {
 	Perk_NextZoneBeaconScan_Init()
 	Perk_EnemyBeaconScan_Init()
+
+
+
+
+
 
 
 
@@ -71,15 +95,60 @@ float function GetBaseSurveyBeaconExclusionDistance()
 	return GetCurrentPlaylistVarFloat( "survey_beacon_exclusion_distance", 12000 )
 }
 
-int function GetEnemyScanBeaconGoalNumber()
-{
-	return GetCurrentPlaylistVarInt( "enemy_scan_beacon_goal_number", 12 )
-}
 
-int function GetRingConsoleGoalNumber()
-{
-	return GetCurrentPlaylistVarInt( "ring_console_goal_number", 12 )
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

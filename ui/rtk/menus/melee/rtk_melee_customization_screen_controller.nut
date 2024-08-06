@@ -58,12 +58,10 @@ global struct RTKMeleeCustomizationSetModel
 {
 	string title
 	int setTheme
-
-		RTKMeleeCustomizationItemModel& blade
-		RTKMeleeCustomizationItemModel& theme
-		RTKMeleeCustomizationItemModel& powerSource
-		RTKMeleeCustomizationItemModel& activationEmote
-
+	RTKMeleeCustomizationItemModel& blade
+	RTKMeleeCustomizationItemModel& theme
+	RTKMeleeCustomizationItemModel& powerSource
+	RTKMeleeCustomizationItemModel& activationEmote
 	RTKMeleeCustomizationItemModel& deathbox
 }
 
@@ -81,17 +79,16 @@ global struct RTKMeleeCustomizationModel
 	array<RTKMeleeCustomizationSetModel> sets
 	RTKMeleeCustomizationSetModel& equippedItems
 	array<asset> equippedToLegendIcons
+	int heirloomShards
 }
 
 struct
 {
 	var menu = null
-
 	array<ItemFlavor> blades = []
 	array<ItemFlavor> themes = []
 	array<ItemFlavor> powerSources = []
 	array<ItemFlavor> activationEmotes = []
-
 	array<ItemFlavor> deathboxSkins = []
 	int focusedIndex = -1
 	int focusedItemGUID = -1
@@ -105,9 +102,7 @@ struct PrivateData
 	int menuGUID = -1
 }
 
-
 const int ARTIFACT_CONFIG_BASE = 0 
-
 
 void function RTKMeleeCustomizationScreen_OnInitialize( rtk_behavior self )
 {
@@ -140,6 +135,7 @@ void function RTKMeleeCustomizationScreen_OnInitialize( rtk_behavior self )
 	RTKMeleeCustomizationScreen_CreateArtifactSets()
 	RTKMeleeCustomizationScreen_AddEvents( self )
 	RTKCustomizationScreen_SetEquippedItems()
+	RTKCustomizationScreen_SetHeirloomShards()
 
 	
 	ItemFlavor ornull selectedMeleeSkin = GetLegendMeleeCustomizeItem()
@@ -154,14 +150,13 @@ void function RTKMeleeCustomizationScreen_OnInitialize( rtk_behavior self )
 	
 	p.menuGUID = AssignMenuGUID()
 	RTKFooters_Add( p.menuGUID, LEFT, BUTTON_B, "#B_BUTTON_BACK", BUTTON_INVALID, "#B_BUTTON_BACK", ExitCustomization )
-
 	if ( !IsCustomizingArtifactConfiguration() )
-
 	{
 		RTKFooters_Add( p.menuGUID, LEFT, BUTTON_X, "#X_BUTTON_EVENT_SHOP", BUTTON_INVALID, "#X_BUTTON_EVENT_SHOP", EquipFocusedDeathbox, CanUnlockFocusedEventShop )
 	}
 	RTKFooters_Add( p.menuGUID, LEFT, BUTTON_A, "#MELEE_CUSTOMIZATION_PREVIEW_ACTION", BUTTON_INVALID, "#MELEE_CUSTOMIZATION_PREVIEW_ACTION", null, CanPreviewFocusedItem )
 	RTKFooters_Add( p.menuGUID, LEFT, BUTTON_X, "#MELEE_CUSTOMIZATION_EQUIP_ACTION", BUTTON_INVALID, "#MELEE_CUSTOMIZATION_EQUIP_ACTION", null, CanEquipFocusedItem )
+	RTKFooters_Add( p.menuGUID, LEFT, BUTTON_X, "#X_BUTTON_UNLOCK", BUTTON_INVALID, "#X_BUTTON_UNLOCK", null, CanUnlockFocusedItem )
 	RTKFooters_Update()
 }
 
@@ -175,12 +170,10 @@ void function RTKMeleeCustomizationScreen_OnDestroy( rtk_behavior self )
 	file.meleeCustomization = null
 	file.meleeCustomizationPath = ""
 
-
 	file.blades.clear()
 	file.themes.clear()
 	file.powerSources.clear()
 	file.activationEmotes.clear()
-
 	file.deathboxSkins.clear()
 
 	RTKFooters_RemoveAll( p.menuGUID )
@@ -224,7 +217,7 @@ RTKMeleeCustomizationItemModel function GetMeleeCustomizationItemModel( ItemFlav
 	}
 
 	
-	if ( meleeItemModel.setTheme == eArtifactSetIndex.CELES && meleeItemModel.locked )
+	if ( meleeItemModel.setTheme == ULTIMATE_SET_INDEX && meleeItemModel.locked )
 	{
 		meleeItemModel.description = CelestialSetDescription( meleeItemModel.type )
 	}
@@ -241,7 +234,6 @@ void function RTKMeleeCustomizationScreen_CreateArtifactSets()
 		foreach ( int theme in ARTIFACT_CUSTOMIZATION_SET_ORDER )
 		{
 			array< ItemFlavor > components = Artifacts_GetSetItems( theme )
-			rtk_struct meleeSetStruct = RTKArray_PushNewStruct( sets )
 
 			RTKMeleeCustomizationSetModel meleeSkinSetModel
 
@@ -257,8 +249,16 @@ void function RTKMeleeCustomizationScreen_CreateArtifactSets()
 				if ( type == eArtifactComponentType.BLADE && Artifacts_IsEmptyComponent( component ) )
 					continue 
 
+				int configIndex = Artifacts_Loadouts_GetConfigIndex( expect ItemFlavor( GetLegendMeleeCustomizeItem() ) )
+				LoadoutEntry entry = Artifacts_Loadouts_GetEntryForConfigIndexAndType( configIndex, type )
+
+				bool shouldHideIfLocked = MeleeCustomization_ShouldHideIfLocked( component )
+				bool isLocked = !IsItemFlavorUnlockedForLoadoutSlot( LocalClientEHI(), entry, component )
+				bool isActiveEventReward = MeleeSkin_IsRewardForActiveEvent( component )
+
 				
-				if ( MeleeCustomization_ShouldHideIfLocked( component ) && MeleeSkin_IsRewardForActiveEvent( component ) )
+				
+				if ( isLocked && shouldHideIfLocked && !isActiveEventReward )
 					continue
 
 				switch ( type )
@@ -285,7 +285,14 @@ void function RTKMeleeCustomizationScreen_CreateArtifactSets()
 						break
 				}
 			}
-			RTKStruct_SetValue( meleeSetStruct, meleeSkinSetModel )
+
+			
+			
+			if ( meleeSkinSetModel.deathbox.guid != 0 )
+			{
+				rtk_struct meleeSetStruct = RTKArray_PushNewStruct( sets )
+				RTKStruct_SetValue( meleeSetStruct, meleeSkinSetModel )
+			}
 		}
 	}
 	else
@@ -365,6 +372,8 @@ void function RTKMeleeCustomizationScreen_AddEvents( rtk_behavior self )
 					}
 					else
 					{
+						OpenStoreInspectForArtifactItem( RTKStruct_GetInt( componentModel, "setTheme" ), type )
+
 						EmitUISound( "UI_Menu_Deny" )
 					}
 				}
@@ -447,6 +456,11 @@ void function RTKCustomizationScreen_SetEquippedItems()
 	}
 }
 
+void function RTKCustomizationScreen_SetHeirloomShards()
+{
+	RTKStruct_SetInt( file.meleeCustomization, "heirloomShards", GRXCurrency_GetPlayerBalance( GetLocalClientPlayer(), GRX_CURRENCIES[GRX_CURRENCY_HEIRLOOM] ) )
+}
+
 
 bool function CanEquipFocusedItem()
 {
@@ -467,6 +481,19 @@ bool function CanEquipFocusedItem()
 	}
 
 	return IsItemFlavorUnlockedForLoadoutSlot( LocalClientEHI(), entry, component )
+}
+
+bool function CanUnlockFocusedItem()
+{
+	if ( file.focusedItemGUID == -1 || !IsValidItemFlavorGUID( file.focusedItemGUID ) )
+		return false
+
+	ItemFlavor component = GetItemFlavorByGUID( file.focusedItemGUID )
+
+	if ( Artifacts_GetSetIndex( component ) == ULTIMATE_SET_INDEX ||  MeleeCustomization_ShouldHideIfLocked( component ) || MeleeSkin_IsRewardForActiveEvent( component ) )
+		return false
+
+	return !CanEquipFocusedItem()
 }
 
 bool function CanPreviewFocusedItem()
@@ -585,24 +612,23 @@ void function MeleeCustomizationPanel_OnShow( var panel )
 	var parentMenu = Hud_GetParent( panel )
 	Hud_SetVisible( Hud_GetChild( parentMenu, "CustomizeMeleePanelModelRotateMouseCapture"), true )
 
+	if ( IsCustomizingArtifactConfiguration() )
+	{
+		if ( CanRunClientScript() )
+			RunClientScript("Artifacts_StoreLoadoutDataOnPlayerEntityStruct", null, null, false )
 
-		if ( IsCustomizingArtifactConfiguration() )
+		EHI lcEHI = LocalClientEHI()
+		LoadoutEntry slot
+		for ( int i = 0; i < eArtifactComponentType.COUNT; i++ )
 		{
-			if ( CanRunClientScript() )
-				RunClientScript("Artifacts_StoreLoadoutDataOnPlayerEntityStruct", null, null, false )
-
-			EHI lcEHI = LocalClientEHI()
-			LoadoutEntry slot
-			for ( int i = 0; i < eArtifactComponentType.COUNT; i++ )
-			{
-				int configIndex = Artifacts_Loadouts_GetConfigIndex( expect ItemFlavor( GetLegendMeleeCustomizeItem() ) )
-				slot = Artifacts_Loadouts_GetEntryForConfigIndexAndType( configIndex, i )
-				AddCallback_ItemFlavorLoadoutSlotDidChange_SpecificPlayer( lcEHI, slot, ArtifactComponentLoadoutChangeCallback )
-			}
+			int configIndex = Artifacts_Loadouts_GetConfigIndex( expect ItemFlavor( GetLegendMeleeCustomizeItem() ) )
+			slot = Artifacts_Loadouts_GetEntryForConfigIndexAndType( configIndex, i )
+			AddCallback_ItemFlavorLoadoutSlotDidChange_SpecificPlayer( lcEHI, slot, ArtifactComponentLoadoutChangeCallback )
 		}
-
+	}
 
 	SetCurrentTabForPIN( Hud_GetHudName( panel ) )
+	MeleeCustomizationPanel_OnTabsChanged()
 }
 
 void function MeleeCustomizationPanel_OnHide( var panel )
@@ -610,20 +636,18 @@ void function MeleeCustomizationPanel_OnHide( var panel )
 	var parentMenu = Hud_GetParent( panel )
 	Hud_SetVisible( Hud_GetChild( parentMenu, "CustomizeMeleePanelModelRotateMouseCapture"), false )
 
-
-		if ( IsCustomizingArtifactConfiguration() )
+	if ( IsCustomizingArtifactConfiguration() )
+	{
+		EHI lcEHI = LocalClientEHI()
+		LoadoutEntry slot
+		for ( int i = 0; i < eArtifactComponentType.COUNT; i++ )
 		{
-			EHI lcEHI = LocalClientEHI()
-			LoadoutEntry slot
-			for ( int i = 0; i < eArtifactComponentType.COUNT; i++ )
-			{
-				int configIndex = Artifacts_Loadouts_GetConfigIndex( expect ItemFlavor( GetLegendMeleeCustomizeItem() ) )
-				slot = Artifacts_Loadouts_GetEntryForConfigIndexAndType( configIndex, i )
-				if ( IsConnected() && IsLobby() && IsLocalClientEHIValid() && IsTopLevelCustomizeContextValid() )
-					RemoveCallback_ItemFlavorLoadoutSlotDidChange_SpecificPlayer( lcEHI, slot, ArtifactComponentLoadoutChangeCallback )
-			}
+			int configIndex = Artifacts_Loadouts_GetConfigIndex( expect ItemFlavor( GetLegendMeleeCustomizeItem() ) )
+			slot = Artifacts_Loadouts_GetEntryForConfigIndexAndType( configIndex, i )
+			if ( IsConnected() && IsLobby() && IsLocalClientEHIValid() && IsTopLevelCustomizeContextValid() )
+				RemoveCallback_ItemFlavorLoadoutSlotDidChange_SpecificPlayer( lcEHI, slot, ArtifactComponentLoadoutChangeCallback )
 		}
-
+	}
 }
 
 void function MeleeCustomizationPanel_OnTabsChanged()
@@ -680,13 +704,11 @@ array<ItemFlavor> function GetSelectableDeathboxSkins()
 	ItemFlavor character = GetTopLevelCustomizeContext()
 	LoadoutEntry entry = Loadout_Deathbox( character )
 
-
 	if ( IsCustomizingArtifactConfiguration() )
 	{
 		int configIndex = Artifacts_Loadouts_GetConfigIndex( expect ItemFlavor( GetLegendMeleeCustomizeItem() ) )
 		entry = Artifacts_Loadouts_GetEntryForConfigIndexAndType( configIndex, eArtifactComponentType.DEATHBOX )
 	}
-
 
 	EHI playerEHI = LocalClientEHI()
 	array<ItemFlavor> allDeathboxSkins = clone GetValidItemFlavorsForLoadoutSlot( playerEHI, entry )
@@ -702,7 +724,8 @@ array<ItemFlavor> function GetSelectableDeathboxSkins()
 		bool isActiveEventReward = MeleeSkin_IsRewardForActiveEvent( deathboxSkin )
 
 		
-		if ( ( isLocked && shouldHideIfLocked ) || isActiveEventReward )
+		
+		if ( isLocked && shouldHideIfLocked && !isActiveEventReward )
 			continue
 
 		selectableDeathboxSkins.append( deathboxSkin )
@@ -1167,6 +1190,23 @@ string function CelestialSetDescription( int type )
 	return ""
 }
 
+void function OpenStoreInspectForArtifactItem( int theme, int type )
+{
+	ItemFlavor component = Artifacts_GetComponentOfTypeFromTheme( theme, type )
+
+	array<GRXScriptOffer> offers = GRX_GetItemDedicatedStoreOffers( component, "artifact_set_shop" )
+	foreach ( offerIndex, offer in offers )
+	{
+		foreach( flav in offer.output.flavors )
+		{
+			if ( Artifacts_GetComponentType( flav ) == type )
+			{
+				ArtifactsInspectMenu_AttemptOpenWithOffer( offer )
+			}
+		}
+	}
+}
+
 
 bool function RTKMutator_ShowCustomizationItem( int currentTab, int tab, bool isVisible )
 {
@@ -1197,7 +1237,7 @@ bool function RTKMutator_HideEmptyActivationEmote( bool isVisible, bool isEmpty,
 
 vector function RTKMutator_CelestialOutline( int state, int theme, rtk_array defaultColors, rtk_array celestialColors )
 {
-	if ( theme == eArtifactSetIndex.CELES )
+	if ( theme == ULTIMATE_SET_INDEX )
 		return RTKMutator_PickFloat3From( state, celestialColors )
 
 	return RTKMutator_PickFloat3From( state, defaultColors )

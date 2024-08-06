@@ -129,17 +129,15 @@ RTKCharacterSkillsInfoModel function RTKCharacterSkillsModel_GetModelFromItemFla
 	classInfo.icon = CharacterClass_GetRoleIcon(characterRole )
 	infoModel.characterClassInfo = classInfo
 
-	RTKCharacterSkillInfoItemModel perkInfo0
-	perkInfo0.descText = Localize( CharacterClass_GetRolePerkShortDescriptionAtIndex(characterRole, 0).toupper() )
-	perkInfo0.icon = CharacterClass_GetRolePerkIconAtIndex(characterRole, 0 )
-	infoModel.characterClassItems.append( perkInfo0 )
-
-	if ( CharacterClass_GetRolePerkShortDescriptionAtIndex(characterRole, 1) != "" )
+	for (int index = 0; index < 3; index++ )
 	{
-		RTKCharacterSkillInfoItemModel perkInfo1
-		perkInfo1.descText = Localize( CharacterClass_GetRolePerkShortDescriptionAtIndex(characterRole, 1).toupper() )
-		perkInfo1.icon       = CharacterClass_GetRolePerkIconAtIndex(characterRole, 1 )
-		infoModel.characterClassItems.append( perkInfo1 )
+		RTKCharacterSkillInfoItemModel perkInfo
+		perkInfo.headerText = Localize( CharacterClass_GetRolePerkShortDescriptionAtIndex(characterRole, index).toupper() )
+		if ( perkInfo.headerText == "" )
+			continue
+		perkInfo.descText = Localize (CharacterClass_GetRolePerkDescriptionAtIndex(characterRole, index) )
+		perkInfo.icon = CharacterClass_GetRolePerkIconAtIndex(characterRole, index )
+		infoModel.characterClassItems.append( perkInfo )
 	}
 
 	return infoModel

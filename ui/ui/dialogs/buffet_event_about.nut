@@ -101,7 +101,7 @@ void function OnOpen()
 	array<string> scheduledModes
 	foreach ( string modeName in bemacd.modes )
 	{
-		PlaylistScheduleData scheduleData = Playlist_GetScheduleData( modeName )
+		PlaylistScheduleData scheduleData = Playlist_GetScheduleData_Deprecated( modeName )
 		TimestampRange ornull block
 		if ( scheduleData.currentBlock != null )
 			block = scheduleData.currentBlock

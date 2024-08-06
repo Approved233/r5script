@@ -321,6 +321,7 @@ void function ClMinimap_Init()
 	AddCreateCallback( "player", OnPlayerCreate )
 	AddTargetNameCreateCallback( "deathField", MinimapDeathFieldCreated )
 	AddCallback_OnPlayerChangedTeam( Minimap_OnPlayerTeamChanged )
+	AddCallback_OnYouRespawned( MinimapRespawnReset )
 	RegisterSignal( "TeamChanged" )
 
 	float threatMaxDist  = Minimap_GetFloatForKey( "threatMaxDist" )
@@ -412,10 +413,14 @@ void function ClMinimap_Init()
 
 
 
+
+
+		file.fullmap_unitframesRui.append( RuiCreate( $"ui/unitframe_survival_v3.rpak", clGlobal.topoFullscreenFullMap, FULLMAP_RUI_DRAW_LAYER, 20 ) )
 		file.fullmap_unitframesRui.append( RuiCreate( $"ui/unitframe_survival_v3.rpak", clGlobal.topoFullscreenFullMap, FULLMAP_RUI_DRAW_LAYER, 20 ) )
 		file.fullmap_unitframesRui.append( RuiCreate( $"ui/unitframe_survival_v3.rpak", clGlobal.topoFullscreenFullMap, FULLMAP_RUI_DRAW_LAYER, 20 ) )
 		file.fullmap_unitframesRui.append( RuiCreate( $"ui/unitframe_survival_v3.rpak", clGlobal.topoFullscreenFullMap, FULLMAP_RUI_DRAW_LAYER, 20 ) )
 
+		file.fullmap_jipframesRui.append( RuiCreate( $"ui/unitframe_survival_jip.rpak", clGlobal.topoFullscreenFullMap, FULLMAP_RUI_DRAW_LAYER, 20 ) )
 		file.fullmap_jipframesRui.append( RuiCreate( $"ui/unitframe_survival_jip.rpak", clGlobal.topoFullscreenFullMap, FULLMAP_RUI_DRAW_LAYER, 20 ) )
 		file.fullmap_jipframesRui.append( RuiCreate( $"ui/unitframe_survival_jip.rpak", clGlobal.topoFullscreenFullMap, FULLMAP_RUI_DRAW_LAYER, 20 ) )
 		file.fullmap_jipframesRui.append( RuiCreate( $"ui/unitframe_survival_jip.rpak", clGlobal.topoFullscreenFullMap, FULLMAP_RUI_DRAW_LAYER, 20 ) )
@@ -1052,10 +1057,10 @@ var function Minimap_AddEnemyToMinimap( entity enemy, asset enemyIconOverride = 
 	
 	RuiSetFloat3( rui, "objColor", GetKeyColor( COLORID_MINIMAP_ENEMY_REF ) * ( 1.0 / 255.0 ) )
 
-		if ( IsRevTakeover() )
-		{
-			RuiSetFloat3( rui, "objColor", Teams_GetTeamColor( enemy.GetTeam() ) )
-		}
+
+
+
+
 
 
 	return rui
@@ -1489,6 +1494,19 @@ void function MinimapJammed_Disabled( entity ent, int statusEffect, bool actuall
 	}
 }
 
+void function MinimapRespawnReset()
+{
+	if ( !file.minimapEnabled )
+		return
+
+	clGlobal.levelEnt.Signal( "LoopRadarJammerSounds" )
+
+	if ( file.minimap_jammed_layer != null )
+	{
+		RuiDestroy( file.minimap_jammed_layer )
+		file.minimap_jammed_layer = null
+	}
+}
 
 void function LoopRadarJammerSounds( entity ent )
 {
@@ -1661,11 +1679,8 @@ void function Minimap_UpdateMinimapVisibility( entity player )
 	if ( MiniMapIsDisabled() )
 		isVisible = false
 
-
-	if ( IsHardcoreSurvival() && ( PlayerMatchState_GetFor( player ) == ePlayerMatchState.NORMAL ) )
+	if ( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_HARDCORE ) && ( PlayerMatchState_GetFor( player ) == ePlayerMatchState.NORMAL ) )
 		isVisible = false
-
-
 
 	if ( Freelance_IsHubLevel() )
 		isVisible = false
@@ -1847,15 +1862,15 @@ void function Fullmap_SetTintParams( float startTime, float tintDuration, vector
 
 void function ChallengesOnScoreboardShow()
 {
-	RegisterButtonPressedCallback( IsRTL() ? BUTTON_DPAD_RIGHT : BUTTON_DPAD_LEFT, FullmapChallengeCategoryLeft )
-	RegisterButtonPressedCallback( IsRTL() ? BUTTON_DPAD_LEFT : BUTTON_DPAD_RIGHT, FullmapChallengeCategoryRight )
+	RegisterButtonPressedCallback( BUTTON_DPAD_LEFT, FullmapChallengeCategoryLeft )
+	RegisterButtonPressedCallback( BUTTON_DPAD_RIGHT, FullmapChallengeCategoryRight )
 	RegisterButtonPressedCallback( KEY_Y, FullmapChallengeCategoryRight )
 }
 
 void function ChallengesOnScoreboardHide()
 {
-	DeregisterButtonPressedCallback( IsRTL() ? BUTTON_DPAD_RIGHT : BUTTON_DPAD_LEFT, FullmapChallengeCategoryLeft )
-	DeregisterButtonPressedCallback( IsRTL() ? BUTTON_DPAD_LEFT : BUTTON_DPAD_RIGHT, FullmapChallengeCategoryRight )
+	DeregisterButtonPressedCallback( BUTTON_DPAD_LEFT, FullmapChallengeCategoryLeft )
+	DeregisterButtonPressedCallback( BUTTON_DPAD_RIGHT, FullmapChallengeCategoryRight )
 	DeregisterButtonPressedCallback( KEY_Y, FullmapChallengeCategoryRight )
 }
 
@@ -1865,6 +1880,10 @@ void function FullmapChallengeCategoryRight( var button )
 	IncrementCategorySelection( true )
 	EmitUISound( "UI_Menu_Focus_Small" )
 	UpdateMinimapChallengeRui( file.fullmap_challengeRuiArray )
+
+
+	OnPlayerViewFullMapChallenges()
+
 }
 
 void function FullmapChallengeCategoryLeft( var button )
@@ -1873,6 +1892,21 @@ void function FullmapChallengeCategoryLeft( var button )
 	DecrementCategorySelection( true )
 	EmitUISound( "UI_Menu_Focus_Small" )
 	UpdateMinimapChallengeRui( file.fullmap_challengeRuiArray )
+
+
+	OnPlayerViewFullMapChallenges()
+
+}
+
+
+void function OnPlayerViewFullMapChallenges()
+{
+	entity player = GetLocalClientPlayer()
+	if ( !player.p.hasTickedFullMapViewChallengesStatThisGame )
+	{
+		Remote_ServerCallFunction( "ClientCallback_StatsHook_OnPlayerViewFullMapChallenges" )
+		player.p.hasTickedFullMapViewChallengesStatThisGame = true
+	}
 }
 
 
@@ -1927,7 +1961,7 @@ void function UpdateFullmapRuiTracks()
 	bool isPlayerShadow = false
 
 
-		isPlayerShadow = IsPlayerShadowZombie( viewPlayer )
+
 
 
 	RuiSetBool( viewPlayerRui, "useShadowFormFrame", viewPlayer.IsShadowForm() && !isPlayerShadow )
@@ -1965,7 +1999,12 @@ void function UpdateFullmapRuiTracks()
 		entity teamMember = UnitFrame_GetOwnerByIndex( slotIndex )
 		if ( !IsValid( teamMember ) )
 		{
-			if ( teamMember != null )
+			if( slotIndex >= ( GetMaxTeamSizeForPlaylist( GetCurrentPlaylistName() ) - 1 ) )
+			{
+				RuiSetBool( rui, "isVisible", false )
+				RuiSetBool( jipRui, "isVisible", false )
+			}
+			else if ( teamMember != null )
 			{
 				
 				RuiSetBool( rui, "isVisible", true )
@@ -1975,7 +2014,7 @@ void function UpdateFullmapRuiTracks()
 				RuiSetBool( rui, "isJumpmaster", false )
 				RuiSetInt( rui, "frameSlot", slotIndex )
 			}
-			else if( GamemodeUtility_IsJIPEnabled() && !IsFiringRangeGameMode() )
+			else if( GamemodeUtility_IsJIPEnabled() && !GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_FIRING_RANGE ) )
 			{
 				bool isObserver = GetLocalClientPlayer().GetTeam() == TEAM_SPECTATOR || GetLocalClientPlayer().GetTeam() == TEAM_UNASSIGNED
 				RuiSetBool( jipRui, "isVisible", gamestateIsPlaying && !isObserver )

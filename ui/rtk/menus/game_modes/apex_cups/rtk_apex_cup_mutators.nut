@@ -19,17 +19,9 @@ string function RTKMutator_ApexCupTierText( int input, int p0 )
 	int relativeTier = 0
 	for ( int i = 0; i < assetData.tiers.len(); ++i )
 	{
-		if ( assetData.tiers[i].tierType == eCupTierType.ABSOLUTE )
-		{
-			if ( i == p0 )
-				return ""
-		}
-		else if ( assetData.tiers[i].tierType == eCupTierType.PERCENTILE )
-		{
-			++relativeTier
-			if ( i == p0 )
-				return LocalizeNumeral( relativeTier )
-		}
+		++relativeTier
+		if ( i == p0 )
+			return LocalizeNumeral( relativeTier )
 	}
 	return ""
 }
@@ -69,7 +61,7 @@ asset function RTKMutator_ApexCupTierIcon( SettingsAssetGUID input, int teirInde
 	unreachable
 }
 
-string function RTKMutator_ApexCupCurrentTierText( int input )
+string function GetApexCupTierText( int input, int offset = 0 )
 {
 	if( !Cups_IsValidCupID( input ) )
 	{
@@ -79,7 +71,7 @@ string function RTKMutator_ApexCupCurrentTierText( int input )
 
 	CupBakeryAssetData assetData = Cups_GetCupBakeryAssetDataFromGUID( input )
 
-	int index = Cups_GetPlayerTierIndexForCup( input )
+	int index = Cups_GetPlayerTierIndexForCup( input ) + offset
 	if ( index < 0 || assetData.tiers.len() <= index )
 	{
 		Warning( "Invalid tier index {" + index + "} for cup {" + input + "}" )
@@ -89,32 +81,55 @@ string function RTKMutator_ApexCupCurrentTierText( int input )
 	int relativeTier = 0
 	for ( int i = 0; i < assetData.tiers.len(); ++i )
 	{
-		if ( assetData.tiers[i].tierType == eCupTierType.ABSOLUTE )
-		{
-			if ( i == index )
-			{
-				CupEntry ornull entry = Cups_GetSquadCupData( input )
-				if ( entry == null )
-				{
-					Warning( "Invalid entry for cup {" + input + "}" )
-					return ""
-				}
-				expect CupEntry( entry )
-
-				return entry.currSquadPosition.tostring()
-			}
-		}
-		else if ( assetData.tiers[i].tierType == eCupTierType.PERCENTILE )
-		{
-			++relativeTier
-			if ( i == index )
-				return LocalizeNumeral( relativeTier )
-		}
+		++relativeTier
+		if ( i == index )
+			return LocalizeNumeral( relativeTier )
 	}
 	return ""
+}
+
+string function RTKMutator_ApexCupCurrentTierText( int input )
+{
+	return GetApexCupTierText( input )
+}
+
+string function RTKMutator_ApexCupNextTierText( int input )
+{
+	return GetApexCupTierText( input, -1 )
 }
 
 asset function RTKMutator_ApexCupCurrentTierIcon( int input )
 {
 	return RTKMutator_ApexCupTierIcon( input, Cups_GetPlayerTierIndexForCup( input ) )
+}
+
+asset function RTKMutator_ApexCupNextTierIcon( int input )
+{
+	return RTKMutator_ApexCupTierIcon( input, Cups_GetPlayerTierIndexForCup( input ) - 1 )
+}
+
+string function RTKMutator_ApexCupLockStateText( int input )
+{
+	switch ( input )
+	{
+		case CUP_LOCK_LEVELS:
+			return Localize( "#PLAYLIST_STATE_RANKED_LEVEL_REQUIRED", Ranked_GetRankedLevelRequirement() + 1 )
+			break
+		case CUP_LOCK_ORIENTATION:
+			return Localize( "#PLAYLIST_STATE_COMPLETED_ORIENTATION_REQUIRED" )
+			break
+		case CUP_LOCK_TRAINING:
+			return Localize( "#PLAYLIST_STATE_COMPLETED_TRAINING_REQUIRED" )
+			break
+
+		default:
+			return ""
+			break
+	}
+	unreachable
+}
+
+bool function RTKMutator_ApexCupContainerIsBestTen( int input )
+{
+	return Cups_IsCupContainerUseBestTen( input )
 }

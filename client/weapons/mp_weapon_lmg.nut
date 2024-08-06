@@ -4,9 +4,9 @@ global function OnWeaponActivate_weapon_lmg
 global function OnWeaponDeactivate_weapon_lmg
 
 
-
-
-
+global function OnWeaponStartZoomIn_weapon_lmg
+global function OnWeaponStartZoomOut_weapon_lmg
+global function OnWeaponOwnerChanged_weapon_lmg
 
 
 
@@ -30,6 +30,10 @@ void function OnWeaponActivate_weapon_lmg( entity weapon )
 
 		UpdateViewmodelAmmo( false, weapon )
 
+
+
+		HopupGunshield_OnWeaponActivate( weapon )
+
 }
 
 
@@ -52,21 +56,25 @@ void function OnWeaponDeactivate_weapon_lmg( entity weapon )
 
 
 
+
+
+		HopupGunshield_OnWeaponDeactivate( weapon )
+
 }
 
 
+void function OnWeaponStartZoomIn_weapon_lmg( entity weapon )
+{
+	HopupGunshield_OnWeaponStartZoomIn( weapon )
+}
 
+void function OnWeaponStartZoomOut_weapon_lmg( entity weapon )
+{
+	HopupGunshield_OnWeaponStartZoomOut( weapon )
+}
 
+void function OnWeaponOwnerChanged_weapon_lmg( entity weapon, WeaponOwnerChangedParams changeParams )
+{
 
-
-
-
-
-
-
-
-
-
-
-
+}
       

@@ -29,6 +29,9 @@ global struct RTKWeaponOverallModel
 	int nextTrialUnlockedAt = 0
 	bool unlockedAllTrials = false
 	bool completedAllTrials = false
+
+	bool hasAkimbo = false
+	asset akimboIcon = $""
 }
 
 global struct RTKWeaponStatsModel
@@ -323,6 +326,14 @@ void function RTKWeaponMasteryScreen_InitializeDataModel()
 			RTKStruct_SetBool( overallStruct, "unlockedAllTrials", totalUnlocked == trialResultList.len() )
 			RTKStruct_SetBool( overallStruct, "completedAllTrials", totalCompleted == trialResultList.len() )
 
+			bool weaponCanAkimbo = CanWeaponAkimbo( weaponId )
+			RTKStruct_SetBool( overallStruct, "hasAkimbo", weaponCanAkimbo )
+
+			if ( weaponCanAkimbo )
+			{
+				RTKStruct_SetAssetPath( overallStruct, "akimboIcon", GetAkimboWeaponIcon( weaponId ) )
+			}
+
 			
 			array< MasteryWeapon_TrialQueryResult > bonusTrialsList
 			MasteryWeapon_TrialQueryResult bonusTrial
@@ -381,6 +392,18 @@ void function RTKWeaponMasteryScreen_InitializeDataModel()
 	RTKStruct_SetInt( weaponMasteryOverallStruct, "level", totalMasteryLevel )
 }
 
+bool function CanWeaponAkimbo( string weaponId )
+{
+	return IsWeaponKeyFieldDefined( weaponId, "is_akimbo_weapon" ) && GetWeaponInfoFileKeyField_GlobalBool( weaponId, "is_akimbo_weapon" )
+}
+
+asset function GetAkimboWeaponIcon( string weaponId )
+{
+	if ( !IsWeaponKeyFieldDefined( weaponId, "hud_icon_akimbo_active" ) )
+		return $""
+
+	return GetWeaponInfoFileKeyFieldAsset_Global( weaponId, "hud_icon_akimbo_active" )
+}
 
 array< featureTutorialTab > function WeaponMastery_PopulateAboutText()
 {

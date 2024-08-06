@@ -19,6 +19,15 @@ global function OnDeactivate_BeaconScan
 
 
 
+
+
+
+
+
+
+
+
+
 global function SurveyBeacon_CreateHUDMarker
 global function SurveyBeacon_AddSurveyBeaconMinimapPackage
 global function OnSurveyBeaconCreated
@@ -54,6 +63,16 @@ struct
 
 	table< entity, table<int, SurveyBeaconData > > surveyBeaconData
 
+
+
+
+
+
+
+
+
+
+
 } file
 
 void function Perk_BeaconScan_Init()
@@ -64,6 +83,11 @@ void function Perk_BeaconScan_Init()
 
 	RegisterSignal( "BeaconIconReset" )
 
+
+
+
+
+
 }
 
 float function GetBaseSurveyBeaconExclusionDistance()
@@ -71,15 +95,26 @@ float function GetBaseSurveyBeaconExclusionDistance()
 	return GetCurrentPlaylistVarFloat( "survey_beacon_exclusion_distance", 12000 )
 }
 
-int function GetEnemyScanBeaconGoalNumber()
-{
-	return GetCurrentPlaylistVarInt( "enemy_scan_beacon_goal_number", 12 )
-}
 
-int function GetRingConsoleGoalNumber()
-{
-	return GetCurrentPlaylistVarInt( "ring_console_goal_number", 12 )
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 asset function SurveyBeacon_GetBeaconIcon( entity beacon )
@@ -369,6 +404,40 @@ entity function GetTeamSurveyBeaconUser( int team )
 	}
 	return null
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

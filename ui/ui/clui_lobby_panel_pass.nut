@@ -15,13 +15,25 @@ global function ShPassPanel_LevelInit
 
 
 
+
+
+
+
+
 global function InitPassPanel
+
+global function InitBattlepassPanel
+global function InitNewplayerpassPanel
+global function GetLoadscreenPreviewBox
+
 global function UpdateRewardPanel
 global function InitAboutBattlePass1Dialog
 
 global function InitPassPurchaseMenu
 
 global function GetNumPages
+global function GetRewardGroupsForPage
+global function GetRewardsBoxSizeForGroup
 
 global function TryDisplayBattlePassAwards
 
@@ -39,6 +51,7 @@ global function GetBattlePassRewardHeaderText
 global function GetBattlePassRewardItemName
 
 global function BattlePass_PurchaseButton_OnActivate
+global function BattlePass_Purchase
 global function ShouldDisplayTallButton
 global function GetCharacterIconToDisplay
 global function BattlePass_OpenBoostedBreakdown
@@ -325,6 +338,23 @@ void function InitPassPanel( var panel )
 	Hud_AddEventHandler( file.invisiblePageRightTriggerButton, UIE_GET_FOCUS, void function( var button ) {
 		BattlePass_PageForward( button )
 	} )
+}
+
+
+void function InitBattlepassPanel( var panel )
+{
+	file.loadscreenPreviewBox = Hud_GetChild( panel, "LoadscreenPreviewBox" )
+	RTKBattlepass_InitializeMenuPanel( panel, ePassType.BATTLEPASS )
+}
+
+void function InitNewplayerpassPanel( var panel )
+{
+	RTKBattlepass_InitializeMenuPanel( panel, ePassType.NEWPLAYER )
+}
+
+var function GetLoadscreenPreviewBox()
+{
+	return file.loadscreenPreviewBox
 }
 
 
@@ -889,7 +919,11 @@ void function BattlePass_Purchase( var button, int startQuantity )
 
 	if ( !hasPremiumPass )
 	{
-		AdvanceMenu( GetMenu( "PassPurchaseMenu" ) )
+
+			AdvanceMenu( GetMenu( "RTKBattlepassPurchaseMenu" ) )
+
+
+
 	}
 	else if ( GetPlayerBattlePassPurchasableLevels( ToEHI( GetLocalClientPlayer() ), activeBattlePass ) > 0 )
 	{
@@ -966,20 +1000,30 @@ void function BattlePass_Purchase( var button, int startQuantity )
 		}
 
 		rpdcfg.rewardsCallback = array<BattlePassReward> function( int purchaseQuantity, int startingPurchaseLevelIdx ) : ( activeBattlePass ) {
-			array<BattlePassReward> rewards
-			for ( int index = 1; index <= purchaseQuantity; index++ )
-				rewards.extend( GetBattlePassLevelRewards( activeBattlePass, startingPurchaseLevelIdx + index ) )
-			return rewards
+			entity localClientPlayer = GetLocalClientPlayer()
+			bool hasPremiumPass    = DoesPlayerOwnBattlePass( localClientPlayer, activeBattlePass )
+			bool hasElitePass      = DoesPlayerOwnEliteBattlePass( localClientPlayer, activeBattlePass )
+			int rewardTier = hasElitePass ? eBattlePassV2RewardTier.ELITE : hasPremiumPass ? eBattlePassV2RewardTier.PREMIUM : eBattlePassV2RewardTier.FREE
+			return GetBattlePassV2Rewards( activeBattlePass, startingPurchaseLevelIdx + purchaseQuantity , rewardTier, localClientPlayer, true, startingPurchaseLevelIdx + 1 ) 
 		}
 
 		rpdcfg.getPurchaseFlavCallback = ItemFlavor function() : ( activeBattlePass ) {
 			return BattlePass_GetXPPurchaseFlav( activeBattlePass )
 		}
 
+
+		rpdcfg.getEliteBattlePassPurchaseFlavCallback = void function() : ( ) {
+			PurchaseEntitlement( R5_BATTLEPASS_1_UPGRADE )
+		}
+
+		rpdcfg.eliteBattlePassDescTextCallback = string function ( int purchaseQuantity ) : ( activeBattlePass ) {
+			return GetEntitlementPricesAsStr( [R5_BATTLEPASS_1_UPGRADE] )[0]
+		}
+
+
 		rpdcfg.getSecondaryPurchaseFlavCallback = ItemFlavor function() : ( activeBattlePass ) {
 			return BattlePass_GetXPPurchaseLegendTokenFlav( activeBattlePass )
 		}
-
 
 		rpdcfg.toolTipDataMaxPurchase.titleText     = "#BATTLE_PASS_MAX_PURCHASE_LEVEL"
 		rpdcfg.toolTipDataMaxPurchase.descText      = "#BATTLE_PASS_MAX_PURCHASE_LEVEL_DESC"
@@ -999,6 +1043,10 @@ void function BattlePass_Purchase( var button, int startQuantity )
 		rpdcfg.descTextPlural                 = "#BATTLE_PASS_PURCHASE_LEVELS_DESC"
 		rpdcfg.secondaryButtonUnavailableText = "%$" + lockIcon + "% " + Localize( "#BATTLE_PASS_PURCHASE_LEVEL_LEGEND_TOKEN_UNAVAILABLE" )
 		rpdcfg.startQuantity                  = startQuantity
+
+		rpdcfg.eliteBattlePassText            = "#ELITE_BATTLE_PASS"
+		rpdcfg.eliteBatllePassOptionIsEnabled = !DoesPlayerOwnEliteBattlePass( player, activeBattlePass )
+
 
 		RewardPurchaseDialog( rpdcfg )
 	}
@@ -1202,6 +1250,10 @@ bool function Battlepass_ShouldShowLow( ItemFlavor flav )
 	{
 		case eItemType.character_skin:
 		case eItemType.gladiator_card_frame:
+
+			case eItemType.gladiator_card_stance:
+			case eItemType.character:
+
 		case eItemType.emote_icon:
 			return true
 	}
@@ -1250,7 +1302,7 @@ void function BattlePass_RewardButton_OnActivate( var button )
 		RunClientScript( "ClearBattlePassItem" )
 		SetBattlePassItemPresentationModeActive( reward )
 	}
-	PIN_UIInteraction_OnBattlepassItemSelected( Hud_GetHudName( file.panel ) + "_pg" + file.currentPage, Hud_GetHudName( file.panel ), ItemFlavor_GetAssetName(reward.flav), int( UITime() ) - file.openedAtTime  )
+	PIN_UIInteraction_OnBattlepassItemSelected( Hud_GetHudName( file.panel ) + "_pg" + file.currentPage, Hud_GetHudName( file.panel ), ItemFlavor_GetAssetShortName(reward.flav), int( UITime() ) - file.openedAtTime  )
 }
 
 
@@ -2061,7 +2113,11 @@ void function GiftButton_OnClick( var button )
 	}
 
 	SetCurrentTabForPIN( "PassPanel" )
-	AdvanceMenu( GetMenu( "PassPurchaseMenu" ) )
+
+		AdvanceMenu( GetMenu( "RTKBattlepassPurchaseMenu" ) )
+
+
+
 }
 
 string function BattlePass_SetUnlockedString( var button, int level )
@@ -2327,12 +2383,20 @@ void function AboutPurchaseButton_OnClick( var button )
 
 	CloseActiveMenu()
 	SetCurrentTabForPIN( "PassPanel" ) 
-	AdvanceMenu( GetMenu( "PassPurchaseMenu" ) )
+
+		AdvanceMenu( GetMenu( "RTKBattlepassPurchaseMenu" ) )
+
+
+
 }
 
 void function AboutProgressButton_OnClick( var button )
 {
-	JumpToSeasonTab( "PassPanel" )
+
+	JumpToSeasonTab( "RTKBattlepassPanel" )
+
+
+
 }
 
 void function AboutBattlePass1Dialog_OnOpen()
@@ -2872,8 +2936,10 @@ bool function TryDisplayBattlePassAwards( bool playSound = false )
 	int lastSeenXP         = GetPlayerBattlePassLastSeenXP( playerEHI, activeBattlePass )
 	bool hasPremiumPass    = DoesPlayerOwnBattlePass( GetLocalClientPlayer(), activeBattlePass )
 	bool hadPremiumPass    = GetPlayerBattlePassLastSeenPremium( playerEHI, activeBattlePass )
+	bool hasElitePass      = DoesPlayerOwnEliteBattlePass( GetLocalClientPlayer(), activeBattlePass )
+	bool hadElitePass      = GetPlayerBattlePassLastSeenElite( playerEHI, activeBattlePass )
 
-	if ( currentXP == lastSeenXP && hasPremiumPass == hadPremiumPass )
+	if ( currentXP == lastSeenXP && hasPremiumPass == hadPremiumPass && hasElitePass == hadElitePass )
 		return false
 
 	if ( IsDialog( GetActiveMenu() ) )
@@ -2890,14 +2956,19 @@ bool function TryDisplayBattlePassAwards( bool playSound = false )
 
 	for ( int levelIdx = lastLevel; levelIdx <= currentLevel; levelIdx++ )
 	{
-		array<BattlePassReward> awardsForLevel = GetBattlePassLevelRewards( activeBattlePass, levelIdx )
-		foreach ( award in awardsForLevel )
-		{
-			if ( award.isPremium )
-				continue
 
-			freeAwards.append( award )
-		}
+			freeAwards.extend( GetBattlePassV2Rewards( activeBattlePass, levelIdx, eBattlePassV2RewardTier.FREE, GetLocalClientPlayer() ) )
+
+
+
+
+
+
+
+
+
+
+
 	}
 
 	allAwards.extend( freeAwards )
@@ -2911,17 +2982,49 @@ bool function TryDisplayBattlePassAwards( bool playSound = false )
 
 		for ( int levelIdx = lastLevel; levelIdx <= currentLevel; levelIdx++ )
 		{
-			array<BattlePassReward> awardsForLevel = GetBattlePassLevelRewards( activeBattlePass, levelIdx )
-			foreach ( award in awardsForLevel )
-			{
-				if ( !award.isPremium )
-					continue
 
-				premiumAwards.append( award )
-			}
+				premiumAwards.extend( GetBattlePassV2Rewards( activeBattlePass, levelIdx, eBattlePassV2RewardTier.PREMIUM, GetLocalClientPlayer() ) )
+
+
+
+
+
+
+
+
+
+
+
 		}
 
 		allAwards.extend( premiumAwards )
+	}
+
+	if ( hasElitePass != hadElitePass )
+		lastLevel = 0 
+
+	if ( hasElitePass )
+	{
+		array<BattlePassReward> eliteAwards
+
+		for ( int levelIdx = lastLevel; levelIdx <= currentLevel; levelIdx++ )
+		{
+
+				eliteAwards.extend( GetBattlePassV2Rewards( activeBattlePass, levelIdx, eBattlePassV2RewardTier.ELITE, GetLocalClientPlayer() ) )
+
+
+
+
+
+
+
+
+
+
+
+		}
+
+		allAwards.extend( eliteAwards )
 	}
 
 	if ( allAwards.len() == 0 )
@@ -2952,13 +3055,225 @@ int function SortByAwardLevel( BattlePassReward a, BattlePassReward b )
 	else if ( a.level < b.level )
 		return -1
 
-	if ( a.isPremium && !b.isPremium )
+	bool isEliteA = a.isElite
+
+		isEliteA = isEliteA || a.rewardTier == eBattlePassV2RewardTier.ELITE
+
+
+	bool isEliteB = b.isElite
+
+		isEliteB = isEliteB || b.rewardTier == eBattlePassV2RewardTier.ELITE
+
+
+	if ( isEliteA && !isEliteB )
 		return 1
-	else if ( b.isPremium && !a.isPremium )
+	else if ( isEliteB && !isEliteA )
+		return -1
+
+	bool isPremiumA = a.isPremium
+
+		isPremiumA = isPremiumA || a.rewardTier == eBattlePassV2RewardTier.PREMIUM
+
+
+	bool isPremiumB = b.isPremium
+
+		isPremiumB = isPremiumB || b.rewardTier == eBattlePassV2RewardTier.PREMIUM
+
+
+	if ( isPremiumA && !isPremiumB )
+		return 1
+	else if ( isPremiumB && !isPremiumA )
 		return -1
 
 	return 0
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4927,4 +5242,11 @@ vector function Season_GetSubTabGlowFocusedCol( ItemFlavor event )
 	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_season )
 	return GetGlobalSettingsVector( ItemFlavor_GetAsset( event ), "subtabGlowFocusedCol" )
 }
+
+
+
+
+
+
+
 

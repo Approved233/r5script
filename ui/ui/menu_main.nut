@@ -7,6 +7,7 @@ global function SetLaunchingState
 global function GetLaunchingState
 global function CanAutoRetryConnect
 global function EnableAutoRetryConnect
+global function HasSeasonalVideo
 
 #if DEV
 global function Dev_ResetFirstTimeUserState
@@ -26,6 +27,7 @@ struct
 
 
 	int launching = eLaunching.FALSE
+	int mainMenuStatusIndex
 } file
 
 #if DEV
@@ -48,10 +50,28 @@ void function InitMainMenu( var newMenuArg )
 
 	file.titleArt = Hud_GetChild( file.menu, "TitleArt" )
 	var titleArtRui = Hud_GetRui( file.titleArt )
-	RuiSetImage( titleArtRui, "basicImage", $"ui/menu/title_screen/title_art" )
+
+
+
+
+		asset titleArt = $"ui/menu/title_screen/title_art"
+
+
+	RuiSetImage( titleArtRui, "basicImage", titleArt )
 
 	var subtitleRui = Hud_GetRui( Hud_GetChild( file.menu, "Subtitle" ) )
-	RuiSetString( subtitleRui, "subtitleText", Localize( "#BP_S21_NAME").toupper() )
+
+
+
+
+
+
+
+
+	{
+		RuiSetString( subtitleRui, "subtitleText", Localize( "#BP_S22_NAME" ).toupper() )
+	}
+
 	if ( GetLanguage() == "polish" )
 		RuiSetBool( subtitleRui, "useAltFont", true )
 
@@ -69,8 +89,15 @@ void function InitMainMenu( var newMenuArg )
 void function OnMainMenu_Show()
 {
 	
-	
-	float aspectRatio = 2.4 
+	float aspectRatio = 2.4
+
+
+
+
+
+
+
+
 	int width = int( Hud_GetHeight( file.titleArt ) * aspectRatio )
 	Hud_SetWidth( file.titleArt, width )
 
@@ -91,6 +118,8 @@ void function OnMainMenu_Show()
 
 
 
+	file.mainMenuStatusIndex = StatusTracker_StatusBeginEvent( ST_STATUS_SHOWING_MAIN_MENU, "" )
+
 	SetMenuNavigationDisabled( true )
 }
 
@@ -98,6 +127,7 @@ void function OnMainMenu_Show()
 void function OnMainMenu_Close()
 {
 	HidePanel( GetPanel( "MainMenuPanel" ) )
+	StatusTracker_StatusEndEvent( file.mainMenuStatusIndex, "" )
 	SetMenuNavigationDisabled( false )
 }
 
@@ -247,10 +277,10 @@ bool function TryPlayIntroVideo()
 
 		SetFirstTimePlayerState( eNewPlayerState.SEEN_INTRO )
 	}
-	else if ( ShouldShowIntro( CURRENT_INTRO_VIDEO_VERSION ) )
+	else if ( ShouldShowIntro( CURRENT_INTRO_VIDEO_VERSION ) && HasSeasonalVideo() )
 	{
-		settings.video = INTRO_VIDEO
-		settings.milesAudio = INTRO_AUDIO_EVENT
+		settings.video = GetIntroVideo()
+		settings.milesAudio = GetIntroAudioEvent()
 
 		SetIntroViewedVersion( CURRENT_INTRO_VIDEO_VERSION )
 	}
@@ -266,6 +296,11 @@ bool function TryPlayIntroVideo()
 
 	PlayVideoMenu( true, settings )
 	return true
+}
+
+bool function HasSeasonalVideo()
+{
+	return GetConVarBool( "has_seasonal_video" )
 }
 
 void function AttemptLaunch()

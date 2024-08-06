@@ -218,6 +218,11 @@ void function ChangeGift( int delta )
 	Assert( delta == -1 || delta == 1 )
 
 	int newGiftIndex = file.activeGiftIndex + delta
+	array<GRXContainerInfo> AllGifts = PromoDialog_GetAllGifts()
+
+	if ( newGiftIndex > AllGifts.len() - 1 )
+		return
+
 	file.isCurrentGiftCharacter  = false
 	file.isCurrentGiftBattlepass = false
 
@@ -240,7 +245,6 @@ void function ChangeGift( int delta )
 
 	EmitUISound( "UI_Menu_MOTD_Tab" )
 
-	array<GRXContainerInfo> AllGifts = PromoDialog_GetAllGifts()
 	array<ItemFlavor> items
 
 	foreach( int index in AllGifts[file.activeGiftIndex].itemIndices )
@@ -278,7 +282,7 @@ void function ChangeGift( int delta )
 
 void function PassAwardsDialog_OnOpen()
 {
-	UI_SetPresentationType( ePresentationType.BATTLE_PASS )
+	UI_SetPresentationType( ePresentationType.BATTLE_PASS_3 )
 
 	Assert( file.displayAwards.len() != 0 )
 
@@ -361,16 +365,29 @@ void function ContinueButton_OnActivate( var button )
 
 	CloseActiveMenu()
 
+	
+	DialogFlow()
+	if ( !IsPlayPanelCurrentlyTopLevel() )
+		return
+
 	if ( storeInspect_JumpingToBPFromBPStorePurchase )
 	{
 		storeInspect_JumpingToBPFromBPStorePurchase = false
-		JumpToSeasonTab( "PassPanel" )
+
+			JumpToSeasonTab( "RTKBattlepassPanel" )
+
+
+
 		return
 	}
 
 	if ( file.isCurrentGiftBattlepass )
 	{
-		JumpToSeasonTab( "PassPanel" )
+
+			JumpToSeasonTab( "RTKBattlepassPanel" )
+
+
+
 		return
 	}
 
@@ -436,9 +453,6 @@ void function PassAwardsDialog_UpdateAwards()
 	}
 
 	file.buttonToItem.clear()
-
-	
-	RemoveBattlepassFromRewards()
 
 	int numAwards = file.displayAwards.len()
 
@@ -545,19 +559,6 @@ void function CheckForCharacterOrBattlepass()
 		if ( ItemFlavor_GetType( bpr.flav ) == eItemType.image_2d )
 		{
 			file.isCurrentGiftBattlepass = true
-			break
-		}
-	}
-}
-
-
-void function RemoveBattlepassFromRewards()
-{
-	foreach ( index, BattlePassReward bpr in file.displayAwards )
-	{
-		if ( ItemFlavor_GetType( bpr.flav ) == eItemType.battlepass )
-		{
-			file.displayAwards.remove( index )
 			break
 		}
 	}

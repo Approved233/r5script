@@ -6,10 +6,13 @@ global function ClearActiveLobbyPopup
 global function HasActiveLobbyPopup
 global function SetNewsButtonTooltip
 global function PostGameFlow
+global function LobbyMenu_OpenDefaultTab
+global function LobbyMenu_IsDefaultTabOpen
 
 global function Lobby_UpdateSelectedPlaylistUsingUISlot
 global function GetLobbyMenuOpenedTime
 global function UpdateEventTabVisibility
+global function UpdateSeasonTabVisibility
 
 
 global function Lobby_EnableMinimapCoordsOnConnect
@@ -42,7 +45,6 @@ struct
 	bool hasFocusedNews = false
 
 	var postGameButton
-	var progressionModifiersButton
 	var newsButton
 	var newsButtonStatusIcon
 	var socialButton
@@ -158,10 +160,6 @@ void function InitLobbyMenu( var newMenuArg )
 	HudElem_SetRuiArg( postGameButton, "shortcutText", "%[BACK|TAB]%" )
 	Hud_AddEventHandler( postGameButton, UIE_CLICK, PostGameButton_OnActivate )
 
-	var progressionModifiersButton = Hud_GetChild( menu, "ProgressionModifiersButton" )
-	file.progressionModifiersButton = progressionModifiersButton
-	HudElem_SetRuiArg( progressionModifiersButton, "icon", $"rui/menu/xp_boost/BoostXP_lrg" )
-	Hud_AddEventHandler( progressionModifiersButton, UIE_CLICK, ProgressionModifiersButton_OnActivate )
 	var newsButton = Hud_GetChild( menu, "NewsButton" )
 	file.newsButton = newsButton
 	file.newsButtonStatusIcon = Hud_GetChild( menu, "NewsButtonStatusIcon" )
@@ -442,12 +440,25 @@ void function UpdateEventTabVisibility( bool isVisible )
 		ActivateTabNext( tabData )
 }
 
+
+void function UpdateSeasonTabVisibility( bool isVisible )
+{
+	TabData tabData = GetTabDataForPanel( file.menu )
+
+	SetTabDefVisible(file.seasonalPanelTabDef, isVisible )
+	SetTabDefEnabled(file.seasonalPanelTabDef, isVisible )
+
+	
+	if( !isVisible && file.seasonalPanelTabDef.isActive )
+		ActivateTabNext( tabData )
+}
+
 void function UpdateNewnessCallbacks()
 {
 	ClearNewnessCallbacks()
 
 
-
+	Newness_AddCallbackAndCallNow_OnRerverseQueryUpdated( NEWNESS_QUERIES.ChallengesTab, OnNewnessQueryChangedUpdatePanelTab, GetPanel( "ChallengesPanel" ) )
 
 	Newness_AddCallbackAndCallNow_OnRerverseQueryUpdated( NEWNESS_QUERIES.SeasonTab, OnNewnessQueryChangedUpdatePanelTab, GetPanel( "SeasonPanel" ) )
 	Newness_AddCallbackAndCallNow_OnRerverseQueryUpdated( NEWNESS_QUERIES.ArmoryTab, OnNewnessQueryChangedUpdatePanelTab, GetPanel( "ArmoryPanel" ) )
@@ -462,7 +473,7 @@ void function ClearNewnessCallbacks()
 		return
 
 
-
+	Newness_RemoveCallback_OnRerverseQueryUpdated( NEWNESS_QUERIES.ChallengesTab, OnNewnessQueryChangedUpdatePanelTab, GetPanel( "ChallengesPanel" ) )
 
 	Newness_RemoveCallback_OnRerverseQueryUpdated( NEWNESS_QUERIES.SeasonTab, OnNewnessQueryChangedUpdatePanelTab, GetPanel( "SeasonPanel" ) )
 	Newness_RemoveCallback_OnRerverseQueryUpdated( NEWNESS_QUERIES.ArmoryTab, OnNewnessQueryChangedUpdatePanelTab, GetPanel( "ArmoryPanel" ) )
@@ -519,7 +530,6 @@ void function LobbyMenuUpdateLowFrequencyElements()
 		SetPanelTabNew( GetPanel( "StorePanel" ), HasNewPersonalisedOffers() )
 
 		Boost_LowFreqUpdate()
-		UpdateProgressionModifiersButton()
 		wait 1.0
 	}
 }
@@ -599,7 +609,7 @@ void function HandleCrossplayPartyInvalid()
 		return
 
 	
-	string hardware   = GetUnspoofedPlayerHardware()
+	string hardware   = GetPlayerHardware()
 	Party myParty     = GetParty()
 	foreach ( p in myParty.members )
 	{
@@ -670,34 +680,8 @@ void function TrackPlaylistRotation()
 		{
 			Lobby_UpdateSelectedPlaylistUsingUISlot( selectedPlaylist )
 		}
-
 		ServerCallback_GamemodeSelectorInitialize()
-
 	}
-}
-
-void function UpdateProgressionModifiersButton()
-{
-	if ( GetActiveMenu() != file.menu )
-		return
-
-	BoostTable boosts = Boost_GetActiveBoosts( GetLocalClientPlayer() )
-	int boostCount = boosts.len() + 2 
-	if ( boostCount > 0 )
-	{
-		ToolTipData tooltip
-		tooltip.descText  = boostCount > 1 ? Localize( "#PROGRESSION_MODIFIERS_TOOLTIP_PLURAL", boostCount ) : Localize( "#PROGRESSION_MODIFIERS_TOOLTIP", boostCount )
-		Hud_SetToolTipData( file.progressionModifiersButton, tooltip )
-	}
-	else
-	{
-		Hud_ClearToolTipData( file.progressionModifiersButton )
-	}
-
-	var rui = Hud_GetRui( file.progressionModifiersButton )
-
-	RuiSetColorAlpha( rui, "seasonColor", GetSeasonStyle().seasonNewColor, 1 )
-	RuiSetBool( rui, "isNew", Boost_UI_HasNewBoosts() )
 }
 
 void function UpdateCornerButtons()
@@ -716,7 +700,6 @@ void function UpdateCornerButtons()
 	Hud_SetVisible( file.newsButtonStatusIcon, isPlayPanelActive )
 	Hud_SetVisible( file.socialButton, isPlayPanelActive )
 	Hud_SetVisible( file.gameMenuButton, isPlayPanelActive )
-	Hud_SetVisible( file.progressionModifiersButton, isPlayPanelActive )
 
 	var accessibilityHint = Hud_GetChild( playPanel, "AccessibilityHint" )
 	Hud_SetVisible( accessibilityHint, isPlayPanelActive && IsAccessibilityChatHintEnabled() && !VoiceIsRestricted() && (GetPartySize() > 1) )
@@ -803,11 +786,6 @@ void function SeasonTab_OnActivate( var button )
 	JumpToSeasonTab()
 }
 
-void function ProgressionModifiersButton_OnActivate( var button )
-{
-	OpenProgressionModifiersMenu()
-}
-
 void function NewsButton_OnActivate( var button )
 {
 	if ( PromoDialog_CanShow() )
@@ -885,12 +863,21 @@ void function OnLobbyMenu_NavigateBack()
 	}
 	else
 	{
-		TabData tabData = GetTabDataForPanel( file.menu )
-		ActivateTab( tabData, GetLobbyDefaultTabIndex() )
-		UpdateMenuTabs()
+		LobbyMenu_OpenDefaultTab()
 	}
 }
 
+bool function LobbyMenu_IsDefaultTabOpen()
+{
+	return ( GetMenuActiveTabIndex( file.menu ) == 0 )
+}
+
+void function LobbyMenu_OpenDefaultTab()
+{
+	TabData tabData = GetTabDataForPanel( file.menu )
+	ActivateTab( tabData, GetLobbyDefaultTabIndex() )
+	UpdateMenuTabs()
+}
 
 int function GetLobbyDefaultTabIndex()
 {
@@ -943,7 +930,8 @@ void function PostGameFlow()
 
 
 
-	bool showRankedSummary = Ranked_GetXProgMergedPersistenceData( GetLocalClientPlayer(), RANKED_SHOW_RANKED_SUMMARY_PERSISTENCE_VAR_NAME ) != 0
+	bool showRankedSummary = Ranked_ShowRankedSummary()
+	bool showCupSummary = Cups_ShowCupSummary()
 	bool isFirstTime       = GetPersistentVarAsInt( "showGameSummary" ) != 0
 
 		bool showOrientationMatchDialog = GetPersistentVarAsInt( "showOrientationMatchGraduationDialog" ) != 0
@@ -956,9 +944,14 @@ void function PostGameFlow()
 		OpenPostGameBattlePassMenu( isFirstTime )
 	}
 
-	if ( showRankedSummary )
+	if ( showRankedSummary && !showCupSummary )
 	{
 		OpenRankedSummary( isFirstTime )
+	}
+
+	if ( showCupSummary && Cups_IsCupForLatestMatchActive( GetLocalClientPlayer() ) )
+	{
+		OpenCupsSummary()
 	}
 
 
@@ -1032,9 +1025,7 @@ void function ButtonX_OnActivate( var button )
 {
 	DispatchLobbyPopupInput( BUTTON_X )
 
-
 	DismissGamemodeSelectorModal( button )
-
 }
 
 
@@ -1071,9 +1062,7 @@ void function KeySpace_OnActivate( var button )
 {
 	DispatchLobbyPopupInput( KEY_SPACE )
 
-
-		DismissGamemodeSelectorModal( button )
-
+	DismissGamemodeSelectorModal( button )
 }
 
 

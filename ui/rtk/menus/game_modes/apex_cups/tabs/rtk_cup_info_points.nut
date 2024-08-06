@@ -4,6 +4,7 @@ global function RTKCupInfoPoints_OnDestroy
 
 global struct RTKCupInfoPoints
 {
+	bool isCupRanked
 	array< RTKSummaryBreakdownRowModel > pointList1
 	array< RTKSummaryBreakdownRowModel > pointList2
 	array< RTKSummaryBreakdownRowModel > additionalList
@@ -59,6 +60,10 @@ void function RTKCupInfoPoints_OnInitialize( rtk_behavior self )
 
 		apexCupsModel.additionalList.append( summaryBreakdownModel )
 	}
+
+
+		apexCupsModel.isCupRanked = RankedRumble_IsCupRankedRumble( cupData.itemFlavor )
+
 
 	RTKStruct_SetValue( apexCups, apexCupsModel )
 }

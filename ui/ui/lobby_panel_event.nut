@@ -154,14 +154,14 @@ void function OnGRXEventUpdate()
 			{
 
 
-
-
-
-					if ( Hud_GetHudName( nestedPanel ) == "CollectionEventPanel" && !haveActiveCollectionEvent )
+					if ( Hud_GetHudName( nestedPanel ) == "RTKEventsPanel" && (!haveActiveEventShop && !haveActiveBaseEvent && !haveActiveCollectionEvent) )
 						continue
 
-					if ( Hud_GetHudName( nestedPanel ) == "RTKEventsPanel" && (!haveActiveEventShop && !haveActiveBaseEvent) )
-						continue
+
+
+
+
+
 
 
 				switch ( Hud_GetHudName( nestedPanel ) )
@@ -199,9 +199,9 @@ void function OnGRXEventUpdate()
 			if ( Hud_GetHudName( tabDef.panel ) == "CollectionEventPanel" )
 			{
 
+					showTab = false 
 
 
-					showTab = haveActiveCollectionEvent
 
 
 				enableTab = haveActiveCollectionEvent
@@ -224,19 +224,28 @@ void function OnGRXEventUpdate()
 			else if ( Hud_GetHudName( tabDef.panel ) == "RTKEventsPanel" )
 			{
 
+					showTab = haveActiveEventShop || haveActiveBaseEvent || haveActiveCollectionEvent
 
 
-					showTab = haveActiveEventShop || haveActiveBaseEvent
 
 
 				if ( haveActiveBaseEvent )
 				{
 					enableTab = true
 					tabDef.title = "#EVENT_TAB_TITLE"
-					if ( !haveActiveThemedShopEvent && !haveActiveCollectionEvent )
-					{
-						SetTabBaseWidth( tabDef, 325 )
-					}
+
+						if ( !haveActiveThemedShopEvent )
+						{
+							SetTabBaseWidth( tabDef, 325 )
+							SetTabNavigationEnabled( file.panel, false )
+						}
+
+
+
+
+
+
+
 				}
 				else if ( haveActiveEventShop )
 				{
@@ -245,12 +254,12 @@ void function OnGRXEventUpdate()
 				}
 
 
+				else if ( haveActiveCollectionEvent )
+				{
+					expect ItemFlavor(activeCollectionEvent)
 
-
-
-
-
-
+					tabDef.title = "#MENU_STORE_PANEL_COLLECTION" 
+				}
 
 
 				if ( !MilestoneEvent_IsPlaylistVarEnabled() )

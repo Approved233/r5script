@@ -36,7 +36,7 @@ void function OnRankedInfoMoreMenu_Open()
 	SharedRankedTierData currentTier     = currentRank.tier
 
 	var mainRui = Hud_GetRui( Hud_GetChild( file.menu, "InfoMain" ) )
-
+	RuiSetInt( mainRui, "maxTierDiff", Ranked_RankedPartyMaxTierDifferential() )
 	
 	
 	
@@ -47,7 +47,7 @@ void function OnRankedInfoMoreMenu_Open()
 	
 
 	var rankedScoringTableRui = Hud_GetRui( Hud_GetChild( file.menu, "RankedScoringTable" ) )
-	RuiSetInt( rankedScoringTableRui, "fourteenthPlaceRP", Ranked_GetPointsForPlacement( 14 ) )
+	RuiSetInt( rankedScoringTableRui, "sixteenthPlaceRP", Ranked_GetPointsForPlacement( 16 ) )
 	RuiSetInt( rankedScoringTableRui, "eleventhPlaceRP", Ranked_GetPointsForPlacement( 11 ) )
 	RuiSetInt( rankedScoringTableRui, "tenthPlaceRP", Ranked_GetPointsForPlacement( 10 ) )
 	RuiSetInt( rankedScoringTableRui, "ninthPlaceRP", Ranked_GetPointsForPlacement( 9 ) )
@@ -61,7 +61,7 @@ void function OnRankedInfoMoreMenu_Open()
 	RuiSetInt( rankedScoringTableRui, "firstPlaceRP", Ranked_GetPointsForPlacement( 1 ) )
 
 	var rankedKillsScoringTableRui = Hud_GetRui( Hud_GetChild( file.menu, "RankedKillsScoringTable" ) )
-	RuiSetInt( rankedKillsScoringTableRui, "fourteenthPlaceRP", RankedGetPointsForKillsByPlacement( 14 ) )
+	RuiSetInt( rankedKillsScoringTableRui, "sixteenthPlaceRP", RankedGetPointsForKillsByPlacement( 16 ) )
 	RuiSetInt( rankedKillsScoringTableRui, "eleventhPlaceRP", RankedGetPointsForKillsByPlacement( 11 ) )
 	RuiSetInt( rankedKillsScoringTableRui, "tenthPlaceRP", RankedGetPointsForKillsByPlacement( 10 ) )
 	RuiSetInt( rankedKillsScoringTableRui, "ninthPlaceRP", RankedGetPointsForKillsByPlacement( 9 ) )

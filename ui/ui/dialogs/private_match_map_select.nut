@@ -62,7 +62,7 @@ void function PrivateMatchMapSelect_UpdateSelectButton( var button, string playl
 	RuiSetString( rui, "modeLockedReason", LobbyPlaylist_GetPlaylistStateString( LobbyPlaylist_GetPlaylistState( playlistName ) ) )
 
 	int emblemMode = DRAW_NONE
-	if ( IsRankedPlaylist( playlistName ) )
+	if ( GameModeVariant_IsActiveForPlaylist( playlistName, eGameModeVariants.SURVIVAL_RANKED ) )
 	{
 		emblemMode = DRAW_RANK
 		int rankScore = GetPlayerRankScore( GetLocalClientPlayer() )

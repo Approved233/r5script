@@ -2610,6 +2610,14 @@ int function Mastery_SortTrialQueryResult( MasteryWeapon_TrialQueryResult a, Mas
 
 
 
+
+
+
+
+
+
+
+
 array<MasteryReward> function Mastery_GetMatchRewards()
 {
 	array<MasteryReward> rewards
@@ -2651,7 +2659,7 @@ array<MasteryReward> function Mastery_GetMatchRewards()
 							MasteryReward masteryReward
 							masteryReward.flav = expect ItemFlavor( trialConfig.specialBadge )
 							masteryReward.quantity = 1
-							masteryReward.level = GRX_GetItemTier( ItemFlavor_GetGRXIndex( reward.flav ) ) - 2 
+							masteryReward.level = GRX_GetItemTier( ItemFlavor_GetGRXIndex( reward.flav ) )
 							rewards.append( masteryReward )
 						}
 						else

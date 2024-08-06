@@ -169,6 +169,22 @@ const asset LOADOUTSELECTION_WEAPON_DATA_DATATABLE = $"datatable/loadoutselectio
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 global enum eLoadoutSelectionSlotType
 {
 	INVALID,
@@ -313,6 +329,27 @@ bool function LoadoutSelection_ShouldAvoidDuplicateWeaponsInLoadoutRotation()
 {
 	return GetCurrentPlaylistVarBool( "loadoutselection_avoid_duplicate_weapons_in_loadouts", false )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+string function GetCustomLoadoutName()
+{
+	return GetCurrentPlaylistVarString( "loadoutselection_custom_loadout", "" )
+}
+
+
+
+
 
 
 
