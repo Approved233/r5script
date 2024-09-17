@@ -34,6 +34,9 @@ global const int ANNOUNCEMENT_STYLE_FINAL_RING_NO_RESPAWNS = 18
 	global const int ANNOUNCEMENT_STYLE_REMAINING_RESPAWNS = 22
 
 
+
+
+
 global const int ANNOUNCEMENT_POSITION_ZONE_NONE = 0
 global const int ANNOUNCEMENT_POSITION_ZONE_TOP_CENTER = 1
 global const int ANNOUNCEMENT_POSITION_ZONE_CENTER = 2
@@ -578,6 +581,16 @@ void function AnnouncementMessage_DisplayOnHud( AnnouncementData announcement )
 			break
 
 
+
+
+
+
+
+
+
+
+
+
 		case ANNOUNCEMENT_STYLE_SWEEP:
 			if ( announcement.drawOverScreenFade )
 				rui = RuiCreate( $"ui/announcement_center_sweep.rpak", clGlobal.topoFullScreen, RUI_DRAW_HUD, RUI_SORT_SCREENFADE + 1 )
@@ -695,8 +708,10 @@ void function AnnouncementMessage_DisplayOnHud( AnnouncementData announcement )
 		case ANNOUNCEMENT_STYLE_KILL_LEADER:
 			customAnnouncement = true
 			rui = RuiCreate( $"ui/kill_leader_noti.rpak", clGlobal.topoFullScreen, RUI_DRAW_POSTEFFECTS, 0 )
-			if ( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_VALENTINES_S15 ) )
-				rui = RuiCreate( $"ui/kill_leader_datenight_noti.rpak", clGlobal.topoFullScreen, RUI_DRAW_POSTEFFECTS, 0 )
+
+
+
+
 			RuiSetFloat( rui, "startTime", Time() )
 			RuiSetFloat( rui, "duration", announcement.duration )
 			RuiSetString( rui, "messageText", optionalTextArgs[0] )

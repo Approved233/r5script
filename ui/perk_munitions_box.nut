@@ -152,6 +152,11 @@ void function Perk_MunitionsBox_Init()
 
 
 
+
+
+
+
+
 bool function Perk_SwapMunitionsBoxAndSkirmisherPerks()
 {
 	return GetCurrentPlaylistVarBool( "swap_munitions_box_and_skirmisher_perks", false )
@@ -196,33 +201,6 @@ bool function MunitionsBox_BoostOpenerLoot()
 {
 	return GetCurrentPlaylistVarBool( "munitions_box_boost_opener_loot", false )
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

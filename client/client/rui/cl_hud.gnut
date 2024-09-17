@@ -13,6 +13,9 @@ global function AddGenericQueueMessage
 global function AddImageQueueMessage
 global function AddScoreEventMessage
 
+global function ScoreObit_SetRuiAssetForMessageType
+global function ScoreObit_SetMessageScaleForMessageType
+
 global function AddCallback_ModifyDamageFlyoutForScriptName
 
 global function DEV_DamageFlyout
@@ -57,13 +60,21 @@ const bool RUI_ENABLED = true
 
 
 
+global enum eScoreEventMessageType
+{
+	DEFAULT,
+	SPECIAL
+}
+
 struct MessageData
 {
 	int scoreEventId = -1
 	int scoreEventValue = 0
+	int scoreEventMessageType = eScoreEventMessageType.DEFAULT
 
 	float  messageScale = 1.0
 	string messageText = ""
+	string messageScoreText = ""
 	float  duration = 2.5
 
 	float startTime
@@ -98,8 +109,16 @@ struct DamageFlyoutData
 	array<DamageData> floatingDamageData
 }
 
+struct MessageTypeConfiguration
+{
+	int messageType
+	asset ornull ruiAsset
+	float ornull messageScale
+}
+
 struct
 {
+	table<int, MessageTypeConfiguration> messageTypeConfigurations
 	array<MessageData> activeEventQueue = []
 
 	bool               eventQueueActive = false
@@ -120,6 +139,8 @@ struct
 	var rui_hitIndicator
 
 	table< string, vector functionref( entity, vector ) > modifyDamageFlyoutForScriptNameCallbacks
+
+	table < int, int > scoreEventIDToNumTimesTriggeredDuringMsgDelay
 } file
 
 
@@ -153,12 +174,21 @@ void function AddGenericQueueMessage( string messageText, float duration = 4.0 )
 }
 
 
-void function AddImageQueueMessage( string messageText, asset image, float duration = 4.0 )
+void function AddImageQueueMessage( string messageText, asset image, float duration = 4.0, int messageType = eScoreEventMessageType.DEFAULT, string scoreText = "" )
 {
 	MessageData messageData
 	messageData.messageText = Localize( messageText )
 	messageData.icon = image
 	messageData.duration = duration
+	messageData.scoreEventMessageType = messageType
+	messageData.messageScoreText = scoreText
+
+	float ornull messageScaleOverride = GetScoreMessageScaleForMessageType( messageType )
+	if ( messageScaleOverride != null )
+	{
+		expect float( messageScaleOverride )
+		messageData.messageScale = messageScaleOverride
+	}
 
 	file.pendingEventQueue.append( messageData )
 
@@ -190,12 +220,41 @@ int function SortPendingMedals( MessageData eventA, MessageData eventB )
 	return 0
 }
 
+void function ScoreObit_SetRuiAssetForMessageType( int messageType, asset ruiAsset )
+{
+	if ( !( messageType in file.messageTypeConfigurations ) )
+	{
+		MessageTypeConfiguration messageConfiguration
+		messageConfiguration.messageType = messageType
+		messageConfiguration.ruiAsset = ruiAsset
+		file.messageTypeConfigurations[ messageType ] <- messageConfiguration
+	}
+	else
+	{
+		file.messageTypeConfigurations[ messageType ].ruiAsset = ruiAsset
+	}
+}
+
+void function ScoreObit_SetMessageScaleForMessageType( int messageType, float messageScale )
+{
+	if ( !( messageType in file.messageTypeConfigurations ) )
+	{
+		MessageTypeConfiguration messageConfiguration
+		messageConfiguration.messageType = messageType
+		messageConfiguration.messageScale = messageScale
+		file.messageTypeConfigurations[ messageType ] <- messageConfiguration
+	}
+	else
+	{
+		file.messageTypeConfigurations[ messageType ].messageScale = messageScale
+	}
+}
 
 asset function GetRuiAssetForMessage( MessageData messageData )
 {
 	asset ruiAsset = $""
-	if ( GetScoreMessageRuiAssetForMode() != $"" )
-		ruiAsset = GetScoreMessageRuiAssetForMode()
+	if ( GetScoreMessageRuiAssetForMode( messageData.scoreEventMessageType ) != $"" )
+		ruiAsset = GetScoreMessageRuiAssetForMode( messageData.scoreEventMessageType )
 	else if ( messageData.messageScale > 1.0 )
 	{
 		ruiAsset = $"ui/centerevent_info.rpak"
@@ -230,6 +289,11 @@ void function QueueMessageThink()
 		RuiSetString( rui, "messageText", Localize( messageData.messageText ) )
 		RuiSetBool( rui, "isBigText", messageData.messageScale > 1.0 )
 		RuiSetAsset( rui, "messageIcon", messageData.icon)
+
+		if ( messageData.messageScoreText != "" && RuiHasStringArg( rui, "messageScoreText" ) )
+		{
+			RuiSetString( rui, "messageScoreText", messageData.messageScoreText )
+		}
 
 		messageData.rui = rui
 		thread MessageThink( messageData )
@@ -276,7 +340,7 @@ void function MessageThink( MessageData messageData )
 }
 
 
-asset function GetScoreMessageRuiAssetForMode()
+asset function GetScoreMessageRuiAssetForMode( int messageType )
 {
 
 	if ( GameMode_IsActive( eGameModes.CONTROL ) )
@@ -288,7 +352,25 @@ asset function GetScoreMessageRuiAssetForMode()
 		return $"ui/lockdown_score_info.rpak"
 
 
+	if ( messageType in file.messageTypeConfigurations )
+	{
+		asset ornull ruiAsset = file.messageTypeConfigurations[messageType].ruiAsset
+		if ( ruiAsset != null )
+		{
+			expect asset( ruiAsset )
+			return ruiAsset
+		}
+	}
+
 	return $""
+}
+
+float ornull function GetScoreMessageScaleForMessageType( int messageType )
+{
+	if ( messageType in file.messageTypeConfigurations )
+		return file.messageTypeConfigurations[messageType].messageScale
+
+	return null
 }
 
 
@@ -976,7 +1058,27 @@ void function ServerCallback_ScoreEvent( int scoreEventId, int displayType, enti
 
 	if ( IsBitFlagSet( displayType, eEventDisplayType.CENTER ) )
 	{
-		AddScoreEventMessage( scoreEvent, ent, displayType, 0, valueA, 0 )
+		
+		
+		
+		if ( scoreEvent.messagingDelay > 0.0 )
+		{
+			if ( scoreEventId in file.scoreEventIDToNumTimesTriggeredDuringMsgDelay )
+			{
+				int numTimesTriggered = file.scoreEventIDToNumTimesTriggeredDuringMsgDelay[ scoreEventId ]
+				numTimesTriggered++
+				file.scoreEventIDToNumTimesTriggeredDuringMsgDelay[ scoreEventId ] = numTimesTriggered
+			}
+			else
+			{
+				file.scoreEventIDToNumTimesTriggeredDuringMsgDelay[ scoreEventId ] <- 1
+				thread AddScoreEventMessageDelayed_Thread( scoreEvent, ent, displayType, 0, valueA, 0 )
+			}
+		}
+		else 
+		{
+			AddScoreEventMessage( scoreEvent, ent, displayType, 0, valueA, 0 )
+		}
 	}
 }
 
@@ -1052,6 +1154,74 @@ void function AddScoreEventMessage( ScoreEvent scoreEvent, entity associatedEnti
 
 	thread QueueMessageThink()
 }
+
+
+void function AddScoreEventMessageDelayed_Thread( ScoreEvent scoreEvent, entity associatedEntity, int displayType, int pointValue, float earnedValue, float ownedValue )
+{
+#if DEV
+		Assert( IsNewThread(), "Must be threaded off" )
+#endif
+
+	int eventID = scoreEvent.eventId
+	if ( !( eventID in file.scoreEventIDToNumTimesTriggeredDuringMsgDelay ) )
+	{
+		Assert( false, "SCORE EVENT: " + FUNC_NAME() + " was run with eventID: " + eventID + " that wasn't entered in the file.scoreEventIDToNumTimesTriggeredDuringMsgDelay table first." )
+		return
+	}
+
+	if ( GetGameState() > eGameState.Playing )
+		return
+
+	if ( !IsValid( clGlobal.levelEnt ) )
+		return
+
+	EndSignal( clGlobal.levelEnt, "OnDestroy" )
+
+	entity localPlayer = GetLocalClientPlayer()
+	if ( !IsValid( localPlayer ) )
+		return
+
+	EndSignal( localPlayer, "OnDestroy", "OnDeath" )
+
+	OnThreadEnd(
+		function() : ( eventID )
+		{
+			delete file.scoreEventIDToNumTimesTriggeredDuringMsgDelay[ eventID ]
+		}
+	)
+
+	int currentNumTimesTriggered = file.scoreEventIDToNumTimesTriggeredDuringMsgDelay[ eventID ]
+	int updatedNumTimesTriggered = currentNumTimesTriggered
+
+	
+	float messagingDelay = scoreEvent.messagingDelay
+	while ( true )
+	{
+		wait messagingDelay
+
+		updatedNumTimesTriggered = file.scoreEventIDToNumTimesTriggeredDuringMsgDelay[ eventID ]
+
+		if ( currentNumTimesTriggered == updatedNumTimesTriggered ) 
+			break
+
+		
+		currentNumTimesTriggered = updatedNumTimesTriggered
+	}
+
+	int totalPointValue = currentNumTimesTriggered * pointValue
+	float totalEarnedValue = currentNumTimesTriggered * earnedValue
+	float totalOwnedValue = currentNumTimesTriggered * ownedValue
+
+
+		if ( UpgradeCore_UsePersonalObituaryNotifications() && scoreEvent.xpValue > 0 )
+		{
+			scoreEvent.xpValue *= currentNumTimesTriggered
+		}
+
+
+	AddScoreEventMessage( scoreEvent, associatedEntity, displayType, totalPointValue, totalEarnedValue, totalOwnedValue )
+}
+
 
 
 string function GetFormattedEventText( ScoreEvent scoreEvent, int pointValue, entity targetEntity, float valueA, float valueB )

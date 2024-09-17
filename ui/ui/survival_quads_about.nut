@@ -7,7 +7,7 @@ array< featureTutorialTab > function Survival_Quads_PopulateAboutText()
 {
 	array< featureTutorialTab > tabs
 
-	string playlistUiRules = GetPlaylist_UIRules()
+	string playlistUiRules = GetCurrentPlaylist_UIRules()
 	if ( playlistUiRules != GAMEMODE_SURVIVAL_QUADS )
 		return tabs
 

@@ -54,6 +54,11 @@ const string KNOCKDOWN_SHIELD_BASIC 					= "incapshield_pickup_lv0"
 const int BLEEDOUT_DISABLED_WEAPON_TYPES 				= WPT_ALL_EXCEPT_VIEWHANDS_OR_INCAP
 
 
+
+
+
+
+
 const int REVIVE_SHIELD_MAX_SHIELD_HEALTH_TIER_1 		= 200 
 const int REVIVE_SHIELD_MAX_SHIELD_HEALTH_TIER_2 		= 300 
 const int REVIVE_SHIELD_MAX_SHIELD_HEALTH_TIER_3 		= 500 
@@ -157,7 +162,7 @@ void function MpWeaponReviveShield_Init()
 
 	AddCallback_OnPassiveChanged( ePassives.PAS_AXIOM, OnPassiveChanged )
 
-	RegisterNetworkedVariable( NEWCASTLE_REVIVE_SHIELD_HEALTH_NETVAR, SNDC_PLAYER_EXCLUSIVE, SNVT_INT, -1 )
+	RegisterNetworkedVariable( NEWCASTLE_REVIVE_SHIELD_HEALTH_NETVAR, SNDC_PLAYER_EXCLUSIVE, SNVT_BIG_INT, -1 )
 
 	Remote_RegisterServerFunction( "ClientCallback_Cancel_NewcastleRevive" )
 	Remote_RegisterClientFunction( "ServerToClient_DisplayCancelNewcastleReviveHintForPlayer" )
@@ -186,7 +191,7 @@ bool function IsNewcastleReviveShieldEnt( entity ent )
 
 float function ReviveShield_GetUpgradeCoreHealthMultiplier()
 {
-	return GetCurrentPlaylistVarFloat( "passive_revive_shield_health_upgrade_multiplier", 1.25 )
+	return GetCurrentPlaylistVarFloat( "passive_revive_shield_health_upgrade_multiplier", 1.50 )
 }
 
 float function ReviveShield_GetUpgradedReviveExtraHealth()
@@ -216,12 +221,6 @@ int function ReviveShield_GetMaxShieldHealthFromTier( int tier, entity player )
 		default:
 			shieldHealth = file.reviveShield_HP_LV1
 	}
-
-
-	
-
-
-
 
 
 	return shieldHealth
@@ -1527,6 +1526,16 @@ void function CL_PassiveAxiom_KDShieldReviveChargeRUI_Thread( entity player, ent
 
 
 
+
+float function PassiveAxiom_GetSpeedBoostSeverity( entity player )
+{
+	float severity = file.reviveShield_SpeedBoost
+
+
+
+
+	return severity
+}
 
 
 

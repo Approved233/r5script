@@ -1,5 +1,6 @@
 
 global function TempUnlock_IsEnabled
+global function TempUnlock_GetParentFlav
 global function TempUnlock_GetActiveEvents
 global function TempUnlock_GetLatestActiveEvent
 global function TempUnlock_IsCharacterUnlocked
@@ -11,6 +12,17 @@ global function TempUnlock_GetCharacterUnlockFeaturedChallenge
 global function TempUnlock_GetCharacterUnlockChallenges
 global function TempUnlock_GetCurrentCharacterUnlockChallenges
 global function TempUnlock_GetCurrentCharacterUnlockFeaturedChallenge
+global function TempUnlock_GetCharacterUnlockChallenge
+global function TempUnlock_GetActiveCharacterUnlockEvent
+global function TempUnlock_GetUpcomingCharacterUnlockEvent
+
+global function TempUnlock_GetTooltipTitleUnlocked
+global function TempUnlock_GetTooltipDescUnlocked
+global function TempUnlock_GetTooltipTitleCompleted
+global function TempUnlock_GetTooltipDescCompleted
+global function TempUnlock_GetTooltipTitleUpcoming
+global function TempUnlock_GetTooltipDescUpcoming
+
 
 const PLAYLIST_KILLSWITCH_VAR = "temp_unlock_flav_enabled"
 
@@ -31,6 +43,21 @@ bool function TempUnlock_IsEnabled()
 {
 	bool isEnabled = GetCurrentPlaylistVarBool( PLAYLIST_KILLSWITCH_VAR, true )
 	return isEnabled
+}
+
+
+ItemFlavor ornull function TempUnlock_GetParentFlav( ItemFlavor tempUnlockFlav )
+{
+	Assert( ItemFlavor_GetType( tempUnlockFlav ) == eItemType.calevent_temp_unlock )
+	ItemFlavor ornull tempUnlockParent = ItemFlavor_GetParentFlavor( tempUnlockFlav )
+
+
+
+
+
+
+
+	return tempUnlockParent
 }
 
 array<ItemFlavor> function TempUnlock_GetActiveEvents( int unixTime )
@@ -88,6 +115,7 @@ array<ItemFlavor> function TempUnlock_GetUpcomingEvents( int unixTime )
 	return events
 }
 
+
 bool function TempUnlock_WillCharacterUnlockDuringEvent( ItemFlavor characterFlav, ItemFlavor event )
 {
 	Assert( ItemFlavor_GetType( characterFlav ) == eItemType.character )
@@ -96,26 +124,10 @@ bool function TempUnlock_WillCharacterUnlockDuringEvent( ItemFlavor characterFla
 	{
 		 return false
 	}
-	asset wantedCharacterAsset     = ItemFlavor_GetAsset( characterFlav )
-	array<ItemFlavor> upcomingEvents = TempUnlock_GetUpcomingEvents( GetUnixTimestamp() )
-	foreach ( ItemFlavor tempUnlockEvent in upcomingEvents )
-	{
-		if ( !CalEvent_HasStarted( tempUnlockEvent, CalEvent_GetFinishUnixTime( event ) ) )
-		{
-			continue
-		}
 
-		asset tempUnlockAsset = ItemFlavor_GetAsset( tempUnlockEvent )
-		foreach ( var characterBlock in IterateSettingsAssetArray( tempUnlockAsset, "characters" ) )
-		{
-			asset characterAsset = GetSettingsBlockAsset( characterBlock, "itemFlavor" )
-			if ( characterAsset == wantedCharacterAsset )
-			{
-				return true
-			}
-		}
-	}
-	return false
+	array<ItemFlavor> upcomingEvents = TempUnlock_GetUpcomingEvents( GetUnixTimestamp() )
+	ItemFlavor ornull upcomingCharacterTempUnlock = TempUnlock_FindCharacterTempUnlockFromList( characterFlav, upcomingEvents, event )
+	return upcomingCharacterTempUnlock != null
 }
 
 bool function TempUnlock_IsCharacterUnlocked( ItemFlavor characterFlav )
@@ -123,22 +135,35 @@ bool function TempUnlock_IsCharacterUnlocked( ItemFlavor characterFlav )
 	Assert( ItemFlavor_GetType( characterFlav ) == eItemType.character )
 
 	
-	asset wantedCharacterAsset     = ItemFlavor_GetAsset( characterFlav )
 	array<ItemFlavor> activeEvents = TempUnlock_GetActiveEvents( GetUnixTimestamp() )
 	foreach ( ItemFlavor tempUnlockEvent in activeEvents )
 	{
-		asset tempUnlockAsset = ItemFlavor_GetAsset( tempUnlockEvent )
-		foreach ( var characterBlock in IterateSettingsAssetArray( tempUnlockAsset, "characters" ) )
+		if ( TempUnlock_GetCharacterUnlockIndex( tempUnlockEvent, characterFlav ) >= 0 )
 		{
-			asset characterAsset = GetSettingsBlockAsset( characterBlock, "itemFlavor" )
-			if ( characterAsset == wantedCharacterAsset )
-			{
-				return true
-			}
+			return true
 		}
 	}
 
 	return false
+}
+
+
+int function TempUnlock_GetCharacterUnlockIndex( ItemFlavor tempUnlockFlav, ItemFlavor characterFlav )
+{
+	Assert( ItemFlavor_GetType( tempUnlockFlav ) == eItemType.calevent_temp_unlock )
+	Assert( ItemFlavor_GetType( characterFlav ) == eItemType.character )
+
+	asset wantedCharacterAsset = ItemFlavor_GetAsset( characterFlav )
+	asset tempUnlockAsset = ItemFlavor_GetAsset( tempUnlockFlav )
+	foreach ( int index, var characterBlock in IterateSettingsAssetArray( tempUnlockAsset, "characters" ) )
+	{
+		asset characterAsset = GetSettingsBlockAsset( characterBlock, "itemFlavor" )
+		if ( characterAsset == wantedCharacterAsset )
+		{
+			return index
+		}
+	}
+	return -1
 }
 
 array<ItemFlavor> function TempUnlock_GetActiveUnlockedCharacters( ItemFlavor tempUnlockEvent )
@@ -195,7 +220,7 @@ ItemFlavor ornull function TempUnlock_GetCharacterUnlockFeaturedChallenge( ItemF
 
 	
 	ChallengeSet topChallengeSet = challengeSets[0]
-	return topChallengeSet.mainChallenge
+	return topChallengeSet.metaChallenge
 }
 
 
@@ -251,3 +276,94 @@ ItemFlavor ornull function TempUnlock_GetCurrentCharacterUnlockFeaturedChallenge
 	}
 	return null
 }
+
+
+ItemFlavor ornull function TempUnlock_GetCharacterUnlockChallenge( ItemFlavor characterFlav )
+{
+	int now = GetUnixTimestamp()
+
+	asset wantedCharacterAsset = ItemFlavor_GetAsset( characterFlav )
+	foreach ( ItemFlavor tempUnlockEvent in TempUnlock_GetActiveEvents( now ) )
+	{
+		asset tempUnlockAsset = ItemFlavor_GetAsset( tempUnlockEvent )
+		foreach ( int index, var characterBlock in IterateSettingsAssetArray( tempUnlockAsset, "characters" ) )
+		{
+			asset characterAsset = GetSettingsBlockAsset( characterBlock, "itemFlavor" )
+			if ( characterAsset == wantedCharacterAsset )
+			{
+				asset challengeSetAsset = GetSettingsBlockAsset( characterBlock, "challengeSet" )
+				if ( challengeSetAsset != $"" )
+				{
+					ItemFlavor challengeSetFlav = GetItemFlavorByAsset( challengeSetAsset )
+					ChallengeSet challengeSet = ChallengeSet_GetByGUID( challengeSetFlav.guid )
+					return challengeSet.metaChallenge
+				}
+			}
+		}
+	}
+	return null
+}
+
+
+ItemFlavor ornull function TempUnlock_GetActiveCharacterUnlockEvent( ItemFlavor characterFlav, ItemFlavor ornull boundingCalEvent )
+{
+	array<ItemFlavor> activeEvents = TempUnlock_GetActiveEvents( GetUnixTimestamp() )
+	return TempUnlock_FindCharacterTempUnlockFromList( characterFlav, activeEvents, boundingCalEvent )
+}
+
+
+ItemFlavor ornull function TempUnlock_GetUpcomingCharacterUnlockEvent( ItemFlavor characterFlav, ItemFlavor ornull boundingCalEvent )
+{
+	array<ItemFlavor> upcomingEvents = TempUnlock_GetUpcomingEvents( GetUnixTimestamp() )
+	return TempUnlock_FindCharacterTempUnlockFromList( characterFlav, upcomingEvents, boundingCalEvent )
+}
+
+
+ItemFlavor ornull function TempUnlock_FindCharacterTempUnlockFromList( ItemFlavor characterFlav, array<ItemFlavor> activeEvents, ItemFlavor ornull boundingCalEvent )
+{
+	asset wantedCharacterAsset = ItemFlavor_GetAsset( characterFlav )
+	foreach ( ItemFlavor tempUnlockEvent in activeEvents )
+	{
+		if ( boundingCalEvent != null )
+		{
+			expect ItemFlavor( boundingCalEvent )
+			if ( !CalEvent_HasStarted( tempUnlockEvent, CalEvent_GetFinishUnixTime( boundingCalEvent ) ) )
+			{
+				continue
+			}
+		}
+
+		if ( TempUnlock_GetCharacterUnlockIndex( tempUnlockEvent, characterFlav ) >= 0 )
+		{
+			return tempUnlockEvent
+		}
+	}
+	return null
+}
+
+
+string function TempUnlock_GetTooltipTitleUnlocked( ItemFlavor tempUnlockFlav )
+{
+	return GetGlobalSettingsString( ItemFlavor_GetAsset( tempUnlockFlav ), "characterTooltipUnlockedTitle" )
+}
+string function TempUnlock_GetTooltipDescUnlocked( ItemFlavor tempUnlockFlav )
+{
+	return GetGlobalSettingsString( ItemFlavor_GetAsset( tempUnlockFlav ), "characterTooltipUnlockedDesc" )
+}
+string function TempUnlock_GetTooltipTitleCompleted( ItemFlavor tempUnlockFlav )
+{
+	return GetGlobalSettingsString( ItemFlavor_GetAsset( tempUnlockFlav ), "characterTooltipCompletedTitle" )
+}
+string function TempUnlock_GetTooltipDescCompleted( ItemFlavor tempUnlockFlav )
+{
+	return GetGlobalSettingsString( ItemFlavor_GetAsset( tempUnlockFlav ), "characterTooltipCompletedDesc" )
+}
+string function TempUnlock_GetTooltipTitleUpcoming( ItemFlavor tempUnlockFlav )
+{
+	return GetGlobalSettingsString( ItemFlavor_GetAsset( tempUnlockFlav ), "characterTooltipUpcomingTitle" )
+}
+string function TempUnlock_GetTooltipDescUpcoming( ItemFlavor tempUnlockFlav )
+{
+	return GetGlobalSettingsString( ItemFlavor_GetAsset( tempUnlockFlav ), "characterTooltipUpcomingDesc" )
+}
+

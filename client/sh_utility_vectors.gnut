@@ -1,0 +1,3389 @@
+
+untyped
+
+globalize_all_functions
+
+global struct Coord
+{
+	vector pos
+	vector ang
+}
+
+global struct AABB
+{
+	vector mins
+	vector maxs
+}
+
+global struct ArrayDistanceEntry
+{
+	float  distanceSqr
+	entity ent
+	vector origin
+	vector angles
+}
+
+global struct LineSegment
+{
+	vector start
+	vector end
+}
+
+global struct RaySphereIntersectStruct
+{
+	bool  result
+	float enterFrac
+	float leaveFrac
+}
+
+global struct WallToTopResults
+{
+	bool found
+	vector pos
+	vector normal
+	entity hitEnt
+}
+
+
+
+
+
+
+
+
+
+struct
+{
+	float skyZPos = MAX_WORLD_COORD_BUFFER
+} file
+
+vector function RotateAroundOrigin2D( vector originToRotate, vector origin, float angRadians )
+{
+	vector rotated     = <0, 0, originToRotate.z>
+	float sinOffsetAng = sin( angRadians )
+	float cosOffsetAng = cos( angRadians )
+	vector offset      = originToRotate - origin
+
+	rotated.x = origin.x + (offset.x * cosOffsetAng) - (offset.y * sinOffsetAng)
+	rotated.y = origin.y + (offset.x * sinOffsetAng) + (offset.y * cosOffsetAng)
+
+	return rotated
+}
+
+
+vector function RotateVector( vector vec, vector rotateAngles )
+{
+	return vec.x * AnglesToForward( rotateAngles ) + vec.y * -1.0 * AnglesToRight( rotateAngles ) + vec.z * AnglesToUp( rotateAngles )
+
+	
+	
+	
+	
+}
+
+AABB function RotateAABB( vector mins, vector maxs, vector rotateAngles )
+{
+	vector cnr_000 = RotateVector( < mins.x, mins.y, mins.z >, rotateAngles )
+	vector cnr_001 = RotateVector( < mins.x, mins.y, maxs.z >, rotateAngles )
+	vector cnr_010 = RotateVector( < mins.x, maxs.y, mins.z >, rotateAngles )
+	vector cnr_011 = RotateVector( < mins.x, maxs.y, maxs.z >, rotateAngles )
+	vector cnr_100 = RotateVector( < maxs.x, mins.y, mins.z >, rotateAngles )
+	vector cnr_101 = RotateVector( < maxs.x, mins.y, maxs.z >, rotateAngles )
+	vector cnr_110 = RotateVector( < maxs.x, maxs.y, mins.z >, rotateAngles )
+	vector cnr_111 = RotateVector( < maxs.x, maxs.y, maxs.z >, rotateAngles )
+
+	AABB result
+	result.mins = <
+	min( cnr_000.x, min( cnr_001.x, min( cnr_010.x, min( cnr_011.x, min( cnr_100.x, min( cnr_101.x, min( cnr_110.x, cnr_111.x ) ) ) ) ) ) ),
+	min( cnr_000.y, min( cnr_001.y, min( cnr_010.y, min( cnr_011.y, min( cnr_100.y, min( cnr_101.y, min( cnr_110.y, cnr_111.y ) ) ) ) ) ) ),
+	min( cnr_000.z, min( cnr_001.z, min( cnr_010.z, min( cnr_011.z, min( cnr_100.z, min( cnr_101.z, min( cnr_110.z, cnr_111.z ) ) ) ) ) ) )
+	>
+	result.maxs = <
+	max( cnr_000.x, max( cnr_001.x, max( cnr_010.x, max( cnr_011.x, max( cnr_100.x, max( cnr_101.x, max( cnr_110.x, cnr_111.x ) ) ) ) ) ) ),
+	max( cnr_000.y, max( cnr_001.y, max( cnr_010.y, max( cnr_011.y, max( cnr_100.y, max( cnr_101.y, max( cnr_110.y, cnr_111.y ) ) ) ) ) ) ),
+	max( cnr_000.z, max( cnr_001.z, max( cnr_010.z, max( cnr_011.z, max( cnr_100.z, max( cnr_101.z, max( cnr_110.z, cnr_111.z ) ) ) ) ) ) )
+	>
+	return result
+}
+
+vector function VectorReflectionAcrossNormal( vector vec, vector normal )
+{
+	return (vec - normal * (2 * DotProduct( vec, normal )))
+}
+
+bool function VectorsFacingSameDirection( vector v1, vector v2, float degreesThreshold )
+{
+	float minDot = deg_cos( degreesThreshold )
+	float dot    = DotProduct( Normalize( v1 ), Normalize( v2 ) )
+	return (dot >= minDot)
+}
+
+vector function FindAnyPerpendicularVector( vector v )
+{
+	return RotateVector( <0, 0, 1> * Length( v ), VectorToAngles( Normalize( v ) ) )
+}
+
+vector function OffsetPointRelativeToVector( vector point, vector offset, vector forward )
+{
+	vector angles = VectorToAngles( forward )
+	vector right  = AnglesToRight( angles )
+	vector up     = AnglesToUp( angles )
+	return point + (right * offset.x) + (forward * offset.y) + (up * offset.z)
+}
+
+bool function IsEqualVector( vector a, vector b )
+{
+	return DistanceSqr( a, b) <= FLT_EPSILON
+}
+
+float function MetersToInchesSqr( float meters )
+{
+	float inches =  meters * METERS_TO_INCHES
+	return( inches * inches )
+}
+
+vector function FlattenVec( vector vec )
+{
+	return <vec.x, vec.y, 0>
+}
+
+vector function FlattenNormalizeVec( vector v )
+{
+	return Normalize( <v.x, v.y, 0> )
+}
+
+vector function FlattenAngles( vector angles )
+{
+	return <0, angles.y, 0>
+}
+
+bool function IsNormalized( vector vec )
+
+{
+	return fabs( 1.0 - LengthSqr( vec ) ) < 0.01
+}
+
+float function DotToAngle( float dot )
+{
+	return acos( dot ) * RAD_TO_DEG
+}
+
+
+float function AngleToDot( float angle )
+{
+	return cos( angle * DEG_TO_RAD )
+}
+
+float function GetYaw( vector org1, vector org2 )
+{
+	vector vec    = org2 - org1
+	vector angles = VectorToAngles( vec )
+	return angles.y
+}
+
+float function AngleDiff( float ang, float targetAng )
+{
+	float delta = (targetAng - ang) % 360.0
+	if ( targetAng > ang )
+	{
+		if ( delta >= 180.0 )
+			delta -= 360.0
+	}
+	else
+	{
+		if ( delta <= -180.0 )
+			delta += 360.0
+	}
+	return delta
+}
+
+bool function IsNormalVertical( vector normal )
+{
+	float dot = DotProduct( normal, UP_VECTOR )
+	if ( dot > DOT_45DEGREE )	
+		return true
+
+	return false
+}
+
+vector function MapAngleToRadius( float angle, float radius )
+{
+	float offsetX = radius * cos( angle * (PI / 180) )
+	float offsetY = radius * sin( angle * (PI / 180) )
+	vector offset = (< offsetX, offsetY, 0 >)
+	return offset
+}
+
+int function SortSpawnPositionsByVertDist( table a, table b )
+{
+	float vertDistA = expect float( a.vertDist )
+	float vertDistB = expect float( b.vertDist )
+
+	if ( vertDistA > vertDistB )
+		return 1
+	else if ( vertDistB > vertDistA )
+		return -1
+
+	return 0
+}
+
+vector function PositionOffsetFromEnt( entity ent, float offsetX, float offsetY, float offsetZ )
+{
+	vector angles = ent.GetAngles()
+	vector origin = ent.GetOrigin()
+	origin += AnglesToForward( angles ) * offsetX
+	origin += AnglesToRight( angles ) * offsetY
+	origin += AnglesToUp( angles ) * offsetZ
+	return origin
+}
+
+vector function PositionOffsetFromOriginAngles( vector origin, vector angles, float offsetX, float offsetY, float offsetZ )
+{
+	origin += AnglesToForward( angles ) * offsetX
+	origin += AnglesToRight( angles ) * offsetY
+	origin += AnglesToUp( angles ) * offsetZ
+	return origin
+}
+
+bool function PlayerCanSee( entity player, entity ent, bool doTrace, float degrees, bool passIfChildHit = false )
+{
+	float minDot = deg_cos( degrees )
+
+	
+	float dot = DotProduct( Normalize( ent.GetWorldSpaceCenter() - player.EyePosition() ), player.GetViewVector() )
+	if ( dot < minDot )
+		return false
+
+	
+	if ( doTrace )
+	{
+		TraceResults trace = TraceLine( player.EyePosition(), ent.GetWorldSpaceCenter(), null, TRACE_MASK_BLOCKLOS, TRACE_COLLISION_GROUP_NONE )
+		if ( trace.hitEnt == ent || trace.fraction >= 0.99 )
+			return true
+		else if( passIfChildHit && trace.hitEnt != null && trace.hitEnt.GetParent() == ent )
+			return true
+		else
+			return false
+	}
+
+	return true
+}
+
+bool function PlayerCanSeePos( entity player, vector pos, bool doTrace, float degrees )
+{
+	float minDot = deg_cos( degrees )
+	float dot    = DotProduct( Normalize( pos - player.EyePosition() ), player.GetViewVector() )
+	if ( dot < minDot )
+		return false
+
+	if ( doTrace )
+	{
+		TraceResults trace = TraceLine( player.EyePosition(), pos, null, TRACE_MASK_BLOCKLOS, TRACE_COLLISION_GROUP_NONE )
+		if ( trace.fraction < 0.99 )
+			return false
+	}
+
+	return true
+}
+
+bool function LegalOrigin( vector origin )
+{
+	if ( fabs( origin.x ) > MAX_WORLD_COORD )
+		return false
+
+	if ( fabs( origin.y ) > MAX_WORLD_COORD )
+		return false
+
+	if ( fabs( origin.z ) > MAX_WORLD_COORD )
+		return false
+
+	return true
+}
+
+bool function LegalAngles( vector angles )
+{
+	if ( fabs( angles.x ) > 360 )
+		return false
+
+	if ( fabs( angles.y ) > 360 )
+		return false
+
+	if ( fabs( angles.z ) > 360 )
+		return false
+
+	return true
+}
+
+#if DEV
+void function PrintTraceResults( TraceResults results )
+{
+	printt( "TraceResults: " )
+	printt( "=========================" )
+	printt( "hitEnt: " + results.hitEnt )
+	printt( "endPos: " + results.endPos )
+	printt( "surfaceNormal: " + results.surfaceNormal )
+	printt( "surfaceName: " + results.surfaceName )
+	printt( "fraction: " + results.fraction )
+	printt( "fractionLeftSolid: " + results.fractionLeftSolid )
+	printt( "hitGroup: " + results.hitGroup )
+	printt( "startSolid: " + results.startSolid )
+	printt( "allSolid: " + results.allSolid )
+	printt( "hitSky: " + results.hitSky )
+	printt( "contents: " + results.contents )
+	printt( "=========================" )
+}
+#endif
+
+#if INTELLIJ_OUTLINE_SECTION_MARKER
+void function _____________PointOrLineIntersection___________________________(){}
+#endif
+
+bool function IsPositionWithinRadius( float radius, vector position1, vector position2 )
+{
+	float radiusToTestSqr = pow( radius, 2 )
+	float positionDistSqr = Distance2DSqr( position1, position2 )
+
+	if ( positionDistSqr < radiusToTestSqr )
+		return true
+
+	return false
+}
+
+bool function IsVectorWithinBounds( vector v, float maxValue )
+{
+	return (fabs( v.x ) < maxValue && fabs( v.y ) < maxValue && fabs( v.z ) < maxValue)
+}
+
+bool function PointInCapsule( vector vecBottom, vector vecTop, float radius, vector point )
+{
+	return GetDistanceFromLineSegment( vecBottom, vecTop, point ) <= radius
+}
+
+bool function PointInCylinder( vector vecBottom, vector vecTop, float radius, vector point )
+{
+	if ( GetDistanceFromLineSegment( vecBottom, vecTop, point ) > radius )
+		return false
+
+	vector bottomVec     = Normalize( vecTop - vecBottom )
+	vector pointToBottom = Normalize( point - vecBottom )
+
+	vector topVec     = Normalize( vecBottom - vecTop )
+	vector pointToTop = Normalize( point - vecTop )
+
+	if ( DotProduct( bottomVec, pointToBottom ) < 0 )
+		return false
+
+	if ( DotProduct( topVec, pointToTop ) < 0.0 )
+		return false
+
+	return true
+}
+
+bool function PointIsWithinBounds( vector point, vector mins, vector maxs )
+{
+	Assert( mins.x < maxs.x )
+	Assert( mins.y < maxs.y )
+	Assert( mins.z < maxs.z )
+
+	return ((point.z >= mins.z && point.z <= maxs.z) &&
+			(point.x >= mins.x && point.x <= maxs.x) &&
+			(point.y >= mins.y && point.y <= maxs.y))
+}
+
+vector ornull function IntersectRayAABB( vector rayStartIn, vector rayDirIn, vector minsIn, vector maxsIn )
+{
+	float[3] rayStart
+	rayStart[0] = rayStartIn.x
+	rayStart[1] = rayStartIn.y
+	rayStart[2] = rayStartIn.z
+	float[3] rayDir
+	rayDir[0] = rayDirIn.x
+	rayDir[1] = rayDirIn.y
+	rayDir[2] = rayDirIn.z
+	float[3] mins
+	mins[0] = minsIn.x
+	mins[1] = minsIn.y
+	mins[2] = minsIn.z
+	float[3] maxs
+	maxs[0] = maxsIn.x
+	maxs[1] = maxsIn.y
+	maxs[2] = maxsIn.z
+
+	float[3] hit
+	bool inside = true
+	float[3] quadrant
+	float[3] candidatePlane
+	float[3] maxT
+	for ( int dim = 0; dim < 3; dim ++ )
+	{
+		if ( rayStart[dim] < mins[dim] )
+		{
+			quadrant[dim] = -1
+			candidatePlane[dim] = mins[dim]
+			inside = false
+		}
+		else if ( rayStart[dim] > maxs[dim] )
+		{
+			quadrant[dim] = 1
+			candidatePlane[dim] = maxs[dim]
+			inside = false
+		}
+		else
+		{
+			quadrant[dim] = 0
+		}
+	}
+
+	if ( inside )
+	{
+		return rayStartIn
+	}
+
+	for ( int dim = 0; dim < 3; dim ++ )
+	{
+		if ( quadrant[dim] != 0 && (rayDir[dim] < -0.00001 || rayDir[dim] > 0.00001) )
+		{
+			maxT[dim] = (candidatePlane[dim] - rayStart[dim]) / rayDir[dim]
+		}
+		else
+		{
+			maxT[dim] = -1.0
+		}
+	}
+
+	int whichPlane = 0
+	for ( int dim = 0; dim < 3; dim ++ )
+	{
+		if ( maxT[whichPlane] < maxT[dim] )
+			whichPlane = dim
+	}
+
+	if ( maxT[whichPlane] < 0.0 )
+		return null
+
+	for ( int dim = 0; dim < 3; dim ++ )
+	{
+		if ( whichPlane != dim )
+		{
+			hit[dim] = rayStart[dim] + maxT[whichPlane] * rayDir[dim]
+			if ( hit[dim] < mins[dim] || hit[dim] > maxs[dim] )
+				return null
+		}
+		else
+		{
+			hit[dim] = candidatePlane[dim]
+		}
+	}
+	return <hit[0], hit[1], hit[2]>
+}
+
+RaySphereIntersectStruct function IntersectRayWithSphere( vector rayStart, vector rayEnd, vector sphereOrigin, float sphereRadius )
+{
+	RaySphereIntersectStruct intersection
+
+	vector vecSphereToRay = rayStart - sphereOrigin
+
+	vector vecRayDelta = rayEnd - rayStart
+	float a            = DotProduct( vecRayDelta, vecRayDelta )
+
+	if ( a == 0.0 )
+	{
+		intersection.result = LengthSqr( vecSphereToRay ) <= sphereRadius * sphereRadius
+		intersection.enterFrac = 0.0
+		intersection.leaveFrac = 0.0
+		return intersection
+	}
+
+	float b       = 2 * DotProduct( vecSphereToRay, vecRayDelta )
+	float c       = DotProduct( vecSphereToRay, vecSphereToRay ) - sphereRadius * sphereRadius
+	float discrim = b * b - 4 * a * c
+	if ( discrim < 0.0 )
+	{
+		intersection.result = false
+		return intersection
+	}
+
+	discrim = sqrt( discrim )
+	float oo2a = 0.5 / a
+	intersection.enterFrac = (- b - discrim) * oo2a
+	intersection.leaveFrac = (- b + discrim) * oo2a
+
+	if ( (intersection.enterFrac > 1.0) || (intersection.leaveFrac < 0.0) )
+	{
+		intersection.result = false
+		return intersection
+	}
+
+	if ( intersection.enterFrac < 0.0 )
+		intersection.enterFrac = 0.0
+	if ( intersection.leaveFrac > 1.0 )
+		intersection.leaveFrac = 1.0
+
+	intersection.result = true
+	return intersection
+}
+
+
+
+
+
+
+
+void function Get2DLineIntersection( vector A, vector B, vector C, vector D, PassByReferenceVector P )
+{
+	float s1_x = B.x - A.x
+	float s1_y = B.y - A.y
+	float s2_x = D.x - C.x
+	float s2_y = D.y - C.y
+
+	float determinant = -s2_x * s1_y + s1_x * s2_y
+
+	if ( fabs( determinant ) < FLT_EPSILON )
+		return
+
+	float s = (-s1_y * (A.x - C.x) + s1_x * (A.y - C.y)) / determinant
+	float t = (s2_x * (A.y - C.y) - s2_y * (A.x - C.x)) / determinant
+
+	if ( s >= 0.0 && s <= 1.0 && t >= 0.0 && t <= 1.0 )
+	{
+		
+		vector intersection = < A.x + (t * s1_x), A.y + (t * s1_y), 0.0>
+		P.value = intersection
+	}
+}
+
+bool function Do2DLinesIntersect( vector A, vector B, vector C, vector D )
+{
+	float ax = B.x - A.x    
+	float ay = B.y - A.y    
+
+	float bx = C.x - D.x    
+	float by = C.y - D.y    
+
+	float dx = C.x - A.x    
+	float dy = C.y - A.y
+
+	float det = ax * by - ay * bx
+
+	if ( fabs( det ) < 0.001 )
+		return false
+
+	if ( ax * dy - ay * dx == 0 )
+		return false
+
+	float r = (dx * by - dy * bx) / det
+	float s = (ax * dy - ay * dx) / det
+
+	return !(r < 0 || r > 1 || s < 0 || s > 1)
+}
+
+#if INTELLIJ_OUTLINE_SECTION_MARKER
+void function _____________ClosestPointOrDistance___________________________(){}
+#endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+float function DistanceAlongVector( vector origin, vector lineStart, vector lineForward )
+{
+	vector originDif = origin - lineStart
+	return DotProduct( originDif, lineForward )
+}
+
+
+vector function GetClosestPointOnLineSegment( vector a, vector b, vector p )
+{
+	float distanceSqr = LengthSqr( a - b )
+
+	if ( distanceSqr == 0.0 )
+		return a
+
+	float t = DotProduct( p - a, b - a ) / distanceSqr
+	if ( t < 0.0 )
+		return a
+	else if ( t > 1.0 )
+		return b
+
+	return a + t * (b - a)
+}
+
+vector function GetClosestPointOnLine( vector a, vector b, vector p )
+{
+	float distanceSqr = LengthSqr( a - b )
+
+	if ( distanceSqr == 0.0 )
+		return a
+
+	float t = DotProduct( p - a, b - a ) / distanceSqr
+
+	return a + t * (b - a)
+}
+
+vector ornull function GetIntersectionOfLineAndPlane( vector a, vector b, vector planePoint, vector planeNormal )
+{
+	float sT = DotProduct( planeNormal, planePoint - a )
+	float sB = DotProduct( planeNormal, b - a )
+
+	if ( sB > -0.0000001 && sB < 0.0000001 )
+		return null
+
+	float s = sT / sB
+	return a + (b - a) * s
+}
+
+float function GetDistanceFromLineSegment( vector a, vector b, vector p )
+{
+	vector closestPoint = GetClosestPointOnLineSegment( a, b, p )
+	return Distance( p, closestPoint )
+}
+
+float function GetDistanceSqrFromLineSegment( vector a, vector b, vector p )
+{
+	vector closestPoint = GetClosestPointOnLineSegment( a, b, p )
+	return DistanceSqr( p, closestPoint )
+}
+
+float function GetProgressAlongLineSegment( vector P, vector A, vector B )
+{
+	vector AP = P - A
+	vector AB = B - A
+
+	float ab2   = DotProduct( AB, AB ) 
+	float ap_ab = DotProduct( AP, AB ) 
+	float t     = ap_ab / ab2
+	return t
+}
+
+bool function IsPointWithinDistanceFromAnotherPoint( vector p, array<vector> points, float dist )
+{
+	if ( dist <= 0.0 )
+		return false
+
+	float distSq = dist * dist
+
+	foreach ( vector point in points )
+	{
+		if ( Distance2DSqr( point, p ) <= distSq )
+			return true
+	}
+
+	return false
+}
+
+float function GetClosestDistanceFromPointToPoints( vector p, array<vector> points )
+{
+	float closestDist = -1
+	foreach ( vector point in points )
+	{
+		float d = Distance2D( point, p )
+		if ( closestDist < 0 || d < closestDist )
+			closestDist = d
+	}
+	return closestDist
+}
+
+
+float function GetTotalDistanceFromPointToPoints( vector p, array<vector> points )
+{
+	float dist = 0.0
+	foreach ( vector point in points )
+		dist += Distance( point, p )
+	return dist
+}
+
+
+LineSegment function GetShortestLineSegmentConnectingLineSegments( vector p1, vector p2, vector p3, vector p4 )
+{
+	
+	
+	
+
+	
+	
+	
+	
+	vector p13 = p1 - p3
+	vector p21 = p2 - p1
+	vector p43 = p4 - p3
+
+	if ( Length( p43 ) < 1.0 )
+	{
+		LineSegment out
+		out.start = GetClosestPointOnLine( p1, p2, p3 )
+		out.end = p3
+		return out
+	}
+
+	if ( Length( p21 ) < 1.0 )
+	{
+		LineSegment out
+		out.start = p1
+		out.end = GetClosestPointOnLine( p3, p4, p1 )
+		return out
+	}
+
+	float d1343 = p13.x * p43.x + p13.y * p43.y + p13.z * p43.z
+	float d4321 = p43.x * p21.x + p43.y * p21.y + p43.z * p21.z
+	float d1321 = p13.x * p21.x + p13.y * p21.y + p13.z * p21.z
+	float d4343 = p43.x * p43.x + p43.y * p43.y + p43.z * p43.z
+	float d2121 = p21.x * p21.x + p21.y * p21.y + p21.z * p21.z
+
+	float denom = d2121 * d4343 - d4321 * d4321
+	if ( denom <= 0.01 )
+	{
+		
+		LineSegment out
+		out.start = p2
+
+		if ( Length( p2 - p3 ) < Length( p2 - p4 ) )
+			out.end = p3
+		else
+			out.end = p4
+
+		return out
+	}
+	float numer = d1343 * d4321 - d1321 * d4343
+
+	float mua = numer / denom
+	float mub = (d1343 + d4321 * (mua)) / d4343
+
+	LineSegment out
+	out.start = <p1.x + mua * p21.x, p1.y + mua * p21.y, p1.z + mua * p21.z>
+	out.end = <p3.x + mub * p43.x, p3.y + mub * p43.y, p3.z + mub * p43.z>
+	return out
+}
+
+
+vector function GetClosestPointToLineSegments( vector line1Point1, vector line1Point2, vector line2Point1, vector line2Point2 )
+{
+	LineSegment seg = GetShortestLineSegmentConnectingLineSegments( line1Point1, line1Point2, line2Point1, line2Point2 )
+	return (seg.start + seg.end) / 2.0
+}
+
+
+float function GetClosestDistanceBetweenLineSegments( vector line1Point1, vector line1Point2, vector line2Point1, vector line2Point2 )
+{
+	LineSegment seg = GetShortestLineSegmentConnectingLineSegments( line1Point1, line1Point2, line2Point1, line2Point2 )
+	return Distance( seg.start, seg.end )
+}
+
+float function GetFractionAlongPath( array<entity> nodes, vector p )
+{
+	float totalDistance = GetPathDistance( nodes )
+
+	
+	int closestSegment = -1
+	float closestDist  = 9999
+	for ( int i = 0; i < nodes.len() - 1; i++ )
+	{
+		float dist = GetDistanceSqrFromLineSegment( nodes[i].GetOrigin(), nodes[i + 1].GetOrigin(), p )
+		if ( closestSegment < 0 || dist < closestDist )
+		{
+			closestSegment = i
+			closestDist = dist
+		}
+	}
+	Assert( closestSegment >= 0 )
+	Assert( closestSegment < nodes.len() - 1 )
+
+	
+	float distTraveled = 0.0
+	for ( int i = 0; i < closestSegment; i++ )
+	{
+		
+		distTraveled += Distance( nodes[i].GetOrigin(), nodes[i + 1].GetOrigin() )
+	}
+
+	
+	vector closestPointOnSegment = GetClosestPointOnLineSegment( nodes[closestSegment].GetOrigin(), nodes[closestSegment + 1].GetOrigin(), p )
+	
+	distTraveled += Distance( nodes[closestSegment].GetOrigin(), closestPointOnSegment )
+
+	return clamp( distTraveled / totalDistance, 0.0, 1.0 )
+}
+
+
+float function GetPathDistance( array<entity> nodes )
+{
+	float totalDist = 0.0
+	for ( int i = 0; i < nodes.len() - 1; i++ )
+	{
+		
+		totalDist += Distance( nodes[i].GetOrigin(), nodes[i + 1].GetOrigin() )
+	}
+	
+
+	return totalDist
+}
+
+
+float function GetPathDistance_VectorArray( array<vector> nodes, bool isLoopingPath )
+{
+	float totalDist = 0.0
+	int end_iter    = nodes.len()
+	int numNodes    = end_iter
+
+	if ( !isLoopingPath )
+		end_iter -= 1
+
+	for ( int i = 0; i < end_iter; i++ )
+	{
+		int idx_next = (i + 1) % numNodes
+		totalDist += Distance( nodes[i], nodes[idx_next] )
+	}
+
+	return totalDist
+}
+
+
+array<float> function GetPathDistancesFromIdxArray_VectorArray( array<vector> nodes, array<int> distanceIdxArray, bool isLoopingPath )
+{
+	float totalDist = 0.0
+	array<float> results
+	int end_iter    = nodes.len()
+	int numNodes    = end_iter
+
+	int idx_curDistanceIdx
+	int numRequestedDistances = distanceIdxArray.len()
+	Assert( numRequestedDistances > 0, "No path distances given! 0 indexes received!" )
+
+	for ( int i = 0; i < end_iter; i++ )
+	{
+		if ( i == distanceIdxArray[ idx_curDistanceIdx ] )
+		{
+			results.append( totalDist )
+			idx_curDistanceIdx++
+			if ( idx_curDistanceIdx == numRequestedDistances )
+				break
+		}
+
+		int idx_next = (i + 1) % numNodes
+		totalDist += Distance( nodes[i], nodes[idx_next] )
+	}
+	return results
+}
+
+#if INTELLIJ_OUTLINE_SECTION_MARKER
+void function _____________Randomization___________________________(){}
+#endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+vector function GetRandomCenterBiasedToEdge( vector center, float minDeviation, float maxDeviation, float minAngle = 0, float maxAngle = 360 )
+{
+	float deviation = RandomFloatRange( 0.0, 1.0 )
+	deviation = minDeviation + (sqrt( deviation ) * (maxDeviation - minDeviation))
+	vector angles    = <0, RandomFloatRange( minAngle, maxAngle ) % 360, 0>
+	vector newCenter = center + (AnglesToForward( angles ) * deviation)
+	return newCenter
+}
+
+vector function GetRandomCenter( vector center, float minDeviation, float maxDeviation, float minAngle = 0, float maxAngle = 360, var randomSeed = null )
+{
+	float deviation
+	vector angles
+	if ( IsValid ( randomSeed ) )
+	{
+		deviation = RandomFloatRangeSeeded( randomSeed, minDeviation, maxDeviation )
+		angles = <0, RandomFloatRangeSeeded( randomSeed, minAngle, maxAngle ) % 360, 0>
+	}
+	else
+	{
+		deviation = RandomFloatRange( minDeviation, maxDeviation )
+		angles = <0, RandomFloatRange( minAngle, maxAngle ) % 360, 0>
+	}
+	vector newCenter = center + (AnglesToForward( angles ) * deviation)
+	return newCenter
+}
+
+vector function GetRandomCenterDistributed( vector center, float minDeviation, float maxDeviation, float minAngle = 0, float maxAngle = 360 )
+{
+	float deviation   = RandomFloatRange( minDeviation, maxDeviation )
+	float angles      = RandomFloatRange( minAngle, maxAngle ) % 360
+	float scale_ratio = 0
+	if ( maxDeviation > 0 )	
+		scale_ratio = maxDeviation / sqrt( maxDeviation )
+	float r           = sqrt( deviation ) * scale_ratio
+	return center + (< deg_cos( angles ) * r, deg_sin( angles ) * r, 0 >)
+}
+
+vector function RandomVec( float range )
+{
+	
+	vector vec = <0, 0, 0>
+	vec.x = RandomFloatRange( -range, range )
+	vec.y = RandomFloatRange( -range, range )
+	vec.z = RandomFloatRange( -range, range )
+
+	return vec
+}
+
+const float ROG_MIN_VERT_DISTRIB 		= 1024.0 * 4.0 
+const float ROG_MAX_VERT_DISTRIB 		= 1024.0 * 6.0
+const float ROG_MIN_HORIZ_DISTRIBUTION			= 1024 * 12.0
+const float ROG_DEFAULT_GRID_HALF_SIZE			= 64000.0
+const int ROG_MAX_SPAWN_POOL_BEFORE_REDUCTION	= 100
+const float ROG_MAX_SPAWN_TO_POOL_SATURATION	= 0.5
+
+
+
+
+array<entity> function RandomOrientedGridDistribution(
+		array<entity> possibleLocationEnts,						
+		int numDesiredSpawns,									
+		float defaultGridHalfSize = ROG_DEFAULT_GRID_HALF_SIZE,		
+		float minDesiredVertSpacingParam = ROG_MIN_VERT_DISTRIB,					
+		float maxDesiredVertSpacingParam = ROG_MAX_VERT_DISTRIB,					
+		float minDesiredHorizSpacing = ROG_MIN_HORIZ_DISTRIBUTION,					
+		int maxNumSpawnsBeforeReduction = ROG_MAX_SPAWN_POOL_BEFORE_REDUCTION,		
+		float maxSpawnSaturationBeforeRandomPick = ROG_MAX_SPAWN_TO_POOL_SATURATION 	
+		)
+{
+	
+	int numSpawnPoints       	= possibleLocationEnts.len()
+	int numSpawnsToReturn = numDesiredSpawns
+
+	if ( (numSpawnPoints == 0) || (numSpawnsToReturn == 0) )
+	{
+		array<entity> empty
+		return empty
+	}
+
+	float desiredToLocationRatio = float( numSpawnsToReturn / numSpawnPoints )
+	if ( desiredToLocationRatio > maxSpawnSaturationBeforeRandomPick )
+	{
+		if ( numSpawnsToReturn > numSpawnPoints )
+			numSpawnsToReturn = numSpawnPoints
+
+		printt( "!!! WARNING !!! Ratio of desired tick spawns to available locations too high to be worth it! Randomizing and returning results!", desiredToLocationRatio )
+		possibleLocationEnts.randomize()
+		return possibleLocationEnts.slice( 0, numSpawnsToReturn )
+	}
+
+	vector verticalAxis   = Normalize( < RandomFloatRange( -1, 1 ), RandomFloatRange( -1, 1 ), 0 > )
+	vector horizAxis      = CrossProduct( verticalAxis, < 0, 0, 1 > )
+	vector vertAxisOrigin = verticalAxis * -defaultGridHalfSize
+
+	bool verbosePrint = GetCurrentPlaylistVarInt( "debug_loot_ticks", 0 ) == 1
+
+	
+	
+	
+	
+	array<table> selectedSpawnPositions
+	float closestSpawnOriginToVertAxisOrigin  = defaultGridHalfSize
+	float furthestSpawnOriginToVertAxisOrigin = 0
+	float minWidth                            = defaultGridHalfSize
+	float maxWidth                            = -defaultGridHalfSize
+	bool shouldDiscardSomeCandidates          = numSpawnPoints > maxNumSpawnsBeforeReduction 
+	int numSelectedSpawnEnts
+	foreach( spawnEnt in possibleLocationEnts )
+	{
+		if ( !IsValid( spawnEnt ) )
+			continue
+
+		
+		if ( shouldDiscardSomeCandidates && CoinFlip() )
+			continue
+
+		numSelectedSpawnEnts++
+
+		vector vertAxisOriginToEnt      = spawnEnt.GetOrigin() - vertAxisOrigin
+		float distToVertAxisOrigin      = DotProduct2D( vertAxisOriginToEnt, verticalAxis )
+		float horizDistToVertAxisOrigin = DotProduct2D( vertAxisOriginToEnt, horizAxis )
+		selectedSpawnPositions.append( { ent = spawnEnt, vertDist = distToVertAxisOrigin, horizDist = horizDistToVertAxisOrigin } )
+
+		
+		if ( distToVertAxisOrigin > furthestSpawnOriginToVertAxisOrigin )
+			furthestSpawnOriginToVertAxisOrigin = distToVertAxisOrigin
+		else if ( distToVertAxisOrigin < closestSpawnOriginToVertAxisOrigin )
+			closestSpawnOriginToVertAxisOrigin = distToVertAxisOrigin
+
+		
+		if ( horizDistToVertAxisOrigin > maxWidth )
+			maxWidth = horizDistToVertAxisOrigin
+		else if( horizDistToVertAxisOrigin < minWidth )
+			minWidth = horizDistToVertAxisOrigin
+	}
+
+	selectedSpawnPositions.sort( SortSpawnPositionsByVertDist )
+
+	if ( numSelectedSpawnEnts < numSpawnsToReturn )
+		numSpawnsToReturn = numSelectedSpawnEnts
+
+	
+	
+	
+	
+	
+	
+	
+	
+	Assert( maxDesiredVertSpacingParam > minDesiredVertSpacingParam, "Max loottick distribution distance is smaller than min distribution! Fix it!" )
+
+	float vertAxisSpawnRange     = furthestSpawnOriginToVertAxisOrigin - closestSpawnOriginToVertAxisOrigin
+	float maxDesiredSpawnSpacing = ( vertAxisSpawnRange * 0.9 ) / numSpawnsToReturn		
+	float minDesiredSpawnSpacing = minDesiredVertSpacingParam
+	if ( maxDesiredSpawnSpacing > maxDesiredVertSpacingParam )
+		maxDesiredSpawnSpacing = maxDesiredVertSpacingParam
+
+	if ( maxDesiredSpawnSpacing < minDesiredVertSpacingParam )
+		minDesiredSpawnSpacing = maxDesiredSpawnSpacing - 1
+
+	float verticalDistanceTraveled = closestSpawnOriginToVertAxisOrigin			
+	int numVertSplits              = 0
+	int lastSafetyCheckedSpawnEnt  = 0
+	array<float> generatedVertSplits	
+	while( true )
+	{
+		float newVerticalDistanceTraveled = RandomFloatRange( minDesiredSpawnSpacing, maxDesiredSpawnSpacing )
+		verticalDistanceTraveled += newVerticalDistanceTraveled
+
+		if ( verticalDistanceTraveled > furthestSpawnOriginToVertAxisOrigin )
+			break
+
+		
+		int numSpawnEntsBetweenLastAndCurrentSelection
+		for( int i = lastSafetyCheckedSpawnEnt; i < numSelectedSpawnEnts; i++ )
+		{
+			float curVertDist = expect float( selectedSpawnPositions[ i ].vertDist )
+			if ( curVertDist > verticalDistanceTraveled )
+				break
+
+			numSpawnEntsBetweenLastAndCurrentSelection = i - lastSafetyCheckedSpawnEnt
+		}
+
+		
+		if ( numSpawnEntsBetweenLastAndCurrentSelection == 0 )
+		{
+			float vertDistMidpointToNext = FLT_MAX
+			float nextSpawnEntVertDist   = expect float( selectedSpawnPositions[ lastSafetyCheckedSpawnEnt + 1 ].vertDist ) 
+			if ( ( lastSafetyCheckedSpawnEnt + 2 ) < numSelectedSpawnEnts )
+			{
+				float spawnEntAfterNext_vertDist = expect float( selectedSpawnPositions[ lastSafetyCheckedSpawnEnt + 2 ].vertDist )
+				vertDistMidpointToNext = ( spawnEntAfterNext_vertDist - nextSpawnEntVertDist ) * 0.5
+			}
+
+			float safetyBuffer 			= min( 128, vertDistMidpointToNext )
+			lastSafetyCheckedSpawnEnt 	+= 1
+			verticalDistanceTraveled 	= nextSpawnEntVertDist + safetyBuffer
+		}
+		else
+			lastSafetyCheckedSpawnEnt += numSpawnEntsBetweenLastAndCurrentSelection
+
+		numVertSplits++
+		generatedVertSplits.append( verticalDistanceTraveled )
+	}
+
+	if ( verbosePrint )
+		printt( "Num generated vert splits:", generatedVertSplits.len(), "num div selections:", numSpawnsToReturn )
+
+	
+	
+	int numVertSplitsToUse = minint( numSpawnsToReturn, numVertSplits )
+	generatedVertSplits.randomize()
+	
+	array<float> vertSplitsToUse = generatedVertSplits.slice( 0, numVertSplitsToUse )
+	vertSplitsToUse.sort( SortLowestFloat )
+
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	array<entity> spawnSelections
+	int idx_vertSplit
+	float horizTarget = RandomFloatRange( minWidth, maxWidth )
+	int curAxisBestSpawnEntChoice
+	float curBestChoiceDistSQ = defaultGridHalfSize * defaultGridHalfSize
+
+	for( int i = 0; i < numSelectedSpawnEnts; i++ )
+	{
+		entity spawnEnt        = expect entity( selectedSpawnPositions[ i ].ent )
+		float spawnEntVertDist = expect float( selectedSpawnPositions[ i ].vertDist )
+		float curVerticalSplit = vertSplitsToUse[ idx_vertSplit ]
+
+		if ( ( spawnEntVertDist < curVerticalSplit ) && ( spawnEntVertDist - curVerticalSplit ) < minDesiredSpawnSpacing )
+		{
+			float spawnEntHorizDist = expect float( selectedSpawnPositions[ i ].horizDist )
+			float vertDistDiff      = curVerticalSplit - spawnEntVertDist
+			float horizDistDiff     = fabs( horizTarget - spawnEntHorizDist )
+			float distSQ            = ( vertDistDiff * vertDistDiff ) + ( horizDistDiff * horizDistDiff )
+			if ( distSQ < curBestChoiceDistSQ )
+			{
+				
+				bool curBestChoiceIsLastAxisSelection = ( idx_vertSplit > 0 ) && ( spawnEnt == spawnSelections.top() )
+				if ( ( idx_vertSplit == 0 ) || !curBestChoiceIsLastAxisSelection )
+				{
+					curBestChoiceDistSQ       = distSQ
+					curAxisBestSpawnEntChoice = i
+				}
+			}
+
+			int nextSpawnEntIdx      = i + 1
+			bool moreSpawnEntsRemain = nextSpawnEntIdx < numSelectedSpawnEnts
+			entity selectedEnt = expect entity( selectedSpawnPositions[ curAxisBestSpawnEntChoice ].ent )
+
+			if ( moreSpawnEntsRemain )
+			{
+				float nextVertDist                = expect float( selectedSpawnPositions[ nextSpawnEntIdx ].vertDist )
+				bool moreSpawnEntsInVerticalSplit = nextVertDist <= curVerticalSplit
+				if ( !moreSpawnEntsInVerticalSplit )
+				{
+					if ( !spawnSelections.contains( selectedEnt ) )
+					{
+						spawnSelections.append( selectedEnt )
+						idx_vertSplit++
+					}
+
+					
+					bool shouldChooseNewHorizTarget = idx_vertSplit < numVertSplitsToUse
+					if ( shouldChooseNewHorizTarget )
+					{
+						curBestChoiceDistSQ = defaultGridHalfSize * defaultGridHalfSize
+
+						array<float> newHorizTargetChoices
+						float selectedSpawnHorizPosition = expect float( selectedSpawnPositions[ curAxisBestSpawnEntChoice ].horizDist )
+						float horizTargetLowEndStart     = selectedSpawnHorizPosition - minDesiredHorizSpacing
+
+						if ( horizTargetLowEndStart > minWidth )
+							newHorizTargetChoices.append( RandomFloatRange( minWidth, horizTargetLowEndStart ) )
+
+						float horizTargetHighEndStart = selectedSpawnHorizPosition + minDesiredHorizSpacing
+						if ( horizTargetHighEndStart < maxWidth )
+							newHorizTargetChoices.append( RandomFloatRange( maxWidth, horizTargetHighEndStart ) )
+
+						if ( newHorizTargetChoices.len() == 0 )
+						{
+							newHorizTargetChoices.append( RandomFloatRange( minWidth, maxWidth ) )
+							Warning( "Warning! Had to select random horiz axis location for next loot tick spawn. minDesiredHorizDistributionDist (" + minDesiredHorizSpacing + ") too large, or loot bin area too narrow (" + ( maxWidth - minWidth ) + ")" )
+						}
+
+						
+						horizTarget = newHorizTargetChoices.getrandom()
+
+						
+						i--
+					}
+					
+					else
+						break
+				}
+			}
+			else if ( !moreSpawnEntsRemain && !spawnSelections.contains( selectedEnt ) )
+				spawnSelections.append( selectedEnt )
+		}
+	}
+
+	return spawnSelections
+}
+
+array<vector> function GenerateRandomPointsInCircle( vector origin, float radius, int numPoints, float minSpacing = 0.0 )
+{
+	
+
+	
+	
+	
+	array<vector> points
+	int MAX_NUM_TRIES = 32
+
+	for ( int i = 0 ; i < numPoints ; i++ )
+	{
+		
+
+		array<vector> availablePoints
+		for ( int t = 0 ; t < MAX_NUM_TRIES ; t++ )
+			availablePoints.append( GetRandomPointInCircle( origin, radius ) )
+
+		vector p = GetRandomPointFromListWithMinDistFromPoints( availablePoints, points, origin, radius, minSpacing )
+		points.append( p )
+	}
+
+	
+
+	return points
+}
+
+
+array<vector> function GetRandomPointsFromList( array<vector> availablePoints, vector origin, float radius, int numPoints, float minSpacing = 0.0 )
+{
+	
+
+	Assert( availablePoints.len() >= numPoints, "Called GetRandomPointsInCircleFromList but there aren't enough points provided in the circle to return " + numPoints + " points" )
+
+	
+	
+	
+
+	array<vector> points
+
+	for ( int i = 0 ; i < numPoints ; i++ )
+	{
+		
+		vector p = GetRandomPointFromListWithMinDistFromPoints( availablePoints, points, origin, radius, minSpacing )
+		points.append( p )
+		availablePoints.fastremovebyvalue( p )
+	}
+
+	
+
+	return points
+}
+
+
+vector function GetRandomPointFromListWithMinDistFromPoints( array<vector> availablePoints, array<vector> existingPoints, vector circleOrigin, float circleRadius, float minSpacing = 0.0 )
+{
+	availablePoints.randomize()
+
+	vector bestFailPoint
+	float bestFailDist = 0.0
+	int MAX_NUM_TRIES  = 32
+
+	int tryCount = 0
+	foreach ( vector point in availablePoints )
+	{
+		if ( !IsPointWithinDistanceFromAnotherPoint( point, existingPoints, minSpacing ) )
+		{
+			
+			
+			return point
+		}
+
+		float distScore = GetClosestDistanceFromPointToPoints( point, existingPoints )
+		if ( distScore > bestFailDist )
+		{
+			bestFailPoint = point
+			bestFailDist = distScore
+		}
+
+		tryCount++
+		if ( tryCount >= MAX_NUM_TRIES )
+			break
+	}
+
+	
+	
+	return bestFailPoint
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+vector function GetRandomPointInCircle( vector origin, float radius )
+{
+	
+	float t  = 2 * PI * RandomFloat( 1 )
+	float r  = sqrt( RandomFloat( 1.0 ) ) * radius
+	float x  = r * cos( t )
+	float y  = r * sin( t )
+	vector p = <x, y, 0> + origin
+	return p
+}
+
+#if INTELLIJ_OUTLINE_SECTION_MARKER
+void function _____________Circles___________________________(){}
+#endif
+
+array<vector> function GetEvenlySpacedPointsAroundCircle( vector origin, vector angles, int numPoints, float radius, bool debug = false )
+{
+	float degrees                = 360.0 / float( numPoints )
+	array<vector> pointsOnCircle = []
+	for ( int i = 0; i < numPoints; i++ )
+	{
+		vector angles2 = AnglesCompose( angles, <0, degrees * i, 0> )
+		vector forward = AnglesToForward( angles2 )
+		pointsOnCircle.append( origin + (forward * radius) )
+	}
+#if DEV
+		if( debug )
+		{
+			const float DEBUGDRAWTIME = 240
+			DebugDrawSphere( origin, 45, COLOR_PURPLE, true, DEBUGDRAWTIME )
+			foreach( pt in pointsOnCircle )
+			{
+				vector debugAngles = VectorToAngles( pt - origin )
+				DebugDrawLine( origin, pt, COLOR_GREEN, true, DEBUGDRAWTIME )
+				DebugDrawAxis( origin, debugAngles, DEBUGDRAWTIME, 64, COLOR_BLUE )
+			}
+		}
+
+#endif
+
+	return pointsOnCircle
+}
+
+#if DEV
+bool function test_CalcPointToCircleTangents()
+{
+	vector position = < -9, -2, 0 >
+	vector circleCenter = < -2, -1, 0 >
+	float radius = 5.0
+	array< vector > tangents = CalcPointToCircleTangents( position, circleCenter, radius )
+
+	if ( fabs( tangents[0].x - ( -5 ) ) > FLT_EPSILON )
+		return false
+	if ( fabs( tangents[0].y - ( -5 ) ) > FLT_EPSILON )
+		return false
+	if ( fabs( tangents[1].x - ( -6 ) ) > FLT_EPSILON )
+		return false
+	if ( fabs( tangents[1].y - ( 2 ) ) > FLT_EPSILON )
+		return false
+
+	return true
+}
+#endif
+
+
+
+
+
+array< vector > function CalcPointToCircleTangents( vector point, vector circleCenter, float radius )
+{
+	vector tangent1
+	vector tangent2
+
+	float dx = point.x - circleCenter.x
+	float dy = point.y - circleCenter.y
+	float dxr = -dy
+	float dyr = dx
+	float d = sqrt(dx * dx + dy * dy)
+	if (d > radius + FLT_EPSILON)
+	{
+		float rho = radius / d
+		float ad = rho * rho
+		float bd  = rho * sqrt( 1 - ad )
+		tangent1.x = ad * dx + bd * dxr
+		tangent1.y = ad * dy + bd * dyr
+		tangent2.x = ad * dx - bd * dxr
+		tangent2.y = ad * dy - bd * dyr
+
+		tangent1 += circleCenter
+		tangent2 += circleCenter
+	}
+
+	return [tangent1, tangent2]
+}
+
+
+#if INTELLIJ_OUTLINE_SECTION_MARKER
+void function _____________LocalAndWorldSpace___________________________(){}
+#endif
+vector function LocalPosToWorldPos( vector pos, entity ent )
+{
+	return ent.GetOrigin() + RotateVector( pos, ent.GetAngles() )
+}
+vector function LocalPosToWorldPos_NoEnt( vector pos, vector parentPos, vector parentAng )
+{
+	return parentPos + RotateVector( pos, parentAng )
+}
+vector function WorldPosToLocalPos( vector pos, entity ent )
+{
+	return RotateVector( pos - ent.GetOrigin(), AnglesInverse( ent.GetAngles() ) )
+}
+vector function WorldPosToLocalPos_NoEnt( vector pos, vector parentPos, vector parentAng )
+{
+	return RotateVector( pos - parentPos, AnglesInverse( parentAng ) )
+}
+vector function LocalDirToWorldDir( vector dir, entity ent )
+{
+	return RotateVector( dir, ent.GetAngles() )
+}
+vector function LocalDirToWorldDir_NoEnt( vector dir, vector parentAng )
+{
+	return RotateVector( dir, parentAng )
+}
+vector function WorldDirToLocalDir( vector dir, entity ent )
+{
+	return RotateVector( dir, AnglesInverse( ent.GetAngles() ) )
+}
+vector function WorldDirToLocalDir_NoEnt( vector dir, vector parentAng )
+{
+	return RotateVector( dir, AnglesInverse( parentAng ) )
+}
+vector function LocalAngToWorldAng( vector ang, entity ent )
+{
+	return AnglesCompose( ent.GetAngles(), ang )
+}
+vector function LocalAngToWorldAng_NoEnt( vector ang, vector parentAng )
+{
+	return AnglesCompose( parentAng, ang )
+}
+vector function WorldAngToLocalAng( vector ang, entity ent )
+{
+	return AnglesCompose( AnglesInverse( ent.GetAngles() ), ang )
+}
+vector function WorldAngToLocalAng_NoEnt( vector ang, vector parentAng )
+{
+	return AnglesCompose( AnglesInverse( parentAng ), ang )
+}
+
+vector function RoundVectorInLocalSpace( vector vec, float interval, vector parentPos, vector parentAng )
+{
+	vec = WorldPosToLocalPos_NoEnt( vec, parentPos, parentAng )
+	vec = RotateVector( vec, AnglesInverse( parentAng ) )
+	vec = <floor( vec.x / interval ) * interval, floor( vec.y / interval ) * interval, floor( vec.z / interval ) * interval >
+	vec = RotateVector( vec, parentAng )
+	vec = LocalPosToWorldPos_NoEnt( vec, parentPos, parentAng )
+	return vec
+}
+
+bool function VectorInWorldBounds( vector vec )
+{
+	return fabs( vec.x ) <= MAX_WORLD_COORD_BUFFER && fabs( vec.y ) <= MAX_WORLD_COORD_BUFFER && fabs( vec.z ) <= MAX_WORLD_COORD_BUFFER
+}
+
+vector function SkyboxToWorldPosition( vector positionInSkybox, float skyboxScale = 0.001, bool clamp = true )
+{
+	Assert( skyboxScale > 0 )
+	Assert( "skyboxCamOrigin" in level )
+
+	vector position  = <0, 0, 0>
+	vector skyOrigin = expect vector( level.skyboxCamOrigin )
+
+
+		position = (positionInSkybox - skyOrigin) * (1.0 / skyboxScale)
+
+		if ( clamp )
+		{
+			entity localViewPlayer = GetLocalViewPlayer()
+			Assert( localViewPlayer )
+			vector localViewPlayerOrg = localViewPlayer.GetOrigin()
+
+			position = localViewPlayerOrg + ClampVectorToCube( localViewPlayerOrg, position - localViewPlayerOrg, <0, 0, 0>, 32000.0 )
+		}
+
+
+
+
+
+
+
+	return position
+}
+
+#if INTELLIJ_OUTLINE_SECTION_MARKER
+void function _____________WaitUntil___________________________(){}
+#endif
+void function WaitUntilWithinDistance( entity player, entity titan, float dist )
+{
+	float distSqr = dist * dist
+	for ( ; ; )
+	{
+		if ( !IsAlive( titan ) )
+			return
+
+		if ( IsAlive( player ) )
+		{
+			if ( DistanceSqr( player.GetOrigin(), titan.GetOrigin() ) <= distSqr )
+				return
+		}
+		wait 0.1
+	}
+}
+
+void function WaitUntilBeyondDistance( entity player, entity titan, float dist )
+{
+	float distSqr = dist * dist
+	for ( ; ; )
+	{
+		if ( !IsAlive( titan ) )
+			return
+
+		if ( IsAlive( player ) )
+		{
+			if ( DistanceSqr( player.GetOrigin(), titan.GetOrigin() ) > distSqr )
+				return
+		}
+		wait 0.1
+	}
+}
+
+void function WaitTillLookingAt( entity player, entity ent, bool doTrace, float degrees, float minDist = 0, float timeOut = 0, entity trigger = null, string failsafeFlag = "" )
+{
+	EndSignal( ent, "OnDestroy" )
+	EndSignal( player, "OnDeath" )
+
+	
+	
+
+	if ( failsafeFlag != "" )
+		EndSignal( level, failsafeFlag )
+
+	float minDistSqr = minDist * minDist
+	Assert( minDistSqr >= 0 )
+	float timeoutTime = Time() + timeOut
+
+	while ( true )
+	{
+		if ( timeOut > 0 && Time() > timeoutTime )
+			break
+
+		if ( failsafeFlag != "" && Flag( failsafeFlag ) )
+			break
+
+		
+		if ( minDistSqr > 0 && DistanceSqr( player.GetOrigin(), ent.GetOrigin() ) > minDistSqr )
+		{
+			WaitFrame()
+			continue
+		}
+
+		
+		if ( (trigger != null) && (!trigger.IsTouching( player )) )
+		{
+			WaitFrame()
+			continue
+		}
+
+		if ( PlayerCanSee( player, ent, doTrace, degrees ) )
+			break
+
+		WaitFrame()
+	}
+}
+
+#if INTELLIJ_OUTLINE_SECTION_MARKER
+void function _____________Clamp___________________________(){}
+#endif
+vector function ClampToWorldspace( vector origin )
+{
+	
+	origin.x = clamp( origin.x, -MAX_WORLD_COORD, MAX_WORLD_COORD )
+	origin.y = clamp( origin.y, -MAX_WORLD_COORD, MAX_WORLD_COORD )
+	origin.z = clamp( origin.z, -MAX_WORLD_COORD, MAX_WORLD_COORD )
+
+	return origin
+}
+
+vector function ClampVectorToCube( vector vecStart, vector vec, vector cubeOrigin, float cubeSize )
+{
+	float halfCubeSize = cubeSize * 0.5
+	vector cubeMins    = <-halfCubeSize, -halfCubeSize, -halfCubeSize>
+	vector cubeMaxs    = <halfCubeSize, halfCubeSize, halfCubeSize>
+
+	return ClampVectorToBox( vecStart, vec, cubeOrigin, cubeMins, cubeMaxs )
+}
+
+
+vector function ClampVectorToBox( vector vecStart, vector vec, vector cubeOrigin, vector cubeMins, vector cubeMaxs )
+{
+	float smallestClampScale = 1.0
+	vector vecEnd            = vecStart + vec
+
+	smallestClampScale = ClampVectorComponentToCubeMax( cubeOrigin.x, cubeMaxs.x, vecStart.x, vecEnd.x, vec.x, smallestClampScale )
+	smallestClampScale = ClampVectorComponentToCubeMax( cubeOrigin.y, cubeMaxs.y, vecStart.y, vecEnd.y, vec.y, smallestClampScale )
+	smallestClampScale = ClampVectorComponentToCubeMax( cubeOrigin.z, cubeMaxs.z, vecStart.z, vecEnd.z, vec.z, smallestClampScale )
+	smallestClampScale = ClampVectorComponentToCubeMin( cubeOrigin.x, cubeMins.x, vecStart.x, vecEnd.x, vec.x, smallestClampScale )
+	smallestClampScale = ClampVectorComponentToCubeMin( cubeOrigin.y, cubeMins.y, vecStart.y, vecEnd.y, vec.y, smallestClampScale )
+	smallestClampScale = ClampVectorComponentToCubeMin( cubeOrigin.z, cubeMins.z, vecStart.z, vecEnd.z, vec.z, smallestClampScale )
+
+	return vec * smallestClampScale
+}
+
+float function ClampVectorComponentToCubeMax( float cubeOrigin, float cubeSize, float vecStart, float vecEnd, float vec, float smallestClampScale )
+{
+	float max       = cubeOrigin + cubeSize
+	float clearance = fabs( vecStart - max )
+	if ( vecEnd > max )
+	{
+		float scale = fabs( clearance / ((vecStart + vec) - vecStart) )
+		if ( scale > 0 && scale < smallestClampScale )
+			return scale
+	}
+
+	return smallestClampScale
+}
+
+
+float function ClampVectorComponentToCubeMin( float cubeOrigin, float cubeSize, float vecStart, float vecEnd, float vec, float smallestClampScale )
+{
+	float min       = cubeOrigin - cubeSize
+	float clearance = fabs( min - vecStart )
+	if ( vecEnd < min )
+	{
+		float scale = fabs( clearance / ((vecStart + vec) - vecStart) )
+		if ( scale > 0 && scale < smallestClampScale )
+			return scale
+	}
+
+	return smallestClampScale
+}
+
+LineSegment function ClampLineSegmentToWorldBounds2D( vector p0, vector p1, float padding = 0 )
+{
+	float max               = MAX_WORLD_COORD - 2 - padding
+	LineSegment lineSegment = ClampLineSegmentToRectangle2D( p0, p1, <-max, -max, 0>, <max, max, 0> )
+
+	lineSegment.start = < lineSegment.start.x, lineSegment.start.y, p0.z >
+	lineSegment.end = < lineSegment.end.x, lineSegment.end.y, p1.z >
+
+	return lineSegment
+}
+
+
+LineSegment function ClampLineSegmentToRectangle2D( vector p0, vector p1, vector rectP0, vector rectP1 )
+{
+	vector bottomLeft 	= rectP0
+	vector topLeft  	= <rectP0.x, rectP1.y, 0>
+	vector bottomRight  = <rectP1.x, rectP0.y, 0>
+	vector topRight 	= rectP1
+
+	PassByReferenceVector newP0
+	PassByReferenceVector newP1
+	newP0.value = <p0.x, p0.y, 0>
+	newP1.value = <p1.x, p1.y, 0>
+
+	
+	if ( p0.x < topLeft.x )
+		Get2DLineIntersection( p0, p1, topLeft, bottomLeft, newP0 )
+	if ( p1.x < topLeft.x )
+		Get2DLineIntersection( p0, p1, topLeft, bottomLeft, newP1 )
+
+	
+	if ( p0.x > bottomRight.x )
+		Get2DLineIntersection( p0, p1, topRight, bottomRight, newP0 )
+	if ( p1.x > bottomRight.x )
+		Get2DLineIntersection( p0, p1, topRight, bottomRight, newP1 )
+
+	
+	if ( p0.y > topLeft.y )
+		Get2DLineIntersection( p0, p1, topLeft, topRight, newP0 )
+	if ( p1.y > topLeft.y )
+		Get2DLineIntersection( p0, p1, topLeft, topRight, newP1 )
+
+	
+	if ( p0.y < bottomRight.y )
+		Get2DLineIntersection( p0, p1, bottomLeft, bottomRight, newP0 )
+	if ( p1.y < bottomRight.y )
+		Get2DLineIntersection( p0, p1, bottomLeft, bottomRight, newP1 )
+
+	LineSegment lineSegment
+	lineSegment.start = newP0.value
+	lineSegment.end = newP1.value
+
+	return lineSegment
+}
+
+float function ClampAngle( float ang )
+{
+	while ( ang > 360 )
+		ang -= 360
+	while ( ang < 0 )
+		ang += 360
+	return ang
+}
+
+float function ClampAngle180( float ang )
+{
+	while ( ang > 180 )
+		ang -= 180
+	while ( ang < -180 )
+		ang += 180
+	return ang
+}
+
+vector function ClampAngles( vector ang )
+{
+	vector clampedAngles = < ClampAngle( ang.x ), ClampAngle( ang.y ), ClampAngle( ang.z ) >
+	return clampedAngles
+}
+
+vector function ClampAnglesToAngles( vector angles, vector anglesMin, vector anglesMax )
+{
+	vector clampedAngles = <0, 0, 0>
+
+	clampedAngles.x = GraphCapped( angles.x, anglesMin.x, anglesMax.x, anglesMin.x, anglesMax.x )
+	clampedAngles.y = GraphCapped( angles.y, anglesMin.y, anglesMax.y, anglesMin.y, anglesMax.y )
+	clampedAngles.z = GraphCapped( angles.z, anglesMin.z, anglesMax.z, anglesMin.z, anglesMax.z )
+
+	return clampedAngles
+}
+
+#if INTELLIJ_OUTLINE_SECTION_MARKER
+void function _____________Bezier___________________________(){}
+#endif
+array<vector> function GetAllPointsOnBezier( array<vector> points, int numSegments, float debugDrawTime = 0.0 )
+{
+	Assert( points.len() >= 2 )
+	Assert( numSegments > 0 )
+	array<vector> curvePoints = []
+
+	
+	if ( debugDrawTime != 0 )
+	{
+		for ( int i = 0; i < points.len() - 1; i++ )
+			DebugDrawLine( points[i], points[i + 1], <150, 150, 150>, true, debugDrawTime )
+	}
+
+	for ( int i = 0; i < numSegments; i++ )
+	{
+		float t = float( i ) / (float( numSegments ) - 1.0)
+		curvePoints.append( GetSinglePointOnBezier( points, t ) )
+	}
+
+	if ( debugDrawTime != 0 )
+	{
+		for ( int i = 0; i < curvePoints.len() - 1; i++ )
+			DebugDrawLine( curvePoints[i], curvePoints[i + 1], <200, 0, 0>, true, debugDrawTime )
+	}
+
+	return curvePoints
+}
+
+
+vector function GetSinglePointOnBezier( array<vector> points, float t )
+{
+	
+
+	array<vector> lastPoints = clone points
+	for ( ; ; )
+	{
+		array<vector> newPoints = []
+		for ( int i = 0; i < lastPoints.len() - 1; i++ )
+			newPoints.append( lastPoints[i] + (lastPoints[i + 1] - lastPoints[i]) * t )
+
+		if ( newPoints.len() == 1 )
+			return newPoints[0]
+
+		lastPoints = newPoints
+	}
+
+	unreachable
+}
+
+
+array< vector > function GetBezierOfPath( array< vector > path, int numSegments, float debugTime = 0.0 )
+{
+	Assert( path.len() >= 3 )
+	int numNodesInPath = path.len()
+	int idx_cur        = 0
+	array< vector > nodeTangents
+	array< vector > bezierPath
+
+	for ( ; idx_cur < numNodesInPath - 1; idx_cur++ )
+	{
+		int idx_next   = (idx_cur + 1) % numNodesInPath
+		int idx_next_2 = (idx_cur + 2) % numNodesInPath
+
+		
+		if ( idx_next < (numNodesInPath - 1) )
+		{
+			nodeTangents.append( GetBezierNodeTangent( path[ idx_next ], path[ idx_cur ], path[ idx_next_2 ] ) )
+
+			
+			if ( idx_cur == 0 )
+			{
+				
+				vector firstTangent = path[ idx_next ] + nodeTangents[ 0 ]
+				
+				firstTangent = path[ idx_cur ] - firstTangent
+				nodeTangents.insert( 0, firstTangent )
+			}
+		}
+		
+		else
+		{
+			
+			vector lastTangent = path[ idx_cur ] - nodeTangents[ idx_cur ]
+			
+			lastTangent = lastTangent - path[ idx_next ]
+			nodeTangents.append( lastTangent )
+		}
+
+		array< vector > bezierPoints = GetAllPointsOnBezier( [ path[ idx_cur ], path[ idx_cur ] - nodeTangents[ idx_cur ], path[ idx_next ] + nodeTangents[ idx_next ], path[ idx_next ] ], numSegments, debugTime )
+
+		
+		vector endPoint = bezierPoints.pop()
+		bezierPath.extend( bezierPoints )
+
+		
+		if ( idx_cur >= (numNodesInPath - 2) )
+			bezierPath.append( endPoint )
+	}
+
+	return bezierPath
+}
+
+
+array< vector > function GetBezierOfPathLoop( array< vector > path, int numSegments )
+{
+	int numNodesInPath = path.len()
+	int idx_cur        = 0
+	array< vector > nodeTangents
+	array< vector > bezierPath
+
+	nodeTangents.append( GetBezierNodeTangent( path[ 0 ], path[ (numNodesInPath - 1) ], path[ 1 ] ) )
+	for ( ; idx_cur < numNodesInPath; idx_cur++ )
+	{
+		int idx_next   = (idx_cur + 1) % numNodesInPath
+		int idx_next_2 = (idx_cur + 2) % numNodesInPath
+
+		
+		if ( idx_cur < (numNodesInPath - 1) )
+		{
+			nodeTangents.append( GetBezierNodeTangent( path[ idx_next ], path[ idx_cur ], path[ idx_next_2 ] ) )
+		}
+
+		array< vector > bezierPoints = GetAllPointsOnBezier( [ path[ idx_cur ], path[ idx_cur ] - nodeTangents[ idx_cur ], path[ idx_next ] + nodeTangents[ idx_next ], path[ idx_next ] ], numSegments )
+		
+		bezierPoints.pop()
+		bezierPath.extend( bezierPoints )
+	}
+
+	return bezierPath
+}
+
+
+
+vector function GetBezierNodeTangent( vector nodePos, vector predecessorPos, vector successorPos )
+{
+	vector preToNode       = nodePos - predecessorPos
+	vector nodeToSuccessor = successorPos - nodePos
+
+	float preToNodeLen       = Distance( nodePos, predecessorPos )
+	float nodeToSuccessorLen = Distance( successorPos, nodePos )
+
+	vector preToNodeNorm       = preToNode / preToNodeLen
+	vector nodeToSuccessorNorm = nodeToSuccessor / nodeToSuccessorLen
+
+	float angleToBisect = acos( DotProduct( preToNodeNorm, nodeToSuccessorNorm ) )
+	angleToBisect = 180 - RadToDeg( angleToBisect )
+	angleToBisect *= 0.5
+	vector crossUp = Normalize( CrossProduct( preToNodeNorm, nodeToSuccessorNorm ) )
+	if ( Length( crossUp ) == 0 )
+	{
+		printt( "!!! Cross up length is 0 !!!" )
+		return < 0, 0, 0 >
+	}
+	vector bisectVector = VectorRotateAxis( preToNodeNorm, crossUp, angleToBisect )
+
+	vector tangentDir = Normalize( CrossProduct( bisectVector, crossUp ) )
+	float tangentDist = min( preToNodeLen, nodeToSuccessorLen ) * 0.5
+
+	
+	return tangentDir * tangentDist
+}
+
+#if INTELLIJ_OUTLINE_SECTION_MARKER
+void function _____________PositionsFromList___________________________(){}
+#endif
+
+array<vector> function VectorArrayWithin( array<vector> Array, vector origin, float maxDist )
+{
+	float maxDistSqr = maxDist * maxDist
+
+	array<vector> resultArray = []
+	foreach ( vector p in Array )
+	{
+		float distSqr = DistanceSqr( origin, p )
+		if ( distSqr <= maxDistSqr )
+			resultArray.append( p )
+	}
+	return resultArray
+}
+
+
+array<vector> function ArrayFarthestVector( array<vector> vecArray, vector origin )
+{
+	array<ArrayDistanceEntry> allResults = ArrayDistanceResultsVector( vecArray, origin )
+
+	allResults.sort( DistanceCompareFarthest )
+
+	array<vector> returnVecs
+
+	foreach ( result in allResults )
+		returnVecs.append( result.origin )
+
+	return returnVecs
+}
+
+
+array<entity> function ArrayClosest( array<entity> entArray, vector origin )
+{
+	array<ArrayDistanceEntry> allResults = ArrayDistanceResults( entArray, origin )
+
+	allResults.sort( DistanceCompareClosest )
+
+	array<entity> returnEntities
+
+	foreach ( result in allResults )
+		returnEntities.append( result.ent )
+
+	return returnEntities
+}
+
+
+array<entity> function ArrayFarthest( array<entity> entArray, vector origin )
+{
+	array<ArrayDistanceEntry> allResults = ArrayDistanceResults( entArray, origin )
+
+	allResults.sort( DistanceCompareFarthest )
+
+	array<entity> returnEntities
+
+	foreach ( result in allResults )
+		returnEntities.append( result.ent )
+
+	
+	return returnEntities
+}
+
+
+array<vector> function ArrayClosestVector( array<vector> vecArray, vector origin )
+{
+	array<ArrayDistanceEntry> allResults = ArrayDistanceResultsVector( vecArray, origin )
+
+	allResults.sort( DistanceCompareClosest )
+
+	array<vector> returnVecs
+
+	foreach ( result in allResults )
+		returnVecs.append( result.origin )
+
+	return returnVecs
+}
+
+
+array<Point> function ArrayClosestPoint( array<Point> pointArray, vector origin )
+{
+	array<ArrayDistanceEntry> allResults = ArrayDistanceResultsPoint( pointArray, origin )
+
+	allResults.sort( DistanceCompareClosest )
+
+	array<Point> returnPoints
+
+	foreach ( result in allResults )
+	{
+		Point point
+		point.origin = result.origin
+		point.angles = result.angles
+		returnPoints.append( point )
+	}
+
+	return returnPoints
+}
+
+array<entity> function ArrayClosestWithinDistance( array<entity> entArray, vector origin, float maxDistance )
+{
+	array<ArrayDistanceEntry> allResults = ArrayDistanceResults( entArray, origin )
+	float maxDistSq                      = maxDistance * maxDistance
+
+	allResults.sort( DistanceCompareClosest )
+
+	array<entity> returnEntities
+
+	foreach ( result in allResults )
+	{
+		if ( result.distanceSqr > maxDistSq )
+			break
+
+		returnEntities.append( result.ent )
+	}
+
+	return returnEntities
+}
+
+array<vector> function ArrayClosestVectorWithinDistance( array<vector> vecArray, vector origin, float maxDistance )
+{
+	array<ArrayDistanceEntry> allResults = ArrayDistanceResultsVector( vecArray, origin )
+	float maxDistSq                      = maxDistance * maxDistance
+
+	allResults.sort( DistanceCompareClosest )
+
+	array<vector> returnVecs
+
+	foreach ( result in allResults )
+	{
+		if ( result.distanceSqr > maxDistSq )
+			break
+
+		returnVecs.append( result.origin )
+	}
+
+	return returnVecs
+}
+
+array<Point> function ArrayClosestPointWithinDistance( array<Point> pointArray, vector origin, float maxDistance )
+{
+	array<ArrayDistanceEntry> allResults = ArrayDistanceResultsPoint( pointArray, origin )
+	float maxDistSq                      = maxDistance * maxDistance
+
+	allResults.sort( DistanceCompareClosest )
+
+	array<Point> returnPoints
+
+	foreach ( result in allResults )
+	{
+		if ( result.distanceSqr > maxDistSq )
+			break
+		Point point
+		point.origin = result.origin
+		point.angles = result.angles
+		returnPoints.append( point )
+	}
+
+	return returnPoints
+}
+
+
+array<entity> function ArrayClosest2D( array<entity> entArray, vector origin )
+{
+	array<ArrayDistanceEntry> allResults = ArrayDistance2DResults( entArray, origin )
+
+	allResults.sort( DistanceCompareClosest )
+
+	array<entity> returnEntities
+
+	foreach ( result in allResults )
+		returnEntities.append( result.ent )
+
+	return returnEntities
+}
+
+
+array<vector> function ArrayClosest2DVector( array<vector> entArray, vector origin )
+{
+	array<ArrayDistanceEntry> allResults = ArrayDistance2DResultsVector( entArray, origin )
+
+	allResults.sort( DistanceCompareClosest )
+
+	array<vector> returnVecs
+
+	foreach ( result in allResults )
+		returnVecs.append( result.origin )
+
+	return returnVecs
+}
+
+
+array<entity> function ArrayClosest2DWithinDistance( array<entity> entArray, vector origin, float maxDistance )
+{
+	array<ArrayDistanceEntry> allResults = ArrayDistance2DResults( entArray, origin )
+	float maxDistSq                      = maxDistance * maxDistance
+
+	allResults.sort( DistanceCompareClosest )
+
+	array<entity> returnEntities
+
+	foreach ( result in allResults )
+	{
+		if ( result.distanceSqr > maxDistSq )
+			break
+
+		returnEntities.append( result.ent )
+	}
+
+	return returnEntities
+}
+
+
+array<vector> function ArrayClosest2DVectorWithinDistance( array<vector> entArray, vector origin, float maxDistance )
+{
+	array<ArrayDistanceEntry> allResults = ArrayDistance2DResultsVector( entArray, origin )
+	float maxDistSq                      = maxDistance * maxDistance
+
+	allResults.sort( DistanceCompareClosest )
+
+	array<vector> returnVecs
+
+	foreach ( result in allResults )
+	{
+		if ( result.distanceSqr > maxDistSq )
+			break
+
+		returnVecs.append( result.origin )
+	}
+
+	return returnVecs
+}
+
+bool function ArrayEntityWithinDistance( array<entity> entArray, vector origin, float distance )
+{
+	float distSq = distance * distance
+	foreach ( entity ent in entArray )
+	{
+		if ( DistanceSqr( ent.GetOrigin(), origin ) <= distSq )
+			return true
+	}
+	return false
+}
+
+int function DistanceCompareClosest( ArrayDistanceEntry a, ArrayDistanceEntry b )
+{
+	if ( a.distanceSqr > b.distanceSqr )
+		return 1
+	else if ( a.distanceSqr < b.distanceSqr )
+		return -1
+
+	return 0
+}
+
+int function DistanceCompareFarthest( ArrayDistanceEntry a, ArrayDistanceEntry b )
+{
+	if ( a.distanceSqr < b.distanceSqr )
+		return 1
+	else if ( a.distanceSqr > b.distanceSqr )
+		return -1
+
+	return 0
+}
+
+array<ArrayDistanceEntry> function ArrayDistanceResults( array<entity> entArray, vector origin )
+{
+	array<ArrayDistanceEntry> allResults
+
+	foreach ( ent in entArray )
+	{
+		ArrayDistanceEntry entry
+
+		vector entOrigin = ent.GetOrigin()
+		if ( IsSpawner( ent ) )
+		{
+			var spawnKVs = ent.GetSpawnEntityKeyValues()
+			entOrigin = StringToVector( string( spawnKVs.origin ) )
+		}
+		entry.distanceSqr = DistanceSqr( entOrigin, origin )
+		entry.ent = ent
+		entry.origin = entOrigin
+
+		allResults.append( entry )
+	}
+
+	return allResults
+}
+
+array<ArrayDistanceEntry> function ArrayDistanceResultsVector( array<vector> vecArray, vector origin )
+{
+	array<ArrayDistanceEntry> allResults
+
+	foreach ( vec in vecArray )
+	{
+		ArrayDistanceEntry entry
+
+		entry.distanceSqr = DistanceSqr( vec, origin )
+		entry.ent = null
+		entry.origin = vec
+
+		allResults.append( entry )
+	}
+
+	return allResults
+}
+
+
+entity function GetClosest( array<entity> entArray, vector origin, float maxdist = -1.0 )
+{
+	entity bestEnt
+	float bestDistSqr = (999999.0 * 999999.0)
+
+	for ( int i = 0; i < entArray.len(); i++ )
+	{
+		entity ent       = entArray[ i ]
+		float newDistSqr = DistanceSqr( ent.GetOrigin(), origin )
+
+		if ( newDistSqr < bestDistSqr )
+		{
+			bestEnt = ent
+			bestDistSqr = newDistSqr
+		}
+	}
+
+	if ( maxdist >= 0.0 )
+	{
+		if ( bestDistSqr > maxdist * maxdist )
+			return null
+	}
+
+	return bestEnt
+}
+
+
+int function GetClosestVectorIndex( array<vector> vecArray, vector origin, bool is2D = false, float maxdist = -1.0 )
+{
+	int bestIndex     = -1
+	float bestDistSqr = (999999.0 * 999999.0)
+
+	for ( int idx = 0; idx < vecArray.len(); idx++ )
+	{
+		float distSqr = is2D ? Distance2DSqr( vecArray[idx], origin ) : DistanceSqr( vecArray[idx], origin )
+		if ( distSqr < bestDistSqr )
+		{
+			bestIndex = idx
+			bestDistSqr = distSqr
+		}
+	}
+
+	if ( maxdist >= 0.0 )
+	{
+		if ( bestDistSqr > maxdist * maxdist )
+			return -1
+	}
+
+	return bestIndex
+}
+
+
+entity function GetClosest2D( array<entity> entArray, vector origin, float maxdist = -1.0 )
+{
+	Assert( entArray.len() > 0, "Empty array!" )
+
+	entity bestEnt    = entArray[ 0 ]
+	float bestDistSqr = DistanceSqr( bestEnt.GetOrigin(), origin )
+
+	for ( int i = 1; i < entArray.len(); i++ )
+	{
+		entity newEnt    = entArray[ i ]
+		float newDistSqr = Length2DSqr( newEnt.GetOrigin() - origin )
+
+		if ( newDistSqr < bestDistSqr )
+		{
+			bestEnt = newEnt
+			bestDistSqr = newDistSqr
+		}
+	}
+
+	if ( maxdist >= 0.0 )
+	{
+		if ( bestDistSqr > maxdist * maxdist )
+			return null
+	}
+
+	return bestEnt
+}
+
+
+entity function GetClosestSpawner( array<entity> spawnerArray, vector origin, float maxdist = -1.0 )
+{
+	Assert( spawnerArray.len() > 0 )
+
+	entity bestEnt = spawnerArray[ 0 ]
+
+	var spawnerKVs       = bestEnt.GetSpawnEntityKeyValues()
+	vector spawnerOrigin = StringToVector( string( spawnerKVs.origin ) )
+	float bestDistSqr    = DistanceSqr( spawnerOrigin, origin )
+
+	for ( int i = 1; i < spawnerArray.len(); i++ )
+	{
+		entity newEnt = spawnerArray[ i ]
+
+		spawnerKVs = newEnt.GetSpawnEntityKeyValues()
+		spawnerOrigin = StringToVector( string( spawnerKVs.origin ) )
+
+		float newDistSqr = LengthSqr( spawnerOrigin - origin )
+
+		if ( newDistSqr < bestDistSqr )
+		{
+			bestEnt = newEnt
+			bestDistSqr = newDistSqr
+		}
+	}
+
+	if ( maxdist >= 0.0 )
+	{
+		if ( bestDistSqr > maxdist * maxdist )
+			return null
+	}
+
+	return bestEnt
+}
+
+
+entity function GetFarthestSpawner( array<entity> spawnerArray, vector origin, float maxdist = -1.0 )
+{
+	Assert( spawnerArray.len() > 0 )
+
+	entity bestEnt = spawnerArray[ 0 ]
+
+	var spawnerKVs       = bestEnt.GetSpawnEntityKeyValues()
+	vector spawnerOrigin = StringToVector( string( spawnerKVs.origin ) )
+	float bestDistSqr    = DistanceSqr( spawnerOrigin, origin )
+
+	for ( int i = 1; i < spawnerArray.len(); i++ )
+	{
+		entity newEnt = spawnerArray[ i ]
+
+		spawnerKVs = newEnt.GetSpawnEntityKeyValues()
+		spawnerOrigin = StringToVector( string( spawnerKVs.origin ) )
+
+		float newDistSqr = LengthSqr( spawnerOrigin - origin )
+
+		if ( newDistSqr > bestDistSqr )
+		{
+			bestEnt = newEnt
+			bestDistSqr = newDistSqr
+		}
+	}
+
+	if ( maxdist >= 0.0 )
+	{
+		if ( bestDistSqr < maxdist * maxdist )
+			return null
+	}
+
+	return bestEnt
+}
+
+entity function GetFarthest( array<entity> entArray, vector origin )
+{
+	Assert( entArray.len() > 0, "Empty array!" )
+
+	entity bestEnt    = entArray[0]
+	float bestDistSqr = DistanceSqr( bestEnt.GetOrigin(), origin )
+
+	for ( int i = 1; i < entArray.len(); i++ )
+	{
+		entity newEnt    = entArray[ i ]
+		float newDistSqr = DistanceSqr( newEnt.GetOrigin(), origin )
+
+		if ( newDistSqr > bestDistSqr )
+		{
+			bestEnt = newEnt
+			bestDistSqr = newDistSqr
+		}
+	}
+
+	return bestEnt
+}
+
+
+vector function GetFarthestVector( array<vector> vecArray, vector origin )
+{
+	Assert( vecArray.len() > 0, "Empty array!" )
+
+	vector bestPos    = vecArray[0]
+	float bestDistSqr = DistanceSqr( bestPos, origin )
+
+	for ( int i = 1; i < vecArray.len(); i++ )
+	{
+		vector newVec    = vecArray[ i ]
+		float newDistSqr = DistanceSqr( newVec, origin )
+
+		if ( newDistSqr > bestDistSqr )
+		{
+			bestPos = newVec
+			bestDistSqr = newDistSqr
+		}
+	}
+
+	return bestPos
+}
+
+int function GetClosestIndex( array<entity> Array, vector origin )
+{
+	Assert( Array.len() > 0 )
+
+	int index     = 0
+	float distSqr = LengthSqr( Array[ index ].GetOrigin() - origin )
+
+	entity newEnt
+	float newDistSqr
+	for ( int i = 1; i < Array.len(); i++ )
+	{
+		newEnt = Array[ i ]
+		newDistSqr = LengthSqr( newEnt.GetOrigin() - origin )
+
+		if ( newDistSqr < distSqr )
+		{
+			index = i
+			distSqr = newDistSqr
+		}
+	}
+
+	return index
+}
+
+
+bool function PointWithinDistOfAnyPoint( Point point, array<Point> pointArray, float dist )
+{
+	float distSq = dist * dist
+	foreach ( Point pt in pointArray )
+	{
+		if ( DistanceSqr( pt.origin, point.origin ) < distSq )
+			return true
+	}
+
+	return false
+}
+
+bool function PointIsEqualToAPointInList( Point testPt, array< Point > pointArray )
+{
+	foreach( Point pt in pointArray )
+	{
+		if(( testPt.origin == pt.origin ) && ( testPt.angles == pt.angles ))
+			return true
+	}
+
+	return false
+}
+
+array<ArrayDistanceEntry> function ArrayDistanceResultsPoint( array<Point> pointArray, vector origin )
+{
+	array<ArrayDistanceEntry> allResults
+
+	foreach ( point in pointArray )
+	{
+		ArrayDistanceEntry entry
+
+		entry.distanceSqr = DistanceSqr( point.origin, origin )
+		entry.ent = null
+		entry.origin = point.origin
+		entry.angles = point.angles
+
+		allResults.append( entry )
+	}
+
+	return allResults
+}
+
+array<ArrayDistanceEntry> function ArrayDistance2DResults( array<entity> entArray, vector origin )
+{
+	array<ArrayDistanceEntry> allResults
+
+	foreach ( ent in entArray )
+	{
+		ArrayDistanceEntry entry
+
+		vector entOrigin = ent.GetOrigin()
+
+		entry.distanceSqr = Distance2DSqr( entOrigin, origin )
+		entry.ent = ent
+		entry.origin = entOrigin
+
+		allResults.append( entry )
+	}
+
+	return allResults
+}
+
+array<ArrayDistanceEntry> function ArrayDistance2DResultsVector( array<vector> vecArray, vector origin )
+{
+	array<ArrayDistanceEntry> allResults
+
+	foreach ( vec in vecArray )
+	{
+		ArrayDistanceEntry entry
+
+		entry.distanceSqr = Distance2DSqr( vec, origin )
+		entry.ent = null
+		entry.origin = vec
+
+		allResults.append( entry )
+	}
+
+	return allResults
+}
+
+
+array<vector> function EntitiesToOrigins( array<entity> ents )
+{
+	array<vector> origins
+
+	foreach ( ent in ents )
+	{
+		origins.append( ent.GetOrigin() )
+	}
+
+	return origins
+}
+
+
+vector function GetCenter( array<entity> ents )
+{
+	vector total
+
+	foreach ( ent in ents )
+	{
+		total += ent.GetOrigin()
+	}
+
+	total.x /= float( ents.len() )
+	total.y /= float( ents.len() )
+	total.z /= float( ents.len() )
+
+	return total
+}
+
+vector function GetAverageOriginOfEnts( array<entity> ents )
+{
+	Assert( ents.len() > 0, "Can not get average origin of empty ent array." )
+	vector averageOrigin = <0, 0, 0>
+	int originCount      = 0
+
+	foreach ( entity ent in ents )
+	{
+		averageOrigin += ent.GetOrigin()
+		originCount++
+	}
+
+	return (averageOrigin / originCount)
+}
+
+vector function GetMedianOriginOfEntities( array<entity> ents )
+{
+	array<vector> origins = EntitiesToOrigins( ents )
+	return GetMedianOrigin( origins )
+}
+
+
+vector function GetMedianOrigin( array<vector> origins )
+{
+	if ( origins.len() == 1 )
+		return origins[0]
+
+	vector median
+
+	int middleIndex1
+	int middleIndex2
+
+	if ( IsEven( origins.len() ) )
+	{
+		middleIndex1 = origins.len() / 2
+		middleIndex2 = middleIndex1
+	}
+	else
+	{
+		middleIndex1 = int( floor( origins.len() / 2.0 ) )
+		middleIndex2 = middleIndex1 + 1
+	}
+
+	origins.sort( CompareVecX )
+	median.x = (origins[ middleIndex1 ].x + origins[ middleIndex2 ].x) / 2.0
+
+	origins.sort( CompareVecY )
+	median.y = (origins[ middleIndex1 ].y + origins[ middleIndex2 ].y) / 2.0
+
+	origins.sort( CompareVecZ )
+	median.z = (origins[ middleIndex1 ].z + origins[ middleIndex2 ].z) / 2.0
+
+	return median
+}
+
+
+int function CompareVecX( vector a, vector b )
+{
+	if ( a.x > b.x )
+		return 1
+
+	return -1
+}
+
+
+int function CompareVecY( vector a, vector b )
+{
+	if ( a.y > b.y )
+		return 1
+
+	return -1
+}
+
+
+int function CompareVecZ( vector a, vector b )
+{
+	if ( a.z > b.z )
+		return 1
+
+	return -1
+}
+
+#if INTELLIJ_OUTLINE_SECTION_MARKER
+void function _____________Points___________________________(){}
+#endif
+Point function CreatePoint( vector origin, vector angles )
+{
+	Point data
+	data.origin = origin
+	data.angles = angles
+	return data
+}
+
+Point function GetPointFromEnt( entity ent )
+{
+	Point result
+
+	result.origin = ent.GetOrigin()
+	result.angles = ent.GetAngles()
+
+	return result
+}
+
+vector function GetPointOnPathForFraction( array<entity> nodes, float frac )
+{
+	Assert( frac >= 0 )
+
+	float totalPathDist = GetPathDistance( nodes )
+	float distRemaining = totalPathDist * frac
+	vector point        = nodes[0].GetOrigin()
+
+	for ( int i = 0; i < nodes.len() - 1; i++ )
+	{
+		float segmentDist = Distance( nodes[i].GetOrigin(), nodes[i + 1].GetOrigin() )
+		if ( segmentDist <= distRemaining )
+		{
+			
+			distRemaining -= segmentDist
+			point = nodes[i + 1].GetOrigin()
+		}
+		else
+		{
+			
+			vector dirVec = Normalize( nodes[i + 1].GetOrigin() - nodes[i].GetOrigin() )
+			point = nodes[i].GetOrigin() + (dirVec * distRemaining)
+			distRemaining = 0
+		}
+		if ( distRemaining <= 0 )
+			break
+	}
+
+	if ( frac > 1.0 && distRemaining > 0 )
+	{
+		vector dirVec = Normalize( nodes[nodes.len() - 1].GetOrigin() - nodes[nodes.len() - 2].GetOrigin() )
+		point = nodes[nodes.len() - 1].GetOrigin() + (dirVec * distRemaining)
+	}
+
+	return point
+}
+
+
+vector function GetPointOnPathForFraction_VectorArray( array<vector> nodes, float frac )
+{
+	Assert( frac >= 0 )
+
+	float totalPathDist = GetPathDistance_VectorArray( nodes, false )
+	float distRemaining = totalPathDist * frac
+	vector point        = nodes[0]
+
+	for ( int i = 0; i < nodes.len() - 1; i++ )
+	{
+		float segmentDist = Distance( nodes[i], nodes[i + 1] )
+		if ( segmentDist <= distRemaining )
+		{
+			
+			distRemaining -= segmentDist
+			point = nodes[i + 1]
+		}
+		else
+		{
+			
+			vector dirVec = Normalize( nodes[i + 1] - nodes[i] )
+			point = nodes[i] + (dirVec * distRemaining)
+			distRemaining = 0
+		}
+		if ( distRemaining <= 0 )
+			break
+	}
+
+	if ( frac > 1.0 && distRemaining > 0 )
+	{
+		vector dirVec = Normalize( nodes[nodes.len() - 1] - nodes[nodes.len() - 2] )
+		point = nodes[nodes.len() - 1] + (dirVec * distRemaining)
+	}
+
+	return point
+}
+
+
+
+array<vector> function GetPointsOnLoopingPathForFraction_Simple( array<vector> path, array<float> fracArray )
+{
+	float totalDist  = GetPathDistance_VectorArray( path, true )
+	int numPathNodes = path.len()
+	return GetPointsOnLoopingPathForFraction( path, totalDist, numPathNodes, fracArray )
+}
+
+
+array<vector> function GetPointsOnLoopingPathForFraction( array<vector> path, float totalPathDist, int numPathNodes, array<float> fracArray )
+{
+	Assert( fracArray.len() > 0 )
+	Assert( fracArray.top() <= 1.0, "Fracs must be within [0, 1]!" )
+
+	array<vector> results
+	float totalDistTraveled = 0
+	float curDistRemaining  = totalPathDist * fracArray[ 0 ]
+	int numRemainingFracs   = fracArray.len()
+	int frac_idx            = 0
+
+	for ( int path_idx = 0; path_idx < numPathNodes; path_idx++ )
+	{
+		Assert( fracArray[ frac_idx ] >= 0 )
+
+		
+		int path_idx_next      = (path_idx + 1) % numPathNodes
+		bool fracFoundThisLoop = false
+
+		float segmentDist = Distance( path[path_idx], path[path_idx_next] )
+		if ( segmentDist <= curDistRemaining )
+		{
+			if ( segmentDist == curDistRemaining )
+			{
+				fracFoundThisLoop = true
+				results.append( path[path_idx_next] )
+			}
+			else
+			{
+				
+				curDistRemaining -= segmentDist
+				totalDistTraveled += segmentDist
+			}
+		}
+		else
+		{
+			
+			vector dirVec = Normalize( path[path_idx_next] - path[path_idx] )
+			results.append( path[path_idx] + (dirVec * curDistRemaining) )
+
+			fracFoundThisLoop = true
+		}
+
+		if ( fracFoundThisLoop )
+		{
+			numRemainingFracs--
+			frac_idx++
+			path_idx--
+			if ( numRemainingFracs <= 0 )
+				break
+			else
+				curDistRemaining = (totalPathDist * fracArray[ frac_idx ]) - totalDistTraveled
+		}
+	}
+
+	return results
+}
+
+
+array<vector> function GetPointsOnCircle( vector origin, vector angles, float radius, int segments = 16 )
+{
+	vector start
+	vector end
+
+	float degrees                = 360.0 / float( segments )
+	array<vector> pointsOnCircle = []
+
+	for ( int i = 0; i < segments; i++ )
+	{
+		vector angles2 = AnglesCompose( angles, <0, degrees * i, 0> )
+		vector forward = AnglesToForward( angles2 )
+		end = origin + (forward * radius)
+
+		pointsOnCircle.append( end )
+
+		start = end
+	}
+
+	return pointsOnCircle
+}
+
+
+array< vector > function GetPointsAlongLine( vector start, vector end, int count, bool debugDraw = false )
+{
+	Assert( count > 0, FUNC_NAME() + "(): ERROR! Count Must Be > 0." )
+
+	array< vector > result = []
+
+	vector rowStartEdge = start
+	vector rowEndEdge = end
+	float rowWidth = Distance( rowStartEdge, rowEndEdge )
+	vector nextItemDir = ( rowEndEdge - rowStartEdge )/rowWidth
+
+
+	vector itemPos
+
+	if( count < 2 )
+	{
+		itemPos = ( rowEndEdge + rowStartEdge ) / 2
+		result.append( itemPos )
+	}
+	else 
+	{
+		float distBtwnItems = rowWidth / ( count - 1 )
+		itemPos = rowStartEdge
+		vector nextItemDelta = nextItemDir * distBtwnItems
+
+		for( int i = 0; i < count; i++ )
+		{
+			result.append( itemPos )
+			itemPos = itemPos + nextItemDelta
+		}
+	}
+
+#if DEV
+		if( debugDraw )
+		{
+			for( int i = 0; i < result.len(); i++ )
+			{
+				DebugDrawText( result[ i ], string( i ), false, 60 )
+			}
+		}
+#endif
+
+	return result
+}
+
+
+#if INTELLIJ_OUTLINE_SECTION_MARKER
+void function _____________MiscSpecific___________________________(){}
+#endif
+
+vector function GetSmoothedPoint( vector v0, vector v1, vector v2, vector v3, float mu, float tension, float bias = 0.0 ) 
+{
+	float x = HermiteInterpolate( v0.x, v1.x, v2.x, v3.x, mu, tension, bias )
+	float y = HermiteInterpolate( v0.y, v1.y, v2.y, v3.y, mu, tension, bias )
+	float z = HermiteInterpolate( v0.z, v1.z, v2.z, v3.z, mu, tension, bias )
+	return <x,y,z>
+}
+
+float function HermiteInterpolate( float y0, float y1, float y2, float y3, float mu, float tension, float bias ) 
+{
+	
+	
+
+	Assert( mu >= 0.0 && mu <= 1.0 )
+
+	float m0
+	float m1
+	float mu2
+	float mu3
+	float a0
+	float a1
+	float a2
+	float a3
+
+	mu2 = mu * mu
+	mu3 = mu2 * mu
+	m0  = (y1-y0)*(1+bias)*(1-tension)/2.0
+	m0 += (y2-y1)*(1-bias)*(1-tension)/2.0
+	m1  = (y2-y1)*(1+bias)*(1-tension)/2.0
+	m1 += (y3-y2)*(1-bias)*(1-tension)/2.0
+	a0 =  2.0*mu3 - 3.0*mu2 + 1.0
+	a1 =    mu3 - 2.0*mu2 + mu
+	a2 =    mu3 -   mu2
+	a3 = -2.0*mu3 + 3.0*mu2
+
+	return(a0*y1+a1*m0+a2*m1+a3*y2)
+}
+
+vector function OriginToGround( vector origin, int traceMask = TRACE_MASK_NPCWORLDSTATIC, entity tracingEnt = null )
+{
+	vector endOrigin         = <origin.x, origin.y, -MAX_WORLD_COORD_BUFFER >
+	array <entity> ignoreArray = []
+	if ( IsValid( tracingEnt ) )
+		ignoreArray.append( tracingEnt )
+
+	TraceResults traceResult = TraceLine( origin, endOrigin, ignoreArray, traceMask, TRACE_COLLISION_GROUP_NONE, tracingEnt )
+
+	return traceResult.endPos
+}
+
+vector function GetGroundPositionOpenToSky( vector origin, bool excludePlayers = true )
+{
+	vector newOrigin = < origin.x, origin.y, file.skyZPos >
+
+	vector endOrigin = < origin.x, origin.y, -MAX_WORLD_COORD_BUFFER >
+
+	array< entity > excludeEnts
+	if ( excludePlayers )
+	{
+		excludeEnts.extend( GetPlayerArray_Alive() )
+	}
+
+	
+	TraceResults traceResult = TraceLine( newOrigin, endOrigin, excludeEnts, TRACE_MASK_SHOT, TRACE_COLLISION_GROUP_NONE )
+
+	newOrigin = traceResult.endPos
+
+	int maxTries = 4
+	int tries = 0
+
+	for ( tries = 0; tries < maxTries; tries++ ) 
+	{
+		if( traceResult.hitSky )
+		{
+			if( traceResult.endPos.z < 0 ) 
+			{
+				
+				newOrigin = < origin.x, origin.y, origin.z >
+				break
+			}
+			else
+			{
+				
+				file.skyZPos = traceResult.endPos.z - 1000
+
+				vector startPos = < origin.x, origin.y, file.skyZPos >
+
+				traceResult = TraceLine( startPos, endOrigin, excludeEnts, TRACE_MASK_SHOT, TRACE_COLLISION_GROUP_NONE )
+
+				newOrigin = traceResult.endPos
+			}
+		}
+		else
+		{
+			break
+		}
+	}
+
+	
+	Assert( tries < maxTries, "Traces for Pings from map are hitting the skybox too many times, the skybox may be too large or misconfigured." )
+
+	return newOrigin
+}
+
+WallToTopResults function TraceFromWallToTop(vector wallPos, vector wallNormal, array<entity> ignoreEnts, float checkBackDistance, float checkUpDistance, int traceMask, int collisionGroup, float DEBUG_DRAW_TIME = 0.0, bool doHullTrace = false, vector hullBoundsMin = ZERO_VECTOR, vector hullBoundsMax = ZERO_VECTOR )
+{
+	WallToTopResults results
+	results.found = false
+
+	vector flattenedNormal = FlattenNormalizeVec( wallNormal )
+	
+	
+	vector traceUpStart = wallPos + (wallNormal * checkBackDistance )
+	vector traceUpEnd = traceUpStart + (UP_VECTOR * checkUpDistance )
+
+	TraceResults trUp
+	if ( doHullTrace )
+		trUp = TraceHull( traceUpStart, traceUpEnd, hullBoundsMin, hullBoundsMax, ignoreEnts, traceMask, collisionGroup)
+	else
+		trUp = TraceLine( traceUpStart, traceUpEnd, ignoreEnts, traceMask , collisionGroup )
+
+#if DEV
+		if ( DEBUG_DRAW_TIME > 0.0 )
+		{
+			DebugDrawArrow( traceUpStart, trUp.endPos, 10, COLOR_ORANGE, false, DEBUG_DRAW_TIME )
+			DebugDrawText( trUp.endPos, string(checkUpDistance), false, DEBUG_DRAW_TIME )
+			if( doHullTrace )
+			{
+				if ( !trUp.startSolid )
+					DebugDrawBox( traceUpStart, hullBoundsMin, hullBoundsMax, COLOR_ORANGE, 1, DEBUG_DRAW_TIME )
+
+				vector endColor = trUp.fraction < 1.0 ?  COLOR_LIGHT_RED : COLOR_LIGHT_GREEN
+				DebugDrawBox( trUp.endPos, hullBoundsMin, hullBoundsMax, endColor, 1, DEBUG_DRAW_TIME )
+			}
+		}
+#endif
+
+	
+	{
+
+		
+		
+		vector traceBackStart = trUp.endPos
+		vector traceBackEnd = traceBackStart - (flattenedNormal * checkBackDistance * 2 )
+		TraceResults trBack
+		if ( doHullTrace )
+			trBack = TraceHull( traceBackStart, traceBackEnd, hullBoundsMin, hullBoundsMax, ignoreEnts, traceMask, collisionGroup)
+		else
+			trBack = TraceLine( traceBackStart, traceBackEnd, ignoreEnts, traceMask , collisionGroup )
+
+#if DEV
+
+			if ( DEBUG_DRAW_TIME > 0.0 )
+			{
+				DebugDrawArrow( traceBackStart, trBack.endPos, 10, COLOR_YELLOW, false, DEBUG_DRAW_TIME )
+				if( doHullTrace )
+				{
+					if ( !trUp.startSolid )
+						DebugDrawBox( traceBackStart, hullBoundsMin, hullBoundsMax, COLOR_ORANGE, 1, DEBUG_DRAW_TIME )
+
+					vector endColor = trBack.fraction < 1.0 ?  COLOR_LIGHT_RED : COLOR_LIGHT_GREEN
+					DebugDrawBox( trBack.endPos, hullBoundsMin, hullBoundsMax, endColor, 1, DEBUG_DRAW_TIME )
+				}
+			}
+#endif
+
+		if ( trBack.fraction > 0.5 )
+		{
+			vector ledgeStartTrace = trBack.endPos + (flattenedNormal * checkBackDistance*(1.5-trBack.fraction)/2.0)
+			vector ledgeEndTrace = ledgeStartTrace - (UP_VECTOR * checkUpDistance * 1.25)
+
+			TraceResults trDownToLedge
+			if ( doHullTrace )
+				trDownToLedge = TraceHull( ledgeStartTrace, ledgeEndTrace, hullBoundsMin, hullBoundsMax, ignoreEnts, traceMask, collisionGroup)
+			else
+				trDownToLedge = TraceLine( ledgeStartTrace, ledgeEndTrace, ignoreEnts, traceMask , collisionGroup )
+
+			if ( trDownToLedge.fraction >= 1.0 )
+			{
+				ledgeStartTrace = trBack.endPos
+				ledgeEndTrace = ledgeStartTrace - (UP_VECTOR * checkUpDistance * 1.25)
+				if ( doHullTrace )
+					trDownToLedge = TraceHull( ledgeStartTrace, ledgeEndTrace, hullBoundsMin, hullBoundsMax, ignoreEnts, traceMask, collisionGroup)
+				else
+					trDownToLedge = TraceLine( ledgeStartTrace, ledgeEndTrace, ignoreEnts, traceMask , collisionGroup )
+			}
+
+
+#if DEV
+
+				if ( DEBUG_DRAW_TIME > 0.0 )
+				{
+					DebugDrawArrow( ledgeStartTrace, trDownToLedge.endPos, 10, COLOR_LIGHT_GREEN, false, DEBUG_DRAW_TIME )
+					if( doHullTrace )
+					{
+						if ( !trUp.startSolid )
+							DebugDrawBox( ledgeStartTrace, hullBoundsMin, hullBoundsMax, COLOR_ORANGE, 1, DEBUG_DRAW_TIME )
+
+						vector endColor = trDownToLedge.fraction < 1.0 ?  COLOR_LIGHT_RED : COLOR_LIGHT_GREEN
+						DebugDrawBox( trDownToLedge.endPos, hullBoundsMin, hullBoundsMax, endColor, 1, DEBUG_DRAW_TIME )
+					}
+				}
+#endif
+
+			if ( !trDownToLedge.startSolid && trDownToLedge.fraction < 1.0 && IsNormalVertical(trDownToLedge.surfaceNormal) )
+			{
+				
+#if DEV
+					if ( DEBUG_DRAW_TIME > 0.0 )
+					{
+						DebugDrawSphere( trDownToLedge.endPos, 2,COLOR_LIGHT_GREEN,false, DEBUG_DRAW_TIME )
+						DebugDrawText( trDownToLedge.endPos + <0,0,10>,"CornerPos Found", false, DEBUG_DRAW_TIME )
+						
+					}
+#endif
+
+				results.found = true
+				results.pos = trDownToLedge.endPos - (FLT_EPSILON*UP_VECTOR)
+				results.normal = trDownToLedge.surfaceNormal
+				results.hitEnt = trDownToLedge.hitEnt
+			}
+		}
+	}
+
+	return results
+}
+
+#if INTELLIJ_OUTLINE_SECTION_MARKER
+void function _____________Unsorted___________________________(){}
+#endif
+
+
+float function Location_Score_ByDistance( vector loc, array< vector > testLocs, float testRadius, float scoreMod_Outer, float scoreMod_Inner, bool test2D = true, bool scaleScore = false )
+{
+	float score = 0
+	if( scaleScore )
+	{
+		foreach( testLoc in testLocs )
+		{
+			float testDist = test2D ? Distance2D( loc, testLoc ) : Distance( loc, testLoc )
+			float testScore
+
+			if( testDist > testRadius )
+			{
+				testScore = testDist / testRadius * scoreMod_Outer
+			}
+			else
+			{
+				testScore = testRadius / testDist * scoreMod_Inner
+			}
+
+			score += testScore
+		}
+	}
+	else
+	{
+		float testRadiusSqr = pow( testRadius, 2 )
+		foreach( testLoc in testLocs )
+		{
+			float testDistSqr = test2D ? Distance2DSqr( loc, testLoc ) : DistanceSqr( loc, testLoc )
+
+			if( testDistSqr > testRadiusSqr )
+			{
+				score += scoreMod_Outer
+			}
+			else
+			{
+				score += scoreMod_Inner
+			}
+		}
+	}
+
+	return score
+}
+
+vector function GetRelativeDelta( vector origin, entity ref, string attachment = "" )
+{
+	vector pos
+	vector right
+	vector forward
+	vector up
+
+	if ( attachment != "" )
+	{
+		int attachID = ref.LookupAttachment( attachment )
+		pos = ref.GetAttachmentOrigin( attachID )
+		vector angles = ref.GetAttachmentAngles( attachID )
+		right = AnglesToRight( angles )
+		forward = AnglesToForward( angles )
+		up = AnglesToUp( angles )
+	}
+	else
+	{
+		pos = ref.GetOrigin()
+		right = ref.GetRightVector()
+		forward = ref.GetForwardVector()
+		up = ref.GetUpVector()
+	}
+
+	vector x = GetClosestPointOnLineSegment( pos + right * -16384, pos + right * 16384, origin )
+	vector y = GetClosestPointOnLineSegment( pos + forward * -16384, pos + forward * 16384, origin )
+	vector z = GetClosestPointOnLineSegment( pos + up * -16384, pos + up * 16384, origin )
+
+	float distx = Distance( pos, x )
+	float disty = Distance( pos, y )
+	float distz = Distance( pos, z )
+
+	if ( DotProduct( x - pos, right ) < 0 )
+		distx *= -1
+	if ( DotProduct( y - pos, forward ) < 0 )
+		disty *= -1
+	if ( DotProduct( z - pos, up ) < 0 )
+		distz *= -1
+
+	return <distx, disty, distz>
+}
+
+
+bool function IsEntityFacing( entity observer, entity target, int viewAngle = 75, bool exactLook = true, bool do2D = false )
+{
+	if( !IsValid( observer ) )
+		return false
+
+	if( !IsValid( target ) )
+		return false
+
+	return( IsFacingPoint( observer, target.GetOrigin(), viewAngle, exactLook, do2D ) )
+}
+
+bool function IsFacingPoint( entity observer, vector targetLoc, int viewAngle = 75, bool exactLook = true, bool do2D = false )
+{
+	vector dir = targetLoc - observer.GetOrigin()
+	dir = Normalize( dir )
+
+	vector observerCheckVector
+
+	
+	
+	if( exactLook )
+	{
+		observerCheckVector = observer.GetPlayerOrNPCViewVector()
+	}
+	else
+	{
+		observerCheckVector = observer.GetForwardVector()
+	}
+
+	if( do2D )
+	{
+		observerCheckVector.z = 0
+		dir.z = 0
+	}
+
+	float dot = DotProduct( observerCheckVector, dir )
+	float yaw = DotToAngle( dot )
+
+	return (yaw < viewAngle)
+}
+
+
+float function YawDifference( float yaw1, float yaw2 )
+{
+	Assert( yaw1 >= 0 )
+	Assert( yaw1 <= 360 )
+	Assert( yaw2 >= 0 )
+	Assert( yaw2 <= 360 )
+
+	float diff = fabs( yaw1 - yaw2 )
+
+	if ( diff > 180 )
+		return 360 - diff
+	else
+		return diff
+
+	unreachable
+}
+
+vector function ShortestRotation( vector ang, vector targetAng )
+{
+	return <AngleDiff( ang.x, targetAng.x ), AngleDiff( ang.y, targetAng.y ), AngleDiff( ang.z, targetAng.z )>
+}
+
+vector function AnglesOnSurface( vector surfaceNormal, vector playerVelocity )
+{
+	playerVelocity.Norm()
+	vector right   = CrossProduct( playerVelocity, surfaceNormal )
+	vector forward = CrossProduct( surfaceNormal, right )
+	vector angles  = VectorToAngles( forward )
+	angles.z = atan2( right.z, surfaceNormal.z ) * RAD_TO_DEG
+
+	return angles
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

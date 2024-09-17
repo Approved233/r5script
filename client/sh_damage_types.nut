@@ -173,6 +173,9 @@ global enum eDamageSourceId
 
 
 
+
+
+
 	
 	melee_pilot_emptyhanded
 
@@ -237,8 +240,8 @@ global enum eDamageSourceId
 	mp_weapon_fuse_heirloom_primary
 
 
-
-
+	melee_hook_sword
+	mp_weapon_hook_sword_primary
 
 
 
@@ -319,6 +322,7 @@ global enum eDamageSourceId
 
 
 	mp_ability_conduit_shield_mines
+
 
 
 
@@ -573,13 +577,14 @@ global enum eDamageSourceId
 
 
 
+
+
+
+
 	mp_ability_void_ring
 	mp_weapon_3030
 	mp_weapon_dragon_lmg
 	mp_weapon_dragon_lmg_thermite
-
-
-
 
 
 
@@ -627,11 +632,13 @@ global enum eDamageSourceId
 
 
 
-
-
-
-
 	golden_horse_green
+
+
+
+
+
+
 
 
 
@@ -694,6 +701,31 @@ mp_weapon_octane_knife_rt01_primary
 
 	melee_bangalore_heirloom_rt01
 	mp_weapon_bangalore_heirloom_rt01_primary
+
+
+
+
+
+
+
+
+
+
+
+
+
+	score_elimination
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -796,11 +828,9 @@ void function DamageTypes_Init()
 		[ eDamageSourceId.nessie_kiss ] = "#BABY_NESSIE_TITLE",
 		[ eDamageSourceId.super_spectre_melee ] = "#DEATH_SUPER_SPECTRE",
 		[ eDamageSourceId.grunt_melee ] = "#DEATH_GRUNT_MELEE",
-
-			[ eDamageSourceId.spectre_melee ] = "#DEATH_SPECTRE_MELEE",
-			[ eDamageSourceId.spectre_ranged_hemlock ] = "#DEATH_SPECTRE_RANGED_HEMLOCK",
-			[ eDamageSourceId.npc_weapon_thermite_grenade ] = "#DEATH_SPECTRE_THERMITE",
-
+		[ eDamageSourceId.spectre_melee ] = "#DEATH_SPECTRE_MELEE",
+		[ eDamageSourceId.spectre_ranged_hemlock ] = "#DEATH_SPECTRE_RANGED_HEMLOCK",
+		[ eDamageSourceId.npc_weapon_thermite_grenade ] = "#DEATH_SPECTRE_THERMITE",
 		[ eDamageSourceId.eviscerate ] = "#DEATH_EVISCERATE",
 		[ eDamageSourceId.wall_smash ] = "#DEATH_WALL_SMASH",
 		[ eDamageSourceId.ai_turret ] = "#DEATH_TURRET",
@@ -947,8 +977,8 @@ void function DamageTypes_Init()
 		[ eDamageSourceId.mp_weapon_octane_knife_rt01_primary ] = "#DEATH_MELEE_OCTANE_KNIFE_RT01",
 
 
-
-
+			[ eDamageSourceId.melee_hook_sword] = "#DEATH_MELEE_HOOK_SWORD",
+			[ eDamageSourceId.mp_weapon_hook_sword_primary] = "#DEATH_MELEE_HOOK_SWORD",
 
 
 
@@ -1023,12 +1053,46 @@ void function DamageTypes_Init()
 
 
 
+
+
+
+
 		[ eDamageSourceId.melee_artifact_dagger] = "#DEATH_MELEE_ARTIFACT_DAGGER",
 		[ eDamageSourceId.mp_weapon_artifact_dagger_primary] = "#DEATH_MELEE_ARTIFACT_DAGGER",
 
 
 			[ eDamageSourceId.melee_bangalore_heirloom_rt01 ] = "#DEATH_MELEE_BANGALORE_HEIRLOOM_RT01",
 			[ eDamageSourceId.mp_weapon_bangalore_heirloom_rt01_primary ] = "#DEATH_MELEE_BANGALORE_HEIRLOOM_RT01",
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+			[ eDamageSourceId.score_elimination ] = "#GAMEMODE_OBJECTIVE_BR_ELIMINATION_DEATH_SCREEN",
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

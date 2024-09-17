@@ -55,7 +55,7 @@ void function RTKCupInfoPoints_OnInitialize( rtk_behavior self )
 			summaryBreakdownModel.textArgs = ( statPointData.statLimit ).tostring()
 		}
 
-		summaryBreakdownModel.leftText		= Localize( statPointData.statDescription )
+		summaryBreakdownModel.leftText		= Localize( statPointData.statLocLong )
 		summaryBreakdownModel.rightText		= Localize( "#CUPS_TOTAL_CUP_POINTS_VALUE", statPointData.pointsRate )
 
 		apexCupsModel.additionalList.append( summaryBreakdownModel )

@@ -787,15 +787,6 @@ bool function PhaseShift( entity ent, float warmupTime, float duration, int shif
 
 
 
-
-
-
-
-
-
-
-
-
 void function ClientPhaseShiftWarmupThread( entity player, float warmupTime, int shiftStyle = PHASETYPE_DEFAULT )
 {
 	player.EndSignal( "OnDeath" )
@@ -955,7 +946,7 @@ void function ClientPhaseShiftFirstPersonFXThread()
 
 				
 				{
-					entity viewModelEntity  = localViewPlayer.GetViewModelEntity()
+					entity viewModelEntity  = localViewPlayer.GetViewModelEntity( eActiveInventorySlot.mainHand )
 					entity firstPersonProxy = localViewPlayer.GetPredictedFirstPersonProxy()
 
 					if ( IsValid( viewModelEntity ) )

@@ -64,7 +64,6 @@ const string	SQUAD_SURVIVOR_SOUND_ANNOUNCE				= "Survival_Freespawn_TokenCountdo
 
 
 
-
 struct sObserverTarget
 {
 	entity targetObj
@@ -122,9 +121,19 @@ const string HIGHLIGHT_ENEMYTEAMMATES = "bloodhound_sonar"
 
 
 
+
+
+
+
+
 global function FreeRespawns_CanLocalPlayerRespawn
 global function FreeRespawns_CanLocalPlayerRespawnOrIsRespawning
 global function FreeRespawns_SetCanLocalPlayerRespawn
+
+
+
+
+
 
 
 
@@ -322,6 +331,10 @@ struct
 
 
 
+
+
+
+
 		int squadLives = 0
 		int squadLivesViewPlayer = 0
 		int lastSquadLifeAnnouncement = -1
@@ -344,6 +357,74 @@ struct
 
 
 } file
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2795,10 +2876,6 @@ int function EndFreespawn_NoDeath_Reward_XP()
 
 
 
-
-
-
-
 bool function FreeRespawns_CanLocalPlayerRespawn()
 {
 	if ( !IsValid( GetLocalClientPlayer() ) )
@@ -2913,6 +2990,11 @@ void function FreeRespawns_SetCanLocalPlayerRespawn(bool localPlayerCanRespawnOr
 
 
 
+
+
+
+
+
 bool function Lockout_PLV_IntroTunings_Enabled()
 {
 	
@@ -2934,12 +3016,6 @@ float function Lockout_PLV_IntroTunings_DeathAdd()
 {
 	return( GetCurrentPlaylistVarFloat( "freespawns_lockout_introtunings_deathadd", 5.0 ) )
 }
-
-
-
-
-
-
 
 bool function Lockout_IntroTunings_ActiveCheck()
 {
@@ -4949,43 +5025,6 @@ bool function DropshipGroupSpawn_PLV_DropFacingRingCenter()
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 bool function Freespawns_PLV_SkipBleedout_Allow()
 
 {
@@ -5001,6 +5040,11 @@ float function Freespawns_PLV_SkipBleedout_DelayTime_Base()
 {
 	return( GetCurrentPlaylistVarFloat( "freespawns_skipbleedout_delaytime_base", 10.0 ) ) 
 }
+
+
+
+
+
 
 
 

@@ -107,9 +107,7 @@ global const table<string, asset> emptyAttachmentSlotImages = {
 		hopup_golden_horse_purple = $"rui/pilot_loadout/mods/empty_hopup_golden_horse_purple"
 		hopup_golden_horse_red = $"rui/pilot_loadout/mods/empty_hopup_golden_horse_red"
 
-
 		hopup_gunshield = $"rui/pilot_loadout/mods/empty_hopup_gunshield"
-
 }
 
 
@@ -795,10 +793,8 @@ int function EmptyCommsAction_AttachmentForParent( string equipmentSlot, string 
 						case "hopup_kinetic_loader":
 							return eCommsAction.INVENTORY_NEED_HOPUP_KINETIC_FEEDER
 
-
 						case "hopup_gunshield":
 							return eCommsAction.INVENTORY_NEED_HOPUP_GUNSHIELD
-
 					}
 				}
 

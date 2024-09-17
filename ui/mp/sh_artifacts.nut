@@ -264,6 +264,13 @@ global enum eArtifactSetIndex {
 
 
 
+
+
+
+
+
+	HOOK_SWORD = -3,
+
 	RAGOLD = -2,
 	_EMPTY = -1, 
 	CELES = 0,
@@ -311,6 +318,13 @@ global array<int> ARTIFACT_CUSTOMIZATION_SET_ORDER = [
 	eArtifactSetIndex.STECH,
 	eArtifactSetIndex.CELES,
 	eArtifactSetIndex.RAGOLD,
+
+	eArtifactSetIndex.HOOK_SWORD,
+
+
+
+
+
 
 
 
@@ -411,8 +425,12 @@ const vector FX_NULL_CAP_EMISSIVE = <0, 0, 0>
 
 
 
+
+
 const asset VFX_TEST_DEATHBOX_PARTICLE = $"P_death_box_mob_kill_fx"
 const asset VFX_TEST_IDLE = $"P_car_reac_spinners_lvl4"
+
+const asset VFX_HookSword_Deathbox = $"P_hs_deathbox_idle"
 
 const asset VFX_MOB_STARTUP_1P = $"P_art_MOB_power_start_FP"
 const asset VFX_MOB_STARTUP_3P = $"P_art_MOB_power_start_3P"

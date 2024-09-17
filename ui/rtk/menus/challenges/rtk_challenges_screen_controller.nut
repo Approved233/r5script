@@ -148,7 +148,7 @@ void function RTKChallengesPanel_OnDestroy( rtk_behavior self )
 void function RTKChallengesPanel_BuildTilesDataModel( rtk_struct challengesPanel )
 {
 	rtk_array challengeTileModel = RTKStruct_GetOrCreateScriptArrayOfStructs( challengesPanel, "buttonData", "RTKChallengeTileModel" )
-	array<ChallengeTile> activeTileData = ChallengeTile_GetActiveTiles()
+	array<ChallengeTile> activeTileData = ChallengeTile_GetActiveTilesSorted()
 	foreach ( tileData in activeTileData )
 	{
 		rtk_struct challengeTileStruct 	= RTKArray_PushNewStruct( challengeTileModel )
@@ -195,7 +195,7 @@ bool function RTKChallengesPanel_DoesTileHaveNarratives( rtk_struct challengesPa
 
 void function RTKChallengesPanel_SetUpTilesButtons( rtk_behavior self )
 {
-	array<ChallengeTile> activeTileData = ChallengeTile_GetActiveTiles()
+	array<ChallengeTile> activeTileData = ChallengeTile_GetActiveTilesSorted()
 	rtk_panel ornull tilesGrid = self.PropGetPanel( "tilesGrid" )
 	if ( tilesGrid != null )
 	{
@@ -355,7 +355,7 @@ void function JumpToChallenges( string link = "" )
 		return
 	}
 
-	array<ChallengeTile> activeTileData = ChallengeTile_GetActiveTiles()
+	array<ChallengeTile> activeTileData = ChallengeTile_GetActiveTilesSorted()
 	foreach( ChallengeTile tileData in activeTileData )
 	{
 		string tileType = GetEnumString( "eChallengeTileCategory", tileData.tileCategory ).tolower()

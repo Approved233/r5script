@@ -103,7 +103,13 @@ RTKOfferButtonModel function RTKStore_CreateOfferButtonModel( GRXScriptOffer off
 
 			foreach ( flav in offer.output.flavors )
 			{
-				if ( ItemFlavor_GetType( flav ) == eItemType.account_pack )
+				if ( ItemFlavor_GetType( flav ) == eItemType.character )
+				{
+					offerTypeName = Localize ( "#UNLOCK_BUNDLE" )
+
+					break
+				}
+				else if ( ItemFlavor_GetType( flav ) == eItemType.account_pack )
 				{
 					if ( ItemFlavor_IsThematic( flav ) )
 					{
@@ -255,22 +261,22 @@ RTKOfferButtonModel function RTKStore_CreateOfferButtonModel( GRXScriptOffer off
 			}
 		}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+		else if ( offer.attributes.location == "universal_set_shop" )
+		{
+			if ( UniversalMelee_IsBaseSkin( itemFlav ) )
+			{
+				string baseWeaponName = Localize( ItemFlavor_GetLongName( UniversalMelee_GetBaseSkin( itemFlav ) ) )
+				offerButtonModel.offerType = GRXOffer_IsFullyClaimed( offer ) ? Localize( "#BASE_UNIVERSAL_MELEE_OWNED", baseWeaponName ) : Localize( "#BASE_UNIVERSAL_MELEE_UNOWNED", baseWeaponName )
+				offerButtonModel.isBaseItem = true
+			}
+			else
+			{
+				bool locked = ( offer.prereq != null && !GRX_IsItemOwnedByPlayer( expect ItemFlavor( offer.prereq ) ) )
+				offerButtonModel.offerType = Localize( locked ? "#UNIVERSAL_MELEE_SET_ITEM_LOCKED" : "#UNIVERSAL_MELEE_SET_ITEM_UNLOCKED", UniversalMelee_GetSetItemIndex( itemFlav ) + 1, UniversalMelee_GetNumberOfSetItems( itemFlav ) )
+				offerButtonModel.locked = locked
+				offerButtonModel.isAddOn = UniversalMelee_GetSetItemIndex( itemFlav ) == 1
+			}
+		}
 
 	}
 

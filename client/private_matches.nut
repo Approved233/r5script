@@ -1239,7 +1239,7 @@ void function PrivateMatch_ClientOnSquadEliminated( entity player, int newVal )
 {
 	bool anonymousModeActive = GetConVarBool( CUSTOM_ANONYMOUS_MODE_CONVAR_NAME )
 	if ( anonymousModeActive && GameRules_IsTeamIndexValid( newVal ) )
-		Obituary_Print_Localized( Localize( "#SURVIVAL_OBITUARY_SQUADELIMINATED", PrivateMatch_GetTeamName( newVal ) ).toupper(), <255, 244, 79> )
+		Obituary_Print_Localized( Localize( "#SURVIVAL_OBITUARY_SQUADELIMINATED", PrivateMatch_GetTeamName( newVal ) ).toupper(), <255, 244, 79>, OBITUARY_COLOR_DEFAULT, OBITUARY_COLOR_DEFAULT, OBITUARY_COLOR_DEFAULT, 0, false, OBIT_FLAG_SQUAD_WIPE)
 }
 
 void function ChampionScreenSetWinningTeamName( var rui )

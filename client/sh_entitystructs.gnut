@@ -76,7 +76,8 @@ global struct EHIScriptStruct
 	
 	int rankScore = -1 
 	int rankedLadderPosition = -1 
-	table< string, int > platformLadderPosition = {}
+	int highestRankScore = -1
+	int highestLadderPosition = -2 
 
 	int rankScorePrevSeason = -1 
 	int rankedLadderPositionPrevSeason = -1 

@@ -58,6 +58,11 @@ global function EquipmentChanged
 
 global function PROTO_OpenInventoryOrSpecifiedMenu
 
+
+
+
+
+
 global function UICallback_OpenCharacterSelectMenu
 global function UICallback_QueryPlayerCanBeRespawned
 global function UICallback_DieAndChangeCharacters
@@ -250,7 +255,6 @@ const string SFX_DROPSELECTION_TEAM = "UI_Survival_DropSelection_TeamMember"
 global const vector SAFE_ZONE_COLOR = <1, 1, 1>
 global const float SAFE_ZONE_ALPHA = 0.05
 global const float OBSERVER_SURVEY_ZONE_ALPHA = 0.6
-const float DEFAULT_PODIUM_DURATION = 11.5
 
 global const string HEALTHKIT_BIND_COMMAND = "+scriptCommand2"
 global const string ORDNANCEMENU_BIND_COMMAND = "+strafe"
@@ -431,8 +435,8 @@ struct
 
 
 
-
-
+	var followerCountRui
+	bool followerRuiVisibility = false
 
 	var dynamicSquadTagRui
 
@@ -479,11 +483,11 @@ void function ClGamemodeSurvival_Init()
 	if( !ClGameState_HasRegisteredGameStateAsset() )
 	{
 
-
-
-
-
-
+		if ( Survival_GetDropshipCount() > 1 )
+		{
+			ClGameState_RegisterGameStateAsset( $"ui/airdrop_update_gamestate_info_survival.rpak" )
+		}
+		else
 
 		{
 			ClGameState_RegisterGameStateAsset( $"ui/gamestate_info_survival.rpak" )
@@ -577,9 +581,9 @@ void function ClGamemodeSurvival_Init()
 		fullmapData.friendlyOnly = false
 		fullmapData.hudMapOnly = false
 
+			fullmapData.setupFunc = SetPlayerDropshipOnMap
 
 
-			fullmapData.setupFunc = null
 
 		AddCallback_Targetname_AddToFullMapAndInWorldMapCustom( "pathCenterEnt", fullmapData )
 	}
@@ -592,7 +596,7 @@ void function ClGamemodeSurvival_Init()
 		fullmapData.friendlyOnly = false
 		fullmapData.hudMapOnly = false
 
-
+		fullmapData.setupFunc = SetPlayerDropshipOnMap
 
 		AddCallback_Targetname_AddToFullMapAndInWorldMapGeneric( SURVIVAL_PLANE_NAME, fullmapData )
 	}
@@ -633,9 +637,6 @@ void function SURVIVAL_SetGameStateAssetOverrideCallback( void functionref() fun
 
 bool function SprintFXAreEnabled()
 {
-	if ( Freelance_IsHubLevel() )
-		return false
-
 	bool enabled = GetCurrentPlaylistVarBool( "fp_sprint_fx", false )
 	return enabled
 }
@@ -838,6 +839,7 @@ void function SURVIVAL_PopulatePlayerInfoRui( entity player, var rui )
 
 		RuiTrackInt( rui, "playerExtraShield", player, RUI_TRACK_EXTRA_SHIELD_INT )
 		RuiTrackInt( rui, "playerExtraShieldTier", player, RUI_TRACK_EXTRA_SHIELD_TIER_INT )
+		RuiSetBool( rui, "showProgressMeter", UpgradeCore_ArmorTiedToUpgrades() && UpgradeCore_ShowUpgradesUnitframe() )
 
 	RuiTrackFloat( rui, "cameraViewFrac", player, RUI_TRACK_STATUS_EFFECT_SEVERITY, eStatusEffect.camera_view ) 
 	vector shieldFrac = < SURVIVAL_GetArmorShieldCapacity( 0 ) / 100.0,
@@ -1013,10 +1015,10 @@ void function RegisterMinimapPackages()
 	RegisterMinimapPackage( "prop_script", eMinimapObject_prop_script.FD_HARVESTER, MINIMAP_OBJECT_RUI, MinimapPackage_PlaneInit )
 
 
-
-
-
-
+		if ( GetMapName().find( "canyonlands" ) < 0 )
+		{
+			RegisterMinimapPackage( "prop_script", eMinimapObject_prop_script.HOVERTANK_DESTINATION, MINIMAP_OBJECT_RUI, MinimapPackage_HoverTankDestination, FULLMAP_OBJECT_RUI, MinimapPackage_HoverTankDestination )
+		}
 
 }
 
@@ -1034,15 +1036,15 @@ void function MinimapPackage_PlaneInit( entity ent, var rui )
 }
 
 
+void function MinimapPackage_HoverTankDestination( entity ent, var rui )
+{
+	if ( MINIMAP_DEBUG )
+		printt( "Adding 'rui/hud/gametype_icons/survival/sur_hovertank_minimap_destination' icon to minimap" )
 
-
-
-
-
-
-
-
-
+	RuiSetImage( rui, "defaultIcon", $"rui/hud/gametype_icons/survival/sur_hovertank_minimap_destination" )
+	RuiSetImage( rui, "clampedDefaultIcon", $"" )
+	RuiSetBool( rui, "useTeamColor", false )
+}
 
 
 void function RuiSetObjectRadius( entity ent, var rui )
@@ -1107,14 +1109,12 @@ void function Survival_MinimapPackage_ObjectiveAreaInit( entity ent, var rui )
 
 
 
-
 		case "trainIcon":
 			
 			
 			RuiSetBool( rui, "blink", false )
 			RuiSetColorAlpha( rui, "objColor", SrgbToLinear( TEAM_COLOR_PARTY / 255.0 ), 1.0 )  
 			break
-
 
 		case "risingWallIconDown":
 		case "risingWallIconMoving":
@@ -1280,85 +1280,85 @@ void function CLSurvival_RegisterNetworkFunctions()
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+void function SetPlayerDropshipOnMap( var rui, entity ent )
+{
+	if ( Survival_GetDropshipCount() == 1 )
+		return
+
+	thread WaitToUpdateDropshipIcons( rui, ent )
+}
+
+
+const float BASE_MOVE_BACK_PATH_AMOUNT = 86000 
+void function WaitToUpdateDropshipIcons( var rui, entity ent )
+{
+	entity player = GetLocalViewPlayer()
+
+	entity playerPlane
+	while( true )
+	{
+		if ( !IsValid( player ) )
+			return
+
+		if ( IsValid( player.GetPlayerNetEnt( "planeEnt" ) ) )
+		{
+			playerPlane = player.GetPlayerNetEnt( "planeEnt" )
+			break
+		}
+
+		WaitFrame()
+	}
+
+	if ( !IsValid( ent ) || !IsValid( rui ) )
+		return
+
+	if ( Survival_StopDropshipsEarly() && ent.GetTargetName() == "pathCenterEnt" ) 
+	{
+		
+		table < string, float > mapScalingForMovingBackPath = {
+			["mp_rr_district"] = BASE_MOVE_BACK_PATH_AMOUNT,
+			["mp_rr_divided_moon"] = BASE_MOVE_BACK_PATH_AMOUNT,
+			["mp_rr_tropic_island_mu2"] = 102400.0,
+			["mp_rr_canyonlands_hu"] = 81900.0,
+			["mp_rr_desertlands_hu"] = 90100.0,
+			["mp_rr_olympus_mu2"] = BASE_MOVE_BACK_PATH_AMOUNT
+		}
+
+		string mapName = GetMapName()
+		float moveBackPathAmount = mapName in mapScalingForMovingBackPath ? mapScalingForMovingBackPath[mapName] : BASE_MOVE_BACK_PATH_AMOUNT
+		RuiSetFloat3( rui, "objectPos", ent.GetOrigin() - AnglesToForward( ent.GetAngles() ) * moveBackPathAmount )
+	}
+
+	if ( PlaneEntityBelongsToPlayer( ent, playerPlane ) )
+		return
+
+	if ( ent.GetTargetName() == "pathCenterEnt" )
+	{
+		if ( !Survival_ShowEnemyPlanePathsOnMap() )
+		{
+			RuiSetFloat( rui, "pathAlpha", 0.0 )
+		}
+		else
+		{
+			RuiSetFloat3( rui, "pathColor", < 1.0, 0.1, 0.1 > ) 
+		}
+	}
+	else if ( ent.GetTargetName() == SURVIVAL_PLANE_NAME )
+	{
+		RuiSetFloat2( rui, "iconScale", < 1.0, 1.0, 0> )
+	}
+}
+
+
+bool function PlaneEntityBelongsToPlayer( entity ent, entity playerPlane )
+{
+	if ( ent.GetOrigin() == playerPlane.GetOrigin() )
+		return true
+
+	float originDot = DotProduct( Normalize( ent.GetOrigin() - playerPlane.GetOrigin() ), AnglesToForward( playerPlane.GetAngles() ) )
+	float angleDot = DotProduct( AnglesToForward( ent.GetAngles() ), AnglesToForward( playerPlane.GetAngles() ) )
+	return fabs( originDot ) > .99 && angleDot > .99
+}
 
 
 
@@ -1498,10 +1498,7 @@ void function Status_UpdatePlayerUnitFrameRui( entity player, var rui )
 
 void function OnHealthPickupTypeChanged( entity player, int kitType )
 {
-	if ( WeaponDrivenConsumablesEnabled() )
-	{
-		Consumable_OnSelectedConsumableTypeNetIntChanged( player, kitType )
-	}
+	Consumable_OnSelectedConsumableTypeNetIntChanged( player, kitType )
 
 	if ( !IsLocalViewPlayer( player ) )
 		return
@@ -1685,6 +1682,31 @@ void function UpdateDpadHud( entity player )
 		showGadgetButtonText = true
 	else
 		showGadgetButtonText = false
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	RuiSetBool( file.dpadMenuRui, "showGadgetButtonText", showGadgetButtonText )
 
 
@@ -2784,6 +2806,14 @@ void function Survival_WaitForPlayers()
 }
 
 
+
+
+
+
+
+
+
+
 void function EnableToggleMuteKeys()
 {
 	if ( !SquadMuteIntroEnabled() )
@@ -2930,10 +2960,13 @@ void function Survival_RunCharacterSelection_Thread()
 
 	Fullmap_SetVisible( false )
 
-	bool isShowingAllSquadsGladCardIntro = GetCurrentPlaylistVarBool( "survival_enable_all_squads_intro", false )
-	bool isShowingSquadGladCardIntro = GetCurrentPlaylistVarBool( "survival_enable_squad_intro", true )
-	bool isShowingChampGladCardIntro = GetCurrentPlaylistVarBool( "survival_enable_gladiator_intros", true ) && GetConVarBool( "show_champion_screen" )
-	bool isShowingMVPGladCardIntro = GetCurrentPlaylistVarBool( "survival_enable_mvp_intros", false )
+	bool isShowingAllSquadsGladCardIntro = CharSelect_GetAllSquadIntroEnabled()
+	bool isShowingSquadGladCardIntro = CharSelect_GetSquadIntroEnabled()
+	bool isShowingChampGladCardIntro = CharSelect_GetGladiatorCardsEnabled() && GetConVarBool( "show_champion_screen" )
+
+
+
+	bool isShowingMVPGladCardIntro = CharSelect_GetMVPGladCardEnabled()
 
 	
 	CloseCharacterSelectMenu()
@@ -2946,7 +2979,6 @@ void function Survival_RunCharacterSelection_Thread()
 	while( Time() < GetGlobalNetTime( "allSquadsPresentationStartTime" ) )
 		WaitFrame()
 
-
 	waitthread PanAwayCharacterSelect()
 
 	if( file.gameStartUltraWideBlackBars != null && isShowingAllSquadsGladCardIntro)
@@ -2957,25 +2989,36 @@ void function Survival_RunCharacterSelection_Thread()
 
 	
 	
-	if ( isShowingAllSquadsGladCardIntro )
+	if ( isShowingAllSquadsGladCardIntro ) 
 	{
-		waitthread DoAllSquadsCardsPresentation("squadPresentationStartTime")
+
+
+
+			float endTime = Character_GetSquadPresentationStartTime( SquadPresentationStartTimePhases.squadPresentationStartTime, GetGlobalNetTime( "allSquadsPresentationStartTime" ) )
+
+
+		waitthread DoAllSquadsCardsPresentation( endTime )
 	}
 
-	if ( isShowingSquadGladCardIntro )
+
+
+
+
+
+	if ( isShowingSquadGladCardIntro ) 
 	{
 		bool shouldSquadIntroShowTitleFrame = GetCurrentPlaylistVarBool( "survival_squad_intro_show_title_frame", false )
-		waitthread DoSquadCardsPresentation( "mvpPresentationStartTime", shouldSquadIntroShowTitleFrame )
+		waitthread DoSquadCardsPresentation( shouldSquadIntroShowTitleFrame )
 	}
 
-	if ( isShowingMVPGladCardIntro )
+	if ( isShowingMVPGladCardIntro ) 
 	{
-		waitthread DoMVPSquadCardsPresentation( "championSquadPresentationStartTime" )
+		waitthread DoMVPSquadCardsPresentation()
 	}
 
-	if ( isShowingChampGladCardIntro )
+	if ( isShowingChampGladCardIntro ) 
 	{
-		waitthread DoChampionSquadCardsPresentation( "pickLoadoutGamestateEndTime" )
+		waitthread DoChampionSquadCardsPresentation()
 	}
 
 	if( file.gameStartUltraWideBlackBars != null )
@@ -4077,6 +4120,9 @@ int function VictorySequence_GetPlayerTeamFromEHI( EHI playerEHI )
 void function ShowMatchStartSequence( int teamOrAlliance, float camera_move_duration = DEFAULT_PODIUM_DURATION, bool placementMode = false, bool isDevTest = false, bool isChampionTeam = false )
 {
 	entity player = GetLocalClientPlayer()
+	if ( !IsValid ( player ) )
+		return
+
 	EndSignal( player, "OnDestroy" )
 
 #if !DEV
@@ -4147,14 +4193,21 @@ void function ShowMatchStartSequence( int teamOrAlliance, float camera_move_dura
 	OnThreadEnd(
 		function() : ( overHeadRuis, cleanupEnts, player, isSpectator )
 		{
-			
-			if ( IsEmoteEnabledForPodiumScreen() && IsValid( player ) )
-				StopSoundOnEntity( player, "Ctrl_Duck_Pregame_Podium_Emotes" )
+			if ( IsValid( player ) )
+			{
+				
+				if ( IsEmoteEnabledForPodiumScreen() )
+					StopSoundOnEntity( player, "Ctrl_Duck_Pregame_Podium_Emotes" )
 
-			if( isSpectator )
-				player.ClearMenuCameraEntity()
+				if( isSpectator )
+					player.ClearMenuCameraEntity()
+			}
 
-			GetLightEnvironmentEntity().ScaleSunSkyIntensity( 1.0, 1.0 )
+			entity lightEnvEnt = GetLightEnvironmentEntity()
+			if ( IsValid( lightEnvEnt ) )
+			{
+				lightEnvEnt.ScaleSunSkyIntensity( 1.0, 1.0 )
+			}
 			file.isShowingIntroPodiumSequence = false
 
 			foreach ( rui in overHeadRuis )
@@ -4167,7 +4220,12 @@ void function ShowMatchStartSequence( int teamOrAlliance, float camera_move_dura
 			}
 
 			foreach ( entity ent in cleanupEnts )
-				ent.Destroy()
+			{
+				if ( IsValid( ent ) )
+				{
+					ent.Destroy()
+				}
+			}
 
 			array <int> eHandleKeysForCleanup
 			foreach( key, value in file.eHandleToIntroPodiumCharacterModelTable )
@@ -4957,20 +5015,23 @@ void function ShowVictorySequence( bool placementMode = false, bool isDevTest = 
 
 			SetSquadDataToLocalTeam()
 			ShowDeathScreen( initialTab )
-			HandleRankAndCupSummaryTab()
 			EnableDeathScreenTab( eDeathScreenPanel.SPECTATE, false )
 			EnableDeathScreenTab( eDeathScreenPanel.DEATH_RECAP, !IsAlive( player ) )
-			SwitchDeathScreenTab( eDeathScreenPanel.SQUAD_SUMMARY )
 		}
 		else
 		{
 			SetSquadDataToLocalTeam()
 			ShowDeathScreen( initialTab )
-			HandleRankAndCupSummaryTab()
 			EnableDeathScreenTab( eDeathScreenPanel.SPECTATE, false )
 			EnableDeathScreenTab( eDeathScreenPanel.DEATH_RECAP, true )
-			SwitchDeathScreenTab( eDeathScreenPanel.SQUAD_SUMMARY )
 		}
+
+		
+		int specialSummaryTab = GetSpecialSummaryTab()
+		if ( specialSummaryTab != eDeathScreenPanel.NONE )
+			SwitchDeathScreenTab( specialSummaryTab, true )
+		else
+			SwitchDeathScreenTab( eDeathScreenPanel.SQUAD_SUMMARY )
 
 		TryEnableDeathScreenRequeue()
 
@@ -4998,19 +5059,6 @@ void function ShowVictorySequence( bool placementMode = false, bool isDevTest = 
 	Signal( player, "PodiumVictoryFinished" )
 }
 
-void function HandleRankAndCupSummaryTab()
-{
-	bool showRankedSummary = Ranked_ShowRankedSummary()
-	bool showCupSummary = Cups_ShowCupSummary()
-	if ( showRankedSummary && !showCupSummary )
-	{
-		EnableDeathScreenTab( eDeathScreenPanel.RANK, true )
-	}
-	else if ( showCupSummary && Cups_IsCupForLatestMatchActive( GetLocalClientPlayer() ) )
-	{
-		EnableDeathScreenTab( eDeathScreenPanel.CUP, true )
-	}
-}
 
 entity function GetPodiumScreenCharacterModelForEHI( int playerEHI )
 {
@@ -5750,13 +5798,13 @@ void function ServerCallback_PromptTaunt()
 void function ServerCallback_PromptSayThanks( entity playerBeingAddressed )
 {
 
-		
-		if ( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_VALENTINES_S15 ) && Valentines_S15_ILoveYouEasterEggEnabled() )
-		{
-			if ( !ShouldMuteCommsActionForCooldown( GetLocalViewPlayer(), eCommsAction.REPLY_LOVE_YOU, null ) )
-				AddOnscreenPromptFunction( "quickchat", CreateQuickchatFunction( eCommsAction.REPLY_LOVE_YOU, playerBeingAddressed ), 6.0, Localize( "#PING_SAY_LOVE_YOU", playerBeingAddressed.GetPlayerName() ) )
-			return
-		}
+
+
+
+
+
+
+
 
 
 	if ( ShouldMuteCommsActionForCooldown( GetLocalViewPlayer(), eCommsAction.REPLY_THANKS, null ) )
@@ -5768,13 +5816,13 @@ void function ServerCallback_PromptSayThanks( entity playerBeingAddressed )
 void function ServerCallback_PromptSayThanksRevive( entity playerBeingAddressed )
 {
 
-		
-		if ( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_VALENTINES_S15 ) && Valentines_S15_ILoveYouEasterEggEnabled() )
-		{
-			if ( !ShouldMuteCommsActionForCooldown( GetLocalViewPlayer(), eCommsAction.REPLY_LOVE_YOU, null ) )
-				AddOnscreenPromptFunction( "quickchat", CreateQuickchatFunction( eCommsAction.REPLY_LOVE_YOU, playerBeingAddressed ), 6.0, Localize( "#PING_SAY_LOVE_YOU", playerBeingAddressed.GetPlayerName() ) )
-			return
-		}
+
+
+
+
+
+
+
 
 
 	if ( ShouldMuteCommsActionForCooldown( GetLocalViewPlayer(), eCommsAction.REPLY_THANKS, null ) )
@@ -5855,6 +5903,10 @@ void function OnPlayerKilled( entity player )
 
 void function UpdateInventoryCounter( entity player, string ref, bool isFull = false )
 {
+	
+	if( ref == CRAFTED_BANNER_REF )
+		return
+
 	var rui = file.inventoryCountRui
 
 	RuiSetGameTime( rui, "startTime", Time() )
@@ -6220,6 +6272,12 @@ string function Cl_GetPlaylistUIRules()
 	string playlist = GetCurrentPlaylistName()
 	return GetPlaylistVarString( playlist, "ui_rules", "" )
 }
+
+
+
+
+
+
 
 
 

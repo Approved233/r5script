@@ -64,7 +64,6 @@ const string	SQUAD_SURVIVOR_SOUND_ANNOUNCE				= "Survival_Freespawn_TokenCountdo
 
 
 
-
 struct sObserverTarget
 {
 	entity targetObj
@@ -107,7 +106,12 @@ const string HIGHLIGHT_ENEMYTEAMMATES = "bloodhound_sonar"
 const int FREESPAWN_ANNOUNCEMENT_PRIORITY_DEFAULT = 1000
 
 global function FreeRespawns_Init
-global function FreeRespawns_IsPlayerRespawnDisabled
+global function Freespawns_DisabledForPlayer_Get
+
+#if DEV
+global function DEV_Freespawns_DisabledForPlayer_Set
+#endif
+
 global function FreeRespawns_Feature_IsInEffect
 global function FreeRespawns_DontResetInventory
 global function FreeRespawns_PLV_DontResetInventory_OnFreespawn
@@ -125,6 +129,12 @@ global function PlayerRecentlyFreespawned_Check
 global function FreeRespawns_CanLocalPlayerRespawn
 global function FreeRespawns_CanLocalPlayerRespawnOrIsRespawning
 global function FreeRespawns_SetCanLocalPlayerRespawn
+
+
+
+
+
+
 
 
 
@@ -185,7 +195,6 @@ const string NETFUNC_ANNOUNCEMENT_RESPAWNS_DISABLED 	= "FreeRespawns_SV2CL_Annou
 const string NETFUNC_SV2CL_UPDATERUI 					= "FreeRespawns_SV2CL_UpdateRui"
 
 const string NETVAR_FREERESPAWNS_SQUAD_LIVES 			= "FreeRespawn_Squad_Lives"
-const string NETVAR_FREERESPAWNS_DISABLED 				= "FreeRespawn_Disabled"
 global const string NETVAR_FREERESPAWNS_RECENTLYFREESPAWNED	= "Freespawn_RecentlyFreespawned"
 global const string NETVAR_FREESPAWNS_PLAYER_ISFREESPAWNING = "Freespawn_Player_IsFreespawning"
 const float TIME_ANNOUNCEMENT_RESPAWN_ENABLED = 7.0
@@ -315,10 +324,14 @@ struct
 
 
 
+
 		bool freespawns_IsEnabled = false	
 		array< float > lockoutTimeMins_ByRound_Explicit
 		array< float > lockoutDeathAdds_ByRound_Explicit
 		table< int, asset > freeSpawnV2_CountdownNumbers
+
+		array< entity > freespawns_DisabledForPlayer 
+
 
 
 
@@ -367,8 +380,6 @@ void function FreeRespawns_Init()
 
 	PrecacheParticleSystem( DESTINATIONMARKER_FX )
 
-	
-
 	RegisterNetworking()
 
 	AddCallback_EntitiesDidLoad( OnEntitiesDidLoad )
@@ -413,7 +424,6 @@ void function FreeRespawns_Init()
 
 
 		RegisterNetVarIntChangeCallback( NETVAR_FREERESPAWNS_SQUAD_LIVES, Lives_Changed )
-		RegisterNetVarBoolChangeCallback( NETVAR_FREERESPAWNS_DISABLED, FreeRespawns_CL_Disabled_Changed )
 
 		Announcements_SetOnSetupAnnouncement_RemainingRespawns( FreeRespawns_OnSetupAnnouncement_RemainingRespawns )
 
@@ -434,29 +444,10 @@ void function FreeRespawns_Init()
 
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 void function RegisterNetworking()
 {
 	RegisterNetworkedVariable( NETVAR_FREERESPAWNS_SQUAD_LIVES, SNDC_PLAYER_EXCLUSIVE, SNVT_INT, 0 )
-	RegisterNetworkedVariable( NETVAR_FREERESPAWNS_DISABLED, SNDC_PLAYER_EXCLUSIVE, SNVT_BOOL, false )
+
 	RegisterNetworkedVariable( NETVAR_FREERESPAWNS_RECENTLYFREESPAWNED, SNDC_PLAYER_EXCLUSIVE, SNVT_BOOL, false )
 	RegisterNetworkedVariable( NETVAR_FREESPAWNS_PLAYER_ISFREESPAWNING, SNDC_PLAYER_EXCLUSIVE, SNVT_BOOL, false )
 	RegisterNetworkedVariable( "Freespawns_Lockout_IntroTuning_Active", SNDC_GLOBAL, SNVT_BOOL  )
@@ -624,6 +615,56 @@ float function DeathAdd_Calculate( int modType )
 	float result = deathAddBase * deathAddMod
 	return( result )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1815,10 +1856,47 @@ bool function FreeRespawns_IsPlayerEliminated( entity player )
 	return result
 }
 
-bool function FreeRespawns_IsPlayerRespawnDisabled( entity player )
+bool function Freespawns_DisabledForPlayer_Get( entity player )
 {
-	return player.GetPlayerNetBool( NETVAR_FREERESPAWNS_DISABLED )
+	if ( !IsValid( player ) )
+		return false
+
+	if ( !player.IsPlayer() )
+		return false
+
+	return( file.freespawns_DisabledForPlayer.contains( player ) )
 }
+
+void function Freespawns_DisabledForPlayer_Set( entity player, bool isDisabled )
+{
+	if ( !IsValid( player ) )
+		return
+
+	if ( !player.IsPlayer() )
+		return
+
+	if ( isDisabled )
+	{
+		if ( !file.freespawns_DisabledForPlayer.contains( player )  )
+		{
+			file.freespawns_DisabledForPlayer.append( player )
+		}
+	}
+	else
+	{
+		if ( file.freespawns_DisabledForPlayer.contains( player ) )
+		{
+			file.freespawns_DisabledForPlayer.removebyvalue( player )
+		}
+	}
+}
+
+#if DEV
+void function DEV_Freespawns_DisabledForPlayer_Set( entity player, bool isDisabled )
+{
+	Freespawns_DisabledForPlayer_Set( player, isDisabled )
+}
+#endif
 
 bool function FreeRespawns_Feature_IsInEffect()
 {
@@ -1841,6 +1919,9 @@ bool function Freespawns_ManualBleedout_CanDo()
 	bool canForceBleedout 	= ManualBleedout_PLV_Enabled()
 	return( featureOn && canForceBleedout )
 }
+
+
+
 
 
 
@@ -2239,6 +2320,16 @@ int function EndFreespawn_NoDeath_Reward_XP()
 
 
 
+
+
+
+
+
+
+
+
+
+
 bool function PlayerRecentlyFreespawned_Check( entity player )
 {
 	if( !IsValid( player ) )
@@ -2427,20 +2518,6 @@ void function DevSphere( vector loc, float radius, vector color, bool showThroug
 
 
 
-void function FreeRespawns_CL_Disabled_Changed( entity argPlayer, bool isOff )
-{
-	
-	if( !IsValid( argPlayer ) )
-		return
-
-#if DEV
-		printt( FUNC_NAME() + "(): Freespawns for player " + argPlayer.GetPlayerName() + " disabled == " + isOff )
-#endif
-
-	file.freespawns_IsEnabled = !isOff
-	RunUIScript( "UI_Freespawns_SetEnabled", !isOff )
-}
-
 void function Lives_Changed( entity argPlayer, int newValue )
 {
 	string freespawnType = FreeRespawns_PLV_Type()
@@ -2504,7 +2581,7 @@ bool function FreeRespawns_IsPlayerWaitingForRespawn( entity player )
 	if ( !IsValid( player ) || ( player != GetLocalClientPlayer() ) )
 		return false
 
-	if ( FreeRespawns_IsPlayerRespawnDisabled( player ) )
+	if ( Freespawns_DisabledForPlayer_Get( player ) )
 		return false
 
 	int team = player.GetTeam()
@@ -2913,6 +2990,11 @@ array< int > function Get_Squads_NotEliminated()
 
 
 
+
+
+
+
+
 bool function Lockout_PLV_IntroTunings_Enabled()
 {
 	
@@ -2934,12 +3016,6 @@ float function Lockout_PLV_IntroTunings_DeathAdd()
 {
 	return( GetCurrentPlaylistVarFloat( "freespawns_lockout_introtunings_deathadd", 5.0 ) )
 }
-
-
-
-
-
-
 
 bool function Lockout_IntroTunings_ActiveCheck()
 {
@@ -4710,43 +4786,6 @@ bool function DropshipGroupSpawn_PLV_DropFacingRingCenter()
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 void function SetupMapRuiRespawnLocation( entity ent, var rui, bool isFullMap )
 {
 	RuiSetAsset( rui, "areaImage", $"rui/hud/common/radial_gradiant" )
@@ -5015,7 +5054,7 @@ bool function Freespawns_SkipBleedout_CanDo( entity player )
 	if( !player.IsPlayer() )
 		return false
 
-	bool freespawnsEnabled = !player.GetPlayerNetBool( NETVAR_FREERESPAWNS_DISABLED )
+	bool freespawnsEnabled = !Freespawns_DisabledForPlayer_Get( player )
 	int numTokensLeft = player.GetPlayerNetInt( NETVAR_FREERESPAWNS_SQUAD_LIVES )
 
 	result = result && freespawnsEnabled
@@ -5023,6 +5062,8 @@ bool function Freespawns_SkipBleedout_CanDo( entity player )
 	result = result && Bleedout_IsBleedingOut( player )
 	return( result )
 }
+
+
 
 
 
@@ -5198,6 +5239,9 @@ void function SkipBleedout_UpdatePrompt( string prompt, float timeStart, float t
 void function Freespawns_SV2CL_FreespawnsEnabled_Update( bool isOn )
 {
 	file.freespawns_IsEnabled = isOn
+
+	Freespawns_DisabledForPlayer_Set( GetLocalViewPlayer(), !isOn )
+
 	RunUIScript( "UI_Freespawns_SetEnabled", isOn )
 }
 

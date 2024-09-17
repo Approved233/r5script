@@ -183,7 +183,7 @@ global enum eLoadoutCategory
 	DEATHBOX,
 	ARTIFACT_CONFIGURATIONS,
 
-
+	MELEE_ADDONS,
 
 
 	OTHER,
@@ -212,7 +212,7 @@ global const table< int, string > LOADOUT_CATEGORIES_TO_NAMES_MAP = {
 	[eLoadoutCategory.DEATHBOX] = "deathbox",
 	[eLoadoutCategory.ARTIFACT_CONFIGURATIONS] = "artifact_weapons",
 
-
+	[eLoadoutCategory.MELEE_ADDONS] = "melee_addons",
 
 
 	[eLoadoutCategory.OTHER] = "other",
@@ -1308,7 +1308,7 @@ void function RequestClearFavoredQuip( ItemFlavor quipToClear )
 		ItemFlavor item = LoadoutSlot_GetItemFlavor( LocalClientEHI(), loadoutEntry )
 		if ( item == quipToClear )
 		{
-			foreach ( validFlavor in GetValidItemFlavorsForLoadoutSlot( LocalClientEHI(), loadoutEntry ) )
+			foreach ( validFlavor in GetValidItemFlavorsForLoadoutSlot( loadoutEntry ) )
 			{
 				if ( CharacterQuip_IsTheEmpty( validFlavor ) )
 				{
@@ -1342,7 +1342,7 @@ void function DEV_RequestSetItemFlavorLoadoutSlot( EHI playerEHI, LoadoutEntry e
 #endif
 
 
-bool function IsItemFlavorValidForLoadoutSlot( EHI playerEHI, LoadoutEntry entry, ItemFlavor itemFlavor )
+bool function IsItemFlavorValidForLoadoutSlot( LoadoutEntry entry, ItemFlavor itemFlavor )
 {
 #if LOADOUTS_DBG
 		DEV_LoadoutsDebug( entry )
@@ -1355,7 +1355,7 @@ bool function IsItemFlavorValidForLoadoutSlot( EHI playerEHI, LoadoutEntry entry
 }
 
 
-array<ItemFlavor> function GetValidItemFlavorsForLoadoutSlot( EHI playerEHI, LoadoutEntry entry )
+array<ItemFlavor> function GetValidItemFlavorsForLoadoutSlot( LoadoutEntry entry )
 {
 #if LOADOUTS_DBG
 		DEV_LoadoutsDebug( entry )
@@ -1369,7 +1369,7 @@ array<ItemFlavor> function GetValidItemFlavorsForLoadoutSlot( EHI playerEHI, Loa
 
 
 #if DEV
-array<ItemFlavor> function DEV_GetValidItemFlavorsForLoadoutSlotForDev( EHI playerEHI, LoadoutEntry entry )
+array<ItemFlavor> function DEV_GetValidItemFlavorsForLoadoutSlotForDev( LoadoutEntry entry )
 {
 #if LOADOUTS_DBG
 		DEV_LoadoutsDebug( entry )
@@ -2079,7 +2079,7 @@ int function GetLoadoutSlotContentsIndexInternal( EHI playerEHI, LoadoutEntry en
 			{
 				if ( entry.type == eLoadoutEntryType.ITEM_FLAVOR )
 				{
-					ItemFlavor defaultFlav = GetDefaultItemFlavorForLoadoutSlot( playerEHI, entry )
+					ItemFlavor defaultFlav = GetDefaultItemFlavorForLoadoutSlot( entry )
 					return ConvertItemFlavorToLoadoutSlotContentsIndex( entry, defaultFlav )
 				}
 				else if ( entry.type == eLoadoutEntryType.INTEGER )
@@ -2109,7 +2109,7 @@ int function GetLoadoutSlotContentsIndexFromPersistence( EHI playerEHI, LoadoutE
 	{
 		if ( entry.type == eLoadoutEntryType.ITEM_FLAVOR )
 		{
-			ItemFlavor defaultItemFlavor = GetDefaultItemFlavorForLoadoutSlot( playerEHI, entry )
+			ItemFlavor defaultItemFlavor = GetDefaultItemFlavorForLoadoutSlot( entry )
 			return ConvertItemFlavorToLoadoutSlotContentsIndex( entry, defaultItemFlavor )
 		}
 		else if ( entry.type == eLoadoutEntryType.INTEGER )
@@ -2213,6 +2213,11 @@ int function GetLoadoutSlotContentsIndexFromCache( EHI playerEHI, LoadoutEntry e
 
 	return GetEHIScriptStruct( playerEHI ).loadoutSlotsLastSeenContentsMap[entry.entryIndex]
 }
+
+
+
+
+
 
 
 
@@ -2703,8 +2708,12 @@ void function ClientToUI_RefreshLoadoutSlot( EHI playerEHI, int entryIndex, int 
 			else
 			{
 				
-				ItemFlavor equipped = LoadoutSlot_GetItemFlavor( playerEHI, entry, true )
-				equipped.loadoutSortPriority = equipped.loadoutSortPriority | eLoadoutSortPriority.EQUIPPED
+				if ( entry.category != eLoadoutCategory.WEAPON_CHARMS || ( entry.category == eLoadoutCategory.WEAPON_CHARMS && entry == GetCurrentActiveWeaponCharmSlot() ) )
+				{
+					
+					ItemFlavor equipped = LoadoutSlot_GetItemFlavor( playerEHI, entry, true )
+					equipped.loadoutSortPriority = equipped.loadoutSortPriority | eLoadoutSortPriority.EQUIPPED
+				}
 
 				
 				if ( entry.maxFavoriteCount > 0 )
@@ -2848,7 +2857,7 @@ array<ItemFlavor> function GetLoadoutItemsSortedForMenu( array<LoadoutEntry> loa
 #endif
 
 	EHI playerEHI           = LocalClientEHI()
-	array<ItemFlavor> items = clone GetValidItemFlavorsForLoadoutSlot( playerEHI, entry )
+	array<ItemFlavor> items = clone GetValidItemFlavorsForLoadoutSlot( entry )
 
 	
 	
@@ -3043,7 +3052,7 @@ void function CallIntegerLoadoutSlotDidChangeCallbacks( EHI playerEHI, LoadoutEn
 }
 
 
-ItemFlavor function GetDefaultItemFlavorForLoadoutSlot( EHI playerEHI, LoadoutEntry entry )
+ItemFlavor function GetDefaultItemFlavorForLoadoutSlot( LoadoutEntry entry )
 {
 #if LOADOUTS_DBG
 		DEV_LoadoutsDebug( entry )
@@ -3081,7 +3090,7 @@ bool function IsContentsIndexValidForLoadoutSlot( EHI playerEHI, LoadoutEntry en
 		if ( entry.type == eLoadoutEntryType.ITEM_FLAVOR )
 		{
 			ItemFlavor itemFlavor = ConvertLoadoutSlotContentsIndexToItemFlavor( entry, slotContentsIndex )
-			if ( !IsItemFlavorValidForLoadoutSlot( playerEHI, entry, itemFlavor ) )
+			if ( !IsItemFlavorValidForLoadoutSlot( entry, itemFlavor ) )
 			{
 				Assert( false || validationBehavior != eValidation.ASSERT, "Tried to assign invalid item value to loadout slot." )
 				return false

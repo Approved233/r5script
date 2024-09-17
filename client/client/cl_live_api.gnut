@@ -467,6 +467,7 @@ void function ServerCallback_LiveAPI_LogNetwork_RespawnTeam( entity player, int 
 	array< entity > playersOnTeam = GetPlayerArrayOfTeam( player.GetTeam() )
 	int numPlayersOnTeam = playersOnTeam.len()
 	string playerListStr
+	array< var > teammates
 	for ( int i = 0; i < numPlayersOnTeam; i++ )
 	{
 		int bitTest = 1 << i
@@ -481,6 +482,7 @@ void function ServerCallback_LiveAPI_LogNetwork_RespawnTeam( entity player, int 
 				if( teammate.GetTeamMemberIndex() == i )
 				{
 					playerListStr += LiveAPI_GetPlayerIdentity( teammate )
+					teammates.append( LiveAPI_GetPlayerIdentityTable( teammate ) )
 				}
 			}
 		}
@@ -489,8 +491,8 @@ void function ServerCallback_LiveAPI_LogNetwork_RespawnTeam( entity player, int 
 	
 	
 	LiveAPI_WriteLogUsingCustomFieldNames( eLiveAPI_EventTypes.playerRespawnTeam,
-		[ LiveAPI_GetPlayerIdentityTable( player ), playerListStr ],
-		[ "player", 								"respawned"   ]
+		[ LiveAPI_GetPlayerIdentityTable( player ), playerListStr	, teammates ],
+		[ "player", 								"respawned"		, "respawnedTeammates"   ]
 	)
 }
 

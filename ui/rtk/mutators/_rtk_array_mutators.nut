@@ -59,3 +59,10 @@ vector function RTKMutator_PickFloat3From( int input, rtk_array p0 )
 		return RTKArray_GetFloat3( p0, input )
 	return <0, 0, 0>
 }
+
+asset function RTKMutator_PickAssetFrom( int input, rtk_array p0 )
+{
+	if ( 0 <= input && input < RTKArray_GetCount( p0 )  )
+		return RTKArray_GetAssetPath( p0, input )
+	return $""
+}

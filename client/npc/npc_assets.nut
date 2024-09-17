@@ -15,10 +15,8 @@ global enum eNPC
 
 
 
-
-	SPECTRE,
-	DEATH_SPECTRE,
-
+SPECTRE,
+DEATH_SPECTRE,
 
 
 

@@ -1,0 +1,47 @@
+
+
+global function Sh_Survival_Halloween_22_1_Init
+
+
+
+
+const string MUSIC_INTRO_STINGER = "Music_NightMaps_Intro_Stinger"
+
+
+struct
+{
+} file
+
+
+void function Sh_Survival_Halloween_22_1_Init()
+{
+
+	AddCallback_GameStateEnter( eGameState.WaitingForPlayers, OnWaitingForPlayers_Client )
+	AddCallback_GameStateEnter( eGameState.PickLoadout, OnPickLoadout_Client )
+	AddCallback_OnPlayerDisconnected( OnPlayerDisconnected )
+
+}
+
+
+
+void function OnWaitingForPlayers_Client()
+{
+	EmitUISound( MUSIC_INTRO_STINGER )
+}
+
+
+
+void function OnPickLoadout_Client()
+{
+	StopUISoundByName( MUSIC_INTRO_STINGER )
+}
+
+
+
+
+void function OnPlayerDisconnected( entity player )
+{
+	StopUISoundByName( MUSIC_INTRO_STINGER )
+}
+
+                            

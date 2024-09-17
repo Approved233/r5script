@@ -125,7 +125,7 @@ table< ItemFlavor, string > function DEV_GetFeatureFlagItemFlavPairsArray()
 
 	foreach ( string arrayFieldName in BASE_ITEMFLAV_TYPES )
 	{
-		var arrField    = GetSettingsBlockArray( parentBlock, arrayFieldName )
+		var arrField = GetSettingsBlockArray( parentBlock, arrayFieldName )
 
 		foreach ( var entryBlock in IterateSettingsArray( arrField ) )
 		{
@@ -147,6 +147,16 @@ table< ItemFlavor, string > function DEV_GetFeatureFlagItemFlavPairsArray()
 
 			string entryFlag = GetSettingsBlockString( entryBlock, "featureFlag" )
 
+			if ( ItemFlavor_GetType( flav ) == eItemType.character )
+			{
+				int shippingStatus = CharacterClass_GetShippingStatus( flav )
+				if ( shippingStatus == eItemFlavorShippingStatus.WIP_HIDE )
+				{
+					printt( "Base - Skipping", ItemFlavor_GetAssetName( flav ), "due to WIP_HIDE shipping status" )
+					continue
+				}
+			}
+
 			flavFlagPairing[ flav ] <- entryFlag
 		}
 	}
@@ -155,6 +165,7 @@ table< ItemFlavor, string > function DEV_GetFeatureFlagItemFlavPairsArray()
 	
 	
 	array<ItemFlavor> characterFlavors = GetAllCharacters()
+	characterFlavors = DEV_RemoveWipFlavsFromArray( characterFlavors )
 	DEV_GetFeatureFlagTableFromFlavorTypeSettingsBlock( flavFlagPairing, characterFlavors, CHARACTER_ITEM_TYPES )
 
 	
@@ -170,6 +181,25 @@ table< ItemFlavor, string > function DEV_GetFeatureFlagItemFlavPairsArray()
 	DEV_GetFeatureFlagTableFromFlavorTypeSettingsBlock( flavFlagPairing, meleeWeaponFlavors, MELEE_WEAPON_ITEM_TYPES )
 
 	return flavFlagPairing
+}
+
+array<ItemFlavor> function DEV_RemoveWipFlavsFromArray( array<ItemFlavor> flavs )
+{
+	array<ItemFlavor> rv
+
+	foreach ( ItemFlavor flav in flavs )
+	{
+		int shippingStatus = CharacterClass_GetShippingStatus( flav )
+		if ( shippingStatus == eItemFlavorShippingStatus.WIP_HIDE )
+		{
+			printt( "Post - Skipping", ItemFlavor_GetAssetName( flav ), "due to WIP_HIDE shipping status" )
+			continue
+		}
+
+		rv.append( flav )
+	}
+
+	return rv
 }
 
 void function DEV_GetFeatureFlagTableFromFlavorTypeSettingsBlock( table< ItemFlavor, string > flavFlagPairing, array<ItemFlavor> flavors, array<string> settingsBlockStrings )

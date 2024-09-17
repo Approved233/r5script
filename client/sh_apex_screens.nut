@@ -1399,7 +1399,11 @@ void function UpdateScreensContent( array<ApexScreenState> screenList )
 				continue
 
 			
-			if ( dscd.screen.rui == null )
+			
+			
+			
+			
+			if ( dscd.screen.rui == null || dscd.screen.nestedGladiatorCard0Handle.parentRui == null)
 				continue
 
 			UpdateScreenDetails( dscd.screen, dscd.modeChangeTime, dscd.transitionStyle, dscd.gcardPresentation, dscd.playerEHI, dscd.lifestateOverride )

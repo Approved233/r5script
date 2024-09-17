@@ -19,9 +19,19 @@ global function GetPlaylistVar_HealthRegenPerSec
 
 
 
+
+
+global function HealthRegen_StartRui
+global function HealthRegen_StopRui
+
+
 const string NETVAR_PLAYER_REGEN_DAMAGE_TIME = "HealthRegen_PlayerRegenDamageTime"
 const string NETVAR_PLAYER_REGEN_START_DELAY = "HealthRegen_PlayerRegenStartDelay"
 const float  TIME_PLAYER_REGEN_START_INVALID = -1.0
+
+
+
+
 
 
 
@@ -101,34 +111,78 @@ void function HealthRegen_Init()
 
 
 
-	if ( GetPlaylistVar_IsModeRegenActive() )
-	{
+
+
 
 		RegisterSignal( SIGNAL_PLAYER_REGEN_START_TIME_UPDATED )
 		RegisterSignal( SIGNAL_PLAYER_REGEN_RUI_DESTROYED )
 
-		AddCallback_OnClientScriptInit( HealthRegen_InitClient )
-		AddCallback_GameStateEnter( eGameState.Postmatch, HealthRegen_OnGameState_Ending ) 
+		if ( GetPlaylistVar_IsModeRegenActive() )
+		{
+			AddCallback_OnClientScriptInit( HealthRegen_InitClient )
+			AddCallback_GameStateEnter( eGameState.Postmatch, HealthRegen_OnGameState_Ending ) 
+		}
 
-	}
+
+	HealthRegen_RegisterNetworking()
 }
 
 void function HealthRegen_RegisterNetworking()
 {
 	RegisterNetworkedVariable( NETVAR_PLAYER_REGEN_DAMAGE_TIME, SNDC_PLAYER_EXCLUSIVE, SNVT_TIME, TIME_PLAYER_REGEN_START_INVALID )
-	RegisterNetworkedVariable( NETVAR_PLAYER_REGEN_START_DELAY, SNDC_PLAYER_EXCLUSIVE, SNVT_TIME, TIME_PLAYER_REGEN_START_INVALID )
+	
+	
+	RegisterNetworkedVariable( NETVAR_PLAYER_REGEN_START_DELAY, SNDC_PLAYER_EXCLUSIVE, SNVT_FLOAT_RANGE, TIME_PLAYER_REGEN_START_INVALID, TIME_PLAYER_REGEN_START_INVALID, 10.0 )
 
 
 	RegisterNetVarTimeChangeCallback( NETVAR_PLAYER_REGEN_DAMAGE_TIME, void function( entity player, float newVal ) : ()
 	{
 		Signal( clGlobal.signalDummy, SIGNAL_PLAYER_REGEN_START_TIME_UPDATED )
 	} )
-	RegisterNetVarTimeChangeCallback( NETVAR_PLAYER_REGEN_START_DELAY, void function( entity player, float newVal ) : ()
+	RegisterNetVarFloatChangeCallback( NETVAR_PLAYER_REGEN_START_DELAY, void function( entity player, float newVal ) : ()
 	{
 		Signal( clGlobal.signalDummy, SIGNAL_PLAYER_REGEN_START_TIME_UPDATED )
 	} )
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -879,8 +933,18 @@ void function HealthRegen_InitClient( entity player )
 	if ( !GetPlaylistVar_IsModeRegenActive() )
 		return
 
+	HealthRegen_StartRui( player )
+}
+
+void function HealthRegen_StartRui( entity player )
+{
 	HealthRegen_RUICreate()
 	thread HealthRegen_RunClientLifetime_Thread()
+}
+
+void function HealthRegen_StopRui( entity player )
+{
+	HealthRegen_OnGameState_Ending()
 }
 
 
@@ -928,7 +992,7 @@ void function HealthRegen_RunClientLifetime_Thread()
 
 		entity player = GetLocalViewPlayer()
 		float damageTime = player.GetPlayerNetTime( NETVAR_PLAYER_REGEN_DAMAGE_TIME )
-		float regenStartDelay = player.GetPlayerNetTime( NETVAR_PLAYER_REGEN_START_DELAY )
+		float regenStartDelay = player.GetPlayerNetFloat( NETVAR_PLAYER_REGEN_START_DELAY )
 
 		if ( regenStartDelay == TIME_PLAYER_REGEN_START_INVALID )
 		{
@@ -936,6 +1000,7 @@ void function HealthRegen_RunClientLifetime_Thread()
 			continue
 		}
 
+		
 		RuiSetBool( file.healthRegenRui, "isDamaged", true )
 		RuiSetGameTime( file.healthRegenRui, "lastDamageTime", damageTime )
 		RuiSetFloat( file.healthRegenRui, "regenDelay", regenStartDelay )
@@ -950,6 +1015,11 @@ bool function HealthRegen_IsOctane( entity player )
 
 bool function HealthRegen_IsWattson( entity player )
 {
+
+
+
+
+
 	return ( player.GetPlayerSettings() == $"settings/player/mp/pilot_survival_barricade.rpak" )
 }
 

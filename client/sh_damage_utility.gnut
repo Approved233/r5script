@@ -1,25 +1,4 @@
-global function CloneScriptDamageInfo
-global function GetWeaponClassNameFromDamageInfo
-global function GetWeaponClassNameFromDamageInfoClone
-
-
-global function IsInstantDeath
-global function IsTitanCrushDamage
-global function IsMaxRangeShot
-global function IsMidRangeShot
-global function IsSuicide
-
-
-
-
-
-
-
-
-
-
-global function ServerCallback_QuickDeathRumble
-
+globalize_all_functions
 
 global struct ScriptDamageInfoClone
 {
@@ -392,5 +371,50 @@ void function ServerCallback_QuickDeathRumble()
 	entity player = GetLocalClientPlayer()
 	if ( IsValid( player ) )
 		Rumble_Play( "QuickDeath", { position = player.GetOrigin() } )
+}
+
+
+float function HealthRatio( entity ent )
+{
+	int health    = ent.GetHealth()
+	int maxHealth = ent.GetMaxHealth()
+	return float( health ) / maxHealth
+}
+
+float function GetShieldHealthFrac( entity ent )
+{
+	if ( !IsAlive( ent ) )
+		return 0.0
+
+	int shieldHealth    = ent.GetShieldHealth()
+	int shieldMaxHealth = ent.GetShieldHealthMax()
+
+	if ( shieldMaxHealth == 0 )
+		return 0.0
+
+	return float( shieldHealth ) / float( shieldMaxHealth )
+}
+
+
+float function GetShieldHealthFracBeforeDamage( entity ent, int damage )
+{
+	if ( !IsAlive( ent ) )
+		return 0.0
+
+	int shieldHealthBeforeDamage    = ent.GetShieldHealth() + damage
+	int shieldMaxHealth = ent.GetShieldHealthMax()
+
+	if ( shieldHealthBeforeDamage > shieldMaxHealth )
+	{
+		
+		Warning( "shieldHealth > shieldMaxHealth, this may be due to us having some overshield when we took the damage. " )
+	}
+	if ( shieldHealthBeforeDamage > shieldMaxHealth )
+		shieldHealthBeforeDamage = shieldMaxHealth
+
+	if ( shieldMaxHealth == 0 )
+		return 0.0
+
+	return float( shieldHealthBeforeDamage ) / float( shieldMaxHealth )
 }
 

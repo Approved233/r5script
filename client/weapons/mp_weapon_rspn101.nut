@@ -1,11 +1,13 @@
 global function OnWeaponActivate_R101
 global function OnWeaponDeactivate_R101
 global function OnWeaponPrimaryAttack_R101
+global function OnWeaponOwnerChanged_R101
 
 
 
 
 
+const int R101_ITEMFLAVOR_GUID = 48783537
 
 void function OnWeaponActivate_R101( entity weapon )
 {
@@ -45,4 +47,36 @@ var function OnWeaponPrimaryAttack_R101( entity weapon, WeaponPrimaryAttackParam
 
 
 	return weapon.GetWeaponSettingInt( eWeaponVar.ammo_per_shot )
+}
+
+void function OnWeaponOwnerChanged_R101( entity weapon, WeaponOwnerChangedParams wocp )
+{
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }

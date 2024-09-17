@@ -123,6 +123,15 @@ void function PassiveWarlordsIre_OnLocalPlayerDidDamage( entity attacker, entity
 
 		highlightDuration += IsBitFlagSet( damageType, DF_EXPLOSION ) ? file.balance_warlordsIreHighlightDurationExplode : 0.0
 
+	if ( target.GetScriptName() == GIBRALTAR_GUN_SHIELD_NAME || target.GetScriptName() == HOPUP_GUN_SHIELD_NAME )
+	{
+		entity parentEnt = target.GetParent()
+		if ( IsValid( parentEnt ) && parentEnt.IsPlayer() )
+		{
+			target = parentEnt
+		}
+	}
+
 	if ( (target in file.playerHighlightEndTime) )
 		file.playerHighlightEndTime[ target ] <- ( Time() + highlightDuration )
 	else
@@ -170,6 +179,15 @@ bool function PassiveWarlordsIre_ValidWarlordsIreHighlightPostDamage( entity att
 
 	if ( !attacker.IsPlayer() )
 		return false
+
+	if ( target.GetScriptName() == GIBRALTAR_GUN_SHIELD_NAME || target.GetScriptName() == HOPUP_GUN_SHIELD_NAME )
+	{
+		entity parentEnt = target.GetParent()
+		if ( IsValid( parentEnt ) && parentEnt.IsPlayer() )
+		{
+			target = parentEnt
+		}
+	}
 
 	if ( !target.IsPlayer() && !target.IsNPC() )
 		return false

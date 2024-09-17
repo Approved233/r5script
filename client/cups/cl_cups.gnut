@@ -23,6 +23,7 @@ global function Cups_GetVisibleEvents
 
 
 
+
 #if DEV
 global function Cups_GrantAllCupRewards
 global function Cups_UnregisterFromCup
@@ -140,11 +141,35 @@ array< SettingsAssetGUID > function Cups_GetVisibleEvents()
 	{
 		if ( CalEvent_IsVisible( cupEvent, unixTime ) )
 		{
+			if ( RankedRumble_IsContainerRankedRumble( cupEvent ) && !GetConVarBool( RANKED_RUMBLE_CONVAR ) )
+				continue
 			result.append( cupEvent.guid )
 		}
 	}
 	return result
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -489,7 +489,7 @@ void function ControlSpawnMenu_OpenGameModeDetails(var button)
 	if ( !IsFullyConnected() )
 		return
 
-	UI_OpenFeatureTutorialDialog( GetPlaylist_UIRules() )
+	UI_OpenFeatureTutorialDialog( GetCurrentPlaylist_UIRules() )
 }
 
 void function ControlSpawnMenu_OpenLoadoutMenu( var button )

@@ -1,0 +1,638 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+untyped
+globalize_all_functions
+
+global enum eStreamMode
+{
+	DISABLED,
+	KILLER,
+	ALL,
+}
+
+struct
+{
+	int hud_setting_accessibleChatCache
+} file
+
+ToolTipData function CreateSimpleToolTip( string titleText, string descText, string actionHint1 = "", string actionHint2 = "", string actionHint3 = "", string actionHint4 = "" )
+{
+	ToolTipData toolTipData
+	toolTipData.titleText = titleText
+	toolTipData.descText = descText
+	toolTipData.actionHint1 = actionHint1
+	toolTipData.actionHint2 = actionHint2
+	toolTipData.actionHint3 = actionHint3
+	toolTipData.actionHint4 = actionHint4
+
+	return toolTipData
+}
+
+bool function PointInBounds( vector point, UIPos pos, UISize size )
+{
+	if ( point.x < pos.x )
+		return false
+	if ( point.y < pos.y )
+		return false
+	if ( point.x > pos.x + size.width )
+		return false
+	if ( point.y > pos.y + size.height )
+		return false
+
+	return true
+}
+
+
+UIPos function REPLACEHud_GetPos( var panel )
+{
+	var untypedPos = Hud_GetPos( panel )
+
+	UIPos pos
+	pos.x = expect int( untypedPos[0] )
+	pos.y = expect int( untypedPos[1] )
+
+	return pos
+}
+
+
+UIPos function REPLACEHud_GetAbsPos( var panel )
+{
+	var untypedPos = Hud_GetAbsPos( panel )
+
+	UIPos pos
+	pos.x = expect int( untypedPos[0] )
+	pos.y = expect int( untypedPos[1] )
+
+	return pos
+}
+
+
+UIPos function REPLACEHud_GetBasePos( var panel )
+{
+	var untypedPos = Hud_GetBasePos( panel )
+
+	UIPos pos
+	pos.x = expect int( untypedPos[0] )
+	pos.y = expect int( untypedPos[1] )
+
+	return pos
+}
+
+
+UISize function REPLACEHud_GetSize( var panel )
+{
+	var untypedSize = Hud_GetSize( panel )
+
+	UISize size
+	size.width = expect int( untypedSize[0] )
+	size.height = expect int( untypedSize[1] )
+
+	return size
+}
+
+UIPos function REPLACEHud_GetParentRelativePos( var panel )
+{
+	var untypedPos = Hud_GetParentRelativePos( panel )
+
+	UIPos pos
+	pos.x = expect int( untypedPos[0] )
+	pos.y = expect int( untypedPos[1] )
+
+	return pos
+}
+
+UISize function GetScreenSize()
+{
+
+
+
+		array screenSize = expect array( Hud.GetScreenSize() )
+
+		UISize size
+		size.width = expect int( screenSize[0] )
+		size.height = expect int( screenSize[1] )
+
+		return size
+
+}
+
+UIScaleFactor function GetContentScaleFactor( var panel )
+{
+	UISize size
+	float heightBasis = 1080.0
+
+
+
+
+		array screenSize = expect array( panel.GetScreenSize() )
+		size.width = expect int( screenSize[0] )
+		size.height = expect int( screenSize[1] )
+
+
+	float aspectRatio = size.width / float( size.height )
+
+	UIScaleFactor scaleFactor
+	scaleFactor.x = size.width / (heightBasis * aspectRatio)
+	scaleFactor.y = size.height / heightBasis
+
+	return scaleFactor
+}
+
+UIScaleFactor function GetContentFixedScaleFactor( var panel )
+{
+	UISize size
+	float vwidth  = 1920
+	float vheight = 1080
+
+
+
+
+		array screenSize = expect array( panel.GetScreenSize() )
+		size.width = expect int( screenSize[0] )
+		size.height = expect int ( screenSize[1] )
+
+
+	float rx = size.width / vwidth
+	float ry = size.height / vheight
+
+	UIScaleFactor scaleFactor
+	if ( rx < ry )
+	{
+		scaleFactor.x = rx
+		scaleFactor.y = rx
+	}
+	else
+	{
+		scaleFactor.x = ry
+		scaleFactor.y = ry
+	}
+
+	return scaleFactor
+}
+
+bool function ButtonIsBoundToAction( int buttonID, string actionSubString )
+{
+	string binding = GetEffectiveButtonBinding( buttonID )
+	if ( binding.tolower().find_olduntyped( actionSubString.tolower() ) != null )
+		return true
+
+	return false
+}
+
+bool function ButtonIsBoundToHoldAction( int buttonID, string actionSubString )
+{
+	string binding = GetEffectiveButtonHoldBinding( buttonID )
+	if ( binding.tolower().find_olduntyped( actionSubString.tolower() ) != null )
+		return true
+
+	return false
+}
+
+bool function ButtonIsBoundToPing( int buttonID )
+{
+	return ButtonIsBoundToAction( buttonID, "+ping" )
+}
+
+int function SortByScriptId( var a, var b )
+{
+	int aId = int( Hud_GetScriptID( a ) )
+	int bId = int( Hud_GetScriptID( b ) )
+	if ( aId > bId )
+		return 1
+	else if ( bId > aId )
+		return -1
+
+	return 0
+}
+
+
+void function UpdateAccessibilityChatHintEnabledCache()
+{
+	file.hud_setting_accessibleChatCache = GetConVarInt( "hud_setting_accessibleChat" )
+}
+
+
+bool function IsAccessibilityChatHintEnabled()
+{
+
+		return file.hud_setting_accessibleChatCache == 1 || file.hud_setting_accessibleChatCache == 3
+
+
+
+
+}
+
+bool function IsAccessibilityChatToSpeech()
+{
+	if ( !IsAccessibilityAvailable() )
+		return false
+
+	return GetConVarInt( "speechtotext_enabled" ) > 0
+}
+
+bool function IsAccessibilityAvailable()
+{
+
+
+
+
+
+	return true
+}
+
+int function GetStreamerMode()
+{
+	return GetConVarInt( "hud_setting_streamerMode" )
+}
+
+bool function DisplayKillerName()
+{
+	return GetStreamerMode() < eStreamMode.KILLER
+}
+
+bool function DisplayObituaryName()
+{
+	return GetStreamerMode() < eStreamMode.ALL
+}
+
+bool function DisplayHopupPopup()
+{
+	bool forceHidePopup = GetCurrentPlaylistVarBool( "hud_hide_hopuppopup", false )
+	return !forceHidePopup && GetConVarBool( "hud_setting_showHopUpPopUp" )
+}
+
+bool function IsNetGraphEnabled()
+{
+	return GetConVarInt( "net_netGraph2" ) > 0
+}
+
+bool function IsAnonymousModeEnabled()
+{
+	return GetConVarInt( "hud_setting_anonymousMode" ) > 0
+}
+
+vector function GetKeyColor( int colorID, int optionalParam = 0 )
+{
+	Assert( optionalParam >= 0, "optionalParam must not be negative" )
+	return ColorPalette_GetColorFromID( colorID + optionalParam )
+}
+
+
+
+
+
+
+
+
+
+
+
+
+bool function CanSendFriendRequest( entity player )
+{
+	if ( !GetCurrentPlaylistVarBool( "enable_squad_friend_invite", true ) )
+		return false
+
+	return true
+}
+
+bool function CanInviteSquadMate( string uid )
+{
+	if ( !GetCurrentPlaylistVarBool( "enable_squad_invite", true ) )
+		return false
+
+	if ( IsInMyParty( uid ) )
+		return false
+
+	if ( GetParty().numFreeSlots == 0 )
+		return false
+
+	return true
+}
+
+bool function IsInMyParty( string uid )
+{
+	Party party = GetParty()
+	foreach ( p in party.members )
+	{
+		if ( p.uid == uid )
+			return true
+	}
+	return false
+}
+
+bool function IsMyPartyMatchmaking()
+{
+	bool isMyPartyMatchmaking = false
+	if ( AmIPartyLeader() )
+		isMyPartyMatchmaking = AreWeMatchmaking()
+	else
+		isMyPartyMatchmaking = ( GetMyMatchmakingStatus() != "" )
+
+	return isMyPartyMatchmaking
+}
+
+void functionref( bool success ) MenuExtendedUse_callback = null
+void function StartMenuExtendedUse( var focusElem, var holdToUseElem, float duration, bool requireControllerFocus, bool isAltAction, void functionref( bool success ) callback,
+		string loopSound = "survival_titan_linking_loop", string successSound = "ui_menu_store_purchase_success" )
+{
+	
+	if ( MenuExtendedUse_callback != null )
+		return
+
+	MenuExtendedUse_callback = callback
+
+
+
+
+		RunUIScript( "_ClientToUI_MenuExtendedUseBegin", focusElem, holdToUseElem, duration, loopSound, successSound, requireControllerFocus, isAltAction )
+
+}
+
+
+
+
+
+
+
+
+
+void function _UIToClient_MenuExtendedUseEnded( bool success )
+{
+	Assert( MenuExtendedUse_callback != null )
+	MenuExtendedUse_callback( success )
+	MenuExtendedUse_callback = null
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+float function GetScreenScaleFrac()
+{
+	UISize screenSize = GetScreenSize()
+	float screenSizeXFrac =  screenSize.width / 1920.0
+	float screenSizeYFrac =  screenSize.height / 1080.0
+	return min(screenSizeXFrac, screenSizeYFrac)
+}
+
+float function GetNearestAspectRatio( int width, int height )
+{
+	float aspectRatio = width / float( height )
+
+	if ( fabs( ASPECT_RATIO_16_BY_10 - aspectRatio ) < 0.1 )
+		return aspectRatio
+	else if ( fabs( ASPECT_RATIO_16_BY_9 - aspectRatio ) < 0.1 )
+		return aspectRatio
+	else if ( fabs( ASPECT_RATIO_21_BY_9 - aspectRatio ) < 0.1 )
+		return aspectRatio 
+	else if ( fabs( (16.0 * 3 / 9.0) - aspectRatio ) < 0.1 )
+		return ASPECT_RATIO_16_BY_9
+	else if ( fabs( (16.0 * 3 / 10.0) - aspectRatio ) < 0.1 )
+		return ASPECT_RATIO_16_BY_10
+
+	return aspectRatio
+}
+
+bool function IsUserOnSamePlatform( string hardware )
+{
+
+
+
+
+		entity player = GetLocalClientPlayer()
+		return IsValid( player ) ? hardware == player.GetHardwareName() : false
+
+}
+
+bool function IsUserOnSamePlatformID( int hardwareID )
+{
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		entity player = GetLocalClientPlayer()
+		if( !IsValid( player ) )
+		{
+			return false
+		}
+		int localPlayerHardwareID = GetHardwareFromName( player.GetHardwareName() )
+		if( ( hardwareID == HARDWARE_PS4 || hardwareID == HARDWARE_PS5 ) && (localPlayerHardwareID == HARDWARE_PS4 || localPlayerHardwareID == HARDWARE_PS5) )
+		{
+			return true
+		}
+		else if( ( hardwareID == HARDWARE_XBOXONE || hardwareID == HARDWARE_XB5 ) && (localPlayerHardwareID == HARDWARE_XBOXONE || localPlayerHardwareID == HARDWARE_XB5) )
+		{
+			return true
+		}
+		else
+		{
+			return IsValid( player ) ? hardwareID == GetHardwareFromName( player.GetHardwareName() ) : false
+		}
+		return false
+
+}
+
+bool function CrossplayUserOptIn()
+{
+	return IsUserOptedInToCrossPlay() && CrossplayEnabled()
+}
+
+
+bool function CrossplayEnabled()
+{
+	return GetConVarInt( "crossPlay_enabled" ) != 0
+}
+
+string function PlatformIDToIconString( int platformID )
+{
+	if ( IsUserOnSamePlatformID( platformID ) )
+	{
+		switch ( platformID )
+		{
+			case HARDWARE_PC:
+			case HARDWARE_PC_STEAM:
+				return Localize( "#CROSSPLAY_ICON_PC" )
+
+			case HARDWARE_PS4:
+			case HARDWARE_PS5:
+				return Localize( "#CROSSPLAY_ICON_PS4" )
+
+			case HARDWARE_XBOXONE:
+			case HARDWARE_XB5:
+				return Localize( "#CROSSPLAY_ICON_XBOX" )
+
+			case HARDWARE_SWITCH:
+				return Localize( "#CROSSPLAY_ICON_NX" )
+
+			default:
+				return ""
+		}
+	}
+	else
+	{
+		switch ( platformID )
+		{
+			case HARDWARE_PC:
+			case HARDWARE_PC_STEAM:
+				return Localize( "#CROSSPLAY_ICON_PC" )
+
+			case HARDWARE_PS4:
+			case HARDWARE_XBOXONE:
+			case HARDWARE_SWITCH:
+			case HARDWARE_XB5:
+			case HARDWARE_PS5:
+				return Localize( "#CROSSPLAY_ICON_CONTROLLER" )
+
+			default:
+				return ""
+		}
+	}
+
+	Assert( false, "Unhandled platformID " + platformID )
+	unreachable
+}

@@ -1452,9 +1452,6 @@ void function CodeCallback_ScriptMoverTraversalStopped( entity ent, bool isBlock
 
 
 
-
-
-
 bool function IsMobileShieldEnt( entity ent )
 {
 	return ent.GetScriptName() == MOBILE_SHIELD_SCRIPTNAME

@@ -12,15 +12,15 @@ const int MAX_ACTIVE_LOOTBIN_CREEPS = 10
 global const asset MODEL_INFECTED = $"mdl/Humans/grunts/imc_grunt_lmg_corpse.rmdl"
 global const asset MODEL_SPIDER = $"mdl/creatures/spider/spider.rmdl"
 
-
-
+global const asset MODEL_NESSIE_AI = $"mdl/creatures/spider/spider_jungle.rmdl"
+global const asset MODEL_NESSIE_CYBER_HALLOWEEN = $"mdl/props/nessie/nessie_halloween_s22.rmdl"
 
 global const string LOOT_CREEP_INFECTED_TARGETNAME = "loot_creep_infected"
 global const string LOOT_CREEP_SPIDER_TARGETNAME = "loot_creep_spider"
 const asset DEATH_FX_SPIDER = $"P_infected_death"
 const asset DEATH_FX_INFECTED = $"P_infected_death"
 
-
+const asset DEATH_FX_NESSIE_AI = $"P_infected_death"
 
 const asset FX_LOOTBIN_OPEN = $"P_impact_monarch_beam_v1"
 const asset SPIDER_EYEGLOW_FX = $"P_infected_spider_head" 
@@ -34,7 +34,7 @@ const string LOOT_CREEP_SCRIPTNAME = "lootCreep"
 const string LOOT_BIN_SPIDERS_CHANCE_NAME = "lootbin_spiders_chance"
 const string LOOT_BIN_INFECTED_CHANCE_NAME = "lootbin_infected_chance"
 
-
+const string LOOT_BIN_NESSIE_AI_CHANCE_NAME = "lootbin_nessie_ai_chance"
 
 
 const array< string > LOOT_CREEP_TYPE_CHANCE_NAMES =
@@ -42,7 +42,7 @@ const array< string > LOOT_CREEP_TYPE_CHANCE_NAMES =
 	LOOT_BIN_SPIDERS_CHANCE_NAME,
 	LOOT_BIN_INFECTED_CHANCE_NAME,
 
-
+	LOOT_BIN_NESSIE_AI_CHANCE_NAME,
 
 ]
 
@@ -51,7 +51,7 @@ enum eLootCreepType
 	SPIDER,
 	INFECTED,
 
-
+	NESSIE_AI,
 
 }
 
@@ -94,10 +94,10 @@ void function ShLootCreeps_Init()
 	}
 
 
-
-
-
-
+	{
+		shouldInitGenericCreepAssets = true
+		PrecacheModel( MODEL_NESSIE_CYBER_HALLOWEEN )
+	}
 
 
 	if ( shouldInitGenericCreepAssets )
@@ -128,14 +128,6 @@ void function ShLootCreeps_Init()
 
 
 }
-
-
-
-
-
-
-
-
 
 
 
@@ -876,10 +868,10 @@ bool function ShouldPrecacheLootCreep( int lootCreepType )
 			break
 
 
-
-
-
-
+		case eLootCreepType.NESSIE_AI:
+			if ( GetCurrentPlaylistVarFloat( LOOT_BIN_NESSIE_AI_CHANCE_NAME, 0 ) > 0 )
+				return true
+			break
 
 
 		default:

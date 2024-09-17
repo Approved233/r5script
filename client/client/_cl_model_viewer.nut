@@ -1478,7 +1478,7 @@ void function DisplayPreviewModelAtCursor( HlmvModelData data )
 		previewAngles.z = 0
 		
 
-		vector dest = ClampToMap( result.endPos )
+		vector dest = ClampToWorldspace( result.endPos )
 		data.parentEnt.SetOrigin( dest )
 		data.parentEnt.SetAngles( previewAngles )
 
@@ -1617,7 +1617,7 @@ void function MapLimitsProtect( entity model )
 	model.EndSignal( "OnDestroy" )
 	for ( ;; )
 	{
-		if ( ClampToMap( model.GetOrigin() ) != model.GetOrigin() )
+		if ( ClampToWorldspace( model.GetOrigin() ) != model.GetOrigin() )
 		{
 			model.Anim_Stop()
 		}

@@ -15,9 +15,9 @@ const string LIFESTEAL_WEAPON_VAR = "lifesteal_heal_percent"
 const float VALENTINES_HEAL_DEBOUNCE_SEC = 10
 
 
- const VFX_COCKPIT_HEALTH = $"P_heal_loop_screen"
- const VFX_COCKPIT_SHIELDS = $"P_armor_FP_charging_CP"
- const VFX_PLAYER_HEALED_3P = $"P_armor_3P_loop_CP"
+const VFX_COCKPIT_HEALTH = $"P_heal_loop_screen"
+const VFX_COCKPIT_SHIELDS = $"P_armor_FP_charging_CP"
+const VFX_PLAYER_HEALED_3P = $"P_armor_3P_loop_CP"
 
 
 
@@ -34,8 +34,8 @@ struct
 
 		bool  isHealing = false
 		float healedEndTime
-		int healAmountTotal
-		var healRui
+		int   healAmountTotal
+		var   healRui
 
 } file
 
@@ -48,9 +48,16 @@ void function Lifesteal_Init()
 	Remote_RegisterClientFunction( "ServerToClient_ShowLifesteal", "bool", "int", INT_MIN, INT_MAX )
 
 
-	AddCallback_GameStateEnter( eGameState.Postmatch, Lifesteal_OnGameState_Ending )
+		AddCallback_GameStateEnter( eGameState.Postmatch, Lifesteal_OnGameState_Ending )
 
 }
+
+
+
+
+
+
+
 
 
 
@@ -220,7 +227,7 @@ void function ServerToClient_ShowLifesteal( bool onlyShields, int amount )
 	else
 		file.healAmountTotal += amount
 
-	file.healedEndTime = (Time() + HEAL_VFX_DURATION )
+	file.healedEndTime = (Time() + HEAL_VFX_DURATION)
 	entity player = GetLocalViewPlayer()
 	int armorTier = EquipmentSlot_GetEquipmentTier( player, "armor" )
 	armorTier = armorTier <= 0 ? 1 : armorTier
@@ -234,7 +241,7 @@ void function ServerToClient_ShowLifesteal( bool onlyShields, int amount )
 void function ShowHealHUD( float endTime, bool onlyShields, int amount, int armorTier )
 {
 	if ( file.healRui == null )
-		file.healRui = CreateCockpitPostFXRui( $"ui/lifesteal_hud.rpak" , MINIMAP_Z_BASE )
+		file.healRui = CreateCockpitPostFXRui( $"ui/lifesteal_hud.rpak", MINIMAP_Z_BASE )
 
 	RuiSetGameTime( file.healRui, "endTime", endTime )
 	RuiSetBool( file.healRui, "onlyShields", onlyShields )

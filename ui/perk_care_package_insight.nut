@@ -131,6 +131,9 @@ void function Perk_CarePackageInsight_Init()
 
 
 
+
+
+
 }
 
 
@@ -193,6 +196,30 @@ float function Perk_CarePackageInsight_IgnoreLosRevealDistance()
 {
 	return GetCurrentPlaylistVarFloat( "care_package_insight_ignore_los_distance", 6000.0 )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

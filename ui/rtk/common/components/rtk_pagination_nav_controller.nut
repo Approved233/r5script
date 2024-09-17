@@ -23,6 +23,10 @@ global struct RTKPaginationNavController_Properties
 	bool isVertical
 	bool canWrap
 	float updateDelay = 0.1
+
+	int maxPips
+
+	void functionref() onPageChange
 }
 
 global struct RTKPaginationPipModel
@@ -35,6 +39,9 @@ struct PrivateData
 	int pageIndex
 	int pageCount
 	float lastUpdate
+
+	int currentPipRangeStart
+	int currentPipRangeEnd
 }
 
 
@@ -140,6 +147,7 @@ void function RTKPaginationNavController_SetPageIndex( rtk_behavior self, int pa
 	}
 	RTKPaginationNavController_UpdateNavArrowsState( self )
 	EmitUISound( "UI_Menu_BattlePass_LevelTab" )
+	self.InvokeEvent( "OnPageChange", pageIndex )
 }
 
 void function RTKPaginationNavController_NextPage( rtk_behavior self )

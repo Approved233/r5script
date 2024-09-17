@@ -139,7 +139,7 @@ void function UpgradeSelectionMenu_Open()
 		return
 
 	entity player = GetLocalViewPlayer()
-	if( IsValid( player ) && ( player.ContextAction_IsMeleeExecution() || player.ContextAction_IsMeleeExecutionTarget() ) )
+	if( IsValid( player ) && ( player.ContextAction_IsMeleeExecution() || player.ContextAction_IsMeleeExecutionTarget() || player.Player_IsSkydiving() ) )
 		return
 
 	Announcements_SetVisible(false)
@@ -325,6 +325,9 @@ void function UpgradeSelectionMenu_MockSelection( int upgradeIndex )
 		return
 
 	UpgradeSelectionMenu_Open()
+	if( file.upgradesSelectionMenu == null )
+		return
+
 	player.EndSignal( "UpgradeSelectionMenuClose" )
 	int choice = upgradeIndex % 2
 	wait( MOCK_UPGRADE_SELECTION_WAIT_TIME )

@@ -511,7 +511,6 @@ void function UICallback_RTKPopulateSquadGladCards( string path )
 				isPlayerBot 		  = dataPlayer.IsBot()
 #endif
 
-			isPlayerBot 		  = dataPlayer.IsBot()
 			gladCard.isMuted      = dataPlayer.IsVoiceAndTextMuted()
 			gladCard.isPingMuted  = PlayerIsPingMuted( dataPlayer )
 			gladCard.unspoofedUid = dataPlayer.GetUnspoofedPlatformUserIdStr()
@@ -519,6 +518,8 @@ void function UICallback_RTKPopulateSquadGladCards( string path )
 		}
 		else
 		{
+			gladCard.unspoofedUid = data.unspoofedUid
+
 			int reportStyle = GetReportStyle()
 
 			switch ( reportStyle )

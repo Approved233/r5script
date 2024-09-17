@@ -40,20 +40,25 @@ void function RTKCupInfoTiers_OnInitialize( rtk_behavior self )
 			cupTierCard.tierPercentage = Localize("#CUPS_TIER_PERCENTAGE", (cupTier.bound).tostring())
 		}
 
+		string allRewardsString
 		foreach( CupTierRewardData tierRewardData in cupTier.rewardData )
 		{
 			ItemFlavor rewardItemFlav = GetItemFlavorByAsset( tierRewardData.reward )
 
+			string tierRewardString = ""
 			
-			if ( cupTierCard.tierReward == "" )
-				cupTierCard.tierReward = ItemFlavor_GetRewardShortDescription( rewardItemFlav )
+			if ( tierRewardString == "" )
+				tierRewardString = ItemFlavor_GetRewardShortDescription( rewardItemFlav )
 
-			if ( cupTierCard.tierReward == "" )
-				cupTierCard.tierReward = ItemFlavor_GetLongName( rewardItemFlav )
+			if ( tierRewardString == "" )
+				tierRewardString = ItemFlavor_GetLongName( rewardItemFlav )
 
-			if ( cupTierCard.tierReward == "" )
-				cupTierCard.tierReward = ItemFlavor_GetTypeName( rewardItemFlav )
+			if ( tierRewardString == "" )
+				tierRewardString = ItemFlavor_GetTypeName( rewardItemFlav )
+
+			allRewardsString += Localize( tierRewardString ) + "\n"
 		}
+		cupTierCard.tierReward = allRewardsString
 
 		apexCupsModel.tierList.append( cupTierCard )
 	}

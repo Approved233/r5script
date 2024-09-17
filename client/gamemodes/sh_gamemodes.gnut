@@ -174,7 +174,7 @@ global enum eGameModeVariants
 	SURVIVAL_BATTLE_RUSH,
 
 
-	SURVIVAL_VALENTINES_S15,
+
 
 
 
@@ -199,6 +199,9 @@ global enum eGameModeVariants
 	SURVIVAL_HALLOWEEN_18_1,
 
 
+	SURVIVAL_HALLOWEEN_22_1,
+
+
 
 
 
@@ -211,7 +214,7 @@ global enum eGameModeVariants
 	SURVIVAL_QUADS,
 
 
-
+	SURVIVAL_OBJECTIVE_BR,
 
 
 
@@ -648,6 +651,7 @@ void function GameModes_Init()
 		GameModeVariant_Create( eGameModeVariants.SURVIVAL_BATTLE_RUSH, eGameModes.SURVIVAL )
 		GameModeVariant_SetPlaylistFlag( eGameModeVariants.SURVIVAL_BATTLE_RUSH, "is_gamemode_battle_rush" )
 		GameModeVariant_SetDevName( eGameModeVariants.SURVIVAL_BATTLE_RUSH, GAMEMODE_QUICK_MATCH )
+		GameModeVariant_SetName( eGameModeVariants.SURVIVAL_BATTLE_RUSH, "#PL_BATTLE_RUSH" )
 
 			GameModeVariant_AddSharedInit( eGameModeVariants.SURVIVAL_BATTLE_RUSH, Sh_Survival_BattleRush_Init )
 
@@ -659,14 +663,14 @@ void function GameModes_Init()
 
 
 
-		GameModeVariant_Create( eGameModeVariants.SURVIVAL_VALENTINES_S15, eGameModes.SURVIVAL )
-		GameModeVariant_SetPlaylistFlag( eGameModeVariants.SURVIVAL_VALENTINES_S15, "is_valentines_s15" )
-		GameModeVariant_SetDevName( eGameModeVariants.SURVIVAL_VALENTINES_S15, GAMEMODE_DATE_NIGHT )
-
-			GameModeVariant_AddSharedInit( eGameModeVariants.SURVIVAL_VALENTINES_S15, Valentines_S15_Mode_Init )
 
 
-			GameModeVariant_AddClientInit( eGameModeVariants.SURVIVAL_VALENTINES_S15, ClValentines_Init )
+
+
+
+
+
+
 
 
 
@@ -734,6 +738,21 @@ void function GameModes_Init()
 	GameModeVariant_SetPlaylistFlag( eGameModeVariants.SURVIVAL_HALLOWEEN_18_1, "halloween_18_active" )
 	GameModeVariant_SetDevName( eGameModeVariants.SURVIVAL_HALLOWEEN_18_1, GAMEMODE_HALLOWEEN_18_1 )
 
+
+
+
+
+
+
+
+
+
+	GameModeVariant_Create( eGameModeVariants.SURVIVAL_HALLOWEEN_22_1, eGameModes.SURVIVAL )
+	GameModeVariant_SetPlaylistFlag( eGameModeVariants.SURVIVAL_HALLOWEEN_22_1, "halloween_22_active" )
+	GameModeVariant_SetDevName( eGameModeVariants.SURVIVAL_HALLOWEEN_22_1, GAMEMODE_HALLOWEEN_22_1 )
+
+
+		GameModeVariant_AddSharedInit( eGameModeVariants.SURVIVAL_HALLOWEEN_22_1, Sh_Survival_Halloween_22_1_Init )
 
 
 
@@ -818,16 +837,16 @@ void function GameModes_Init()
 
 
 
+	
+	GameModeVariant_Create( eGameModeVariants.SURVIVAL_OBJECTIVE_BR, eGameModes.SURVIVAL )
+	GameModeVariant_SetDevName( eGameModeVariants.SURVIVAL_OBJECTIVE_BR, GAMEMODE_OBJECTIVE_BR )
+	GameModeVariant_SetName( eGameModeVariants.SURVIVAL_OBJECTIVE_BR, "#GAMEMODE_OBJECTIVE_BR" )
+	GameModeVariant_SetPlaylistFlag( eGameModeVariants.SURVIVAL_OBJECTIVE_BR, "gamemode_objectivebr_active" )
+
+		GameModeVariant_AddSharedInit( eGameModeVariants.SURVIVAL_OBJECTIVE_BR, ObjectiveBR_Init )
 
 
-
-
-
-
-
-
-
-
+	
 
 
 
@@ -1203,7 +1222,6 @@ int function GameModeVariant_GetActiveMode()
 
 	return eGameModeVariants.invalid
 }
-
 
 
 

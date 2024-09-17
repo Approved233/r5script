@@ -12,52 +12,33 @@ global struct RTKEventsPrizeTrackerPanel_Properties
 
 global struct RTKEventsPrizeTracker_Model
 {
+	SettingsAssetGUID calEventBuffet
 }
 
 global struct RTKEventsPrizeTrackerTitle_Model
 {
-	string headerText = ""
-	string subheaderText = ""
-	asset eventIcon = $""
-	asset bgImage = $""
-	asset bgBlurImage = $""
 	int endTime = 0
-	bool bgBlur = false
-	float bgDarkening = 0
-	vector headerTextColor = <0,0,0>
-	vector subheaderTextColor = <0,0,0>
-	vector timeRemainingTextColor = <0,0,0>
 }
 
 global struct RTKEventsPrizeTrackerBadge_Model
 {
 	asset badgeRuiAsset = $""
 	asset imageAsset = $""
-	asset lockAsset = $""
-	asset checkmarkAsset = $""
-	asset lockedBG = $""
-	asset ownedBG = $""
-	asset badgeBorder = $""
-	asset badgeTagBG = $""
 	int   tier = 0
 	string badgeTitle = ""
 	string badgeDescription = ""
 	string badgeAdditionalText = ""
 	string badgeActionText = ""
 	bool isOwned = false
-	vector ownedBGColor = <1,1,1>
+	SettingsAssetGUID calEventBuffet
 }
 
 global struct RTKEventsPrizeTrackerBadgePanel_Model
 {
 	array<RTKEventsPrizeTrackerBadge_Model> badges
 
-	string pointsLabelText = ""
-	string badgesLabelText = ""
-	string eventDescriptionText = ""
 	string badgesOwned = ""
 	string badgesAvailable = ""
-	asset bgImage = $""
 }
 
 global struct RTKEventsPrizeTrackerRewardItem_Model
@@ -85,11 +66,12 @@ global struct RTKEventsPrizeTrackerProgressPip_Model
 	string pointsRequired = ""
 	int width = 110
 	bool doubleSided = false
+	vector progressBarColor = <1,1,1>
+	vector rewardThemeColor = <1,1,1>
 }
 
 global struct RTKEventsPrizeTrackerRewardPanel_Model
 {
-	string rewardsLabelText = ""
 	string rewardsOwned = ""
 	string rewardsAvailable = ""
 	string pointsAcquired = ""
@@ -102,10 +84,6 @@ global struct RTKEventsPrizeTrackerRewardPanel_Model
 
 global struct RTKEventsPrizeTrackerChaseItem_Model
 {
-	string finalRewardText = ""
-	string completeText = ""
-	asset chaseItemIcon = $""
-	asset chaseItemBG = $""
 	bool chaseItemOwned = false
 }
 
@@ -224,6 +202,11 @@ void function BuildDataModel( rtk_behavior self )
 	BuildChaseItemModel( self )
 	RTKEventsPrizeTrackerItemInfo_Model  itemPanel
 	BuildItemPanelModel( itemPanel )
+
+	RTKEventsPrizeTracker_Model prizeTrackModel
+	prizeTrackModel.calEventBuffet = event.guid
+
+	RTKStruct_SetValue( file.prizeTracker, prizeTrackModel )
 }
 
 void function BuildEventsPrizeTrackerTitleDataModel( rtk_behavior self )
@@ -237,16 +220,6 @@ void function BuildEventsPrizeTrackerTitleDataModel( rtk_behavior self )
 		expect ItemFlavor( event )
 
 		RTKEventsPrizeTrackerTitle_Model titleModel
-		titleModel.headerText = BuffetEvent_GetString( event, UI_TITLE_HEADER_ID )
-		titleModel.subheaderText = BuffetEvent_GetString( event, UI_TITLE_SUBHEADER_ID )
-		titleModel.eventIcon = BuffetEvent_GetAsset( event, UI_TITLE_MAIN_ICON_ID )
-		titleModel.bgBlur = BuffetEvent_GetBool( event,  UI_TITLE_USE_BG_BLUR_ID )
-		titleModel.bgBlurImage = BuffetEvent_GetAsset( event, UI_TITLE_BG_BLUR_IMAGE_ID )
-		titleModel.bgDarkening = BuffetEvent_GetFloat( event,  UI_TITLE_BG_BLUR_DARKENING_ID )
-		titleModel.bgImage = BuffetEvent_GetAsset( event, UI_TITLE_BG_IMAGE_ID )
-		titleModel.headerTextColor = BuffetEvent_GetVector( event, UI_TITLE_HEADER_COLOR_ID )
-		titleModel.subheaderTextColor = BuffetEvent_GetVector( event, UI_TITLE_SUBHEADER_COLOR_ID )
-		titleModel.timeRemainingTextColor = BuffetEvent_GetVector( event, UI_TITLE_TIME_REMAINING_COLOR_ID )
 		titleModel.endTime = CalEvent_GetFinishUnixTime( event )
 
 		const string TITLE_CARD_NAME = "titleCard"
@@ -268,10 +241,6 @@ void function BuildEventPrizeTrackerBadgePanelDataModel( rtk_behavior self )
 		expect ItemFlavor(event)
 
 		RTKEventsPrizeTrackerBadgePanel_Model badgePanelModel
-		badgePanelModel.pointsLabelText = BuffetEvent_GetString( event, UI_BADGE_PANEL_POINTS_LABEL_ID )
-		badgePanelModel.badgesLabelText = BuffetEvent_GetString( event, UI_BADGE_PANEL_BADGE_LABEL_ID )
-		badgePanelModel.eventDescriptionText = BuffetEvent_GetString( event, UI_BADGE_PANEL_DESCRIPTION_LABEL_ID )
-		badgePanelModel.bgImage = BuffetEvent_GetAsset( event, UI_MAIN_PANEL_BG_ID )
 
 		int badgeCount = p.bemacd.badges.len()
 
@@ -296,15 +265,7 @@ void function BuildEventPrizeTrackerBadgePanelDataModel( rtk_behavior self )
 			badgeModel.badgeRuiAsset = gcbdd.ruiAsset
 			badgeModel.imageAsset = gcbdd.imageAsset
 			badgeModel.tier = gcbdd.dataInteger
-
-			badgeModel.lockAsset = BuffetEvent_GetAsset( event, UI_BADGE_PANEL_NOT_OWNED_ICON_ID )
-			badgeModel.checkmarkAsset = BuffetEvent_GetAsset( event, UI_BADGE_PANEL_OWNED_ICON_ID )
-
-			badgeModel.lockedBG = BuffetEvent_GetAsset( event, UI_BADGE_PANEL_NOT_OWNED_BG_ID )
-			badgeModel.ownedBG = BuffetEvent_GetAsset( event, UI_BADGE_PANEL_OWNED_BG_ID )
-			badgeModel.ownedBGColor = BuffetEvent_GetVector( event, UI_BADGE_PANEL_OWNED_BG_COLOR_ID )
-			badgeModel.badgeBorder = BuffetEvent_GetAsset( event, UI_BADGE_PANEL_BAGDE_BORDER_ID )
-			badgeModel.badgeTagBG = BuffetEvent_GetAsset( event, UI_BADGE_PANEL_STATE_BG_ID )
+			badgeModel.calEventBuffet = event.guid
 
 			if ( ItemFlavor_GetGRXMode( badge ) != eItemFlavorGRXMode.NONE )
 			{
@@ -356,7 +317,6 @@ void function BuildEventsPrizeTrackerRewardsPanelDataModel( rtk_behavior self )
 		expect ItemFlavor(event)
 
 		RTKEventsPrizeTrackerRewardPanel_Model rewardsPanelModel
-		rewardsPanelModel.rewardsLabelText = BuffetEvent_GetString( event, UI_REWARDS_PANEL_REWARDS_LABEL_ID )
 
 		if ( p.bemacd.mainChallengeFlav != null )
 		{
@@ -394,6 +354,9 @@ void function BuildEventsPrizeTrackerRewardsPanelDataModel( rtk_behavior self )
 
 				progressPip.width = ( tierIdx == 0 ? ( numberOfRewardsInTier * REWARD_ICON_SIZE ) + ( numberOfRewardsInTier *  HORIZONTAL_SPACING  ) + DIVIDER_SIZE : ( numberOfRewardsInTier * REWARD_ICON_SIZE ) + ( ( 1 + numberOfRewardsInTier ) * HORIZONTAL_SPACING ) + DIVIDER_SIZE + PIP_HORIZONTAL_SPACING ) - BUFFER
 				progressPip.doubleSided = tierIdx != 0
+				progressPip.progressBarColor = BuffetEvent_GetVector( event, UI_REWARDS_PANEL_PROGRESS_BAR_COLOR_ID )
+				progressPip.rewardThemeColor = BuffetEvent_GetVector( event, progressPip.progress >= 1.0 ? UI_REWARD_OWNED_COLOR_ID : UI_REWARD_UNOWNED_COLOR_ID )
+
 				rewardsPanelModel.progressBars.push(progressPip)
 
 				prevGoal = goal
@@ -522,10 +485,6 @@ void function BuildChaseItemModel( rtk_behavior self )
 
 
 		RTKEventsPrizeTrackerChaseItem_Model chaseItem
-		chaseItem.finalRewardText   = BuffetEvent_GetString( event, UI_CHASE_ITEM_FINAL_REWARDS_LABEL_ID )
-		chaseItem.completeText   = BuffetEvent_GetString( event, UI_CHASE_ITEM_COMPLETEDLABEL_ID )
-		chaseItem.chaseItemBG       = BuffetEvent_GetAsset( event, UI_CHASE_ITEM_CHASE_ITEM_BG_ID )
-		chaseItem.chaseItemIcon = BuffetEvent_GetAsset( event, UI_CHASE_ITEM_CHASE_ITEM_ID )
 
 		if ( p.bemacd.mainChallengeFlav != null )
 		{
@@ -598,8 +557,14 @@ void function SetupRewardButtons( rtk_behavior self )
 
 void function SetupViewChallengesButton( rtk_behavior self )
 {
+	PrivateData p
+	self.Private( p )
 	rtk_panel ornull viewChallengesButton = self.PropGetPanel( "viewChallengesButton" )
+	if ( p.activeEvent == null )
+		return
 
+	ItemFlavor activeEvent = expect ItemFlavor( p.activeEvent )
+	string GUIDString = BuffetEvent_GetGUIDString( activeEvent, UI_CHALLENGE_TILE_ID )
 	if ( viewChallengesButton != null )
 	{
 		expect rtk_panel( viewChallengesButton )
@@ -607,9 +572,8 @@ void function SetupViewChallengesButton( rtk_behavior self )
 
 		foreach ( button in buttons )
 		{
-			self.AutoSubscribe( button, "onPressed", function( rtk_behavior button, int keycode, int prevState ) {
-
-				JumpToChallenges( "SAID01140881451" ) 
+			self.AutoSubscribe( button, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( GUIDString ) {
+				JumpToChallenges( GUIDString )
 			} )
 		}
 	}

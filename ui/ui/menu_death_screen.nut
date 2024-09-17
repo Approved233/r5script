@@ -75,12 +75,11 @@ struct
 } file
 
 
-void function InitDeathScreenMenu( var newMenuArg ) 
+void function InitDeathScreenMenu( var menu )
 {
-	var menu = GetMenu( "DeathScreenMenu" )
 	file.menu = menu
 
-	SetMenuReceivesCommands( file.menu, true )
+	SetMenuReceivesCommands( menu, true )
 	DeathScreen_AddPassthroughCommandsToMenu( menu ) 
 
 	AddUICallback_UIShutdown( DeathScreenMenu_Shutdown )
@@ -109,16 +108,12 @@ void function InitDeathScreenPanelFooter( var panel, int panelID )
 
 
 		
-		if( panelID != eDeathScreenPanel.SCOREBOARD && panelID == eDeathScreenPanel.CUP && panelID == eDeathScreenPanel.RANK )
+		if( panelID != eDeathScreenPanel.SCOREBOARD )
 		{
-
-				if( panelID == eDeathScreenPanel.SQUAD_SUMMARY )
+				if( panelID == eDeathScreenPanel.SQUAD_SUMMARY || panelID == eDeathScreenPanel.CUP || panelID == eDeathScreenPanel.RANK || panelID == eDeathScreenPanel.SQUAD )
 					AddPanelFooterOption( panel, RIGHT, KEY_ENTER, false, "", "", UI_OnLoadoutButton_Enter_RTKMenu )
 				else
 					AddPanelFooterOption( panel, RIGHT, KEY_ENTER, false, "", "", UI_OnLoadoutButton_Enter )
-
-
-
 		}
 
 
@@ -312,11 +307,14 @@ void function DeathScreenMenuOnOpen()
 	UISize screenSize = GetScreenSize()
 	SetCursorPosition( <1920.0 * 0.5, 1080.0 * 0.5, 0> )
 
-	
-	RunClientScript( "UICallback_ToggleGladCard", file.isGladCardShowing )
+	if ( CanRunClientScript() )
+	{
+		
+		RunClientScript( "UICallback_ToggleGladCard", file.isGladCardShowing )
 
-	RunClientScript( "UICallback_SetChangeLegendButton", DeathScreenGetChangeLegendButton() )
-	RunClientScript( "UICallback_SetChangeLoadoutButton", DeathScreenGetChangeLoadoutButton() )
+		RunClientScript( "UICallback_SetChangeLegendButton", DeathScreenGetChangeLegendButton() )
+		RunClientScript( "UICallback_SetChangeLoadoutButton", DeathScreenGetChangeLoadoutButton() )
+	}
 
 	Hud_AddEventHandler( DeathScreenGetChangeLegendButton(), UIE_CLICK, ChangeLegend_OnActivate )
 	Hud_AddEventHandler( DeathScreenGetChangeLoadoutButton(), UIE_CLICK, ChangeLoadout_OnActivate )
@@ -355,12 +353,14 @@ void function DeathScreen_OnTabChanged()
 	if ( tabData.activeTabIdx  == eDeathScreenPanel.RANK )
 	{
 		var headerElement = Hud_GetChild( file.menu, "Header" )
-		RunClientScript( "UICallback_ShowRank", headerElement )
+		if ( CanRunClientScript() )
+			RunClientScript( "UICallback_ShowRank", headerElement )
 	}
 	else if ( tabData.activeTabIdx  == eDeathScreenPanel.CUP )
 	{
 		var headerElement = Hud_GetChild( file.menu, "Header" )
-		RunClientScript( "UICallback_ShowCup", headerElement )
+		if ( CanRunClientScript() )
+			RunClientScript( "UICallback_ShowCup", headerElement )
 	}
 }
 
@@ -390,7 +390,7 @@ void function DeathScreenMenuOnClose()
 	DeregisterButtonPressedCallback( BUTTON_DPAD_UP, RequeueWithParty )
 	DeregisterButtonPressedCallback( KEY_1, RequeueWithParty )
 
-	if ( IsFullyConnected() )
+	if ( IsFullyConnected() && CanRunClientScript() )
 		RunClientScript( "UICallback_CloseDeathScreenMenu", GetGameState() < eGameState.WinnerDetermined  )
 
 
@@ -739,7 +739,8 @@ void function UI_DeathScreenUpdateHeader()
 	
 
 	var headerElement = Hud_GetChild( file.menu, "Header" )
-	RunClientScript( "UICallback_UpdateHeader", headerElement )
+	if ( CanRunClientScript() )
+		RunClientScript( "UICallback_UpdateHeader", headerElement )
 }
 
 void function UI_DeathScreenHideTabs( bool hide )
@@ -798,7 +799,7 @@ var function DeathScreenGetChangeLoadoutButton()
 
 void function DeathScreenMenu_OnResolutionChanged()
 {
-	if ( IsFullyConnected() )
+	if ( IsFullyConnected() && CanRunClientScript() )
 	{
 		RunClientScript( "UICallback_OnResolutionChange" )
 		RunClientScript( "UICallback_SetChangeLegendButton", DeathScreenGetChangeLegendButton() )
@@ -809,7 +810,7 @@ void function DeathScreenMenu_OnResolutionChanged()
 
 void function DeathScreenMenu_Shutdown()
 {
-	if ( IsFullyConnected() )
+	if ( IsFullyConnected() && CanRunClientScript() )
 		RunClientScript( "UICallback_DestroyAllClientGladCardData" )
 	return
 }
@@ -961,13 +962,15 @@ bool function CanReportPlayer()
 
 void function DeathScreenPingRespawn( var button )
 {
-	RunClientScript( "UICallback_TryPingRespawn" )
+	if ( CanRunClientScript() )
+		RunClientScript( "UICallback_TryPingRespawn" )
 }
 
 
 void function DeathScreenPingReplicator( var button )
 {
-	RunClientScript( "UICallback_TryPingReplicator" )
+	if ( CanRunClientScript() )
+		RunClientScript( "UICallback_TryPingReplicator" )
 }
 
 
@@ -1087,7 +1090,7 @@ void function DeathScreenOnBlockButtonClick( var button )
 		thread RunClientScriptOnButtonHold( BUTTON_STICK_LEFT, GetPCBlockKey(), "UICallback_BlockPlayer" )
 		return
 	}
-	else
+	else if ( CanRunClientScript() )
 	{
 		
 		RunClientScript( "UICallback_BlockPlayer" )
@@ -1105,7 +1108,7 @@ void function DeathScreenOnReportButtonClick( var button )
 		thread RunClientScriptOnButtonHold( BUTTON_STICK_RIGHT, GetPCReportKey(), "UICallback_ReportPlayer" )
 		return
 	}
-	else
+	else if ( CanRunClientScript() )
 	{
 		
 		RunClientScript( "UICallback_ReportPlayer" )
@@ -1123,7 +1126,8 @@ void function DeathScreenSpectateNext( var button )
 void function DeathScreenTryToggleGladCard( var button )
 {
 	file.isGladCardShowing = !file.isGladCardShowing
-	RunClientScript( "UICallback_ToggleGladCard", file.isGladCardShowing )
+	if ( CanRunClientScript() )
+		RunClientScript( "UICallback_ToggleGladCard", file.isGladCardShowing )
 
 	string gladCardMessageString = "#SPECTATE_HIDE_BANNER"
 	if ( !file.isGladCardShowing )
@@ -1162,7 +1166,8 @@ void function DeathScreenTryToggleUpgradesOnGladCard( var button )
 
 
 	file.isUpgradesGladCardShowing = !file.isUpgradesGladCardShowing
-	RunClientScript( "UICallback_ToggleUpgradesGladCard", file.isUpgradesGladCardShowing )
+	if ( CanRunClientScript() )
+		RunClientScript( "UICallback_ToggleUpgradesGladCard", file.isUpgradesGladCardShowing )
 }
 
 
@@ -1222,8 +1227,11 @@ void function RunClientScriptOnButtonHold( int consoleButtonID, int PCKeyID, str
 
 	if ( UITime() >= endTIme && ( InputIsButtonDown( consoleButtonID ) || InputIsButtonDown( PCKeyID ) ) )
 	{
-		printt( "#EADP RunClientScriptOnButtonHold", clientScriptCallback )
-		RunClientScript( clientScriptCallback )
+		if ( CanRunClientScript() )
+		{
+			printt( "#EADP RunClientScriptOnButtonHold", clientScriptCallback )
+			RunClientScript( clientScriptCallback )
+		}
 		return
 	}
 }
@@ -1239,7 +1247,7 @@ bool function DeathScreenIsOpen()
 
 void function ChangeLegend_OnActivate( var button )
 {
-	if( Hud_IsVisible( DeathScreenGetChangeLegendButton() ) && DeathScreenIsOpen() )
+	if( Hud_IsVisible( DeathScreenGetChangeLegendButton() ) && DeathScreenIsOpen() && CanRunClientScript() )
 		RunClientScript( "UICallback_OpenCharacterSelectMenu" )
 }
 
@@ -1271,12 +1279,14 @@ void function RequeueWithParty( var button )
 
 void function UI_FullmapChallengeCategoryLeft( var unused )
 {
-	RunClientScript( "FullmapChallengeCategoryLeft", null )
+	if ( CanRunClientScript() )
+		RunClientScript( "FullmapChallengeCategoryLeft", null )
 }
 
 void function UI_FullmapChallengeCategoryRight( var unused )
 {
-	RunClientScript( "FullmapChallengeCategoryRight", null )
+	if ( CanRunClientScript() )
+		RunClientScript( "FullmapChallengeCategoryRight", null )
 }
 
 #if DEV
@@ -1290,7 +1300,8 @@ void function ShowBanner()
 	
 
 	var headerElement = Hud_GetChild( file.menu, "Header" )
-	RunClientScript( "DEV_UICallback_UpdateHeader", headerElement )
+	if ( CanRunClientScript() )
+		RunClientScript( "DEV_UICallback_UpdateHeader", headerElement )
 }
 #endif
 
@@ -1300,8 +1311,18 @@ void function DeathScreenPanelFooterAutomationThink( var menu )
 {
 	if ( AutomateUi() && !AutomateUiWaitForPostmatch() && DeathScreenShowLobbyButton() )
 	{
-		printt("DeathScreenPanelFooterAutomationThink DeathScreenLeaveGameDialog()")
-		DeathScreenLeaveGameDialog( null )
+		if ( AutomateUiRequeue() )
+		{
+			printt("DeathScreenPanelFooterAutomationThink AutomateUiRequeue()")
+			RequeueWithParty( null )
+		}
+		else{ 
+			printt("DeathScreenPanelFooterAutomationThink StopMatchmaking()")
+			
+			StopMatchmaking()
+			ClientCommand( "disconnect" )
+			Party_LeaveParty()
+		}
 	}
 }
 #endif

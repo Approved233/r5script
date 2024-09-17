@@ -8,21 +8,31 @@ global function OnWeaponDeactivate_RevShell
 global function RevShell_Init
 global function IsRevShellEnabled
 
+global function IsCyberRevShellEnabled
+
+
 
 global function ClientRevShellTargetFX
 
 
 const asset REV_SHELL_MODEL = $"mdl/weapons/skull_grenade/skull_grenade_base_v.rmdl"
 const asset REV_SHELL_MODEL_V1 = $"mdl/weapons/skull_grenade/skull_grenade_base_v_v1.rmdl"
-
-
-
-
 const asset VFX_REV_SHELL_DESTROY = $"P_destroy_exp_rev"
 const asset VFX_REV_SHELL_FIZZLE = $"P_wpn_grenade_rev_fizzle"
 const asset VFX_REV_SHELL_LOCK_ON = $"P_revNade_lockon_sprite"
 const asset VFX_REV_SHELL_EYE_GLOW = $"P_wpn_grenade_rev_eyeglow"
 const asset VFX_REV_SHELL_EYE_GLOW_VOICE = $"P_wpn_grenade_rev_eyeglow_voice"
+
+
+const asset CYBER_REV_SHELL_MODEL = $"mdl/weapons/skull_grenade/skull_grenade_cyber_base_v.rmdl"
+const asset CYBER_REV_SHELL_MODEL_V1 = $"mdl/weapons/skull_grenade/skull_grenade_cyber_base_v_v1.rmdl"
+const asset CYBER_VFX_REV_SHELL_DESTROY = $"P_destroy_exp_rev"
+const asset CYBER_VFX_REV_SHELL_FIZZLE = $"P_wpn_grenade_rev_cyber_fizzle"
+const asset CYBER_VFX_REV_SHELL_LOCK_ON = $"P_revnade_cyber_lockon_sprite"
+const asset CYBER_VFX_REV_SHELL_EYE_GLOW = $"P_wpn_grenade_rev_cyber_eyeglow"
+const asset CYBER_VFX_REV_SHELL_EYE_GLOW_VOICE = $"P_wpn_grenade_rev_cyber_eyeglow_voice"
+
+
 global const string REV_SHELL_TARGETNAME = "Rev_shell"
 global const string REV_SHELL_SCRIPTNAME = "revShell"
 
@@ -37,7 +47,11 @@ const string REV_SHELL_LOCKED_ON_AGGRESSOR_SOUND = "ui_revshellseeker_aggressor_
 const string REV_SHELL_ON_THROWN = "weapon_revshellseeker_seekingloop_3p"
 const string REV_SHELL_SHELL_TOSS = "diag_mp_nocNotify_bc_shellToss_3p"
 const string REV_SHELL_WARNING_BEEP = "weapon_revshellseeker_explosivewarningbeep_3p"
-const string CYBER_REV_SHELL_WEAPON_NAME = "mp_weapon_grenade_cyber_rev_shell"
+const string REV_SHELL_WEAPON_NAME = "mp_weapon_grenade_rev_shell"
+const string HAS_REV_SHELL_ENABLED = "rev_shell_enabled"
+
+const string HAS_CYBER_REV_SHELL_ENABLED = "cyber_rev_shell_enabled"
+
 
 
 const float SPEED_CHANGE_DISTANCE_THRESHOLD = 800.0 
@@ -63,29 +77,66 @@ void function RevShell_Init()
 	RegisterSignal( "RevShellEnd" )
 	PrecacheModel( REV_SHELL_MODEL )
 	PrecacheModel( REV_SHELL_MODEL_V1 )
-
-
-
-
 	PrecacheParticleSystem( VFX_REV_SHELL_DESTROY )
 	PrecacheParticleSystem( VFX_REV_SHELL_FIZZLE )
 	PrecacheParticleSystem( VFX_REV_SHELL_LOCK_ON )
 	PrecacheParticleSystem( VFX_REV_SHELL_EYE_GLOW )
 	PrecacheParticleSystem( VFX_REV_SHELL_EYE_GLOW_VOICE )
+
+
+		if ( IsCyberRevShellEnabled() )
+		{
+			PrecacheModel( CYBER_REV_SHELL_MODEL )
+			PrecacheModel( CYBER_REV_SHELL_MODEL_V1 )
+			PrecacheParticleSystem( CYBER_VFX_REV_SHELL_DESTROY )
+			PrecacheParticleSystem( CYBER_VFX_REV_SHELL_FIZZLE )
+			PrecacheParticleSystem( CYBER_VFX_REV_SHELL_LOCK_ON )
+			PrecacheParticleSystem( CYBER_VFX_REV_SHELL_EYE_GLOW )
+			PrecacheParticleSystem( CYBER_VFX_REV_SHELL_EYE_GLOW_VOICE )
+		}
+
+
 	Remote_RegisterClientFunction( "ClientRevShellTargetFX", "entity", "entity" )
 
-	SURVIVAL_Loot_RegisterConditionalCheck( "mp_weapon_grenade_rev_shell", Rev_Shell_ConditionalCheck)
+	SURVIVAL_Loot_RegisterConditionalCheck( "mp_weapon_grenade_rev_shell", Rev_Shell_ConditionalCheck )
+
 
 
 
 
 	CLOSE_CHASE_SPEED = GetCurrentPlaylistVarFloat( "rev_shell_close_chase_speed", CLOSE_CHASE_SPEED )
 	FAR_CHASE_SPEED = GetCurrentPlaylistVarFloat( "rev_shell_far_chase_speed", FAR_CHASE_SPEED )
-
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 void function OnWeaponActivate_RevShell( entity weapon )
 {
+
+	if ( IsCyberRevShellEnabled() )
+	{
+		if ( !weapon.HasMod( "cyber" ) )
+			weapon.AddMod( "cyber" )
+	}
+
+
 	Grenade_OnWeaponActivate( weapon )
 
 
@@ -227,6 +278,10 @@ var function Grenade_OnWeaponTossReleaseAnimEvent_RevShell( entity weapon, Weapo
 
 	return weapon.GetAmmoPerShot()
 }
+
+
+
+
 
 
 
@@ -744,6 +799,24 @@ void function OnRevShellPostDamaged( entity grenadeProxy, var damageInfo )
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function ClientRevShellTargetFX( entity target, entity projectile )
 {
 	thread ClientRevShellTargetFX_Thread( target, projectile )
@@ -758,6 +831,10 @@ void function ClientRevShellTargetFX_Thread( entity target, entity projectile )
 	EndSignal( projectile, "OnDestroy" )
 
 	int fxIndex = GetParticleSystemIndex( VFX_REV_SHELL_LOCK_ON )
+
+		if ( IsCyberRevShellEnabled() )
+			fxIndex = GetParticleSystemIndex( CYBER_VFX_REV_SHELL_LOCK_ON )
+
 	int attachIdx = target.LookupAttachment( "CHESTFOCUS" )
 	Assert( attachIdx != 0, "Attachment index is 0 for some reason, consider checking IsPlayer()" )
 	if ( attachIdx <= 0 )
@@ -795,6 +872,10 @@ void function RevShell_HandleEyeGlowVFX_Voice_Thread( entity weapon )
 	EndSignal( weapon, "OnDestroy" )
 
 	int fxIndex = GetParticleSystemIndex( VFX_REV_SHELL_EYE_GLOW_VOICE )
+
+		if ( IsCyberRevShellEnabled() )
+			fxIndex = GetParticleSystemIndex( CYBER_VFX_REV_SHELL_EYE_GLOW_VOICE )
+
 	int attachIdxL = viewmodel.LookupAttachment( "L_EYE_VFX" )
 	int attachIdxR = viewmodel.LookupAttachment( "R_EYE_VFX" )
 	Assert( attachIdxL != 0, "Attachment index is 0 for some reason, check rev shell" )
@@ -909,10 +990,21 @@ void function RevShell_HandleEyeGlowVFX_Voice_Thread( entity weapon )
 
 
 
+
+
+
+
 bool function IsRevShellEnabled()
 {
-	return GetCurrentPlaylistVarBool( "rev_shell_enabled", false )
+	return GetCurrentPlaylistVarBool( HAS_REV_SHELL_ENABLED, false )
 }
+
+
+bool function IsCyberRevShellEnabled()
+{
+	return GetCurrentPlaylistVarBool( HAS_CYBER_REV_SHELL_ENABLED, false )
+}
+
 
 bool function Rev_Shell_ConditionalCheck( string ref, entity player )
 {

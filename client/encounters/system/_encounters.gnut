@@ -24,9 +24,7 @@ bool isInitialized = false
 
 void function InitEncounterTypes()
 {
-
 	InitEncounterType_SpectreHitSquad()
-
 
 
 

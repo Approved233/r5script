@@ -30,17 +30,17 @@ void function RemoteFunctions_Init_Begin()
 			break
 
 
-		case "mp_rr_spectreshack_actionblock_02":
 
-		case "mp_rr_tropic_island":
-		case "mp_rr_tropic_island_mu1":
-		case "mp_rr_tropic_island_tt":
-		case "mp_rr_jake_test":
-		case "mp_rr_ai_wildlife":
-		case "mp_rr_canyonlands_mu1_night":
-			
-			NPCs_RegisterNetworking()
-			break
+
+
+
+
+
+
+
+
+
+
 	}
 
 	RegisterNetworkedVariable( "skyDiveTrailOverrideIndex", SNDC_PLAYER_GLOBAL, SNVT_INT, -1 )
@@ -55,7 +55,6 @@ void function RemoteFunctions_Init_Begin()
 	Remote_RegisterClientFunction( "ServerCallback_UpdateOffhandRuis" )
 
 	Remote_RegisterUIFunction( "ScriptCallback_UnlockAchievement", "int", INT_MIN, INT_MAX )
-	Remote_RegisterClientFunction( "ServerCallback_UpdateHeroStats" )
 
 	Remote_RegisterClientFunction( "ServerCallback_SonarPulseFromPosition", "vector", -32000.0, 32000.0, 32, "float", 0.0, 32000.0, 8, "int", 0, 128, "float", 0.0, 64.0, 16, "float", 0.0, 32000.0, 32, "bool" )
 	Remote_RegisterClientFunction( "ServerCallback_SonarPulseConeFromPosition", "vector", -32000.0, 32000.0, 32, "float", 0.0, 32000.0, 8, "vector", -1.0, 1.0, 32, "float", -360.0, 360.0, 8, "int", 0, 128, "float", 0.0, 32000.0, 32, "bool", "bool" )
@@ -200,9 +199,7 @@ void function RemoteFunctions_Init_Begin()
 			RegisterNetworkedVariable( CHARACTER_SELECT_NETVAR_LOCK_STEP_END_TIME, SNDC_GLOBAL, SNVT_TIME, -1 )
 			RegisterNetworkedVariable( "characterSelectPicksEndTime", SNDC_GLOBAL, SNVT_TIME, -1 )
 			RegisterNetworkedVariable( "allSquadsPresentationStartTime", SNDC_GLOBAL, SNVT_TIME, -1 )
-			RegisterNetworkedVariable( "squadPresentationStartTime", SNDC_GLOBAL, SNVT_TIME, -1 )
-			RegisterNetworkedVariable( "mvpPresentationStartTime", SNDC_GLOBAL, SNVT_TIME, -1 )
-			RegisterNetworkedVariable( "championSquadPresentationStartTime", SNDC_GLOBAL, SNVT_TIME, -1 )
+
 			Remote_RegisterClientFunction( "ServerCallback_CharacterLockRejected" )
 			Remote_RegisterClientFunction( "ServerCallback_ForceCharacterLockFeedback", "entity", "bool" )
 
@@ -331,8 +328,8 @@ void function RemoteFunctions_Init_Begin()
 			RegisterNetworkedVariable( "skydiveFollowPlayer", SNDC_PLAYER_EXCLUSIVE, SNVT_ENTITY )
 
 
-
-
+			RegisterNetworkedVariable( "skydiveBoostTime", SNDC_PLAYER_EXCLUSIVE, SNVT_FLOAT_RANGE_OVER_TIME, -1.0, -1.0, 10.0 )
+			RegisterNetworkedVariable( "planeEnt", SNDC_PLAYER_GLOBAL, SNVT_ENTITY )
 
 
 
@@ -367,7 +364,6 @@ void function RemoteFunctions_Init_Begin()
 			Remote_RegisterClientFunction( "ServerCallback_SurveyBeaconNotifications", "entity", "int", 0, 8 )
 			Remote_RegisterClientFunction( "ServerCallback_UpdateSurveyBeaconHUDVisibility" )
 
-			Remote_RegisterClientFunction( "ServerToClient_OnStartedUsingHealthPack", "int", 0, 127 )
 			Remote_RegisterClientFunction( "ServerCallback_PromptSayThanks", "entity" )
 			Remote_RegisterClientFunction( "ServerCallback_PromptSayThanksRevive", "entity" )
 			Remote_RegisterClientFunction( "ServerCallback_PromptTaunt" )
@@ -516,9 +512,7 @@ void function RemoteFunctions_Init_Begin()
 		LoadoutSelection_RegisterNetworking()
 		GamemodeUtility_RegisterNetworking()
 
-
-			EvacShip_RegisterNetworking()
-
+		EvacShip_RegisterNetworking()
 
 
 
@@ -561,23 +555,8 @@ void function RemoteFunctions_Init_Begin()
 			Bloodhound_TT_RegisterNetworking()
 			ShEpilogue_RegisterNetworking()
 			Armor_ShieldRegen_RegisterNetworking()
-			HealthRegen_RegisterNetworking()
 			break
 	}
-
-
-
-		foreach ( string platform in PLATFORM_LIST )
-		{
-			RegisterNetworkedVariable( "nv_currentRankedLadderPosition_" + platform, SNDC_PLAYER_GLOBAL, SNVT_BIG_INT, -2 )
-		}
-		if ( IsLobby() )
-		{
-
-				RankedRumble_RegisterNetworkFunctions()
-
-		}
-
 
 
 		MapMetrics_RegisterNetworking()
@@ -648,9 +627,7 @@ void function RemoteFunctions_Init_Begin()
 
 
 
-
-		Remote_RegisterClientFunction( "ServerCallback_SetDesertlandsTrainAtStation", "bool" )
-
+	Remote_RegisterClientFunction( "ServerCallback_SetDesertlandsTrainAtStation", "bool" )
 
 	Remote_RegisterClientFunction( "ServerCallback_OnBunkerLoreScreenAttemptHack", "entity", "entity" )
 	Remote_RegisterClientFunction( "ServerToClient_RespawnChamberOnUse", "entity", "entity" )
@@ -770,7 +747,6 @@ void function RemoteFunctions_Init_Begin()
 
 	
 	Remote_RegisterServerFunction( "ClientCallback_CancelMatchSearch" )
-	Remote_RegisterServerFunction( "ClientCallback_ValidateLoadout" )
 	Remote_RegisterServerFunction( "ClientCallback_lastSeenPremiumCurrency" )
 	Remote_RegisterServerFunction( "ClientCallback_ResetReconnectParams" )
 	Remote_RegisterServerFunction( "ClientCallback_ReconnectCheckStatus" )
@@ -839,7 +815,7 @@ void function RemoteFunctions_Init_Begin()
 
 
 	
-	Remote_RegisterServerFunction( "ClientCallback_PlayerPerformPodiumScreenEmote", "int", INT_MIN, INT_MAX, "int", 0, INT_MAX )
+	Remote_RegisterServerFunction( "ClientCallback_PlayerPerformPodiumScreenEmote", "int", 0, INT_MAX ) 
 	Remote_RegisterClientFunction( "ServerCallback_PlayerPerformPodiumScreenEmote", "int", INT_MIN, INT_MAX, "int", 0, INT_MAX )
 	Remote_RegisterServerFunction( "ClientCallback_PlayerPerformPodiumScreenFlourish", "int", INT_MIN, INT_MAX )
 	Remote_RegisterClientFunction( "ServerCallback_PlayerPerformPodiumScreenFlourish", "int", INT_MIN, INT_MAX )
@@ -917,10 +893,6 @@ void function RemoteFunctions_Init_Begin()
 
 	Remote_RegisterClientFunction( "ServerToClient_UpdateItem", "entity" )
 
-	if ( !IsLobby() )
-		Remote_RegisterServerFunction( "ClientCallback_MigrateMeTransferPersistence", "typed_entity", "player" )
-
-	
 	Remote_RegisterClientFunction( "ServertoClient_LTM_AnnouncementSplash" )
 
 

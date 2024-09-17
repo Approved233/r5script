@@ -652,7 +652,7 @@ void function PodiumScreenPerformEmote_Thread( entity characterModel, ItemFlavor
 	if ( sendCallback )
 	{
 		int emoteGUID = ItemFlavor_GetGUID( emote )
-		Remote_ServerCallFunction( "ClientCallback_PlayerPerformPodiumScreenEmote", playerEHI, emoteGUID )
+		Remote_ServerCallFunction( "ClientCallback_PlayerPerformPodiumScreenEmote", emoteGUID )
 	}
 
 	OnThreadEnd(
@@ -700,6 +700,20 @@ void function VictoryScreenEmoteCleanup( entity characterModel, EHI playerEHI, e
 
 	characterModel.ClearParent()
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1168,8 +1182,11 @@ void function ModelPerformEmote( entity model, ItemFlavor item, entity mover, bo
 	string anim3p     = CharacterQuip_GetAnim3p( item, character )
 	string loopAnim3p = CharacterQuip_GetAnimLoop3p( item )
 
-	Assert( model.LookupSequence( anim3p ) != -1, "Victory sequence " + anim3p + "doesn't exist on model " + model.GetModelName() +
+	bool sequenceIsValid = ( model.LookupSequence( anim3p ) != -1 )
+	Assert( sequenceIsValid, "Victory sequence " + anim3p + "doesn't exist on model " + model.GetModelName() +
 	"Likely an issue with grabbing the wrong sequence from CharacterQuip_GetAnim3p" )
+	if ( !sequenceIsValid ) 
+		return
 
 	bool usesLoop = loopAnim3p != ""
 
@@ -1239,6 +1256,17 @@ void function ModelPerformEmote( entity model, ItemFlavor item, entity mover, bo
 		}
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
 
 
 

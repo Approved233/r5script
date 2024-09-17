@@ -64,7 +64,7 @@ void function OnWeaponReadyToFire_ability_silence( entity weapon )
 	weapon.PlayWeaponEffect( FX_SILENCE_READY_1P, FX_SILENCE_READY_3P, "muzzle_flash" )
 
 
-		thread PROTO_FadeModelIntensityOverTime( weapon, 1.0, 0, 255)
+		thread FadeModelIntensityOverTime( weapon, 1.0, 0, 255)
 
 
 }
@@ -77,7 +77,7 @@ void function OnWeaponDeactivate_ability_silence( entity weapon )
 	weapon.StopWeaponEffect( FX_SILENCE_READY_1P, FX_SILENCE_READY_3P )
 
 
-		thread PROTO_FadeModelIntensityOverTime( weapon, 0.25, 255, 0)
+		thread FadeModelIntensityOverTime( weapon, 0.25, 255, 0)
 
 
 	Grenade_OnWeaponDeactivate( weapon )

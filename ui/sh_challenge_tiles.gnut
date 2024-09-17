@@ -2,7 +2,9 @@
 
 global function Sh_Challenge_Tiles_Init
 global function ChallengeTiles_IsEnabled
-global function ChallengeTile_GetActiveTiles
+
+global function ChallengeTile_GetActiveTilesSorted
+
 global function ChallengeTile_GetActiveTileByGUID
 global function ChallengeTile_GetActiveBlocks
 global function ChallengeTileFlav_GetActiveTilesOfCategory
@@ -16,17 +18,23 @@ global function ChallengeTileFlav_GetAllLinkedCollectionChallenges
 global function ChallengeTile_HasDeepLink
 global function ChallengeTile_GetCompletedChallengeCount
 global function ChallengeTile_GetChallengeCount
+global function ChallengeTile_HasMetaBlock
 global function ChallengeTile_HasBRChallenges
 global function ChallengeTile_HasNBRChallenges
 global function ChallengeTile_IsCompleted
 
 global function ChallengeTile_HasTrackedChallenges
 global function ChallengeTile_UpdateFavoriteChallenge
+global function ChallengeTile_GetNPPTile
 global function ChallengeTile_GetActiveFeaturedTile
 global function ChallengeTile_GetLobbyWidgetFeaturedChallenge
 global function ChallengeTile_GetLobbyWidgetChallenges
 global function ChallengeTile_AddLobbyWidgetHeaderEventHandlers
+global function ChallengeTile_FindChallenge
+global function ChallengeTile_GetTileByIndex
 
+
+global function ChallengeTile_GetNPPChallengeCollection
 
 global function ChallengeBlock_GetCompletedChallengeCount
 global function ChallengeBlock_GetChallengeCount
@@ -118,6 +126,9 @@ global struct ChallengeBlock
 	array<ChallengeBlockLockReason> lockReasons
 
 	void functionref( ChallengeBlock, entity ) ornull customBlockSort 
+
+	
+	bool isMetaBlock
 }
 
 typedef BlockSortFunc void functionref( ChallengeBlock, entity )
@@ -165,6 +176,7 @@ const string BLOCK_DAILIES_TITLE = "#BLOCK_DAILIES_TITLE"
 
 struct FileStruct_ChallengeTiles
 {
+	table<ChallengeTileCategory, int> tileOrder
 	array< ChallengeTile > activeTiles
 }
 FileStruct_ChallengeTiles& file
@@ -179,6 +191,15 @@ void function Sh_Challenge_Tiles_Init()
 	FileStruct_ChallengeTiles localChallengeTileData
 	file = localChallengeTileData
 
+	
+	const string defaultChallengeTileOrder = "TRACKED BEGINNER DAILY EVENT WEEKLY"
+	string rawChallengeTileCategoricalOrder = GetPlaylistVarString( GetCurrentPlaylistName(), "challenge_tile_order", defaultChallengeTileOrder )
+	array<ChallengeTileCategory> tileOrderList = ChallengeTileImport_ReadTileOrderFromString( rawChallengeTileCategoricalOrder )
+	foreach ( int index, ChallengeTileCategory category in tileOrderList )
+	{
+		file.tileOrder[ category ] <- index
+	}
+
 	AddCallback_RegisterRootItemFlavors( ChallengeTileImport_RegisterItemFlavs )
 }
 
@@ -186,6 +207,18 @@ bool function ChallengeTiles_IsEnabled()
 {
 	bool isEnabled = GetCurrentPlaylistVarBool( PLAYLIST_KILLSWITCH_VAR, true )
 	return isEnabled
+}
+
+array<ChallengeTileCategory> function ChallengeTileImport_ReadTileOrderFromString( string rawString )
+{
+	array<string> categoryTokens = split( rawString, WHITESPACE_CHARACTERS )
+	array<ChallengeTileCategory> categoryList
+
+	foreach ( token in categoryTokens )
+	{
+		categoryList.append( ChallengeTileCategory_FromString( token.toupper() ) )
+	}
+	return categoryList
 }
 
 void function ChallengeTileImport_RegisterItemFlavs()
@@ -257,6 +290,16 @@ int function ChallengeTile_GetChallengeCount( ChallengeTile tile )
 	}
 
 	return count
+}
+
+bool function ChallengeTile_HasMetaBlock( ChallengeTile tile )
+{
+	foreach ( ChallengeBlock block in tile.blocks )
+	{
+		if ( block.isMetaBlock )
+			return true
+	}
+	return false
 }
 
 struct TileSearchResult
@@ -489,6 +532,17 @@ void function ChallengeTile_UpdateFavoriteChallenge( SettingsAssetGUID challenge
 	}
 }
 
+ChallengeTile ornull function ChallengeTile_GetNPPTile()
+{
+	array<int> nppTiles = ChallengeTile_GetActiveTileIndexesByCategory( eChallengeTileCategory.BEGINNER )
+	Assert( nppTiles.len() <= 1 )
+	if ( nppTiles.len() > 0 )
+	{
+		return ChallengeTile_GetTileByIndex( nppTiles[0] )
+	}
+	return null
+}
+
 array<ChallengeTile> function ChallengeTile_GetActiveFeaturedTiles()
 {
 	entity player = GetLocalClientPlayer()
@@ -673,6 +727,21 @@ void function RemoveCallback_OnChallengeTileAdded( void functionref() callbackFu
 }
 
 
+ChallengeCollection function ChallengeTile_GetNPPChallengeCollection()
+{
+	ChallengeCollection challengeCollection
+	array<ItemFlavor> tileFlavs = ChallengeTileFlav_GetActiveTilesOfCategory( eChallengeTileCategory.BEGINNER )
+
+	Assert( tileFlavs.len() <= 1, "Found Multiple NPP Challenge Tiles" )
+
+	foreach ( tileFlav in tileFlavs )
+	{
+		challengeCollection = ChallengeTileFlav_GetLinkedCollection( tileFlav )
+	}
+
+	return challengeCollection
+}
+
 bool function ChallengeTile_HasBRChallenges( ChallengeTile tile )
 {
 	foreach ( ChallengeBlock block in tile.blocks )
@@ -819,8 +888,8 @@ void function ChallengeBlock_SortChallengesByProgress( ChallengeBlock block, ent
 	})
 
 	
-	unstarted.sort( ChallengeBlock_CompareSortOrdinal )
-	finished.sort( ChallengeBlock_CompareSortOrdinal )
+	unstarted.sort( Challenge_SortSameProgressChallenges )
+	finished.sort( Challenge_SortSameProgressChallenges )
 
 	
 	block.challenges.extend( metaChallenges )
@@ -831,14 +900,6 @@ void function ChallengeBlock_SortChallengesByProgress( ChallengeBlock block, ent
 	block.challenges.extend( finished )
 
 	return
-}
-
-int function ChallengeBlock_CompareSortOrdinal( ItemFlavor challengeFlavA, ItemFlavor challengeFlavB )
-{
-	Assert( ItemFlavor_GetType( challengeFlavA ) == eItemType.challenge )
-	Assert( ItemFlavor_GetType( challengeFlavB ) == eItemType.challenge )
-
-	return Challenge_GetSortOrdinal( challengeFlavA ) <= Challenge_GetSortOrdinal( challengeFlavB ) ? -1 : 1
 }
 
 void function ChallengeBlock_SortNarrativeBlock( ChallengeBlock block, entity player )
@@ -1003,6 +1064,15 @@ array<ChallengeTile> function ChallengeTile_GetActiveTiles()
 	return file.activeTiles
 }
 
+
+array<ChallengeTile> function ChallengeTile_GetActiveTilesSorted()
+{
+	array<ChallengeTile> sortedTiles = clone file.activeTiles
+	sortedTiles.sort( ChallengeTile_SortTiles )
+	return sortedTiles
+}
+
+
 ChallengeTile function ChallengeTile_GetActiveTileByGUID( SettingsAssetGUID guid )
 {
 
@@ -1109,14 +1179,17 @@ array< ItemFlavor > function ChallengeTileFlav_GetActiveTilesOfCategory( Challen
 }
 
 
-
+ChallengeTileCategory function ChallengeTileCategory_FromString( string enumKey )
+{
+	Assert( enumKey in eChallengeTileCategory, "Invalid eChallengeTileCategory enum value: " + enumKey )
+	return eChallengeTileCategory[enumKey]
+}
 ChallengeTileCategory function ChallengeTileFlav_GetCategory( ItemFlavor itemFlav )
 {
 	Assert( ItemFlavor_GetType( itemFlav ) == eItemType.challenge_tile )
 	Assert( IsItemFlavorStructValid( itemFlav.guid, eValidation.ASSERT ) )
-	string enumKey = GetGlobalSettingsString( ItemFlavor_GetAsset( itemFlav ), "challengeTileCategory" )
-	Assert( enumKey in eChallengeTileCategory, "Invalid eChallengeTileCategory enum value: " + enumKey )
-	return eChallengeTileCategory[enumKey]
+	ChallengeTileCategory category = ChallengeTileCategory_FromString( GetGlobalSettingsString( ItemFlavor_GetAsset( itemFlav ), "challengeTileCategory" ) )
+	return category
 }
 
 ChallengeCollection function ChallengeTileFlav_GetLinkedCollection( ItemFlavor tileFlav )
@@ -1157,6 +1230,39 @@ bool function ChallengeTile_HasDeepLink( ChallengeTile tile )
 {
 	return tile.deepLinkConfig.linkType != ""
 }
+
+
+
+int function ChallengeTile_SortTiles( ChallengeTile tileA, ChallengeTile tileB )
+{
+	entity player = GetLocalClientPlayer()
+
+	
+	bool tileAComplete = ChallengeTile_IsCompleted( tileA, player )
+	bool tileBComplete = ChallengeTile_IsCompleted( tileB, player )
+
+	if ( tileAComplete && !tileBComplete )
+		return 1
+	else if ( !tileAComplete && tileBComplete )
+		return -1
+
+	
+	ChallengeTileCategory tileCategoryA = tileA.tileCategory
+	ChallengeTileCategory tileCategoryB = tileB.tileCategory
+	if ( file.tileOrder[ tileCategoryA ] < file.tileOrder[ tileCategoryB ] )
+		return -1
+	else if ( file.tileOrder[ tileCategoryA ] > file.tileOrder[ tileCategoryB ] )
+		return 1
+
+	
+	if( tileA.endDate < tileB.endDate )
+		return -1
+	else if( tileA.endDate > tileB.endDate )
+		return 1
+
+	return 0
+}
+
 
 
 void function ChallengeTile_SortTile( entity player, ChallengeTile tile )
@@ -1285,7 +1391,7 @@ array<ChallengeTile> function TileBuild_Dailies( entity player, ChallengeTileFla
 {
 	array<ItemFlavor> dailyTileFlavs = tileFlavsByCategory[ eChallengeTileCategory.DAILY ]
 	array<ChallengeTile> tiles
-	int dailyExpirationTime = ClampChallengeExpireTime( player.GetPersistentVarAsInt( "dailyExpirationTime" ) )
+	int dailyExpirationTime = Challenge_GetDailyExpirationTimeWithOffset( player )
 	ItemFlavor ornull activeBattlePass = GetActiveBattlePass()
 	foreach ( ItemFlavor flav in dailyTileFlavs )
 	{
@@ -1407,6 +1513,18 @@ array<ChallengeTile> function TileBuild_Events( entity player, array<ItemFlavor>
 ChallengeTile function TileBuild_ExtendFromCollection( ChallengeTile tile, ChallengeCollection collection)
 {
 	array<ChallengeBlock> blocks = BlockBuild_FromChallengeCollection( collection )
+
+	
+	ItemFlavor ornull metaChallenge = collection.metaChallenge
+	if ( metaChallenge != null )
+	{
+		expect ItemFlavor( metaChallenge )
+		if ( Challenge_GetRewards( metaChallenge, 0 ).flavors.len() > 0 )
+		{
+			tile.blocks.append( BlockBuild_MetaBlock( metaChallenge ) )
+		}
+	}
+
 	tile.blocks.extend( blocks )
 	return tile
 }
@@ -1514,6 +1632,7 @@ ChallengeBlock function BlockBuild_Default()
 	block.rewards = ""
 	block.startDate = UNIX_TIME_FALLBACK_1970
 	block.endDate = UNIX_TIME_FALLBACK_2038
+	block.isMetaBlock = false
 	return block
 }
 
@@ -1597,10 +1716,16 @@ ChallengeBlock function BlockBuild_FromChallengeSet( ChallengeSet set )
 	ChallengeBlock block = BlockBuild_Default()
 
 	
-	if ( Challenge_GetRewards(set.mainChallenge, 0).flavors.len() > 0 )
+	ItemFlavor ornull metaChallenge = set.metaChallenge
+	if ( metaChallenge != null )
 	{
-		block.challenges.push( set.mainChallenge )
+		expect ItemFlavor( metaChallenge )
+		if ( Challenge_GetRewards( metaChallenge, 0 ).flavors.len() > 0 )
+		{
+			block.challenges.push( metaChallenge )
+		}
 	}
+
 	block.challenges.extend( set.challenges )
 	block.blockType = eChallengeBlockType.DEFAULT 
 	block.title = ItemFlavor_GetLongName( set.itemFlav )
@@ -1632,7 +1757,7 @@ array<ChallengeBlock> function BlockBuild_BuffetEventDailies( ItemFlavor buffetE
 	BuffetEventModesAndChallengesData buffetEventData = BuffetEvent_GetModesAndChallengesData( buffetEventFlav )
 	
 	ChallengeBlock eventDailies = BlockBuild_FromCalEvent( buffetEventFlav )
-	eventDailies.challenges = buffetEventData.dailyChallenges
+	eventDailies.challenges = clone buffetEventData.dailyChallenges
 	eventDailies.title = blockTitleOverride != "" ? blockTitleOverride : BlockBuild_LocalizeDailyBlockTitle( ItemFlavor_GetLongName( buffetEventFlav ) )
 	blocks.append( eventDailies )
 
@@ -1746,7 +1871,7 @@ array<ChallengeBlock> function BlockBuild_EventShopDailies( entity player, ItemF
 	EventShopData eventShopData = EventShop_GetEventShopData( eventFlav )
 	eventDailies.challenges = challenges
 	eventDailies.title = blockTitleOverride != "" ? blockTitleOverride : BlockBuild_LocalizeDailyBlockTitle( ItemFlavor_GetLongName( eventFlav ) )
-	eventDailies.endDate = ClampChallengeExpireTime( player.GetPersistentVarAsInt( "dailyExpirationTime" ) )
+	eventDailies.endDate = Challenge_GetDailyExpirationTimeWithOffset( player )
 	blocks.append( eventDailies )
 
 	return blocks
@@ -1820,6 +1945,17 @@ array<ChallengeBlock> function BlockBuild_NarrativeSummaryBlock()
 		return blocks
 	}
 	return []
+}
+
+
+
+ChallengeBlock function BlockBuild_MetaBlock( ItemFlavor collectionMetaChallengeFlav )
+{
+	ChallengeBlock block = BlockBuild_Default()
+	block.isMetaBlock = true
+	block.title = ItemFlavor_GetLongName( collectionMetaChallengeFlav )
+	block.challenges.append( collectionMetaChallengeFlav )
+	return block
 }
 
 

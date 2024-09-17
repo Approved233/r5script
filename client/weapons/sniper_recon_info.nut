@@ -17,7 +17,7 @@ const float SNIPER_RECON_TRACKING_FOV = 3.5
 const float SNIPER_RECON_MAX_DISTANCE_FROM_TRACE_END = 7.5
 
 
-const bool SNIPER_RECON_DEBUG = false
+const bool SNIPER_RECON_DEBUG = true
 const bool SNIPER_RECON_PERF = false
 const string SNIPER_RECON_TARGET_NETVAR = "sniperReconBestTarget"
 
@@ -122,6 +122,9 @@ bool function SniperRecon_IsTracking( entity owner )
 
 	return false
 }
+
+
+
 
 
 

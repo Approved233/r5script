@@ -13,6 +13,7 @@ global struct RTKRankedBadge_Properties
 	int maxMatches = 10
 	bool useDynamicPips = false
 	bool isPromotional = false
+	bool showDemoteProtection = false
 	int startPip
 	array<bool> wonMatches
 
@@ -20,6 +21,7 @@ global struct RTKRankedBadge_Properties
 	int emblemDisplayMode
 	int ladderPosition
 	int rankScore
+	int protectionCurrent
 }
 
 void function RTKRankedBadge_InitMetaData( string behaviorType, string structType )
@@ -40,8 +42,16 @@ void function RTKRankedBadge_OnDrawBegin( rtk_behavior self )
 
 	if ( panel.HasRui() )
 	{
+		panel.SetRuiArgImage( "rankedIcon", expect asset( self.rtkprops.rankedIcon ) )
+
+		bool showProtection = expect bool ( self.rtkprops.showDemoteProtection )
 		bool isPlacementMode = expect bool( self.rtkprops.isPlacementMode )
-		if ( isPlacementMode )
+		if ( showProtection )
+		{
+			panel.SetRuiArgInt( "protectionCurrent", expect int (self.rtkprops.protectionCurrent ) )
+			panel.SetRuiArgString( "emblemText", expect string( self.rtkprops.emblemText ) )
+		}
+		else if ( isPlacementMode )
 		{
 			panel.SetRuiArgInt( "placementProgress", expect int( self.rtkprops.completedMatches ) )
 			panel.SetRuiArgInt( "maxPips", expect int( self.rtkprops.maxMatches ) )
@@ -57,7 +67,6 @@ void function RTKRankedBadge_OnDrawBegin( rtk_behavior self )
 			}
 
 			panel.SetRuiArgInt("emblemDisplayMode", expect int( self.rtkprops.emblemDisplayMode ) )
-			panel.SetRuiArgImage( "rankedIcon", expect asset( self.rtkprops.rankedIcon ) )
 
 			switch( expect int( self.rtkprops.emblemDisplayMode ) )
 			{
@@ -93,10 +102,6 @@ void function RTKRankedBadge_OnDrawBegin( rtk_behavior self )
 					break
 				}
 			}
-		}
-		else
-		{
-			panel.SetRuiArgImage( "rankedIcon", expect asset( self.rtkprops.rankedIcon ) )
 		}
 	}
 }

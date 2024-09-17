@@ -63,6 +63,7 @@ const vector BLACK_MARKET_BOUND_MINS = <-16, -16, 0>
 const vector BLACK_MARKET_BOUND_MAXS = <16, 16, 80>
 const vector BLACK_MARKET_PLACEMENT_DOWN_TRACE_OFFSET = <0, 0, 94>
 const float BLACK_MARKET_PLACEMENT_MAX_GROUND_DIST = 12.0
+const float BLACK_MARKET_USE_RANGE = 105.0
 
 const vector BLACK_MARKET_PLACEMENT_COLOR = <1, 1, 1>
 const float BLACK_MARKET_PLACEMENT_PLAYER_ALPHA = 1.0
@@ -151,10 +152,6 @@ void function LobaUltimateBlackMarket_LevelInit()
 		AddCreateCallback( "prop_loot_grabber", OnPropScriptCreated )
 
 		RegisterSignal( "BlackMarket_StopPlacementProxy" )
-		
-
-		
-		
 
 
 
@@ -541,6 +538,10 @@ void function PlacementProxyThread( entity weapon, entity player )
 		WaitFrame()
 	}
 }
+
+
+
+
 
 
 
@@ -1301,10 +1302,33 @@ string function GetBlackMarketUsePromptText( entity device )
 
 	device.e.blackMarket_haveSeenReady = true
 
-	if ( device.GetOwner() == GetLocalClientPlayer() )
+	entity player = GetLocalViewPlayer()
+
+
+
+
+
+
+
+
+
+
+
+
+	if ( device.GetOwner() == player )
+	{
+
+
+
 		return "#LOBA_ULT_BLACK_MARKET_USE_HINT_OWNER"
 
+	}
+
+
+
+
 	return "#LOBA_ULT_BLACK_MARKET_USE_HINT"
+
 }
 
 
@@ -1314,6 +1338,15 @@ bool function CanUseBlackMarket( entity player, entity ent, int useFlags )
 {
 	return SURVIVAL_PlayerAllowedToPickup( player )
 }
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1381,33 +1414,20 @@ void function OnBlackMarketUsed( entity blackMarket, entity player, int useInput
 		return
 
 
+
+
+
+
+
+
+
+
 		if ( Survival_IsGroundlistOpen() )
 			return
 
 
 	if ( GradeFlagsHas( blackMarket, eGradeFlags.IS_BUSY ) )
 		return
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 	thread (void function() : ( blackMarket, player ) {
 		ExtendedUseSettings settings
@@ -1463,6 +1483,9 @@ void function OnCharacterButtonPressed( entity player )
 
 	Remote_ServerCallFunction( "ClientCallback_TryPickupBlackMarket", useEnt )
 }
+
+
+
 
 
 
@@ -1577,7 +1600,18 @@ int function GetBlackMarketUseLimit( entity blackMarket, entity player )
 
 		if( !IsValid( blackMarket ) )
 			return result
-		if( player.HasPassive( ePassives.PAS_ULT_UPGRADE_ONE ) && player.HasPassive( ePassives.PAS_LOBA_EYE_FOR_QUALITY ) ) 
+		entity playerToCheck = player
+
+
+
+
+
+
+
+
+
+
+		if( playerToCheck.HasPassive( ePassives.PAS_ULT_UPGRADE_ONE ) && playerToCheck.HasPassive( ePassives.PAS_LOBA_EYE_FOR_QUALITY ) ) 
 		{
 			result += 1
 		}

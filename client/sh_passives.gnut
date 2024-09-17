@@ -191,10 +191,14 @@ global enum ePassives
 	PAS_DEATHBOX_BATTERY_COUNT,
 	PAS_BATTERY_STACK,
 
+
+
+
 	
 	PAS_UPGRADE_CAREPACKAGE_INSIGHT,
 	PAS_UPGRADE_BEACON_SCAN,
 	PAS_UPGRADE_CONSOLE_SCAN,
+	PAS_UPGRADE_SUPPORT_PERKS,
 	PAS_MOD_UPGRADE_ONLY,
 
 	PAS_PAS_UPGRADE_ONE,
@@ -211,6 +215,11 @@ global enum ePassives
 
 	
 	PAS_TAC_COOLDOWN_REDUCTION_EXTRA,
+
+
+
+
+
 
 	
 	PAS_EXPLOSIVE_DAMAGE_RESIST,
@@ -269,7 +278,6 @@ global enum ePassives
 	PAS_ABTEST_UPGRADE_EMPTY1,
 	PAS_ABTEST_UPGRADE_EMPTY2,
 	PAS_ABTEST_UPGRADE_EMPTY3,
-	
 	
 	
 	
@@ -385,6 +393,8 @@ global enum ePassives
 
 
 
+
+
 	_count,
 }
 
@@ -415,6 +425,8 @@ global const table<int, string> PASSIVE_NAME_MAP = {
 
 
 
+
+
 }
 
 global const table<int, string> PASSIVE_DESCRIPTION_SHORT_MAP = {
@@ -427,6 +439,8 @@ global const table<int, string> PASSIVE_DESCRIPTION_SHORT_MAP = {
 	[ePassives.PAS_FORTIFIED] = "#PAS_FORTIFIED_DESC",
 	[ePassives.PAS_LOWPROFILE] = "#PAS_LOW_PROFILE_DESC",
 	[ePassives.PAS_EXTRA_MED_INV] = "#PAS_EXTRA_MED_INV_DESC",
+
+
 
 
 
@@ -669,6 +683,9 @@ void function CodeCallback_OnPassiveChanged( entity player, int passiveIdx )
 	foreach ( callback in file.passiveChangedCallbackListMap[passiveIdx] )
 		callback( player, passiveIdx, didHavePassive, nowHasPassive )
 }
+
+
+
 
 
 

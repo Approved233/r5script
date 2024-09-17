@@ -687,3 +687,12 @@ bool function Perk_RingExpert_IsEnabled()
 
 
 
+
+
+
+
+
+
+
+
+

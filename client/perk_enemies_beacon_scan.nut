@@ -18,6 +18,7 @@ global function BeaconScanEnemy_ClearEnemiesOnMinimap
 global function ServerToClient_BeaconScanEnemy_Notifications
 global function PlayEffects_SurveyBeacon_Laser
 global function StopEffects_SurveyBeacon_Laser
+global function BeaconScanEnemy_SateliteScanEnemies
 
 global function BeaconScanEnemy_GetScannedEnemies
 global function BeaconScanCompanion_SetScanStartTime
@@ -665,16 +666,17 @@ void function BeaconScanEnemy_UpdateMinimapScanBorder_Thread( entity player, arr
 	array<string> indexToVar = ["rightScanned", "topRightScanned", "topScanned", "topLeftScanned", "leftScanned", "botLeftScanned", "botScanned", "botRightScanned"]
 	
 	float borderTreshold = Minimap_GetFloatForKey( "displayDist" ) * 2
+	bool minimapRotationEnabled = GetConVarBool( "hud_setting_minimapRotate" )
 	while( Time() < endTime )
 	{
 		vector playerOrigin = player.GetOrigin()
+		float eyeAnglesOffset = player.EyeAngles().y - 90
 		array<bool> hasEnemy = [false, false, false, false, false, false, false, false]
 		foreach( vector enemyPos in scanLocations )
 		{
 			vector dif = enemyPos - playerOrigin
 			if( fabs( dif.x ) < borderTreshold && fabs( dif.y ) < borderTreshold )
 				continue
-
 			dif.z = 0
 			dif = Normalize( dif )
 			float angle = atan2( dif.y, dif.x ) * RAD_TO_DEG
@@ -684,7 +686,12 @@ void function BeaconScanEnemy_UpdateMinimapScanBorder_Thread( entity player, arr
 			{
 				if( hasEnemy[i] )
 					continue
-				float angleDiff = AngleDiff( i*45.0, angle )
+				float curAngle =  i * 45.0
+				if( minimapRotationEnabled )
+				{
+					curAngle += eyeAnglesOffset
+				}
+				float angleDiff = AngleDiff( curAngle, angle )
 				if( fabs( angleDiff ) < ( 45.0 / 2.0 ) )
 				{
 					hasEnemy[i] = true

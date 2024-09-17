@@ -1,7 +1,10 @@
 global function ShRankedRumble_Init
+global function RankedRumble_ParseContainerBakeryParams
 global function RankedRumble_ParseBadgeFromCupContainer
 global function RankedRumble_CurrentRankedRumbleGUID
 global function RankedRumble_CurrentRankedRumbleTimestampRange
+global function RankedRumble_GetRankedRumbleForRankedPeriod
+global function RankedRumble_GetRankedRumbleStartTimeForRankedPeriod
 global function RankedRumble_IsRunningRankedRumble
 global function RankedRumble_IsLatestGameRankedRumble
 global function RankedRumble_IsRegisteredRankedRumble
@@ -33,10 +36,11 @@ global function RankedRumble_GetPlayerHistoricalRankedTier
 
 
 
-global function RankedRumble_RegisterNetworkFunctions
+
+global function ServerToClient_RankedRumble_UpdateScorePosition
 
 
-global function RankedRumble_UpdateEHIRankedPlatformLadderPosition
+global function RankedRumble_UpdateEHIRankedScorePosition
 
 
 
@@ -45,6 +49,7 @@ global function RankedRumble_UpdateEHIRankedPlatformLadderPosition
 
 
 global function RankedRumble_GetRegisteredCup
+global function RankedRumble_IsRankedScorePositionValid
 
 
 global const bool RANKED_RUMBLE_DEBUG = true
@@ -56,7 +61,6 @@ global const string RANKED_RUMBLE_TUTORIAL_MARK_PERSISTENT_KEY = "hasSeenRankedR
 const int MAX_PARTY_SIZE = 1
 const int EXACT_PERCENTAGE_THRESHOLD = 20
 const SQUAD_SIZE_FIELD_NAME = "squadSize"
-const RANKED_PERIOD_FIELD_NAME = "rankedPeriod"
 const RANKED_BADGE_FIELD_NAME = "rankedRumbleBadge"
 const PLATFORM_FIELD_NAME = "platform"
 const LAST_GAME_IS_RANKED_RUMBLE = "latestGameIsRankedRumble"
@@ -69,6 +73,7 @@ enum eCupPlatform
 	COUNT
 }
 const float REQUEST_LADDER_POSITION_TIMEOUT = 15
+const float RANK_PERIOD_INIT_TIMEOUT = 15
 const table< string, int > PLATFORM_MAP = {
 	["pc"] = eCupPlatform.PLATFORM_PC,
 	["ps"] = eCupPlatform.PLATFORM_PS,
@@ -102,7 +107,6 @@ global struct RankedRumbleContainerInfo
 
 struct FileStruct_LifetimeLevel
 {
-	bool initialized = false
 	table< SettingsAssetGUID, RankedRumbleContainerInfo > rankedRumbleContainers
 	table< SettingsAssetGUID, SettingsAssetGUID > cupsToContainerMap
 
@@ -132,13 +136,8 @@ void function ShRankedRumble_Init()
 
 
 
-
 	Remote_RegisterServerFunction( "UICallback_MarkSeenRankedRumbleTutorial" )
 
-
-	AddCallback_OnItemFlavorRegistered( eItemType.calevent_apex_cup_container, void function(ItemFlavor cupItemFlavor) {
-		RankedRumble_ParseContainerBakeryParams( cupItemFlavor )
-	} )
 }
 
 
@@ -244,7 +243,6 @@ void function RankedRumble_FillCupsToContainer()
 				fileLevel.cupsToContainerMap[cupID] <- containerGUID
 		}
 	}
-	fileLevel.initialized = true
 
 
 
@@ -324,7 +322,7 @@ bool function RankedRumble_IsRegisteredRankedRumble( entity player )
 			return false
 
 
-	if ( !IsValid( player ) )
+	if ( !IsValid( player ) || !Cups_IsInitialized() )
 		return false
 
 	for( int i = 0; i < MAX_REGISTERED_CUPS; i++ )
@@ -348,7 +346,7 @@ SettingsAssetGUID function RankedRumble_CurrentRankedRumbleGUID( int timeOverrid
 	int timeNow = timeOverride == 0 ? GetUnixTimestamp() : timeOverride
 	foreach ( SettingsAssetGUID containerGUID, RankedRumbleContainerInfo info in fileLevel.rankedRumbleContainers )
 	{
-		if ( info.startTime < timeNow && info.finishTime > timeNow )
+		if ( info.startTime <= timeNow && info.finishTime > timeNow )
 			return containerGUID
 	}
 	return ASSET_SETTINGS_UNIQUE_ID_INVALID
@@ -366,6 +364,24 @@ TimestampRange ornull function RankedRumble_CurrentRankedRumbleTimestampRange()
 	return range
 }
 
+SettingsAssetGUID function RankedRumble_GetRankedRumbleForRankedPeriod( ItemFlavor rankedPeriod )
+{
+	foreach ( SettingsAssetGUID containerGUID, RankedRumbleContainerInfo info in fileLevel.rankedRumbleContainers )
+	{
+		if ( info.rankedPeriod == rankedPeriod )
+			return containerGUID
+	}
+	return ASSET_SETTINGS_UNIQUE_ID_INVALID
+}
+
+int ornull function RankedRumble_GetRankedRumbleStartTimeForRankedPeriod( ItemFlavor rankedPeriod )
+{
+	int rrGuid = RankedRumble_GetRankedRumbleForRankedPeriod( rankedPeriod )
+	if ( rrGuid == ASSET_SETTINGS_UNIQUE_ID_INVALID )
+		return null
+	return CalEvent_GetStartUnixTime( GetItemFlavorByGUID( rrGuid ) )
+}
+
 bool function RankedRumble_IsContainerRankedRumble( ItemFlavor cupContainerItemFlavor )
 {
 	return GetGlobalSettingsBool( ItemFlavor_GetAsset( cupContainerItemFlavor ), RANKED_RUMBLE_FIELD_NAME )
@@ -381,9 +397,9 @@ bool function RankedRumble_IsCupIDRankedRumble( SettingsAssetGUID cupID )
 	return cupID in fileLevel.cupsToContainerMap
 }
 
-bool function RankedRumble_IsRankedRumblePlaylist( string playlistName )
+bool function RankedRumble_IsRankedRumblePlaylist( string playlistName, int timeOverride = 0 )
 {
-	return GameModeVariant_IsActiveForPlaylist( playlistName, eGameModeVariants.SURVIVAL_RANKED ) && RankedRumble_IsRunningRankedRumble()
+	return GameModeVariant_IsActiveForPlaylist( playlistName, eGameModeVariants.SURVIVAL_RANKED ) && RankedRumble_IsRunningRankedRumble( timeOverride )
 }
 
 bool function RankedRumble_PartySizeNotQualified( string playlistName, int partySize )
@@ -441,6 +457,10 @@ SettingsAssetGUID function RankedRumble_GetRankedCupFromContainer( entity player
 	if ( !IsConnected() )
 		return ASSET_SETTINGS_UNIQUE_ID_INVALID
 
+
+	if ( !Cups_IsInitialized() )
+		return ASSET_SETTINGS_UNIQUE_ID_INVALID
+
 	int platform = PLATFORM_MAP[GetMergedPlatformIdForPlayer( player )]
 
 	Assert( RankedRumble_IsContainerRankedRumble( GetItemFlavorByGUID( rankedRumbleContainer ) ) )
@@ -451,6 +471,10 @@ SettingsAssetGUID function RankedRumble_GetRankedCupFromContainer( entity player
 	table scorePosition = RankedRumble_GetHighestRankedScoreAndPositionAcrossPlatforms( player )
 	int playerRankedScore = expect int( scorePosition.score )
 	int ladderPosition = expect int( scorePosition.position )
+	if ( ladderPosition == SHARED_RANKED_NOT_INITIALIZED_LADDER_POSITION )
+	{
+		return ASSET_SETTINGS_UNIQUE_ID_INVALID
+	}
 	int numPlayersOnLadder = Ranked_GetNumPlayersOnLadder()
 	bool isOnPredatorLadder = (ladderPosition > 0) && (numPlayersOnLadder > 0) && (ladderPosition <= numPlayersOnLadder)
 
@@ -458,6 +482,8 @@ SettingsAssetGUID function RankedRumble_GetRankedCupFromContainer( entity player
 	int candidateCupMinScore = 0
 	foreach( cupID, mainCupInfo in mainCupInfoMap )
 	{
+		if ( !( cupID in allCupData ) )
+			return ASSET_SETTINGS_UNIQUE_ID_INVALID
 		CupBakeryAssetData cupData = allCupData[cupID]
 		if ( playerRankedScore >= cupData.entryRestrictions.minRankScore && cupData.entryRestrictions.minRankScore >= candidateCupMinScore )
 		{
@@ -557,21 +583,8 @@ table function RankedRumble_GetHighestRankedScoreAndPositionAcrossPlatforms( ent
 		}
 
 
-	int highestScore = -1
-	string highestPlatform = ""
-	foreach( string platform in PLATFORM_LIST )
-	{
-		int currentScore = player.GetPersistentVarAsInt( format( XPROG_PERSISTENCE_FORMAT_STRING, platform, RANKED_CURRENT_SCORE_PERSISTENCE_VAR_NAME ) )
-		if ( currentScore > highestScore )
-		{
-			highestScore = currentScore
-			highestPlatform = platform
-		}
-	}
-	Assert( highestPlatform != "" )
-
 	int highestPosition = -1
-
+	int highestScore = 0
 
 
 
@@ -583,35 +596,15 @@ table function RankedRumble_GetHighestRankedScoreAndPositionAcrossPlatforms( ent
 
 
 		EHIScriptStruct ehiss = GetEHIScriptStruct( LocalClientEHI() )
-#if DEV
-			if ( GetConVarBool( "enableRankedRumblePositionLog" ) )
-			{
-				foreach( platform, position in ehiss.platformLadderPosition )
-					printt( "RankedRumble_GetHighestRankedScoreAndPositionAcrossPlatforms ehiss info", platform, position )
-			}
-#endif
-		if ( highestPlatform in ehiss.platformLadderPosition )
+		if ( ehiss.highestLadderPosition != SHARED_RANKED_NOT_INITIALIZED_LADDER_POSITION )
 		{
-			highestPosition = ehiss.platformLadderPosition[highestPlatform]
-#if DEV
-				if ( GetConVarBool( "enableRankedRumblePositionLog" ) )
-					printt( "RankedRumble_GetHighestRankedScoreAndPositionAcrossPlatforms in ehiss", highestPlatform, highestPosition )
-#endif
-		}else
-		{
-#if RANKED_RUMBLE_DEBUG
-				if ( Ranked_HasActiveLadderOnlyDivision() && highestScore >= Ranked_GetActiveLadderOnlyDivisionData().scoreMin )
-					printt( "platformLadderPosition is not available! platform:" + highestPlatform )
-#endif
-#if DEV
-				if ( GetConVarBool( "enableRankedRumblePositionLog" ) )
-					printt( "RankedRumble_GetHighestRankedScoreAndPositionAcrossPlatforms NOT in ehiss", highestPlatform )
-#endif
+			highestPosition = ehiss.highestLadderPosition
+			highestScore = ehiss.highestRankScore
 		}
 
 #if DEV
 		if ( GetConVarBool( "enableRankedRumblePositionLog" ) )
-			printt( "RankedRumble_GetHighestRankedScoreAndPositionAcrossPlatforms finish", highestScore, highestPosition )
+			printt( "RankedRumble_GetHighestRankedScoreAndPositionAcrossPlatforms finish", player, highestScore, highestPosition )
 #endif
 	return { score = highestScore, position = highestPosition }
 }
@@ -1005,33 +998,72 @@ table function RankedRumble_GetHighestRankedScoreAndPositionAcrossPlatforms( ent
 
 
 
-void function RankedRumble_RegisterNetworkFunctions()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+bool function RankedRumble_IsRankedScorePositionValid()
 {
-	for ( int i = 0; i < PLATFORM_LIST.len(); i++ )
-	{
-		RegisterNetVarIntChangeCallback( "nv_currentRankedLadderPosition_" + PLATFORM_LIST[i], void function ( entity player, int newVal ) : ( i )
-		{
-			OnRankedPlatformLadderPositionChanged( player, newVal, i )
-		} )
-	}
+	EHIScriptStruct ehiss = GetEHIScriptStruct( LocalClientEHI() )
+	return ehiss.highestLadderPosition != SHARED_RANKED_NOT_INITIALIZED_LADDER_POSITION
 }
 
-void function OnRankedPlatformLadderPositionChanged( entity player, int new, int platformIndex )
-{
-	Assert( IsLobby() )
 
+
+void function ServerToClient_RankedRumble_UpdateScorePosition( entity player, int highestPosition, int highestScore )
+{
 	EHI playerEHI = ToEHI( player )
-	RankedRumble_UpdateEHIRankedPlatformLadderPosition( playerEHI, new, platformIndex )
-	RunUIScript( "RankedRumble_UpdateEHIRankedPlatformLadderPosition", playerEHI, new, platformIndex )
+	RankedRumble_UpdateEHIRankedScorePosition( playerEHI, highestPosition, highestScore )
+	RunUIScript( "RankedRumble_UpdateEHIRankedScorePosition", playerEHI, highestPosition, highestScore )
 }
 
 
-void function RankedRumble_UpdateEHIRankedPlatformLadderPosition( EHI playerEHI, int rankedLadderPosition, int platformIndex )
+void function RankedRumble_UpdateEHIRankedScorePosition( EHI playerEHI, int highestPosition, int highestScore )
 {
 	EHIScriptStruct ehiss = GetEHIScriptStruct( playerEHI )
-	ehiss.platformLadderPosition[PLATFORM_LIST[platformIndex]] <- rankedLadderPosition
+	ehiss.highestLadderPosition = highestPosition
+	ehiss.highestRankScore = highestScore
 #if RANKED_RUMBLE_DEBUG
-		printt( "RankedRumble_UpdateEHIRankedPlatformLadderPosition ", rankedLadderPosition, platformIndex )
+		printt( "RankedRumble_UpdateEHIRankedScorePosition ", highestPosition, highestScore )
 #endif
 }
 

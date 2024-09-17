@@ -184,24 +184,25 @@ global table<string, array< array< int > > > xpDisplayGroups = {
 
 
 
+		survival_objectivebr = [
+		[
+			eXPType.WIN_MATCH,
+			eXPType.OBJ_BR_ROUNDS_SURVIVED,
+			eXPType.SURVIVAL_DURATION,
+			eXPType.OBJ_BR_POINTS_EARNED,
+		],
 
+		[
+			eXPType.OBJ_BR_TOP_ROUND_POINTS,
+			eXPType.BONUS_FRIEND,
+			eXPType.KILL_CHAMPION_MEMBER,
+		],
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+		[
+			eXPType.TOTAL_MATCH,
+			eXPType.CHALLENGE_COMPLETED,
+		],
+	],
 
 }
 
@@ -427,7 +428,7 @@ var function DisplayPostGameSummary( bool isFirstTime )
 	
 	string lastPlaylist = string( GetPersistentVar( "lastPlaylist" ) )
 	bool visible = GetPlaylistVarBool( lastPlaylist, "visible", false )
-	bool optInOnly = GetPlaylistVarBool( lastPlaylist, "opt_in_only", false )
+	bool optInOnly = IsOptinPlaylist( lastPlaylist )
 	string playlistName = visible && !optInOnly ? GetPlaylistVarString( lastPlaylist, "name", "" ) : ""
 
 	

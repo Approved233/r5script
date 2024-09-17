@@ -1221,7 +1221,8 @@ void function SetChatHUDPosition( int yPosition )
 		return
 
 	var chat = HudElement( "IngameTextChat" )
-	Hud_SetY( chat, yPosition )
+	float yScale = float( GetScreenSize().height ) / 1080.0
+	Hud_SetY( chat, yPosition * yScale )
 }
 
 

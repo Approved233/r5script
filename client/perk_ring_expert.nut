@@ -356,6 +356,15 @@ void function Perk_RingExpert_OnDeactivate( entity player )
 
 
 
+
+
+
+
+
+
+
+
+
 void function Perk_RingExpert_MonitorEnemyPresence( entity ent, var rui, bool drawLine )
 {
 	if( !Perks_S22UpdateEnabled() )

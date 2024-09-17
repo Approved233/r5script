@@ -7,8 +7,11 @@ global function ShCharacterAbilities_LevelInit
 
 
 global function CharacterClass_GetTacticalAbility
+global function CharacterClass_OverrideTacticalAbility
 global function CharacterClass_GetUltimateAbility
+global function CharacterClass_OverrideUltimateAbility
 global function CharacterClass_GetPassiveAbilities
+global function CharacterClass_OverridePassiveAbilities
 global function CharacterClass_GetPassiveAbilityToShow
 global function CharacterAbility_ShouldShowDetails
 global function CharacterAbility_GetWeaponClassname
@@ -23,11 +26,19 @@ global function CharacterAbility_GetPassiveWeaponMod
 
 
 
+struct
+{
+	bool hasInitialisedOnce = false
+} file
+
 struct FileStruct_LifetimeLevel
 {
 	table<ItemFlavor, ItemFlavor>         characterTacAbilityMap
+	table<ItemFlavor, ItemFlavor>         characterTacAbilityOverrides
 	table<ItemFlavor, ItemFlavor>         characterUltAbilityMap
+	table<ItemFlavor, ItemFlavor>         characterUltAbilityOverrides
 	table<ItemFlavor, array<ItemFlavor> > characterPasAbilitiesMap
+	table<ItemFlavor, array<ItemFlavor> > characterPasAbilitiesOverrides
 }
 FileStruct_LifetimeLevel& fileLevel
 
@@ -44,11 +55,43 @@ void function ShCharacterAbilities_LevelInit()
 	FileStruct_LifetimeLevel newFileLevel
 	fileLevel = newFileLevel
 
+		if ( !file.hasInitialisedOnce )
+		{
+			AddUICallback_OnLevelInit( ShCharacterAbilities_ResetOverrides )
+			file.hasInitialisedOnce = true
+		}
+
+
 	AddCallback_OnItemFlavorRegistered( eItemType.character, OnItemFlavorRegistered_Character )
 }
 
 
 
+void function ShCharacterAbilities_ResetOverrides()
+{
+	fileLevel.characterTacAbilityOverrides.clear()
+	fileLevel.characterUltAbilityOverrides.clear()
+	fileLevel.characterPasAbilitiesOverrides.clear()
+}
+
+
+
+
+#if DEV
+void function DEV_CheckWeaponAsset( string weaponClassname, asset settingsAsset, ItemFlavor abilityItemflav )
+{
+	asset weaponAsset = GetGlobalSettingsAsset( ItemFlavor_GetAsset( abilityItemflav ), "weaponAsset" )
+	string weaponClassnameFromAsset = GetWeaponAssetStringValue( weaponAsset, "weaponClassname" )
+	if ( weaponAsset == "" )
+	{
+		Warning( "Ability is missing a Weapon Asset.  Ability:'" + settingsAsset + "' WeaponClassname:'" + CharacterAbility_GetWeaponClassname( abilityItemflav ) + "'" )
+	}
+	else if ( weaponClassname != weaponClassnameFromAsset )
+	{
+		Warning( "Ability weaponClassname dosent match weaponAsset classname. Ability:'" + settingsAsset + "' WeaponClassname:'" + CharacterAbility_GetWeaponClassname( abilityItemflav ) + "'" + " WeaponAsset '" + weaponAsset + "' WeaponAsset classname '" + weaponClassnameFromAsset )
+	}
+}
+#endif
 
 void function OnItemFlavorRegistered_Character( ItemFlavor character )
 {
@@ -63,7 +106,12 @@ void function OnItemFlavorRegistered_Character( ItemFlavor character )
 			if ( ability != null )
 			{
 				expect ItemFlavor(ability)
-				Assert( CharacterAbility_GetWeaponClassname( ability ) != "" )
+
+				Assert( CharacterAbility_GetWeaponClassname( ability ) != "", "Tactical Ability '" + settingsAsset + "' is missing a Weapon Asset" )
+#if DEV
+				DEV_CheckWeaponAsset( CharacterAbility_GetWeaponClassname( ability ), settingsAsset, ability )
+#endif
+
 				Assert( CharacterAbility_GetPassiveIndex( ability ) == ePassives.INVALID )  
 				fileLevel.characterTacAbilityMap[character] <- ability
 				abilityList.append( ability )
@@ -80,7 +128,11 @@ void function OnItemFlavorRegistered_Character( ItemFlavor character )
 			if ( ability != null )
 			{
 				expect ItemFlavor(ability)
-				Assert( CharacterAbility_GetWeaponClassname( ability ) != "" )
+				Assert( CharacterAbility_GetWeaponClassname( ability ) != "", "Ultimate Ability '" + settingsAsset + "' is missing a Weapon Asset" )
+#if DEV
+					DEV_CheckWeaponAsset( CharacterAbility_GetWeaponClassname( ability ), settingsAsset, ability )
+#endif
+
 				Assert( CharacterAbility_GetPassiveIndex( ability ) == ePassives.INVALID )  
 				fileLevel.characterUltAbilityMap[character] <- ability
 				abilityList.append( ability )
@@ -157,13 +209,38 @@ void function OnItemFlavorRegistered_Character( ItemFlavor character )
 
 
 
+
+void function CharacterClass_OverrideTacticalAbility( ItemFlavor character, ItemFlavor newAbility )
+{
+	Assert( ItemFlavor_GetType( character ) == eItemType.character )
+	Assert( ItemFlavor_GetType( newAbility ) == eItemType.ability )
+
+	fileLevel.characterTacAbilityOverrides[ character ] <- newAbility
+}
+
+
+
 ItemFlavor function CharacterClass_GetTacticalAbility( ItemFlavor character )
 {
 	Assert( ItemFlavor_GetType( character ) == eItemType.character )
 
+	if ( character in fileLevel.characterTacAbilityOverrides )
+	{
+		return fileLevel.characterTacAbilityOverrides[ character ]
+	}
+
 	return fileLevel.characterTacAbilityMap[character]
 }
 
+
+
+void function CharacterClass_OverrideUltimateAbility( ItemFlavor character, ItemFlavor newAbility )
+{
+	Assert( ItemFlavor_GetType( character ) == eItemType.character )
+	Assert( ItemFlavor_GetType( newAbility ) == eItemType.ability )
+
+	fileLevel.characterUltAbilityOverrides[ character ] <- newAbility
+}
 
 
 
@@ -171,15 +248,34 @@ ItemFlavor function CharacterClass_GetUltimateAbility( ItemFlavor character )
 {
 	Assert( ItemFlavor_GetType( character ) == eItemType.character )
 
+	if ( character in fileLevel.characterUltAbilityOverrides )
+	{
+		return fileLevel.characterUltAbilityOverrides[ character ]
+	}
+
 	return fileLevel.characterUltAbilityMap[character]
 }
 
+
+
+void function CharacterClass_OverridePassiveAbilities( ItemFlavor character, array<ItemFlavor> newPassives )
+{
+	Assert( ItemFlavor_GetType( character ) == eItemType.character )
+	
+
+	fileLevel.characterPasAbilitiesOverrides[ character ] <- newPassives
+}
 
 
 
 array<ItemFlavor> function CharacterClass_GetPassiveAbilities( ItemFlavor character )
 {
 	Assert( ItemFlavor_GetType( character ) == eItemType.character )
+
+	if ( character in fileLevel.characterPasAbilitiesOverrides )
+	{
+		return fileLevel.characterPasAbilitiesOverrides[ character ]
+	}
 
 	return fileLevel.characterPasAbilitiesMap[character]
 }
@@ -217,6 +313,16 @@ bool function CharacterAbility_ShouldShowDetails( ItemFlavor flavor )
 string function CharacterAbility_GetWeaponClassname( ItemFlavor flavor )
 {
 	Assert( ItemFlavor_GetType( flavor ) == eItemType.ability )
+
+	asset weaponAsset = GetGlobalSettingsAsset( ItemFlavor_GetAsset( flavor ), "weaponAsset" )
+
+	if ( weaponAsset != ""  )
+	{
+		string weaponClassname = GetWeaponAssetStringValue( weaponAsset, "weaponClassname" )
+		
+		return weaponClassname
+	}
+
 
 	return GetGlobalSettingsString( ItemFlavor_GetAsset( flavor ), "weaponClassname" )
 }

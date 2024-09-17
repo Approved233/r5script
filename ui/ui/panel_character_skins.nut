@@ -1,5 +1,13 @@
 global function InitCharacterSkinsPanel
 
+enum eLinkType
+{
+	NONE,
+	CHALLENGE,
+	BP,
+	NPP
+}
+
 struct
 {
 	var               panel
@@ -18,7 +26,9 @@ struct
 	var mythicEquipButton
 	var mythicGridButton
 
-	var challengeLinkButton
+	var linkButton
+	var linkButtonDisclaimer
+	int linkButtonType
 
 	InputDef& giftFooter
 
@@ -86,9 +96,12 @@ void function InitCharacterSkinsPanel( var panel )
 	file.mythicRightButton = Hud_GetChild( panel, "MythicSkinRightButton" )
 	Hud_AddEventHandler( file.mythicRightButton, UIE_CLICK, RightMythicSkinButton_OnActivate )
 
-	file.challengeLinkButton = Hud_GetChild( panel, "ChallengeLinkButton" )
-	HudElem_SetRuiArg( file.challengeLinkButton, "centerText", "#UNLOCK_LEGEND_CHALLENGES" )
-	Hud_AddEventHandler( file.challengeLinkButton, UIE_CLICK, ChallengeLinkButton_OnActivate )
+	file.linkButton = Hud_GetChild( panel, "LinkButton" )
+	HudElem_SetRuiArg( file.linkButton, "isPrimary", true )
+	HudElem_SetRuiArg( file.linkButton, "bottomBarHeight", 6.0 )
+	Hud_AddEventHandler( file.linkButton, UIE_CLICK, LinkButton_OnActivate )
+	file.linkButtonDisclaimer = Hud_GetChild( panel, "LinkButtonDisclaimer" )
+	file.linkButtonType = eLinkType.NONE
 
 	Hud_AddEventHandler( file.mythicEquipButton, UIE_CLICK, MythicEquipButton_OnActivate )
 	Hud_SetVisible( file.mythicSelection, false )
@@ -96,7 +109,8 @@ void function InitCharacterSkinsPanel( var panel )
 	Hud_SetVisible( file.mythicRightButton, false )
 	Hud_SetVisible( file.mythicTrackingButton, false )
 	Hud_SetVisible( file.mythicPanel, false )
-	Hud_SetVisible( file.challengeLinkButton, false )
+	Hud_SetVisible( file.linkButton, false )
+	Hud_SetVisible( file.linkButtonDisclaimer, false )
 
 	file.equipButton = Hud_GetChild( panel, "ActionButton" )
 	file.blurbPanel = Hud_GetChild( panel, "SkinBlurb" )
@@ -104,10 +118,25 @@ void function InitCharacterSkinsPanel( var panel )
 	Hud_SetVisible( file.blurbPanel, false )
 }
 
-void function ChallengeLinkButton_OnActivate( var button )
+void function LinkButton_OnActivate( var button )
 {
-	JumpToChallenges( "" )
-	AllChallengesMenu_ForceClickSpecialEventButton( eChallengeTimeSpanKind.REWARD_CAMPAIGN )
+	if ( file.linkButtonType == eLinkType.CHALLENGE )
+	{
+		ItemFlavor ornull challenge = TempUnlock_GetCharacterUnlockChallenge( GetTopLevelCustomizeContext() )
+		if ( challenge == null )
+			return
+		expect ItemFlavor( challenge )
+		ChallengeTile tile = ChallengeTile_GetTileByIndex( ChallengeTile_FindChallenge( challenge.guid )[0].tileIndex )
+		JumpToChallenges( ConvertAssetIDToGUIDString( tile.tileId ) )
+	}
+	else if ( file.linkButtonType == eLinkType.NPP )
+	{
+		JumpToSeasonTab( "RTKNewplayerpassPanel" )
+	}
+	else if ( file.linkButtonType == eLinkType.BP )
+	{
+		OpenBattlepassPurchaseMenu( ePassPurchaseTab.ULTIMATE_PLUS )
+	}
 }
 
 void function CharacterSkinsPanel_OnShow( var panel )
@@ -222,10 +251,39 @@ void function PreviewCharacterSkin( ItemFlavor flav )
 		}
 #endif
 
-	if( Character_IsCharacterUnlockedForCalevent( GetTopLevelCustomizeContext() ) )
-		Hud_SetVisible( file.challengeLinkButton, true )
-	else
-		Hud_SetVisible( file.challengeLinkButton, false )
+	entity player = GetLocalClientPlayer()
+	ItemFlavor character = GetTopLevelCustomizeContext()
+	bool unowned = Loadout_IsCharacterStillPurchasableByPlayer( player, character )
+
+	Hud_SetVisible( file.linkButton, false )
+	Hud_SetVisible( file.linkButtonDisclaimer, false )
+	file.linkButtonType = eLinkType.NONE
+
+	if( Character_IsCharacterUnlockedForCalevent( character ) )
+	{
+		Hud_SetVisible( file.linkButton, true )
+		HudElem_SetRuiArg( file.linkButton, "buttonText", "#UNLOCK_LEGEND_CHALLENGES" )
+		file.linkButtonType = eLinkType.CHALLENGE
+	}
+	else if ( Character_IsUnlockableInNewPlayerPass( character ) && unowned )
+	{
+		Hud_SetVisible( file.linkButton, true )
+		HudElem_SetRuiArg( file.linkButton, "buttonText", "#NEW_PLAYER_PASS" )
+		Hud_SetVisible( file.linkButtonDisclaimer, true )
+		Hud_SetText( file.linkButtonDisclaimer, Localize( "#GENERIC_DISCLAIMER", Localize( "#BP_UNLOCK_NPP_LEGENDS" ) ) )
+		file.linkButtonType = eLinkType.NPP
+	}
+	else if ( !Character_IsUnlockedForBattlePassV2( player, character ) && unowned )
+	{
+		Hud_SetVisible( file.linkButton, true )
+		HudElem_SetRuiArg( file.linkButton, "buttonText", "#UNLOCK_LEGEND_BP" )
+		Hud_SetVisible( file.linkButtonDisclaimer, true )
+		Hud_SetText( file.linkButtonDisclaimer, Localize( "#GENERIC_DISCLAIMER", Localize( "#BP_PURCHASE_PLUS_LEGENDS" ) ) )
+		file.linkButtonType = eLinkType.BP
+	}
+
+	
+	Hud_SetY( file.linkButton, Hud_IsVisible( file.equipButton ) ? 32 : -Hud_GetHeight( file.equipButton ) )
 
 	
 	if ( CharacterSkin_HasStoryBlurb( flav ) )
@@ -267,7 +325,7 @@ void function PreviewCharacterSkin( ItemFlavor flav )
 		Hud_SetVisible( file.mythicTrackingButton, false )
 	}
 
-	RunClientScript( "UIToClient_PreviewCharacterSkinFromCharacterSkinPanel", ItemFlavor_GetGUID( flav ), ItemFlavor_GetGUID( GetTopLevelCustomizeContext() ) )
+	RunClientScript( "UIToClient_PreviewCharacterSkinFromCharacterSkinPanel", ItemFlavor_GetGUID( flav ), ItemFlavor_GetGUID( character ) )
 }
 
 

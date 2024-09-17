@@ -418,7 +418,7 @@ void function AnimWindow_CreateProp_Transition( ScriptAnimWindow window, var set
 	entity prop = windowPropMap[window.stringID]
 
 	prop.SetParent( window.ent, attachmentName, false )
-	
+	prop.RenderWithViewModels( window.ent.IsRenderingWithViewModels() )
 	prop.SetModelScale( scale * window.ent.GetModelScale() )
 
 	
@@ -815,7 +815,7 @@ void function AnimWindow_FadeAlphaOverTime_Start( ScriptAnimWindow window, var s
 	window.ent.kv.renderamt = alphaStart
 
 	
-	thread PROTO_FadeModelAlphaOverTime( window.ent, fadeDuration, alphaStart, alphaEnd )
+	thread FadeModelAlphaOverTime( window.ent, fadeDuration, alphaStart, alphaEnd )
 }
 
 
@@ -870,7 +870,7 @@ void function AnimWindow_SetSkin_Start( ScriptAnimWindow window, var settingsBlo
 			}
 
 			if ( loadoutEntry != null )
-				skin = GetDefaultItemFlavorForLoadoutSlot( EHI_null, expect LoadoutEntry( loadoutEntry ) )
+				skin = GetDefaultItemFlavorForLoadoutSlot( expect LoadoutEntry( loadoutEntry ) )
 		}
 		else if ( selectModelFrom == eAnimWindowSkinSelectionStrategy.PLAYER_EQUIPPED )
 		{
@@ -1098,9 +1098,9 @@ void function AnimWindow_ShadowFormBodyFX_Thread( entity ent, int attachIndex, f
 	int originalSkin    = ent.GetSkin()
 
 	if ( fadeAlphaIN )
-		thread PROTO_FadeModelAlphaOverTime( ent, fadeInDuration, 0, 255 )
+		thread FadeModelAlphaOverTime( ent, fadeInDuration, 0, 255 )
 	else
-		thread PROTO_FadeModelIntensityOverTime( ent, fadeInDuration, 1, 0 )
+		thread FadeModelIntensityOverTime( ent, fadeInDuration, 1, 0 )
 
 	wait fadeInDuration
 
@@ -1119,10 +1119,10 @@ void function AnimWindow_ShadowFormBodyFX_Thread( entity ent, int attachIndex, f
 			EffectStop( FX_BODY, false, true )
 	} )
 
-	thread PROTO_FadeModelIntensityOverTime( ent, fadeOutDuration, 0, 1 )
+	thread FadeModelIntensityOverTime( ent, fadeOutDuration, 0, 1 )
 
 	if ( fadeAlphaOUT )
-		thread PROTO_FadeModelAlphaOverTime( ent, fadeOutDuration, 255, 0 )
+		thread FadeModelAlphaOverTime( ent, fadeOutDuration, 255, 0 )
 
 
 	wait fadeOutDuration
@@ -1231,9 +1231,9 @@ void function AnimWindow_ShadowFormRebornBodyFX_Thread( entity ent, int attachIn
 	int originalSkin    = ent.GetSkin()
 
 	if ( fadeAlphaIN )
-		thread PROTO_FadeModelAlphaOverTime( ent, fadeInDuration, 0, 255 )
+		thread FadeModelAlphaOverTime( ent, fadeInDuration, 0, 255 )
 	else
-		thread PROTO_FadeModelIntensityOverTime( ent, fadeInDuration, 1, 0 )
+		thread FadeModelIntensityOverTime( ent, fadeInDuration, 1, 0 )
 
 	wait fadeInDuration
 
@@ -1252,10 +1252,10 @@ void function AnimWindow_ShadowFormRebornBodyFX_Thread( entity ent, int attachIn
 			EffectStop( FX_BODY, false, true )
 	} )
 
-	thread PROTO_FadeModelIntensityOverTime( ent, fadeOutDuration, 0, 1 )
+	thread FadeModelIntensityOverTime( ent, fadeOutDuration, 0, 1 )
 
 	if ( fadeAlphaOUT )
-		thread PROTO_FadeModelAlphaOverTime( ent, fadeOutDuration, 255, 0 )
+		thread FadeModelAlphaOverTime( ent, fadeOutDuration, 255, 0 )
 
 
 	wait fadeOutDuration
@@ -1447,7 +1447,7 @@ void function AnimWindow_MirageHoloFX_Thread( entity ent, int attachIndex, float
 {
 	EndSignal( ent, "OnDestroy" )
 
-	thread PROTO_FadeModelAlphaOverTime( ent, fadeInDuration, 0, 255 )
+	thread FadeModelAlphaOverTime( ent, fadeInDuration, 0, 255 )
 
 	
 	StartParticleEffectOnEntity( ent, GetParticleSystemIndex( MIRAGE_HOLO_FLASH_FX ), FX_PATTACH_POINT, attachIndex )
@@ -1475,7 +1475,7 @@ void function AnimWindow_MirageHoloFX_Thread( entity ent, int attachIndex, float
 
 	StartParticleEffectOnEntity( ent, GetParticleSystemIndex( MIRAGE_HOLO_FLASH_FX ), FX_PATTACH_POINT, attachIndex )
 
-	thread PROTO_FadeModelAlphaOverTime( ent, fadeOutDuration, 255, 0 )
+	thread FadeModelAlphaOverTime( ent, fadeOutDuration, 255, 0 )
 }
 
 
@@ -1769,7 +1769,7 @@ void function AnimWindow_OverrideCharacterSelectCamera_Start( ScriptAnimWindow w
 
 
 
-		OverrideCharacterSelectCamera( window.ent )
+		OverrideCharacterSelectCamera( window.ent, GetSettingsBlockFloat( settingsBlock, "cameraFov" ) )
 
 }
 

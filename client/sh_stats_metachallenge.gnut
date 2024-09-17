@@ -24,7 +24,7 @@ array< ItemFlavor > function GetAllMetaChallenges()
 
 	foreach ( ChallengeCollection challengeCollection in challengeCollections )
 	{
-		array<ItemFlavor> metaChallenges = ChallengeCollection_GetAllMainChallenges( challengeCollection )
+		array<ItemFlavor> metaChallenges = ChallengeCollection_GetAllMetaChallenges( challengeCollection )
 
 		challenges.extend( metaChallenges )
 	}

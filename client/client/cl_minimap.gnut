@@ -631,7 +631,10 @@ PropDynamicMinimapData ornull function Minimap_TryGetPropDynamicMinimapData( ent
 void function MinimapObjectThread( entity ent )
 
 {
-	Assert( IsValid( ent ) )
+	if ( !IsValid( ent ) )
+	{
+		return
+	}
 
 	string className = GetEntityMinimapClassName( ent )
 	int customState  = GetEntityMinimapCustomState( ent )
@@ -2067,9 +2070,6 @@ void function UpdateFullmapRuiTracks()
 		}
 		else
 		{
-
-
-
 			UpdateMinimapChallengeRui( file.fullmap_challengeRuiArray )
 		}
 

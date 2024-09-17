@@ -80,11 +80,9 @@ global enum eMinimapObject_prop_script
 
 	RESPAWN_CHAMBER,
 	RESPAWN_DNA,
-
-		TRAIN,
-		
-		
-
+	TRAIN,
+	
+	
 
 
 
@@ -171,6 +169,10 @@ global enum eMinimapObject_prop_script
 
 
 
+
+
+
+
 		PORTAL,
 		TRANSPORT_PORTAL_TRANSLOCATOR,
 		TRANSPORT_PORTAL_RECEIVER_PREVIEW,
@@ -188,6 +190,10 @@ global enum eMinimapObject_prop_script
 
 
 		FREESPAWN_RESPAWN_MAP,
+
+
+
+
 
 
 	COUNT

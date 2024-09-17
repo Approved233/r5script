@@ -16,6 +16,9 @@ global function CLLootBoxCeremony_Init
 global function UIToClient_LootCeremony_SetMenuHandles
 global function UIToClient_EnterLootCeremony
 global function UIToClient_AdditionalLootTick_Sequence
+
+
+
 global function UIToClient_LootCeremonyExit
 global function UIToClient_RewardPlacard_Hover
 global function UIToClient_RewardInspectActivate
@@ -85,6 +88,7 @@ global function EquipButton_GetItemLoadoutEntries
 
 const float CAMERA_FOV = 35.5
 
+
 const asset TICK_MODEL_DEFAULT = $"mdl/robots/drone_frag/drone_frag_loot.rmdl"
 const asset TICK_FX_HOLO_BEAM_BASE = $"P_loot_triad_beam"
 const asset TICK_FX_HOLO_BEAM_TIER1 = $"P_loot_triad_beam_reveal_T1"
@@ -126,6 +130,7 @@ const asset BP_GIFTING_TEMPLATE_MODEL = $"mdl/menu/generic_1570_740_bg.rmdl"
 
 const asset FINISHER_SWAP_FX = $"P_menu_finisher_swap"
 
+
 const string SOUND_DEPLOY_ZOOM = "LootCeremony_Tick_Deploy_Zoom"
 const string SOUND_LIGHT_FLASH = "LootCeremony_Tick_LightFlash"
 const string SOUND_BEAM_SWEETEN_TIER1 = "LootCeremony_Tick_Deploy_BeamSweetener_Rare"
@@ -145,6 +150,27 @@ const string SOUND_EQUIP = "UI_Menu_Equip_Generic"
 const string SOUND_HOLOGRAM_PREAPPEAR_TIER3 = "LootCeremony_LootHologram_PreAppear_Legendary"
 const string SOUND_HOLOGRAM_PREAPPEAR_TIER4 = "LootCeremony_LootHologram_PreAppear_Legendary"
 const string SOUND_HOLOGRAM_APPEAR_RESETVIEW = "LootCeremony_LootHologram_Appear_ResetView"
+
+
+const string ANIMSEQ_TRIADS_IDLE = "loot_ceremony_tick_triads_idle"
+const string ANIMSEQ_ENTRANCE_NORMAL_IDLE = "loot_ceremony_tick_entrance_normal_idle"
+const string ANIMSEQ_ENTRANCE_NORMAL = "loot_ceremony_tick_entrance_normal"
+const string ANIMSEQ_IDLE = "loot_ceremony_tick_idle"
+
+
+
+
+
+
+
+
+const array< string > ANIMSEQ_DEPLOYMENT_SINGLE = [ 
+	"loot_ceremony_tick_deployment", 
+	"loot_ceremony_tick_deployment_fast_walk",
+	"loot_ceremony_tick_deployment_hop",
+	"loot_ceremony_tick_deployment_jump",
+	"loot_ceremony_tick_deployment_walk",
+]
 
 const int FINAL_TIER = 3
 
@@ -248,6 +274,9 @@ struct GladiatorCardData
 
 
 
+
+
+
 struct FileLevelStruct
 {
 
@@ -275,6 +304,10 @@ struct FileLevelStruct
 		entity lootTickModel
 		entity cameraMover
 		entity cameraEnt
+
+
+
+
 
 		table<string, var>            rewardPlacards = { RewardLeftButton = null, RewardCenterButton = null, RewardRightButton = null }
 		array<entity>				  characterSkinModels
@@ -469,14 +502,26 @@ void function EntitiesDidLoad()
 	fileLevel.lootTickMover = CreateClientsideScriptMover( $"mdl/dev/empty_model.rmdl", targetAnimRef.GetOrigin(), targetAnimRef.GetAngles() )
 	fileLevel.lootTickModel = CreatePropDynamic( TICK_MODEL_DEFAULT, fileLevel.lootTickMover.GetOrigin(), fileLevel.lootTickMover.GetAngles() )
 
+
+
+
+
+
+
+
+
+
+
+
+
 	
 	table< string, table< string, vector > > tickAttachmentOriginsAngles
-	Attachment camResult = fileLevel.lootTickModel.Anim_GetAttachmentAtTime( "loot_ceremony_tick_triads_idle", "CAMERA", 0 )
+	Attachment camResult = fileLevel.lootTickModel.Anim_GetAttachmentAtTime( ANIMSEQ_TRIADS_IDLE, "CAMERA", 0 )
 	foreach ( string attachment in TICK_LOOT_ATTACHMENTS )
 	{
 		tickAttachmentOriginsAngles[attachment] <- {}
 
-		Attachment attachResult = fileLevel.lootTickModel.Anim_GetAttachmentAtTime( "loot_ceremony_tick_triads_idle", attachment, 0 )
+		Attachment attachResult = fileLevel.lootTickModel.Anim_GetAttachmentAtTime( ANIMSEQ_TRIADS_IDLE, attachment, 0 )
 		vector pos              = attachResult.position
 		vector angles           = VectorToAngles( FlattenVec( camResult.position - pos ) )
 
@@ -487,7 +532,7 @@ void function EntitiesDidLoad()
 
 
 	fileLevel.lootTickModel.SetParent( fileLevel.lootTickMover )
-	thread PlayAnim( fileLevel.lootTickModel, "loot_ceremony_tick_entrance_normal_idle", fileLevel.lootTickMover )
+	thread PlayAnim( fileLevel.lootTickModel, ANIMSEQ_ENTRANCE_NORMAL_IDLE, fileLevel.lootTickMover )
 	HideEntityAndChildren( fileLevel.lootTickModel )
 
 	fileLevel.cameraMover = CreateClientsideScriptMover( $"mdl/dev/empty_model.rmdl", targetAnimRef.GetOrigin(), targetAnimRef.GetAngles() )
@@ -1359,7 +1404,7 @@ void function UIToClient_SpecialItemPresentation_Threaded( SettingsAssetGUID ite
 
 	GetLocalClientPlayer().SetMenuCameraEntityWithAudio( fileLevel.cameraEnt )
 
-	thread PlayAnim( fileLevel.lootTickModel, "loot_ceremony_tick_triads_idle", fileLevel.lootTickMover )
+	thread PlayAnim( fileLevel.lootTickModel, ANIMSEQ_TRIADS_IDLE, fileLevel.lootTickMover )
 
 	wait 0.25 
 
@@ -1454,7 +1499,7 @@ void function UIToClient_EnterLootCeremony( int packFlavGUID )
 	Chroma_LootCeremonyStart()
 
 	ShowEntityAndChildren( fileLevel.lootTickModel )
-	thread TickAnimationSequence( packFlav, true )
+	thread TickAnimationSequence( packFlav, true, false )
 }
 
 
@@ -1466,13 +1511,25 @@ void function UIToClient_AdditionalLootTick_Sequence( int packFlavGUID )
 
 	Chroma_LootCeremonyStart()
 
-	thread TickAnimationSequence( packFlav, false )
+	thread TickAnimationSequence( packFlav, false, false )
 }
 
 
 
 
-void function TickAnimationSequence( ItemFlavor packFlav, bool firstTime )
+
+
+
+
+
+
+
+
+
+
+
+
+void function TickAnimationSequence( ItemFlavor packFlav, bool firstTime, bool openAll )
 {
 	Signal( fileLevel.signalDummy, "LootCeremonyAnimSeqStart" )
 
@@ -1491,7 +1548,7 @@ void function TickAnimationSequence( ItemFlavor packFlav, bool firstTime )
 	fileLevel.lootTickModel.SetModel( GRXPack_GetTickModel( packFlav ) )
 	fileLevel.lootTickModel.SetSkin( fileLevel.lootTickModel.GetSkinIndexByName( GRXPack_GetTickModelSkin( packFlav ) ) )
 
-	string deployAnim = GetTickDeploymentAnim()
+	array<string> deployAnims = GetTickDeploymentAnim( openAll )
 
 	OnThreadEnd(
 		function() : ()
@@ -1502,7 +1559,7 @@ void function TickAnimationSequence( ItemFlavor packFlav, bool firstTime )
 
 			if ( !IsLootCeremonyActive() )
 			{
-				thread PlayAnim( fileLevel.lootTickModel, "loot_ceremony_tick_entrance_normal_idle", fileLevel.lootTickMover )
+				thread PlayAnim( fileLevel.lootTickModel, ANIMSEQ_ENTRANCE_NORMAL_IDLE, fileLevel.lootTickMover )
 				HideEntityAndChildren( fileLevel.lootTickModel )
 			}
 			else
@@ -1523,8 +1580,8 @@ void function TickAnimationSequence( ItemFlavor packFlav, bool firstTime )
 	RunUIScript( "PlayCustomUIMusic", LOOT_CEREMONY_MUSIC_P1 )
 
 	
-	PlayAnim( fileLevel.lootTickModel, "loot_ceremony_tick_entrance_normal", fileLevel.lootTickMover )
-	thread PlayAnim( fileLevel.lootTickModel, "loot_ceremony_tick_idle", fileLevel.lootTickMover )
+	PlayAnim( fileLevel.lootTickModel, ANIMSEQ_ENTRANCE_NORMAL, fileLevel.lootTickMover )
+	thread PlayAnim( fileLevel.lootTickModel, ANIMSEQ_IDLE, fileLevel.lootTickMover )
 
 	
 	wait 0.5
@@ -1545,8 +1602,32 @@ void function TickAnimationSequence( ItemFlavor packFlav, bool firstTime )
 	RunUIScript( "ClientToUI_PlayLootCeremonySound", SOUND_DEPLOY_ZOOM )
 
 	
-	thread PlayAnim( fileLevel.lootTickModel, deployAnim, fileLevel.lootTickMover )
-	thread WaitForTickAnimCompleteAndSignalDisplayLoot( fileLevel.lootTickModel, deployAnim )
+	string longestSeq = deployAnims[0]
+	float maxDuration = fileLevel.lootTickModel.GetSequenceDuration( longestSeq )
+	entity longestAnimatingTick = fileLevel.lootTickModel
+	foreach ( int deployIdx, string deployAnim in deployAnims )
+	{
+		if ( deployIdx == 0 )
+		{
+			thread PlayAnim( fileLevel.lootTickModel, deployAnim, fileLevel.lootTickMover )
+		}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	}
+
+	thread WaitForTickAnimCompleteAndSignalDisplayLoot( longestAnimatingTick, longestSeq )
 
 	
 	bool animReachedDisplayEvent = false
@@ -1565,12 +1646,12 @@ void function TickAnimationSequence( ItemFlavor packFlav, bool firstTime )
 	{
 		thread LootCeremonySequenceShowRewards()
 		WaittillAnimDone( fileLevel.lootTickModel )
-		thread PlayAnim( fileLevel.lootTickModel, "loot_ceremony_tick_triads_idle", fileLevel.lootTickMover )
+		thread PlayAnim( fileLevel.lootTickModel, ANIMSEQ_TRIADS_IDLE, fileLevel.lootTickMover )
 	}
 	else
 	{
 		LootCeremony_RarityBeamFX_Stop( true )
-		thread PlayAnim( fileLevel.lootTickModel, "loot_ceremony_tick_triads_idle", fileLevel.lootTickMover )
+		thread PlayAnim( fileLevel.lootTickModel, ANIMSEQ_TRIADS_IDLE, fileLevel.lootTickMover )
 		thread LootCeremonySequenceShowRewards()
 	}
 
@@ -1580,24 +1661,26 @@ void function TickAnimationSequence( ItemFlavor packFlav, bool firstTime )
 
 
 
-string function GetTickDeploymentAnim()
+array<string> function GetTickDeploymentAnim( bool openAll )
 {
-	string deployAnim
-	int randInt = RandomInt( 100 )
+	array<string> deployAnims = []
 
-	if ( randInt > 95 )
+
+
+
+
+
+
 	{
-		
-		deployAnim = "loot_ceremony_tick_deployment"
-	}
-	else
-	{
-		array<string> anims = [ "loot_ceremony_tick_deployment_fast_walk", "loot_ceremony_tick_deployment_hop", "loot_ceremony_tick_deployment_jump", "loot_ceremony_tick_deployment_walk"  ]
-		deployAnim = anims.getrandom()
+		deployAnims.append( ANIMSEQ_DEPLOYMENT_SINGLE.getrandom() )
 	}
 
-	printt( "Loot Ceremony deployment animation: " + deployAnim )
-	return deployAnim
+#if DEV
+		foreach ( deploy in deployAnims )
+			printt( "Loot Ceremony deployment animation: " + deploy )
+#endif
+
+	return deployAnims
 }
 
 
@@ -2269,6 +2352,8 @@ void function ShowRewards_Currency( ItemFlavor item, vector origin, vector angle
 		}
 	)
 
+	rarity = GRX_GetRarityOverrideFromQuantity( item, rarity, quantity )
+
 	if ( IsSpecialItemPresentationModeActive() )
 		SpecialItemPresentationView_Model( item, rarity, quantity, angles, moverEnt, modelEnt, 360.0 )
 	else
@@ -2868,7 +2953,7 @@ GladiatorCardData function ShowRewards_GladiatorCard_Create( ItemFlavor item, in
 		SetNestedGladiatorCardOverrideCharacter( nestedGCHandleFront, character )
 		SetNestedGladiatorCardOverrideStance( nestedGCHandleFront, item )
 
-		ItemFlavor characterDefaultFrame = GetDefaultItemFlavorForLoadoutSlot( EHI_null, Loadout_GladiatorCardFrame( character ) )
+		ItemFlavor characterDefaultFrame = GetDefaultItemFlavorForLoadoutSlot( Loadout_GladiatorCardFrame( character ) )
 		SetNestedGladiatorCardOverrideFrame( nestedGCHandleFront, characterDefaultFrame ) 
 	}
 
@@ -4669,12 +4754,15 @@ void function PopulateInspectMenuDetails( ItemFlavor item, int rarity, int quant
 	{
 		ItemFlavor currencyFlav = GRXCurrencyBundle_GetCurrencyFlav( item )
 		itemTypeName = ItemFlavor_GetShortName( currencyFlav )
-		itemName = Localize( "#CURRENCY_AMOUNT", string( ItemFlavor_GetIcon( currencyFlav ) ), GRXCurrencyBundle_GetValue( item ) )
+		quantity = GRXCurrencyBundle_GetValue( item )
+		string quantityStr = FormatAndLocalizeNumber( "1",  float ( quantity ), IsTenThousandOrMore( quantity ) )
+		itemName = Localize( "#CURRENCY_AMOUNT", string( ItemFlavor_GetIcon( currencyFlav ) ), quantityStr )
 	}
 	else if ( itemType == eItemType.account_currency )
 	{
 		itemTypeName = ItemFlavor_GetShortName( item )
-		itemName = Localize( "#CURRENCY_AMOUNT", string( ItemFlavor_GetIcon( item ) ), quantity )
+		string quantityStr = FormatAndLocalizeNumber( "1",  float ( quantity ), IsTenThousandOrMore( quantity ) )
+		itemName = Localize( "#CURRENCY_AMOUNT", string( ItemFlavor_GetIcon( item ) ), quantityStr )
 	}
 	else if ( itemType == eItemType.account_pack )
 	{
@@ -6118,10 +6206,100 @@ void function WaitForTimeComplete( float timeToWait )
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 bool function IsSpecialItemPresentationModeActive()
 {
 	return fileLevel.specialItemPresentationModeActive
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

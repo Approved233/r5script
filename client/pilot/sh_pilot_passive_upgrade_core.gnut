@@ -78,6 +78,8 @@ global function UpgradeCore_AddCallback_OnPlayerLevelUp
 
 
 
+
+
 global function UpgradeCore_SetProgressionLocked
 global function UpgradeCore_ProgressionLocked_ForPlayer_Set
 global function UpgradeCore_ProgressionLocked_ForPlayer_Get
@@ -171,8 +173,8 @@ global enum eUpgradeXPActions
 
 
 
-
-
+		CAPTURE_THRESHOLD,
+		CAPTURE_COMPLETE,
 
 	COUNT
 }
@@ -275,6 +277,7 @@ struct
 	table< entity, bool > worldspaceHarvesterIconVisibility
 	entity highlightedPingEnt
 	table< entity, var > harvesterToWorldspaceRui
+	table < int, int > xpActionIDToAmountAwardedDuringDelayedMsgInterval
 
 } file
 
@@ -316,8 +319,8 @@ struct
 
 
 
-
-
+		int captureThresholdXP = 100
+		int captureCompleteXP = 200
 
 
 	bool shiftInventoryRight = true
@@ -372,6 +375,8 @@ struct
 
 	bool harvester_useBadAreaAvoidanceRadius = true
 	float harvester_badAreaAvoidanceRadius = 3000.0
+	bool harvester_usePropAvoidanceRadius = true
+	float harvester_propAvoidanceRadius = 400.0
 
 	float harvester_useSafeDistFromRing = -1.0
 
@@ -599,8 +604,8 @@ void function UpgradeCore_InitTuningValues()
 
 
 
-
-
+		tunings.captureThresholdXP = GetCurrentPlaylistVarInt( "passive_upgrade_core_capture_threshold_xp", tunings.captureThresholdXP )
+		tunings.captureCompleteXP = GetCurrentPlaylistVarInt( "passive_upgrade_core_capture_complete_xp", tunings.captureCompleteXP )
 
 	tunings.evoHarvesterTimegateDuration = GetCurrentPlaylistVarFloat( "passive_upgrade_core_evo_harvester_activation_delay", tunings.evoHarvesterTimegateDuration ) 
 	tunings.shiftInventoryRight = GetCurrentPlaylistVarBool( "passive_upgrade_core_shift_inventory_right", tunings.shiftInventoryRight )
@@ -647,6 +652,8 @@ void function UpgradeCore_InitTuningValues()
 	tunings.messageDoubleRingScan = GetCurrentPlaylistVarBool( "passive_upgrade_core_ring_rescan_messaging_enabled", true )
 	tunings.harvester_useBadAreaAvoidanceRadius = GetCurrentPlaylistVarBool( "passive_upgrade_core_harvester_bad_area_avoidance_enabled", tunings.harvester_useBadAreaAvoidanceRadius )
 	tunings.harvester_badAreaAvoidanceRadius = GetCurrentPlaylistVarFloat( "passive_upgrade_core_harvester_bad_area_avoidance_radius", tunings.harvester_badAreaAvoidanceRadius )
+	tunings.harvester_usePropAvoidanceRadius = GetCurrentPlaylistVarBool( "passive_upgrade_core_harvester_prop_avoidance_enabled", tunings.harvester_usePropAvoidanceRadius )
+	tunings.harvester_propAvoidanceRadius = GetCurrentPlaylistVarFloat( "passive_upgrade_core_harvester_prop_avoidance_radius", tunings.harvester_propAvoidanceRadius )
 	tunings.harvester_useSafeDistFromRing = GetCurrentPlaylistVarFloat( "passive_upgrade_core_harvester_dist_from_ring", tunings.harvester_useSafeDistFromRing )
 	tunings.harvester_checkGroundNormalAngle = GetCurrentPlaylistVarBool( "passive_upgrade_core_harvester_check_ground_normal_angle", tunings.harvester_checkGroundNormalAngle )
 }
@@ -804,6 +811,17 @@ bool function UpgradeCore_IsEquipmentArmorCore( string ref )
 bool function UpgradeCore_IsUpgradeCoreConsole( entity ent )
 {
 	return ent.GetScriptName() == UPGRADE_CORE_CONSOLE_SCRIPT_NAME
+}
+
+bool function UpgradeCore_IsCorrectGameState()
+{
+	bool isGameStateCorrect =
+			(
+					( !GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_FIRING_RANGE ) && ( GetGameState() == eGameState.Playing ) ) ||
+					( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_FIRING_RANGE ) && ( GetGameState() == eGameState.WaitingForPlayers ))
+			)
+
+	return isGameStateCorrect
 }
 
 void function UpgradeCore_OnPlayerClassChanged( entity ent )
@@ -967,6 +985,11 @@ bool function UpgradeCore_Message_ReKnocks()
 	return GetCurrentPlaylistVarBool( "passive_upgrade_core_reknock_messaging_enabled", true )
 }
 
+bool function UpgradeCore_EvoHarvester_PreventInteractionForFullyUpgradeTeams()
+{
+	return GetCurrentPlaylistVarBool( "passive_upgrade_core_harvester_prevent_fullyupgraded_teaminteraction", true )
+}
+
 array<int> function UpgradeCore_GetLevelXpThresholds()
 {
 	string defaults = UPGRADE_CORE_DEFAULT_XP_THRESHOLDS_THREE_TIER
@@ -986,6 +1009,71 @@ array<int> function UpgradeCore_GetLevelXpThresholds()
 	}
 	return result
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3339,6 +3427,15 @@ asset function GetShieldCoreIconFromShieldAmount( int amount )
 
 
 
+
+
+
+
+
+
+
+
+
 array< int > function UpgradeCore_GetPotentialClassPerkUpgradesForPlayer( entity player )
 {
 	array<int> result
@@ -3520,7 +3617,40 @@ bool function UpgradeCore_CanUseConsole( entity player, entity console, bool che
 	if( checkTime && Time() < GetGlobalNetTime( UPGRADE_CORE_HARVESTER_ACTIVATION_TIME ) )
 		return false
 
+	if ( UpgradeCore_EvoHarvester_PreventInteractionForFullyUpgradeTeams() )
+	{
+		if ( UpgradeCore_CanUseConsole_IsTeamMaxLevel( player ) )
+			return false
+	}
+
 	return !console.GetUseStateByIndex( player.GetTeam() )
+}
+
+bool function UpgradeCore_CanUseConsole_IsTeamMaxLevel( entity player )
+{
+	array< entity > teammates = GetPlayerArrayOfTeam_Alive( player.GetTeam() )
+
+	int memberCount = 0
+	if ( teammates.len() > 0 )
+	{
+		memberCount = teammates.len()
+	}
+
+	int maxedOutMemberCount = 0
+
+	foreach ( teammate in teammates )
+	{
+		if ( UpgradeCore_IsLevelMaxLevel( UpgradeCore_GetPlayerLevel( teammate ) )  )
+		{
+			maxedOutMemberCount++
+			continue
+		}
+	}
+
+	if( maxedOutMemberCount == memberCount )
+		return true
+
+	return false
 }
 
 
@@ -3731,6 +3861,8 @@ void function ServertoClient_UpgradeCore_XPAwarded( int actionID, int amount, en
 {
 	string xpAction
 	bool sharerMessage = false
+	string xpSound = amount >= tunings.largeXpThreshold ? "UI_InGame_XP_Gain_Large" : "UI_InGame_XP_Gain_Small"
+	bool isDelayedMessage = false
 
 	switch( actionID )
 	{
@@ -3845,9 +3977,14 @@ void function ServertoClient_UpgradeCore_XPAwarded( int actionID, int amount, en
 
 
 
-
-
-
+		case eUpgradeXPActions.CAPTURE_THRESHOLD:
+			isDelayedMessage = true
+			xpAction = "#LEGEND_UPGRADE_XP_ACTION_CAPPROG"
+			break
+		case eUpgradeXPActions.CAPTURE_COMPLETE:
+			isDelayedMessage = true
+			xpAction = "#LEGEND_UPGRADE_XP_ACTION_CAP"
+			break
 
 
 		default:
@@ -3855,36 +3992,104 @@ void function ServertoClient_UpgradeCore_XPAwarded( int actionID, int amount, en
 			break
 	}
 
-	string xpSound = ""
-	if( amount >= tunings.largeXpThreshold )
+	if ( isDelayedMessage )
 	{
-		xpSound = "UI_InGame_XP_Gain_Large"
-	}
-	else
-	{
-		xpSound = "UI_InGame_XP_Gain_Small"
-	}
-
-
-	if( GetLocalViewPlayer() == player && !file.displayingLevelUpMessage )
-	{
-		if( sharerMessage )
+		if ( actionID in file.xpActionIDToAmountAwardedDuringDelayedMsgInterval )
 		{
-			AnnouncementMessageRight( GetLocalViewPlayer(), Localize( xpAction ), "", <214, 214, 214>, $"", 2.5, xpSound )
+			int xpAwarded = file.xpActionIDToAmountAwardedDuringDelayedMsgInterval[ actionID ]
+			xpAwarded += amount
+			file.xpActionIDToAmountAwardedDuringDelayedMsgInterval[ actionID ] = xpAwarded
 		}
 		else
 		{
-			if ( !teamAward )
+			file.xpActionIDToAmountAwardedDuringDelayedMsgInterval[ actionID ] <- amount
+			thread UpgradeCore_DisplayXPAwardedMessagingDelayed_Thread( player, sharerMessage, teamAward, actionID, xpAction,  xpSound )
+		}
+	}
+	else
+	{
+		UpgradeCore_DisplayXPAwardedMessaging( player, sharerMessage, teamAward, xpAction, xpSound, amount )
+	}
+}
+
+void function UpgradeCore_DisplayXPAwardedMessaging( entity player, bool isSharerMessage, bool isTeamAward, string xpActionString, string xpSound, int amount )
+{
+	entity localViewPlayer = GetLocalViewPlayer()
+	if ( localViewPlayer == player && !file.displayingLevelUpMessage )
+	{
+		if ( isSharerMessage )
+		{
+			AnnouncementMessageRight( localViewPlayer, Localize( xpActionString ), "", <214, 214, 214>, $"", 2.5, xpSound )
+		}
+		else
+		{
+			if ( !isTeamAward )
 			{
-				AnnouncementMessageRight( GetLocalViewPlayer(), Localize( "#LEGEND_UPGRADE_CURRENCY_AWARD", Localize( xpAction ), amount ), "", <214, 214, 214>, $"", 2.5, xpSound ) 
+				AnnouncementMessageRight( localViewPlayer, Localize( "#LEGEND_UPGRADE_CURRENCY_AWARD", Localize( xpActionString ), amount ), "", <214, 214, 214>, $"", 2.5, xpSound ) 
 			}
 			else
 			{
-				AnnouncementMessageRight( GetLocalViewPlayer(), Localize( "#LEGEND_UPGRADE_CURRENCY_AWARDTEAM", Localize( xpAction ), amount ), "", <214, 214, 214>, $"", 2.5, xpSound )
+				AnnouncementMessageRight( localViewPlayer, Localize( "#LEGEND_UPGRADE_CURRENCY_AWARDTEAM", Localize( xpActionString ), amount ), "", <214, 214, 214>, $"", 2.5, xpSound )
 			}
 		}
 	}
 }
+
+const float SCORE_MESSAGING_DELAY = 1.0
+
+void function UpgradeCore_DisplayXPAwardedMessagingDelayed_Thread( entity player, bool isSharerMessage, bool isTeamAward, int actionID, string xpActionString, string xpSound )
+{
+#if DEV
+		Assert( IsNewThread(), "Must be threaded off" )
+#endif
+
+	if ( !( actionID in file.xpActionIDToAmountAwardedDuringDelayedMsgInterval ) )
+	{
+		Assert( false, "OBJECTIVE BR: " + FUNC_NAME() + " was run with a actionID: " + actionID + " that wasn't entered in the file.xpActionIDToAmountAwardedDuringDelayedMsgInterval table first." )
+		return
+	}
+
+	if ( GetGameState() > eGameState.Playing )
+		return
+
+	if ( !IsValid( clGlobal.levelEnt ) )
+		return
+
+	EndSignal( clGlobal.levelEnt, "OnDestroy" )
+
+	entity localPlayer = GetLocalClientPlayer()
+	if ( !IsValid( localPlayer ) )
+		return
+
+	EndSignal( localPlayer, "OnDestroy", "OnDeath" )
+
+	OnThreadEnd(
+		function() : ( actionID )
+		{
+			delete file.xpActionIDToAmountAwardedDuringDelayedMsgInterval[ actionID ]
+		}
+	)
+
+	int currentPointsTotal = file.xpActionIDToAmountAwardedDuringDelayedMsgInterval[ actionID ]
+	int updatedPointsTotal = currentPointsTotal
+
+	
+	while ( true )
+	{
+		wait SCORE_MESSAGING_DELAY
+
+		updatedPointsTotal = file.xpActionIDToAmountAwardedDuringDelayedMsgInterval[ actionID ]
+
+		if ( currentPointsTotal == updatedPointsTotal ) 
+			break
+
+		
+		currentPointsTotal = updatedPointsTotal
+	}
+
+	UpgradeCore_DisplayXPAwardedMessaging( player, isSharerMessage, isTeamAward, xpActionString, xpSound, currentPointsTotal )
+}
+
 void function UpgradeCore_OpenOptions( entity player )
 {
 	if ( !IsValid( player ) )
@@ -4013,7 +4218,7 @@ void function ServerToClient_UpgradeCore_ConsoleUsed( entity harvester )
 
 	entity proxy = file.upgradeStationClientProxies[harvester]
 	thread HarvesterAnimThread( proxy )
-	thread PROTO_FadeModelIntensityOverTime( proxy, 1, 1, 0.1 )
+	thread FadeModelIntensityOverTime( proxy, 1, 1, 0.1 )
 
 	Signal( proxy, "HarvesterStopFX" )
 	Signal( harvester, "HarvesterStopFX" )
@@ -4600,6 +4805,12 @@ bool function UpgradeCore_UpdateHighlightedHarvesterIcon()
 
 void function UpgradeCore_XpStationOnUsed_Client( entity beacon, entity player, int pickupFlags )
 {
+	if ( UpgradeCore_EvoHarvester_PreventInteractionForFullyUpgradeTeams() )
+	{
+		if ( UpgradeCore_CanUseConsole_IsTeamMaxLevel( player ) )
+			return
+	}
+
 	beacon.Signal( "HarvesterUsed" )
 }
 
@@ -4760,6 +4971,10 @@ string function GetUpgradeConsoleHoldUseTextOverride( entity ent )
 		if( Time() < GetGlobalNetTime( UPGRADE_CORE_HARVESTER_ACTIVATION_TIME )  )
 		{
 			return Localize( "#LEGEND_UPGRADE_STATIONS_USE_PROMPT_DENY_INACTIVE" ) 
+		}
+		else if ( UpgradeCore_CanUseConsole_IsTeamMaxLevel( player ) )
+		{
+			return Localize( "#LEGEND_UPGRADE_STATIONS_USE_PROMPT_DENY_MAXED" )
 		}
 		else
 		{

@@ -100,7 +100,7 @@ void function OnProjectileCollision_WeaponCreepingBombardment( entity projectile
 	cp.deployableFlags = eDeployableFlags.VEHICLES_NO_STICK
 
 
-	bool didStick = PlantStickyEntityOnWorldThatBouncesOffWalls( projectile, cp, 0.7 )
+	bool didStick = PlantStickyEntityOnWorldThatBouncesOffWalls( projectile, cp )
 
 
 

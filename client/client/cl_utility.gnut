@@ -1,3 +1,53 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 untyped
 
 globalize_all_functions
@@ -75,21 +125,6 @@ const bool SCREEN_SPACE_DATA_DEBUG = false
 
 
 
-array function StringToColorArray( string colorString, string delimiter = " " )
-{
-	table Table = StringToColors( colorString, delimiter )
-	array arr
-	arr.append( Table.r )
-	arr.append( Table.g )
-	arr.append( Table.b )
-
-	if ( "a" in Table )
-		arr.append( Table.a )
-	else
-		arr.append( 255 )
-
-	return arr
-}
 
 string function TimeToString( float time, bool msec = false, bool msecExpanded = false )
 {
@@ -105,24 +140,6 @@ string function TimeToString( float time, bool msec = false, bool msecExpanded =
 	}
 
 	return format( "%02d:%02d", minsleft, secsleft )
-}
-
-float function GetFraction( float value, float min, float max )
-{
-	return ( value - min ) / ( max - min )
-}
-
-float function GetFractionClamped( float value, float min, float max )
-{
-	float frac = GetFraction( value, min, max )
-	return clamp( frac, 0.0, 1.0 )
-}
-
-float function GetValueFromFraction( float value, float value_min, float value_max, float return_min, float return_max )
-{
-	float frac = GetFractionClamped( value, value_min, value_max )
-	float retVal = return_min + ( ( return_max - return_min ) * frac )
-	return clamp( retVal, return_min, return_max )
 }
 
 string function ReloadScripts()
@@ -540,42 +557,6 @@ Point function __GetWarpinPosition( asset model, string animation, vector origin
 	return start
 }
 
-void function CoreActivatedVO( entity player )
-{
-	player.EndSignal( "OnDeath" )
-
-	string ornull conversationName = GetCoreOSConversationName( player, "core_activated" )
-	if ( conversationName == null )
-		return
-
-	expect string( conversationName )
-	
-}
-
-void function MonitorFlickerAndChange( entity screen, asset modelname )
-{
-	screen.EndSignal( "OnDestroy" )
-
-	screen.SetModel( modelname )
-	bool state = false
-	int flickers = RandomIntRange( 2, 6 ) * 2 + 1
-
-	for ( int i = 0; i < flickers; i++ )
-	{
-		if ( !state )
-		{
-			screen.Show()
-			state = true
-		}
-		else
-		{
-			screen.Hide()
-			state = false
-		}
-		wait RandomFloat( 0.15 )
-	}
-}
-
 void function AddCallback_OnClientScriptInit( void functionref( entity ) callbackFunc )
 {
 	clGlobal.onClientScriptInitCallback.append( callbackFunc )
@@ -626,68 +607,6 @@ int function PlayFXOnTag( entity ent, int playFxID, int tagID )
 	return fxID
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-void function ReCalculatePetTurretNumbers()
-{
-	entity clientPlayer = GetLocalClientPlayer()
-	if ( !IsValid( clientPlayer ) )
-		return
-
-	array<entity> allTurrets = GetNPCArrayByClass( "npc_turret_sentry" )
-	int petTurrets = 0
-
-	foreach ( turret in allTurrets )
-	{
-		if ( turret.GetBossPlayer() == clientPlayer )
-			petTurrets++
-	}
-
-	level.petSentryTurrets = petTurrets
-}
-
 void function MMR_RemotePrintTeams()
 {
 	Remote_ServerCallFunction( "ClientCallback_Dev_PrintTeamsMMR" )
@@ -698,19 +617,6 @@ void function ClientCodeCallback_OnDevnetBugScreenshot()
 	printt( "(devnet screenshot client script callback)" )
 	ShGladiatorCards_OnDevnetBugScreenshot()
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 float function GetNextRespawnTime( entity player )
 {
@@ -901,37 +807,6 @@ void function AddClientCallback_OnResolutionChanged( void functionref() callback
 	clGlobal.resolutionChangedCallbacks.append( callbackFunc )
 }
 
-
-void function ServerCallback_UpdateHeroStats()
-{
-	
-	
-
-	
-	
-	
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	
-}
-
 var function CreateRUITopology_Worldspace( vector org, vector ang, float width, float height )
 {
 	
@@ -1031,100 +906,6 @@ void function _Dev_UpdateTextInfoPanelVisibility( var rui, vector origin, int pa
 		float d = DotProduct( player.GetViewVector(), origin - player.GetOrigin() )
 		RuiSetBool( rui, "visible", d >= 0 )
 	}
-}
-
-entity function GetLocalPlayerFromSoul( entity soul )
-{
-	if ( !soul.HasValidTitan() )
-		return null
-
-	entity titan = soul.GetTitan()
-
-	if ( !IsValid( titan ) )
-		return null
-
-	if ( titan.IsNPC() )
-		return null
-
-	Assert( titan.IsPlayer(), titan + " should be a player" )
-
-	if ( titan != GetLocalViewPlayer() )
-		return null
-
-	return titan
-}
-
-bool function ShouldShowWeakpoints( entity ent )
-{
-	entity player = GetLocalViewPlayer()
-
-	if ( !IsAlive( ent ) )
-		return false
-
-	if ( !IsValid( player ) )
-		return false
-
-	if ( !ent.IsNPC() && !ent.IsPlayer() )
-	{
-		if ( ent.GetNetworkedClassName() == "prop_dynamic" )
-			return true
-	}
-
-	if ( ent.GetTeam() == player.GetTeam() )
-		return false
-
-	if ( ent.IsCloaked( true ) )
-		return false
-
-	entity soul = ent.GetTitanSoul()
-	if ( IsValid( soul ) )
-	{
-		if ( soul.GetShieldHealth() > 0 )
-			return false
-
-		if ( soul.GetCritsPrevented() == true )
-			return false
-
-		if ( soul.GetInvalidHealthBarEnt() )
-			return false
-	}
-	else if ( ent.GetShieldHealthMax() > 0 )
-	{
-		if ( soul.GetShieldHealth() > 0 )
-			return false
-	}
-
-	if ( player.GetWeaponDisableFlags() == WEAPON_DISABLE_FLAGS_ALL )
-		return false
-
-	if ( !WeaponCanCrit( player.GetActiveWeapon( eActiveInventorySlot.mainHand ) ) )
-		return false
-
-	
-	{
-		vector eyePos = player.EyePosition()
-		eyePos.z = 0
-
-		vector entPos = ent.GetWorldSpaceCenter()
-		entPos.z = 0
-
-		vector eyeVec = player.GetViewVector()
-		eyeVec.z = 0
-		eyeVec = Normalize( eyeVec )
-
-		vector dirToEnt = (entPos - eyePos)
-		dirToEnt = Normalize( dirToEnt )
-
-		if ( DotProduct( dirToEnt, eyeVec ) < 0.996 )
-			return false
-	}
-
-#if DEV
-		if ( Dev_CommandLineHasParm( "-noweakpoints" ) )
-			return false
-#endif
-
-	return true
 }
 
 
@@ -1238,47 +1019,6 @@ var function CreatePermanentCockpitPostFXRui( asset ruiAsset, int sortKey = 0 )
 {
 	var rui = RuiCreate( ruiAsset, clGlobal.topoFullscreenHudPermanent, RUI_DRAW_POSTEFFECTS, sortKey )
 	InitHUDRui( rui )
-	return rui
-}
-
-var function CreateTitanCockpitRui( asset ruiAsset, int sortKey = 0 )
-{
-	var rui = RuiCreate( ruiAsset, clGlobal.topoTitanCockpitHud, RUI_DRAW_COCKPIT, sortKey )
-	entity player = GetLocalViewPlayer()
-	TitanCockpitRUI tcRUI
-	tcRUI.rui = rui
-	player.p.titanCockpitRUIs.append( tcRUI )
-	return rui
-}
-
-var function CreateTitanCockpitLowerRui( asset ruiAsset, int sortKey = -1 )
-{
-	var rui = RuiCreate( ruiAsset, clGlobal.topoTitanCockpitLowerHud, RUI_DRAW_COCKPIT, sortKey )
-	entity player = GetLocalViewPlayer()
-	TitanCockpitRUI tcRUI
-	tcRUI.rui = rui
-	player.p.titanCockpitRUIs.append( tcRUI )
-	return rui
-}
-
-var function CreateTitanCockpitInstrument1Rui( asset ruiAsset, int sortKey = -1 )
-{
-	var rui = RuiCreate( ruiAsset, clGlobal.topoTitanCockpitInstrument1, RUI_DRAW_COCKPIT, sortKey )
-	entity player = GetLocalViewPlayer()
-	TitanCockpitRUI tcRUI
-	tcRUI.rui = rui
-	player.p.titanCockpitRUIs.append( tcRUI )
-	return rui
-}
-
-var function CreateFixedTitanCockpitRui( asset ruiAsset, int sortKey = 0 )
-{
-	var rui = RuiCreate( ruiAsset, clGlobal.topoFullscreenHud, RUI_DRAW_HUD, sortKey )
-
-	entity player = GetLocalViewPlayer()
-	TitanCockpitRUI tcRUI
-	tcRUI.rui = rui
-	player.p.titanCockpitRUIs.append( tcRUI )
 	return rui
 }
 
@@ -1431,80 +1171,6 @@ void function CharacterReadyUpCycle_Stop()
 	Signal( clGlobal.levelEnt, "OnPlayerUse" )
 }
 
-void function CharacterReadyUpCycle_Start()
-{
-	Assert( false )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-}
-
 void function _CharacterReadyUpCycleMovement( entity ent )
 {
 	EndSignal( clGlobal.levelEnt, "OnPlayerUse" )
@@ -1544,69 +1210,6 @@ bool function ShouldShowButtonHints()
 {
 	return file.showButtonHintsInt == 1
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 float function GetFovScalar( entity player )
 {
@@ -1736,7 +1339,6 @@ array<var> function Client_GetPanelElementsByClassname( var panel, string classN
 	return allElements
 }
 
-
 void function UpdateAbilityToggleOrHoldBasedOnInput()
 {
 	if ( !GetConVarBool( "toggle_on_jump_to_deactivate_changed" ) )
@@ -1746,3 +1348,67 @@ void function UpdateAbilityToggleOrHoldBasedOnInput()
 	}
 }
 
+bool function IsRespawnAvailableBits( int index, int mask )
+{
+	Assert( index >= 0 )
+	Assert( index <= 3 )
+
+	return ( GetGlobalNonRewindNetInt( "respawnAvailableBits" +  index) & mask ) != 0
+}
+
+bool function IsRespawnAvailable( entity player )
+{
+	int varIndex = ( player.GetEntIndex() - 1 ) / 32
+	int shiftIndex = player.GetEntIndex() - 1 - (varIndex*32)
+	int elimMask = (1 << shiftIndex)
+
+	return IsRespawnAvailableBits( varIndex, elimMask )
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+void function HideFriendlyIndicatorAndCrosshairNames()
+{
+	entity player = GetLocalViewPlayer()
+	player.HideCrosshairNames()
+}
+
+void function ShowFriendlyIndicatorAndCrosshairNames()
+{
+	
+	entity player = GetLocalViewPlayer()
+	player.UnhideCrosshairNames()
+}
+
+void function ClientCodeCallback_XPChanged( entity player )
+{
+}
+
+void function AddCallback_GameStateEnter( int gameState, void functionref() callbackFunc )
+{
+	Assert( gameState < clGlobal.gameStateEnterCallbacks.len() )
+
+	Assert( !clGlobal.gameStateEnterCallbacks[ gameState ].contains( callbackFunc ), "Already added " + string( callbackFunc ) + " with AddCallback_GameStateEnter" )
+
+	clGlobal.gameStateEnterCallbacks[ gameState ].append( callbackFunc )
+}

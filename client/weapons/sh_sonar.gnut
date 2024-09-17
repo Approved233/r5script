@@ -642,7 +642,8 @@ void function EntitySonarDetectedEnabled( entity ent, int statusEffect, bool act
 			return
 
 		entity viewModelArm              = ent.GetViewModelArmsAttachment()
-		entity viewModelEntity           = ent.GetViewModelEntity()
+		entity viewModelEntity           = ent.GetViewModelEntity( eActiveInventorySlot.mainHand )
+		entity offhandViewModelEntity    = ent.GetViewModelEntity( eActiveInventorySlot.altHand )
 		entity firstPersonProxy          = ent.GetFirstPersonProxy()
 		entity predictedFirstPersonProxy = ent.GetPredictedFirstPersonProxy()
 
@@ -667,6 +668,9 @@ void function EntitySonarDetectedEnabled( entity ent, int statusEffect, bool act
 
 		if ( IsValid( viewModelEntity ) )
 			SonarViewModelHighlight( viewModelEntity, highlightColor )
+
+		if ( IsValid( offhandViewModelEntity ) )
+			SonarViewModelHighlight( offhandViewModelEntity, highlightColor )
 
 		if ( IsValid( firstPersonProxy ) )
 			SonarViewModelHighlight( firstPersonProxy, highlightColor )
@@ -703,7 +707,8 @@ void function EntitySonarDetectedDisabled( entity ent, int statusEffect, bool ac
 		}
 
 		entity viewModelArm              = ent.GetViewModelArmsAttachment()
-		entity viewModelEntity           = ent.GetViewModelEntity()
+		entity viewModelEntity           = ent.GetViewModelEntity( eActiveInventorySlot.mainHand )
+		entity offhandViewModelEntity    = ent.GetViewModelEntity( eActiveInventorySlot.altHand )
 		entity firstPersonProxy          = ent.GetFirstPersonProxy()
 		entity predictedFirstPersonProxy = ent.GetPredictedFirstPersonProxy()
 
@@ -712,6 +717,9 @@ void function EntitySonarDetectedDisabled( entity ent, int statusEffect, bool ac
 
 		if ( IsValid( viewModelEntity ) )
 			SonarViewModelClearHighlight( viewModelEntity )
+
+		if ( IsValid( offhandViewModelEntity ) )
+			SonarViewModelClearHighlight( offhandViewModelEntity )
 
 		if ( IsValid( firstPersonProxy ) )
 			SonarViewModelClearHighlight( firstPersonProxy )
@@ -778,7 +786,7 @@ void function EntitySonarBlockingDisabled( entity ent, int statusEffect, bool ac
 
 
 
-		entity viewModelEntity           = ent.GetViewModelEntity()
+		entity viewModelEntity           = ent.GetViewModelEntity( eActiveInventorySlot.mainHand )
 		entity firstPersonProxy          = ent.GetFirstPersonProxy()
 		entity predictedFirstPersonProxy = ent.GetPredictedFirstPersonProxy()
 

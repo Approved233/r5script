@@ -98,7 +98,7 @@ void function ReportPlayerDialog_OnOpen()
 	Hud_SetVisible( file.reportCheatButton, true )
 	Hud_SetVisible( file.reportGameplayButton, true )
 	Hud_SetVisible( file.reportContentButton, true )
-	Hud_SetVisible( file.reportHarassmentButton, true )
+	Hud_SetVisible( file.reportHarassmentButton, false )
 
 	HudElem_SetRuiArg( file.reportReasonButton, "buttonText", Localize( "#SELECT_REPORT_REASON" ) )
 	file.selectedReportReason = ""

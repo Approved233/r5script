@@ -236,6 +236,8 @@ var function OnWeaponPrimaryAttack_ability_shield_mines( entity weapon, WeaponPr
 
 	entity grenade = Grenade_Launch( weapon, attackParams.pos, as.fire_velocity/launchSpeed, projectilePredicted, projectileLagCompensated, ZERO_VECTOR )
 
+	PlayerUsedOffhand( weaponOwner, weapon )
+
 	if ( !IsValid( grenade ) )
 		return -1
 

@@ -1451,12 +1451,6 @@ void function OnIsCrowdActiveChanged( entity player, bool new )
 
 
 
-
-
-
-
-
-
 void function Boxing_WeaponStatusCheck( entity player, var rui, int slot )
 {
 	switch ( slot )

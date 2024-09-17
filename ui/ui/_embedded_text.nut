@@ -121,6 +121,15 @@ void function EmbeddedText_Init()
 	InitEmbeddedKeyRui( $"ui/key_wide_pc.rpak", "KEY_SCROLLLOCKTOGGLE	", "SCROLL" )
 	InitEmbeddedKeyRui( $"ui/key_square_icon_pc.rpak", "ICON_UNBOUND", "%$vgui/fonts/buttons/icon_unbound%" )
 
+	InitEmbeddedBadgeRui( $"ui/ranked_badge_basic.rpak", "RANKED_TIER_ROOKIE", $"rui/menu/ranked/rank_emblem_rookie")
+	InitEmbeddedBadgeRui( $"ui/ranked_badge_basic.rpak", "RANKED_TIER_BRONZE", $"rui/menu/ranked/rank_emblem_bronze")
+	InitEmbeddedBadgeRui( $"ui/ranked_badge_basic.rpak", "RANKED_TIER_SILVER", $"rui/menu/ranked/rank_emblem_silver")
+	InitEmbeddedBadgeRui( $"ui/ranked_badge_basic.rpak", "RANKED_TIER_GOLD", $"rui/menu/ranked/rank_emblem_gold")
+	InitEmbeddedBadgeRui( $"ui/ranked_badge_basic.rpak", "RANKED_TIER_DIAMOND", $"rui/menu/ranked/rank_emblem_diamond_flat")
+	InitEmbeddedBadgeRui( $"ui/ranked_badge_basic.rpak", "RANKED_TIER_PLATINUM", $"rui/menu/ranked/rank_emblem_platinum")
+	InitEmbeddedBadgeRui( $"ui/ranked_badge_basic.rpak", "RANKED_TIER_MASTER", $"rui/menu/ranked/rank_emblem_master_flat")
+	InitEmbeddedBadgeRui( $"ui/ranked_badge_basic.rpak", "RANKED_TIER_PRED", $"rui/menu/ranked/rank_emblem_apex_flat")
+
 	RuiCreateEmbedded( $"ui/embedded_bullet_point.rpak", "embedded_bullet_point" )
 }
 
@@ -128,6 +137,12 @@ void function InitEmbeddedKeyRui( asset ruiAsset, string stringReplace, string d
 {
 	var keyRui = RuiCreateEmbedded( ruiAsset, stringReplace )
 	RuiSetEmbeddedRuiString( keyRui, "displayText", displayText )
+}
+
+void function InitEmbeddedBadgeRui( asset ruiAsset, string stringReplace, asset badge )
+{
+	var keyRui = RuiCreateEmbedded( ruiAsset, stringReplace )
+	RuiSetEmbeddedRuiString( keyRui, "rankedIcon", badge )
 }
 
 void function OnKeyBindSet( string key, string newBinding )

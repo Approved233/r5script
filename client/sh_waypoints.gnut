@@ -229,7 +229,7 @@ global enum eWaypoint
 
 
 
-
+		OBJECTIVE_CAPTURE_ZONE,
 
 
 
@@ -467,12 +467,6 @@ void function PlayerWaypoint_CreateCallback( entity wp )
 		case eWaypoint.TREASUREHUNT_OBJECTIVE:
 			TreasureHunt_InstanceObjectivePing( wp )
 			break
-
-
-
-
-
-
 
 
 
@@ -2362,10 +2356,6 @@ void function InstanceLocationPing_Thread( entity wp )
 
 	switch( pingType )
 	{
-
-
-
-
 		case ePingType.SURVEYBEACON:
 		case ePingType.MUNITIONS_BOX:
 		case ePingType.ENCRYPTED_CONSOLE:
@@ -2527,112 +2517,120 @@ void function InstanceLocationPing_Thread( entity wp )
 
 	bool shouldPlayPingSound = true
 	float endTime = 0.0
-	switch ( pingType )
+	bool isObjectiveWaypointPing = Ping_IsObjectiveWaypoint( owner )
+	if ( isObjectiveWaypointPing )
 	{
-		case ePingType.BLEEDOUT:
-			float iconSize = 56.0
-			float iconSizePinned = 72.0
-			bool completeAdsFade = true
-			if ( isSameTeam )
-			{
-				RuiSetImage( rui, "animImage", $"rui/hud/unitframes/frame_status_fill" )
-				RuiSetString( rui, "topLabelText", Localize( "#REVIVE" ).toupper() )
-			}
-			else
-			{
-				iconSize = 45.0
-				iconSizePinned = 50.0
-				completeAdsFade = false
-			}
+		shouldPlayPingSound = false 
+		RuiSetBool( rui, "displayDistance", false )
+		RuiSetBool( rui, "hideIcon", true )
+		RuiSetBool( rui, "doClamp", false )
+	}
+	else
+	{
+		switch ( pingType )
+		{
+			case ePingType.BLEEDOUT:
+				float iconSize = 56.0
+				float iconSizePinned = 72.0
+				bool completeAdsFade = true
+				if ( isSameTeam )
+				{
+					RuiSetImage( rui, "animImage", $"rui/hud/unitframes/frame_status_fill" )
+					RuiSetString( rui, "topLabelText", Localize( "#REVIVE" ).toupper() )
+				}
+				else
+				{
+					iconSize        = 45.0
+					iconSizePinned  = 50.0
+					completeAdsFade = false
+				}
 
-			
-			if ( AllianceProximity_ShouldTryToTransmitPingOrIconToAlliance( true, pingType ) )
-			{
-				completeAdsFade = true
-				RuiSetImage( rui, "animImage", $"rui/hud/unitframes/frame_status_fill" )
-				RuiSetString( rui, "topLabelText", Localize( "#REVIVE" ).toupper() )
-			}
+				
+				if ( AllianceProximity_ShouldTryToTransmitPingOrIconToAlliance( true, pingType ) )
+				{
+					completeAdsFade = true
+					RuiSetImage( rui, "animImage", $"rui/hud/unitframes/frame_status_fill" )
+					RuiSetString( rui, "topLabelText", Localize( "#REVIVE" ).toupper() )
+				}
 
-			endTime = wp.GetWaypointGametime( GAMETIME_INDEX_PING_COMMON_COUNTDOWN )
+				endTime = wp.GetWaypointGametime( GAMETIME_INDEX_PING_COMMON_COUNTDOWN )
 
-			bool isCountdownInfinite = false
+				bool isCountdownInfinite = false
 
-				isCountdownInfinite = GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_STRIKEOUT )
-
-
-			RuiSetBool( rui, "isCountdownInfinite", isCountdownInfinite )
-			RuiSetGameTime( rui, "startTime", endTime - Bleedout_GetBleedoutTime( owner ) )
-			RuiSetFloat( rui, "iconSize", iconSize )
-			RuiSetFloat( rui, "iconSizePinned", iconSizePinned )
-			RuiSetBool( rui, "completeADSFade", completeAdsFade )
-			RuiSetBool( rui, "useInactiveScalar", false )
-
-			iconScale = <0.5, 0.5, 0>
-			break
+					isCountdownInfinite = GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_STRIKEOUT )
 
 
-		case ePingType.MARK_MY_LAST_DEATH_BOX:
-			RuiSetString( rui, "topLabelText", Localize( "" ).toupper() )
-			RuiSetString( rui, "promptText", Localize( "#PROMPT_MARK_MY_LAST_DEATHBOX_SHORT").toupper() )
-			RuiSetFloat( rui, "iconSize", 56.0 )
-			RuiSetFloat( rui, "iconSizePinned", 72.0 )
-			RuiSetBool( rui, "completeADSFade", false )
-			RuiSetBool( rui, "useInactiveScalar", true )
-			RuiSetImage( rui, "animImage", $"" )
-			RuiSetBool( rui, "hideIcon", false )
-			iconScale = <0.5, 0.5, 0>
-			break
+				RuiSetBool( rui, "isCountdownInfinite", isCountdownInfinite )
+				RuiSetGameTime( rui, "startTime", endTime - Bleedout_GetBleedoutTime( owner ) )
+				RuiSetFloat( rui, "iconSize", iconSize )
+				RuiSetFloat( rui, "iconSizePinned", iconSizePinned )
+				RuiSetBool( rui, "completeADSFade", completeAdsFade )
+				RuiSetBool( rui, "useInactiveScalar", false )
+
+				iconScale = <0.5, 0.5, 0>
+				break
 
 
-
-		case ePingType.MARK_MY_LAST_DEATH_LOCATION:
-			RuiSetString( rui, "topLabelText", Localize( "" ).toupper() )
-			RuiSetString( rui, "promptText", Localize( "#PROMPT_MARK_MY_LAST_DEATH_LOCATION_SHORT" ).toupper() )
-			RuiSetFloat( rui, "iconSize", 56.0 )
-			RuiSetFloat( rui, "iconSizePinned", 72.0 )
-			RuiSetBool( rui, "completeADSFade", false )
-			RuiSetBool( rui, "useInactiveScalar", true )
-			RuiSetImage( rui, "animImage", $"" )
-			RuiSetBool( rui, "hideIcon", false )
-			iconScale = <0.5, 0.5, 0>
-			break
-
-
-		case ePingType.RESPAWN_BANNER:
-			RuiSetString( rui, "topLabelText", Localize( "#BANNER_RECOVER" ).toupper() )
-
-			endTime = wp.GetWaypointGametime( GAMETIME_INDEX_PING_COMMON_COUNTDOWN )
-			RuiSetGameTime( rui, "startTime", endTime - RESPAWN_DNA_LIFETIME )
-
-			RuiSetFloat( rui, "iconSize", 56.0 )
-			RuiSetFloat( rui, "iconSizePinned", 72.0 )
-			RuiSetBool( rui, "completeADSFade", true )
-			RuiSetBool( rui, "useInactiveScalar", false )
-			RuiSetImage( rui, "animImage", $"" )
-			iconScale = <0.5, 0.5, 0>
-			break
-
-
-		case ePingType.CAREPACKAGE_INSIGHT:
-			RuiSetFloat( rui, "iconSize", 56.0 )
-			RuiSetFloat( rui, "iconSizePinned", 72.0 )
-			RuiSetBool( rui, "completeADSFade", true )
-			RuiSetBool( rui, "useInactiveScalar", false )
-			string lootRef = wp.GetWaypointString( 0 )
-			asset lootIcon = $""
-			if( lootRef != "" )
-			{	LootData ld = SURVIVAL_Loot_GetLootDataByRef( lootRef )
-				lootIcon = ld.hudIcon
-				RuiSetFloat3( rui, "iconColor", SrgbToLinear( GetKeyColor( COLORID_TEXT_LOOT_TIER0, ld.tier ) / 255.0 ) )
-				RuiSetImage( rui, "iconImage", lootIcon )
-				RuiSetString( rui, "promptText", ld.pickupString )
-			}
-
-			thread SetMaxDrawDistanceOnRuiAfterDelay( rui, wp, 10, 500 )
-			break
+			case ePingType.MARK_MY_LAST_DEATH_BOX:
+				RuiSetString( rui, "topLabelText", Localize( "" ).toupper() )
+				RuiSetString( rui, "promptText", Localize( "#PROMPT_MARK_MY_LAST_DEATHBOX_SHORT" ).toupper() )
+				RuiSetFloat( rui, "iconSize", 56.0 )
+				RuiSetFloat( rui, "iconSizePinned", 72.0 )
+				RuiSetBool( rui, "completeADSFade", false )
+				RuiSetBool( rui, "useInactiveScalar", true )
+				RuiSetImage( rui, "animImage", $"" )
+				RuiSetBool( rui, "hideIcon", false )
+				iconScale = <0.5, 0.5, 0>
+				break
 
 
 
+			case ePingType.MARK_MY_LAST_DEATH_LOCATION:
+				RuiSetString( rui, "topLabelText", Localize( "" ).toupper() )
+				RuiSetString( rui, "promptText", Localize( "#PROMPT_MARK_MY_LAST_DEATH_LOCATION_SHORT" ).toupper() )
+				RuiSetFloat( rui, "iconSize", 56.0 )
+				RuiSetFloat( rui, "iconSizePinned", 72.0 )
+				RuiSetBool( rui, "completeADSFade", false )
+				RuiSetBool( rui, "useInactiveScalar", true )
+				RuiSetImage( rui, "animImage", $"" )
+				RuiSetBool( rui, "hideIcon", false )
+				iconScale = <0.5, 0.5, 0>
+				break
+
+
+			case ePingType.RESPAWN_BANNER:
+				RuiSetString( rui, "topLabelText", Localize( "#BANNER_RECOVER" ).toupper() )
+
+				endTime = wp.GetWaypointGametime( GAMETIME_INDEX_PING_COMMON_COUNTDOWN )
+				RuiSetGameTime( rui, "startTime", endTime - RESPAWN_DNA_LIFETIME )
+
+				RuiSetFloat( rui, "iconSize", 56.0 )
+				RuiSetFloat( rui, "iconSizePinned", 72.0 )
+				RuiSetBool( rui, "completeADSFade", true )
+				RuiSetBool( rui, "useInactiveScalar", false )
+				RuiSetImage( rui, "animImage", $"" )
+				iconScale = <0.5, 0.5, 0>
+				break
+
+
+			case ePingType.CAREPACKAGE_INSIGHT:
+				RuiSetFloat( rui, "iconSize", 56.0 )
+				RuiSetFloat( rui, "iconSizePinned", 72.0 )
+				RuiSetBool( rui, "completeADSFade", true )
+				RuiSetBool( rui, "useInactiveScalar", false )
+				string lootRef = wp.GetWaypointString( 0 )
+				asset lootIcon = $""
+				if ( lootRef != "" )
+				{
+					LootData ld = SURVIVAL_Loot_GetLootDataByRef( lootRef )
+					lootIcon = ld.hudIcon
+					RuiSetFloat3( rui, "iconColor", SrgbToLinear( GetKeyColor( COLORID_TEXT_LOOT_TIER0, ld.tier ) / 255.0 ) )
+					RuiSetImage( rui, "iconImage", lootIcon )
+					RuiSetString( rui, "promptText", ld.pickupString )
+				}
+
+				thread SetMaxDrawDistanceOnRuiAfterDelay( rui, wp, 10, 500 )
+				break
 
 
 
@@ -2644,81 +2642,59 @@ void function InstanceLocationPing_Thread( entity wp )
 
 
 
-		case ePingType.HOLOSPRAY_LIKE:
-			RuiSetFloat( rui, "iconSize", 56.0 )
-			RuiSetFloat( rui, "iconSizePinned", 72.0 )
-			RuiSetBool( rui, "completeADSFade", true )
-			RuiSetBool( rui, "useInactiveScalar", false )
-			RuiSetImage( rui, "animImage", $"" )
-			iconScale = <0.5, 0.5, 0>
-			break
 
 
-		case ePingType.STATION:
-			RuiSetFloat( rui, "iconSize", 56.0 )
-			RuiSetFloat( rui, "iconSizePinned", 72.0 )
-			break
 
 
-		case ePingType.PING_CAPTURE_OBJECTIVE_DEFEND:
-		case ePingType.PING_CAPTURE_OBJECTIVE_ATTACK:
-			shouldPlayPingSound = false 
-			RuiSetBool( rui, "displayDistance", false )
-			RuiSetBool( rui, "hideIcon", true )
-			RuiSetBool( rui, "doClamp", false )
-			break
+
+			case ePingType.HOLOSPRAY_LIKE:
+				RuiSetFloat( rui, "iconSize", 56.0 )
+				RuiSetFloat( rui, "iconSizePinned", 72.0 )
+				RuiSetBool( rui, "completeADSFade", true )
+				RuiSetBool( rui, "useInactiveScalar", false )
+				RuiSetImage( rui, "animImage", $"" )
+				iconScale = <0.5, 0.5, 0>
+				break
 
 
-		case ePingType.UPGRADE_STATION:
-			if( IsValid( pingedEnt ) )
-			{
-				entity pingedParent = pingedEnt.GetParent()
-				thread UpgradeCore_HarvesterPinged( pingedParent == null ? pingedEnt : pingedParent, wp )
-			}
-			break
+			case ePingType.STATION:
+				RuiSetFloat( rui, "iconSize", 56.0 )
+				RuiSetFloat( rui, "iconSizePinned", 72.0 )
+				break
 
+
+
+			case ePingType.UPGRADE_STATION:
+				if ( IsValid( pingedEnt ) )
+				{
+					entity pingedParent = pingedEnt.GetParent()
+					thread UpgradeCore_HarvesterPinged( pingedParent == null ? pingedEnt : pingedParent, wp )
+				}
+				break
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		}
 	}
 
-	bool isObjectiveLocationPing = false
-	if ( IsValid( owner ) )
+	if ( IsValid( owner ) && owner.IsPlayer() )
 	{
-		if ( owner.IsPlayer() )
-		{
-			RuiTrackBool( rui, "ownerIsJumpmaster", owner, RUI_TRACK_SCRIPT_NETWORK_VAR_BOOL, GetNetworkedVariableIndex( "isJumpmaster" ) )
-			RuiTrackInt( rui, "ownerTeamMemberIndex", owner, RUI_TRACK_PLAYER_TEAM_MEMBER_INDEX )
-		}
-		else if ( owner.GetNetworkedClassName() == PLAYER_WAYPOINT_CLASSNAME )
-		{
-			switch ( owner.GetWaypointType() )
-			{
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-				case eWaypoint.TREASUREHUNT_OBJECTIVE:
-				{
-					isObjectiveLocationPing = true
-					break
-				}
-
-				default:
-				{
-					break
-				}
-			}
-		}
+		RuiTrackBool( rui, "ownerIsJumpmaster", owner, RUI_TRACK_SCRIPT_NETWORK_VAR_BOOL, GetNetworkedVariableIndex( "isJumpmaster" ) )
+		RuiTrackInt( rui, "ownerTeamMemberIndex", owner, RUI_TRACK_PLAYER_TEAM_MEMBER_INDEX )
 	}
 
 	RuiTrackBool( rui, "viewPlayerIsOwner", wp, RUI_TRACK_ENT_IS_OWNED_BY_VIEWPLAYER )
@@ -2761,7 +2737,7 @@ void function InstanceLocationPing_Thread( entity wp )
 	bool noCreateForMinimap = ((wp.GetWaypointGroupFlags() & WPGF_NO_CREATE_MINIMAP_ICONS) != 0)
 	
 	
-	if ( !isObjectiveLocationPing && !noCreateForMinimap && ((ms > ePlayerMatchState.STAGING_AREA) || (pingType == ePingType.MAP_WAYPOINT)) )
+	if ( !isObjectiveWaypointPing && !noCreateForMinimap && ((ms > ePlayerMatchState.STAGING_AREA) || (pingType == ePingType.MAP_WAYPOINT)) )
 	{
 		Assert( wp.wp.ruiMinimap == null )
 		wp.wp.ruiMinimap = AddLocationPingToMinimapNoClamp( wp, minimapIcon, MINIMAP_SIZE_BIG, iconScale )
@@ -2811,15 +2787,12 @@ void function InstanceLocationPing_Thread( entity wp )
 	}
 
 	
-	if ( AllianceProximity_ShouldTryToTransmitPingOrIconToAlliance( true, pingType ) )
+	if ( AllianceProximity_ShouldTryToTransmitPingOrIconToAlliance( true, pingType ) && !isObjectiveWaypointPing )
 	{
 		
-		if ( pingType != ePingType.PING_CAPTURE_OBJECTIVE_DEFEND && pingType != ePingType.PING_CAPTURE_OBJECTIVE_ATTACK )
-		{
-			thread AllianceProximity_ManageIconVisibility_Thread( wp, rui, false, true )
-			thread AllianceProximity_ManageIconVisibility_Thread( wp, wp.wp.ruiMinimap, false, false )
-			thread AllianceProximity_ManageIconVisibility_Thread( wp, wp.wp.ruiFullmap, true, false )
-		}
+		thread AllianceProximity_ManageIconVisibility_Thread( wp, rui, false, true )
+		thread AllianceProximity_ManageIconVisibility_Thread( wp, wp.wp.ruiMinimap, false, false )
+		thread AllianceProximity_ManageIconVisibility_Thread( wp, wp.wp.ruiFullmap, true, false )
 	}
 }
 
@@ -2899,14 +2872,12 @@ void function Waypoints_CreateMinimapRuis( entity waypoint )
 	}
 
 	
-	if ( AllianceProximity_ShouldTryToTransmitPingOrIconToAlliance( true, pingType ) )
+	bool isObjectiveWaypoint = Ping_IsObjectiveWaypoint( owner )
+	if ( AllianceProximity_ShouldTryToTransmitPingOrIconToAlliance( true, pingType ) && !isObjectiveWaypoint )
 	{
 		
-		if ( pingType != ePingType.PING_CAPTURE_OBJECTIVE_DEFEND && pingType != ePingType.PING_CAPTURE_OBJECTIVE_ATTACK )
-		{
-			thread AllianceProximity_ManageIconVisibility_Thread( waypoint, waypoint.wp.ruiMinimap, false, false )
-			thread AllianceProximity_ManageIconVisibility_Thread( waypoint, waypoint.wp.ruiFullmap, true, false )
-		}
+		thread AllianceProximity_ManageIconVisibility_Thread( waypoint, waypoint.wp.ruiMinimap, false, false )
+		thread AllianceProximity_ManageIconVisibility_Thread( waypoint, waypoint.wp.ruiFullmap, true, false )
 	}
 }
 
@@ -3292,18 +3263,6 @@ array<entity> function Waypoints_GetActiveLootPings()
 {
 	return s_activeLootPings
 }
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

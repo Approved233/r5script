@@ -18,6 +18,7 @@ TestVars function TV()
 
 struct
 {
+	int entTracker = 0
 	float dev_finisherFOV = 0.0
 } file
 
@@ -261,11 +262,11 @@ void function BatchClientsideExecutionTest( vector refPoint, vector ang, array<I
 	int count = 0
 	foreach ( ItemFlavor attackerCharacter in characterPool )
 	{
-		ItemFlavor attackerSkin = GetValidItemFlavorsForLoadoutSlot( EHI_null, Loadout_CharacterSkin( attackerCharacter ) ).getrandom()
-		foreach ( ItemFlavor execution in GetValidItemFlavorsForLoadoutSlot( EHI_null, Loadout_CharacterExecution( attackerCharacter ) ) )
+		ItemFlavor attackerSkin = GetValidItemFlavorsForLoadoutSlot( Loadout_CharacterSkin( attackerCharacter ) ).getrandom()
+		foreach ( ItemFlavor execution in GetValidItemFlavorsForLoadoutSlot( Loadout_CharacterExecution( attackerCharacter ) ) )
 		{
 			ItemFlavor victimCharacter = characterPool.getrandom()
-			ItemFlavor victimSkin      = GetValidItemFlavorsForLoadoutSlot( EHI_null, Loadout_CharacterSkin( victimCharacter ) ).getrandom()
+			ItemFlavor victimSkin      = GetValidItemFlavorsForLoadoutSlot( Loadout_CharacterSkin( victimCharacter ) ).getrandom()
 			
 			delaythread(1.1) ClientsideExecutionTest( refPoint + count * AnglesToForward( ang ) * 180, attackerCharacter, attackerSkin, victimCharacter, victimSkin, execution )
 			count++
@@ -310,7 +311,7 @@ void function ClientsideExecutionTestInspiration( vector refPoint, entity attack
 
 				if ( ( rigWeight == weight || weight == "random" ) )
 				{
-					ItemFlavor sizedSkin = GetValidItemFlavorsForLoadoutSlot( EHI_null, Loadout_CharacterSkin( character ) ).getrandom()
+					ItemFlavor sizedSkin = GetValidItemFlavorsForLoadoutSlot( Loadout_CharacterSkin( character ) ).getrandom()
 					asset bodyModel = CharacterSkin_GetBodyModel( sizedSkin )
 					asset armsModel = CharacterSkin_GetArmsModel( sizedSkin )
 
@@ -1405,22 +1406,19 @@ void function DEV_DumpPlayers( string filter = "", float drawDuration = 60 )
 	}
 }
 
-
-
-
-void function DEV_FreeCamBasedOnSun( vector toSunDir, entity target, float horzDist, float elevation, float fov )
+void function DEV_LifetimeDebugTool( entity thing )
 {
-	entity ply = GetLocalClientPlayer()
+	while ( true )
+	{
+		bool isValid          = IsValid( thing )
+		bool isValidThisFrame = IsValid_ThisFrame( thing )
+		printf( "[DEV_LifetimeDebugTool] %s, IsValid() = %s, IsValid_ThisFrame() = %s", string( thing ), string(isValid), string(isValidThisFrame) )
 
-	if ( Distance( ply.EyePosition(), GetFinalClientMainViewOrigin() ) < 20.0 )
-		ply.ClientCommand( "freecam" )
+		if ( !isValid && !isValidThisFrame )
+			break
 
-	vector freecamPos = target.GetWorldSpaceCenter() + FlattenVec( toSunDir ) * horzDist + <0, 0, elevation>
-	vector freecamAng = VectorToAngles( Normalize( target.GetWorldSpaceCenter() - freecamPos ) )
-	ply.ClientCommand( format( "freecam_setpos %f %f %f", freecamPos.x, freecamPos.y, freecamPos.z ) )
-	ply.ClientCommand( format( "freecam_setang %f %f %f", freecamAng.x, freecamAng.y, freecamAng.z ) )
-
-	ply.ClientCommand( format( "set fov %f", fov ) )
+		wait 1.0
+	}
 }
 
 
@@ -1628,14 +1626,20 @@ void function DEV_FreeCamBasedOnSun( vector toSunDir, entity target, float horzD
 
 
 
+void function DEV_FreeCamBasedOnSun( vector toSunDir, entity target, float horzDist, float elevation, float fov )
+{
+	entity ply = GetLocalClientPlayer()
 
+	if ( Distance( ply.EyePosition(), GetFinalClientMainViewOrigin() ) < 20.0 )
+		ply.ClientCommand( "freecam" )
 
+	vector freecamPos = target.GetWorldSpaceCenter() + FlattenVec( toSunDir ) * horzDist + <0, 0, elevation>
+	vector freecamAng = VectorToAngles( Normalize( target.GetWorldSpaceCenter() - freecamPos ) )
+	ply.ClientCommand( format( "freecam_setpos %f %f %f", freecamPos.x, freecamPos.y, freecamPos.z ) )
+	ply.ClientCommand( format( "freecam_setang %f %f %f", freecamAng.x, freecamAng.y, freecamAng.z ) )
 
-
-
-
-
-
+	ply.ClientCommand( format( "set fov %f", fov ) )
+}
 
 
 

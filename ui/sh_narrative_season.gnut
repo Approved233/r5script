@@ -3,6 +3,7 @@
 global function NarrativeChallenges_IsEnabled
 
 global function Narrative_GetDataForChallenge
+global function Narrative_GetActiveNarrativeFlav
 global function Narrative_GetDescription
 global function Narrative_GetPreviewImage
 global function Narrative_ActivateRadioPlay
@@ -38,7 +39,7 @@ typedef ChallengeToNarrativeMetadataTable table<ItemFlavor, NarrativeChallengeMe
 struct FileStruct_Narrative
 {
 	ChallengeToNarrativeMetadataTable challengeToNarrativeData
-	ItemFlavor activeNarrative
+	ItemFlavor& activeNarrative
 }
 FileStruct_Narrative& file
 
@@ -67,11 +68,18 @@ void function NarrativeImport_OnItemFlavorRegistered( ItemFlavor narrativeFlav )
 	ItemFlavor season = GetItemFlavorByAsset( parentAsset )
 	Assert( ItemFlavor_GetType( season ) == eItemType.calevent_season )
 
-	
 	int now = GetUnixTimestamp()
-	if ( CalEvent_GetFinishUnixTime( season ) <= now || now < CalEvent_GetStartUnixTime( season ) )
+	int seasonEndTime = CalEvent_GetFinishUnixTime( season )
+	int seasonStartTime = CalEvent_GetStartUnixTime( season )
+	
+	if ( now > seasonEndTime )
 	{
 		return
+	}
+
+	if ( seasonStartTime <= now && now < seasonEndTime )
+	{
+		file.activeNarrative = narrativeFlav
 	}
 
 	
@@ -99,14 +107,29 @@ void function NarrativeImport_OnItemFlavorRegistered( ItemFlavor narrativeFlav )
 		if ( shouldRegisterChallengeAsset )
 		{
 			ItemFlavor ornull newChallengeFlav = RegisterItemFlavorFromSettingsAsset( linkedChallengeAsset )
-			Assert( newChallengeFlav != null, format( " Error registering challenge '%s'", string( linkedChallengeAsset ) ) )
-			expect ItemFlavor( newChallengeFlav )
-			challengeFlav = newChallengeFlav
-			RegisterChallengeSource( challengeFlav, narrativeFlav, displayOrder )
+			if ( newChallengeFlav != null )
+			{
+				expect ItemFlavor( newChallengeFlav )
+				challengeFlav = newChallengeFlav
+				RegisterChallengeSource( challengeFlav, narrativeFlav, displayOrder )
+			}
+			else
+			{
+				printf( "Narrative challenge not registered: %s", string( linkedChallengeAsset ) )
+				continue
+			}
 		}
 		else
 		{
-			challengeFlav = GetItemFlavorByAsset( linkedChallengeAsset )
+			
+			if ( IsValidItemFlavorSettingsAsset( linkedChallengeAsset ) )
+			{
+				challengeFlav = GetItemFlavorByAsset( linkedChallengeAsset )
+			}
+			else
+			{
+				continue
+			}
 		}
 
 		NarrativeChallengeMetadata narrativeData
@@ -130,9 +153,10 @@ NarrativeChallengeMetadata function Narrative_GetDataForChallenge( ItemFlavor ch
 #if DEV
 void function Narrative_DevPrint()
 {
+	printf( "n_dp: Active Narrative flav: %i", file.activeNarrative.guid )
 	foreach( ItemFlavor challenge, narrData in file.challengeToNarrativeData )
 	{
-		printf(" Narrative_dp:; [%i]: BP %i Week %i | Desc: %s\n", challenge.guid, narrData.battlepass.guid, narrData.week, narrData.description )
+		printf("n_dp: [%i]: BP %i Week %i | Desc: %s\n", challenge.guid, narrData.battlepass.guid, narrData.week, narrData.description )
 	}
 }
 #endif
@@ -149,6 +173,9 @@ void function StatsRegister_NarrativeChallenges()
 	array<ItemFlavor> challenges = GetAllNarrativeChallengeFlavs()
 	foreach( ItemFlavor challenge in challenges )
 	{
+#if DEV
+		printf("%s: challenge %i", FUNC_NAME(), challenge.guid )
+#endif
 		RegisterAccumulatedStat_Int( null, NarrativeChallenge_GetStatRef( challenge ), eChallengeGameMode.NON_MODE, CHALLENGES_CALC_DEPENDS )
 	}
 }
@@ -177,6 +204,10 @@ array<ItemFlavor> function GetAllNarrativeChallengeFlavs()
 	return result
 }
 
+ItemFlavor function Narrative_GetActiveNarrativeFlav()
+{
+	return file.activeNarrative
+}
 
 
 

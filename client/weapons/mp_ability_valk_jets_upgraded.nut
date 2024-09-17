@@ -3,6 +3,9 @@ global function UpgradedJets_Init
 global const string VALK_UPGRADE_PAS_AIR_CONTROL = "valk_jetpack_manuverability"
 global const string VALK_UPGRADE_PAS_LONGER_DURATION = "valk_jetpack_increased_duration"
 
+global const string VALK_UPGRADE_PAS_EFFICIENCY = "valk_jetpack_increased_efficiency"
+
+
 void function UpgradedJets_Init()
 {
 	AddCallback_OnPassiveChanged( ePassives.PAS_BOOSTED_JETPACK, BoostedJets_OnPassiveChanged )
@@ -27,6 +30,29 @@ void function BoostedJets_OnPassiveChanged( entity player, int passive, bool did
 
 void function JetpackFuel_OnPassiveChanged( entity player, int passive, bool didHave, bool nowHas )
 {
+
+
+			if ( player == GetLocalViewPlayer() )
+			{
+				if ( nowHas )
+					RuiSetFloat( Valk_GetJetPackRui(), "glideRechargeDelay", player.GetPlayerSettingFloat( "glideRechargeDelay" ) )
+			}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

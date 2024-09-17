@@ -13,13 +13,18 @@ global function ValkTacShowTargetLocsThread
 
 
 const float MAX_ATTACK_RANGE = 4000.0 
-const float MIN_ATTACK_RANGE = 500.0 
 const float MIN_TRAVEL_TIME = 2.0
-const float MAX_TRAVEL_TIME = 4.5
+
+const float MIN_ATTACK_RANGE = 400.0 
+const float MAX_TRAVEL_TIME = 4.0
+
+
+
+
 const int SIDE_STEPS = 2
 const int FORWARD_STEPS = 4
 
-const float STEP_HEIGHT = 300.0 
+const float STEP_HEIGHT = 250.0 
 const float STEP_SIDE = 155.0 
 const float STEP_FORWARD = 185.0 
 const float MISSILE_SPEED = 1600 
@@ -29,16 +34,27 @@ const float GRENADE_LOB_TIME = 0.75
 const float STUN_DURATION = 2.0
 const float STUN_EASEOUT = 1.5
 
-const float STUN_MOVESLOW = 0.5
+
+const float STUN_MOVESLOW = 0.75 
+
+
+
 const float STUN_TURNSLOW = 0.0
 
 const float EXPLOSION_DAMAGE = 25
 const float EXPLOSION_FOLLOWUP_FACTOR = 0.15 
 const float EXPLOSION_FOLLOWUP_TIME = 5 
-const float EXPLOSION_RADIUS = 125
+
+const float EXPLOSION_RADIUS = 150
+
+
+
 
 const float IN_ROW_DELAY = 0.05
-const float ROW_TO_ROW_DELAY = 0.3
+
+const float ROW_TO_ROW_DELAY = 0.15
+
+
 
 const float INITIAL_DELAY = 0.75 
 

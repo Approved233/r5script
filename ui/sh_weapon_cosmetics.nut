@@ -884,9 +884,6 @@ const bool CHARM_DEBUG = false
 
 
 
-
-
-
 void function AddCallback_UpdatePlayerWeaponEffects( void functionref( entity player ) callbackFunc )
 {
 	Assert( !file.callback_UpdatePlayerWeaponEffects.contains( callbackFunc ), "Already added " + string( callbackFunc ) + " with AddCallback_UpdatePlayerWeaponEffects" )

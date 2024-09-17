@@ -535,17 +535,13 @@ void function InitObjectiveTypes()
 
 
 
-
 	InitObjectiveType_DropDownFight()
 
 
 
 
 
-
-
 	InitObjectiveType_ShackAttack()
-
 
 
 

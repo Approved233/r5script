@@ -181,24 +181,6 @@ bool function AmIPartyMember()
 }
 
 
-
-
-
-
-
-array<int> function ColorStringToArray( string colorString )
-{
-	array<string> tokens = split( colorString, WHITESPACE_CHARACTERS )
-
-	Assert( tokens.len() >= 3 && tokens.len() <= 4 )
-
-	array<int> colorArray
-	foreach ( token in tokens )
-		colorArray.append( int( token ) )
-
-	return colorArray
-}
-
 var function AddMenu( string blockName, asset resourceFile, void functionref( var ) initFunc = null, string displayName = "" )
 {
 	var menu = CreateMenu( "menu_" + blockName, resourceFile )

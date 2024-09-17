@@ -665,12 +665,20 @@ float function AreaSonarScan_GetConeFOV()
 
 
 
+
+
+
+
+
+
+
+
 void function CreateViemodelSonarFlash( entity ent )
 {
 	EndSignal( ent, "OnDestroy" )
 
 	entity viewModelArm = ent.GetViewModelArmsAttachment()
-	entity viewModelEntity = ent.GetViewModelEntity()
+	entity viewModelEntity = ent.GetViewModelEntity( eActiveInventorySlot.mainHand )
 	entity firstPersonProxy = ent.GetFirstPersonProxy()
 	entity predictedFirstPersonProxy = ent.GetPredictedFirstPersonProxy()
 
@@ -696,7 +704,7 @@ void function CreateViemodelSonarFlash( entity ent )
 	wait 0.5 
 
 	viewModelArm = ent.GetViewModelArmsAttachment()
-	viewModelEntity = ent.GetViewModelEntity()
+	viewModelEntity = ent.GetViewModelEntity( eActiveInventorySlot.mainHand )
 	firstPersonProxy = ent.GetFirstPersonProxy()
 	predictedFirstPersonProxy = ent.GetPredictedFirstPersonProxy()
 

@@ -1240,6 +1240,8 @@ array<ItemFlavor> function StatCard_GetAvailableSeasons( int gameMode )
 		}
 	}
 
+	seasons.sort( SortSeasonAndRankedStats )
+
 	file.availableSeasonsCache[gameMode] <- seasons
 	return seasons
 }
@@ -1391,8 +1393,6 @@ array< ItemFlavor > function StatCard_GetAvailableSeasonsAndRankedPeriods( int g
 
 
 
-	seasonsAndPeriods.sort( SortSeasonAndRankedStats )
-
 
 	ItemFlavor season09CalEvent = GetItemFlavorByAsset( $"settings/itemflav/calevent/season09.rpak" )
 
@@ -1405,6 +1405,8 @@ array< ItemFlavor > function StatCard_GetAvailableSeasonsAndRankedPeriods( int g
 		}
 	}
 
+
+	seasonsAndPeriods.sort( SortSeasonAndRankedStats )
 
 	file.availableSeasonsAndRankedPeriods[gameMode] <- seasonsAndPeriods
 	return seasonsAndPeriods
@@ -1425,9 +1427,9 @@ int function SortSeasonAndRankedStats( ItemFlavor a, ItemFlavor b )
 	int bTime = CalEvent_GetStartUnixTime( compB )
 
 	if ( aTime < bTime )
-		return -1
-	else if ( aTime > bTime )
 		return 1
+	else if ( aTime > bTime )
+		return -1
 
 	if ( IsSeasonFlavor( a ) && !IsSeasonFlavor( b )  )
 		return -1

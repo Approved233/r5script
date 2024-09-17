@@ -2212,7 +2212,6 @@ var function OnWeaponPrimaryAttack_ability_phase_tunnel( entity weapon, WeaponPr
 
 
 
-
 entity function GetDoorForHitEnt( entity hitEnt )
 {
 	if ( IsDoor( hitEnt ) )

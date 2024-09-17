@@ -46,7 +46,7 @@ global function GetGamemodeSelectorPlaylist
 global function DismissGamemodeSelector
 global function DismissGamemodeSelectorModal
 global function HasGamemodeSelector
-global function UpdateButtonsPositions
+global function LobbyStageSwitching_UpdateFriendsButtons
 #if DEV
 global function DEV_PrintPartyInfo
 global function DEV_PrintUserInfo
@@ -404,9 +404,7 @@ void function InitPlayPanel( var panel )
 
 void function Lobby_OnClickPlaylistAboutButton( var button )
 {
-	string modeRules = GetPlaylist_UIRules()
-	if( FeatureHasTutorialTabs( modeRules ) )
-		OpenFeatureTutorialDialog( button, modeRules )
+	OpenPlaylistTutorialDialog( GamemodeUtility_GetPlaylist() )
 }
 
 void function PlayPanel_LevelInit()
@@ -680,7 +678,6 @@ void function PlayPanel_OnShow( var panel )
 
 
 
-	thread TryRunDialogFlowThread()
 
 	AddCallbackAndCallNow_UserInfoUpdated( Ranked_OnUserInfoUpdatedInPanelPlay )
 
@@ -690,6 +687,7 @@ void function PlayPanel_OnShow( var panel )
 
 	file.isShowing = true
 
+	DialogFlow()
 }
 
 void function Thread_UpdateLobbyButtons()
@@ -1157,7 +1155,6 @@ void function UpdateFriendButtons()
 	Hud_SetVisible( file.friendButton0, false )
 	Hud_SetVisible( file.friendButton1, false )
 
-	Hud_SetVisible( file.inviteFriendsButton2, false )
 	Hud_SetVisible( file.friendButton2, false )
 
 
@@ -1173,15 +1170,18 @@ void function UpdateFriendButtons()
 	Hud_SetNavRight( file.inviteLastPlayedUnitFrame0, leftButton )
 	Hud_SetNavRight( file.inviteLastPlayedUnitFrame1, leftButton )
 
-	int maxTeamSize = GetMaxTeamSizeForAllPlaylistsInRotation()
+	if ( CanRunClientScript() )
+	{
+		int maxTeamSize = GetMaxTeamSizeForAllPlaylistsInRotation()
+		if ( file.lastMaxTeamSize != maxTeamSize )
+		{
+			file.lastMaxTeamSize = maxTeamSize
+			RunClientScript( "LobbyStageSwitching_UpdateLobbyStage", LobbyPlaylist_GetSelectedPlaylist() )
+		}
+	}
 
-
-	Hud_SetVisible( file.inviteFriendsButton2, !file.personInFourthSlot && maxTeamSize >= 4 )
 	var fourthSlotButton = file.personInFourthSlot ? file.friendButton2 : file.inviteFriendsButton2
 	Hud_SetNavRight( file.inviteLastPlayedUnitFrame2, leftButton )
-
-
-	UpdateButtonsPositions( maxTeamSize )
 
 	Hud_SetNavDown( file.selfButton, leftButton )
 	Hud_SetNavLeft( file.selfButton, leftButton )
@@ -1536,7 +1536,11 @@ void function UpdateLowerLeftButtonPositions()
 
 
 		int tierFloor = currentRank.tier.scoreMin
-		bool showDemotionProtection = ((score - tierFloor) <= entryCost && currentRank.tier.allowsDemotion ) && !isProvisional
+		bool showDemotionProtection = ((score - tierFloor) < entryCost && currentRank.tier.allowsDemotion ) && !isProvisional
+
+		if ( RankedRumble_IsRunningRankedRumble() )
+			RuiSetBool ( rui, "showProtection" , false )
+		else
 
 		RuiSetBool ( rui, "showProtection" , showDemotionProtection )
 
@@ -2277,7 +2281,15 @@ bool function CanActivateModeButton()
 	bool isReady  = GetConVarBool( "party_readyToSearch" )
 	bool isLeader = IsPartyLeader()
 
-	return !isReady && isLeader
+	return !isReady || !isLeader
+}
+
+bool function ShouldLockModeButton()
+{
+	bool isReady  = GetConVarBool( "party_readyToSearch" )
+	bool isLeader = IsPartyLeader()
+
+	return isReady || !isLeader
 }
 
 bool function HasNewModes()
@@ -2341,7 +2353,8 @@ void function RestartMatchmakingAfterRotation( string previousPlaylistName )
 	EndSignal( uiGlobal.signalDummy, "LevelShutdown" )
 
 	int retryCount = 5
-	string activeUISlot = GetPlaylistVarString( previousPlaylistName, "ui_slot", "" )
+	string ornull schedule = GetScheduleFromPlaylist( previousPlaylistName )
+	string activeUISlot = schedule != null ? expect string( schedule ) : ""
 	string nextUISlot = ""
 
 	
@@ -2351,7 +2364,7 @@ void function RestartMatchmakingAfterRotation( string previousPlaylistName )
 		{
 			WaitFrame()
 			Lobby_UpdateSelectedPlaylistUsingUISlot( previousPlaylistName )
-			nextUISlot = GetPlaylistVarString( LobbyPlaylist_GetSelectedPlaylist(), "ui_slot", "" )
+			nextUISlot = LobbyPlaylist_GetSelectedUISlot()
 			--retryCount
 		}
 	}
@@ -2402,14 +2415,14 @@ void function UpdateModeButton()
 		if ( file.lastMaxTeamSize != maxTeamSize )
 		{
 			file.lastMaxTeamSize = maxTeamSize
-			RunClientScript( "LSS_UpdateLobbyStage", LobbyPlaylist_GetSelectedPlaylist() )
+			RunClientScript( "LobbyStageSwitching_UpdateLobbyStage", LobbyPlaylist_GetSelectedPlaylist() )
 		}
 	}
 
-	Hud_SetLocked( file.modeButton, !CanActivateModeButton() )
+	Hud_SetLocked( file.modeButton, ShouldLockModeButton() )
 
 	bool isReady = GetConVarBool( "party_readyToSearch" )
-	Hud_SetEnabled( file.modeButton, !isReady && CanActivateModeButton() )
+	Hud_SetEnabled( file.modeButton, CanActivateModeButton() )
 	HudElem_SetRuiArg( file.modeButton, "isReady", isReady )
 	HudElem_SetRuiArg( file.gamemodeSelectButton, "isReady", isReady )
 	HudElem_SetRuiArg( file.gamemodeSelectButton, "crossplayStatus", GetCrossplayStatus() )
@@ -2494,26 +2507,28 @@ void function UpdateModeButton()
 			thread RestartMatchmakingAfterRotation( playlistName )
 		}
 
-		GamemodeSelect_UpdateSelectButton( file.gamemodeSelectButton, playlistName )
+		GamemodeSelect_UpdateSelectButton( file.gamemodeSelectButton, playlistName, LobbyPlaylist_GetSelectedUISlot() )
 		HudElem_SetRuiArg( file.gamemodeSelectButton, "alwaysShowDesc", true )
 		HudElem_SetRuiArg( file.gamemodeSelectButton, "isPartyLeader", isLeader )
 
 		HudElem_SetRuiArg( file.gamemodeSelectButton, "modeLockedReason", "" )
 
+		Hud_SetLocked( file.gamemodeSelectButton, ShouldLockModeButton() )
+		Hud_SetEnabled( file.gamemodeSelectButton, CanActivateModeButton() )
 
-
-			
-			if ( GetConVarBool( "cups_enabled" ) )
-			{
-				Hud_SetLocked( file.gamemodeSelectButton, false )
-				Hud_SetEnabled( file.gamemodeSelectButton, true )
-			}
-			else
-
-			{
-				Hud_SetLocked( file.gamemodeSelectButton, !CanActivateModeButton() )
-				Hud_SetEnabled( file.gamemodeSelectButton, CanActivateModeButton() )
-			}
+		if ( isLeader )
+		{
+			ToolTipData dt
+			dt.tooltipStyle = eTooltipStyle.NONE
+			dt.descText = ""
+			Hud_SetToolTipData( file.gamemodeSelectButton, dt )
+		} else
+		{
+			ToolTipData dt
+			dt.tooltipStyle = eTooltipStyle.DEFAULT
+			dt.descText = "#MENU_LOBBY_LOCKED_GAMEMODE_SELECT_BUTTON"
+			Hud_SetToolTipData( file.gamemodeSelectButton, dt )
+		}
 
 		
 		int mapIdx = playlistName != "" ? GetPlaylistActiveMapRotationIndex( playlistName ) : -1
@@ -2777,7 +2792,7 @@ void function FillButton_OnActivate( var button )
 
 void function ModeButton_OnActivate( var button )
 {
-	if ( Hud_IsLocked( button ) || !CanActivateModeButton() )
+	if ( !CanActivateModeButton() )
 		return
 
 	Remote_ServerCallFunction( "ClientCallback_ViewedModes" )
@@ -2790,15 +2805,8 @@ void function ModeButton_OnActivate( var button )
 void function GamemodeSelectButton_OnActivate( var button )
 {
 
-	if ( !GetConVarBool( "cups_enabled" ) )
-	{
-		if ( Hud_IsLocked( button ) || !CanActivateModeButton() )
-			return
-	}
-
-
-
-
+	if ( !CanActivateModeButton() )
+		return
 
 	Hud_SetVisible( file.gamemodeSelectButton, false )
 	Hud_SetVisible( file.readyButton, false )
@@ -2926,9 +2934,9 @@ void function ReadyButton_OnActivate( var button )
 
 		if ( CanRunClientScript() )
 		{
-			RunClientScript("Lobby_OnReadyFX", false)
 			RunClientScript( "OnReady_PLAY", false )
 		}
+
 	}
 	else
 	{
@@ -2990,7 +2998,7 @@ void function ReadyButton_OnActivate( var button )
 void function Lobby_StartMatchmaking()
 {
 	var jsonTable = {
-		map = GetPlaylistRotationGroup()
+		map = LobbyPlaylist_GetSelectedPlaylist()
 		next_map_time = GetPlaylistRotationNextTime()
 	}
 	PIN_UIInteraction_Select( GetActiveMenuName(), "readybutton", jsonTable );
@@ -3019,7 +3027,6 @@ void function ReadyButtonActivate()
 
 		if ( CanRunClientScript() )
 		{
-			RunClientScript("Lobby_OnReadyFX", true)
 			RunClientScript( "OnReady_PLAY", true )
 		}
 
@@ -4056,23 +4063,12 @@ void function Lobby_UpdatePlayPanelPlaylists()
 	if ( selectedUISlot != "" )
 	{
 		printt( "Attempting to select playlist based on UI slot: " + selectedUISlot )
-		string playlistInSlot = GetCurrentPlaylistInUiSlot( selectedUISlot )
+		string playlistInSlot = GetCurrentPlaylistForSchedule( selectedUISlot )
 		if ( playlistInSlot != "" )
 		{
 			foundOtherPlaylist = true
 			newPlaylist = playlistInSlot
 			printt("UISlot -> Playlist", newPlaylist )
-		}
-	}
-	if ( !foundOtherPlaylist && selectedPlaylist != "" )
-	{
-		printt( "Attempting to select playlist based on previous playlist: " + selectedPlaylist )
-		string uiSlot         = GetPlaylistVarString( selectedPlaylist, "ui_slot", "" )
-		string playlistInSlot = GetCurrentPlaylistInUiSlot( uiSlot )
-		if ( playlistInSlot != "" )
-		{
-			foundOtherPlaylist = true
-			newPlaylist = playlistInSlot
 		}
 	}
 
@@ -5235,11 +5231,11 @@ void function StoryModeButton_OnActivate( var button )
 	}()
 }
 
-void function UpdateButtonsPositions( int maxTeamSize )
+void function LobbyStageSwitching_UpdateFriendsButtons( int teamSize )
 {
 	float scaleFrac = GetScreenScaleFrac()
 
-	if ( maxTeamSize >= 4 )
+	if ( teamSize >= 4 )
 	{
 		
 
@@ -5269,16 +5265,21 @@ void function UpdateButtonsPositions( int maxTeamSize )
 #if PC_PROG_NX_UI
 			if ( IsNxHandheldMode() )
 			{
-				Hud_SetX( file.friendButton0, -354 * scaleFrac )
-				Hud_SetX( file.friendButton1, -346 * scaleFrac )
-				Hud_SetX( file.friendButton2, 150 * scaleFrac )
+				Hud_SetX( file.selfButton, -160 * scaleFrac )
+				Hud_SetX( file.friendButton0, -440 * scaleFrac )
+				Hud_SetX( file.friendButton1, 190 * scaleFrac )
+				Hud_SetX( file.friendButton2, 380 * scaleFrac )
 
-				Hud_SetY( file.selfButton, -18 * scaleFrac )
-				Hud_SetY( file.friendButton0, -70 * scaleFrac )
-				Hud_SetY( file.friendButton1, -18 * scaleFrac )
-				Hud_SetY( file.friendButton2, -70 * scaleFrac )
+				Hud_SetY( file.selfButton, -30 * scaleFrac )
+				Hud_SetY( file.friendButton0, -120 * scaleFrac )
+				Hud_SetY( file.friendButton1, -50 * scaleFrac )
+				Hud_SetY( file.friendButton2, -120 * scaleFrac )
+
 			}
 #endif
+
+		
+		Hud_SetVisible( file.inviteFriendsButton2, !file.personInFourthSlot )
 	}
 	else
 	{
@@ -5314,5 +5315,8 @@ void function UpdateButtonsPositions( int maxTeamSize )
 				Hud_SetY( file.friendButton1, -40 * scaleFrac )
 			}
 #endif
+
+		
+		Hud_SetVisible( file.inviteFriendsButton2, false )
 	}
 }

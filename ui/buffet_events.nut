@@ -21,23 +21,7 @@ global function BuffetEvent_GetRewardIconCol
 
 
 
-global function BuffetEvent_GetAboutPageBGImage
-global function BuffetEvent_GetAboutPageBGCol
-global function BuffetEvent_GetAboutPageBigIcon
-global function BuffetEvent_GetAboutPageTitleText
-global function BuffetEvent_GetAboutPageDescText
-global function BuffetEvent_GetAboutPageScoreTitleText
-global function BuffetEvent_GetAboutPageThemeCol
-global function BuffetEvent_GetAboutPageHeaderCol
-global function BuffetEvent_GetAboutPageBodyCol
-global function BuffetEvent_GetAboutPageBarImage
-global function BuffetEvent_GetAboutPageBarTextCol
-global function BuffetEvent_GetAboutPageBarTextOwnedCol
-global function BuffetEvent_GetAboutPageScoreLabelCol
-global function BuffetEvent_GetAboutPageScoreCol
 global function BuffetEvent_GetAboutPageCheckMarkCol
-global function BuffetEvent_GetAboutPageShowsModes
-global function BuffetEvent_GetAboutPageLineImage
 global function BuffetEvent_GetAboutPageUnownedRewardBorderImage
 global function BuffetEvent_GetAboutPageOwnedRewardBorderImage
 global function BuffetEvent_GetProgressBarCol
@@ -56,40 +40,14 @@ global function BuffetEvent_GetAsset
 global function BuffetEvent_GetBool
 global function BuffetEvent_GetVector
 global function BuffetEvent_GetFloat
+global function BuffetEvent_GetGUIDString
 
 global function BuffetEvent_OnLobbyPlayPanelSpecialChallengeClicked
 
-global const string UI_TITLE_HEADER_ID = "titleHeaderText"
-global const string UI_TITLE_SUBHEADER_ID = "titleSubheaderText"
-global const string UI_TITLE_MAIN_ICON_ID = "titleMainIcon"
-global const string UI_TITLE_USE_BG_BLUR_ID = "titleUseBgBlur"
-global const string UI_TITLE_BG_BLUR_IMAGE_ID = "titleBlurImage"
-global const string UI_TITLE_BG_BLUR_DARKENING_ID = "titleBgDarkening"
-global const string UI_TITLE_BG_IMAGE_ID = "titleBgImage"
-global const string UI_TITLE_HEADER_COLOR_ID = "titleHeaderColor"
-global const string UI_TITLE_SUBHEADER_COLOR_ID = "titleSubheaderColor"
-global const string UI_TITLE_TIME_REMAINING_COLOR_ID = "timeRemainingColor"
-
-global const string UI_MAIN_PANEL_BG_ID = "mainPanelBgImage"
-
-global const string UI_BADGE_PANEL_POINTS_LABEL_ID = "pointsLabelText"
-global const string UI_BADGE_PANEL_BADGE_LABEL_ID = "badgesLabelText"
-global const string UI_BADGE_PANEL_DESCRIPTION_LABEL_ID = "descriptionText"
-global const string UI_BADGE_PANEL_OWNED_ICON_ID = "badgeOwnedStateIconImage"
-global const string UI_BADGE_PANEL_NOT_OWNED_ICON_ID = "badgeLockedStateIconImage"
-global const string UI_BADGE_PANEL_OWNED_BG_ID = "badgeOwnedBgImage"
-global const string UI_BADGE_PANEL_OWNED_BG_COLOR_ID = "badgeOwnedBGColor"
-global const string UI_BADGE_PANEL_NOT_OWNED_BG_ID = "badgeLockedBgImage"
-global const string UI_BADGE_PANEL_STATE_BG_ID = "badgeStateIconBgImage"
-global const string UI_BADGE_PANEL_BAGDE_BORDER_ID = "diamondFrameBadgeBorderImage"
-
-global const string UI_REWARDS_PANEL_REWARDS_LABEL_ID = "rewardsLabelText"
-global const string UI_REWARDS_PANEL_BG_ID = "rewardsPanelBgImage"
-
-global const string UI_CHASE_ITEM_FINAL_REWARDS_LABEL_ID = "finalRewardText"
-global const string UI_CHASE_ITEM_COMPLETEDLABEL_ID = "completedText"
-global const string UI_CHASE_ITEM_CHASE_ITEM_BG_ID = "chaseItemBgImage"
-global const string UI_CHASE_ITEM_CHASE_ITEM_ID = "chaseItemIcon"
+global const string UI_REWARDS_PANEL_PROGRESS_BAR_COLOR_ID = "rewardProgressBarColor"
+global const string UI_CHALLENGE_TILE_ID = "challengeTileFlavor"
+global const string UI_REWARD_OWNED_COLOR_ID = "rewardProgressOwnedColor"
+global const string UI_REWARD_UNOWNED_COLOR_ID = "rewardProgressUnownedColor"
 
 
 
@@ -425,14 +383,6 @@ asset function BuffetEvent_GetHeaderIcon( ItemFlavor event )
 
 
 
-asset function BuffetEvent_GetAboutPageBGImage( ItemFlavor event )
-{
-	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_buffet )
-	return GetGlobalSettingsAsset( ItemFlavor_GetAsset( event ), "aboutPageBGImage" )
-}
-
-
-
 asset function BuffetEvent_GetChallengeHeaderImage( ItemFlavor event )
 {
 	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_buffet )
@@ -465,22 +415,6 @@ vector function BuffetEvent_GetChallengeButtonTextCol( ItemFlavor event )
 
 
 
-asset function BuffetEvent_GetAboutPageBigIcon( ItemFlavor event )
-{
-	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_buffet )
-	return GetGlobalSettingsAsset( ItemFlavor_GetAsset( event ), "aboutPageBigIcon" )
-}
-
-
-
-asset function BuffetEvent_GetAboutPageBarImage( ItemFlavor event )
-{
-	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_buffet )
-	return GetGlobalSettingsAsset( ItemFlavor_GetAsset( event ), "aboutPageBarImage" )
-}
-
-
-
 asset function BuffetEvent_GetAboutPageUnownedRewardBorderImage( ItemFlavor event )
 {
 	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_buffet )
@@ -493,46 +427,6 @@ asset function BuffetEvent_GetAboutPageOwnedRewardBorderImage( ItemFlavor event 
 {
 	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_buffet )
 	return GetGlobalSettingsAsset( ItemFlavor_GetAsset( event ), "aboutPageOwnedRewardBorderImage" )
-}
-
-
-
-asset function BuffetEvent_GetAboutPageLineImage( ItemFlavor event )
-{
-	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_buffet )
-	return GetGlobalSettingsAsset( ItemFlavor_GetAsset( event ), "aboutPageLineImage" )
-}
-
-
-
-string function BuffetEvent_GetAboutPageTitleText( ItemFlavor event )
-{
-	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_buffet )
-	return GetGlobalSettingsString( ItemFlavor_GetAsset( event ), "aboutPageTitleText" )
-}
-
-
-
-string function BuffetEvent_GetAboutPageDescText( ItemFlavor event )
-{
-	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_buffet )
-	return GetGlobalSettingsString( ItemFlavor_GetAsset( event ), "aboutPageDescText" )
-}
-
-
-
-string function BuffetEvent_GetAboutPageScoreTitleText( ItemFlavor event )
-{
-	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_buffet )
-	return GetGlobalSettingsString( ItemFlavor_GetAsset( event ), "aboutPageScoreTitleText" )
-}
-
-
-
-vector function BuffetEvent_GetAboutPageBGCol( ItemFlavor event )
-{
-	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_buffet )
-	return GetGlobalSettingsVector( ItemFlavor_GetAsset( event ), "aboutPageBGCol" )
 }
 
 
@@ -594,70 +488,6 @@ vector function BuffetEvent_GetRewardIconCol( ItemFlavor event )
 
 
 
-vector function BuffetEvent_GetAboutPageThemeCol( ItemFlavor event )
-{
-	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_buffet )
-	return GetGlobalSettingsVector( ItemFlavor_GetAsset( event ), "aboutPageThemeCol" )
-}
-
-
-
-vector function BuffetEvent_GetAboutPageHeaderCol( ItemFlavor event )
-{
-	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_buffet )
-	return GetGlobalSettingsVector( ItemFlavor_GetAsset( event ), "aboutPageHeaderTextCol" )
-}
-
-
-
-vector function BuffetEvent_GetAboutPageBodyCol( ItemFlavor event )
-{
-	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_buffet )
-	return GetGlobalSettingsVector( ItemFlavor_GetAsset( event ), "aboutPageBodyTextCol" )
-}
-
-
-
-vector function BuffetEvent_GetAboutPageBarTextCol( ItemFlavor event )
-{
-	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_buffet )
-	return GetGlobalSettingsVector( ItemFlavor_GetAsset( event ), "aboutPageBarTextCol" )
-}
-
-
-
-vector function BuffetEvent_GetAboutPageBarTextOwnedCol( ItemFlavor event )
-{
-	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_buffet )
-	return GetGlobalSettingsVector( ItemFlavor_GetAsset( event ), "aboutPageBarTextOwnedCol" )
-}
-
-
-
-vector function BuffetEvent_GetAboutPageScoreLabelCol( ItemFlavor event )
-{
-	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_buffet )
-	return GetGlobalSettingsVector( ItemFlavor_GetAsset( event ), "aboutPageScoreLabelCol" )
-}
-
-
-
-vector function BuffetEvent_GetAboutPageScoreCol( ItemFlavor event )
-{
-	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_buffet )
-	return GetGlobalSettingsVector( ItemFlavor_GetAsset( event ), "aboutPageScoreCol" )
-}
-
-
-
-bool function BuffetEvent_GetAboutPageShowsModes( ItemFlavor event )
-{
-	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_buffet )
-	return GetGlobalSettingsBool( ItemFlavor_GetAsset( event ), "aboutPageShowsModes" )
-}
-
-
-
 string function BuffetEvent_GetString( ItemFlavor event, string id  )
 {
 	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_buffet )
@@ -668,6 +498,17 @@ asset function BuffetEvent_GetAsset( ItemFlavor event, string id )
 {
 	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_buffet )
 	return GetGlobalSettingsAsset( ItemFlavor_GetAsset( event ), id )
+}
+
+string function BuffetEvent_GetGUIDString( ItemFlavor event, string id )
+{
+	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_buffet )
+	asset settingsAsset = GetGlobalSettingsAsset( ItemFlavor_GetAsset( event ), id )
+
+	if( settingsAsset == $"" )
+		return ""
+
+	return ItemFlavor_GetGUIDString( GetItemFlavorByAsset( settingsAsset ) )
 }
 
 bool function BuffetEvent_GetBool( ItemFlavor event, string id )
@@ -702,9 +543,6 @@ void function BuffetEvent_OnLobbyPlayPanelSpecialChallengeClicked( ItemFlavor ev
 
 	EventsPanel_SetOpenPageIndex( eEventsPanelPage.LANDING )
 	JumpToEventTab( "RTKEventsPanel" )
-
-
-
 
 }
 

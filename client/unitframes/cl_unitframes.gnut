@@ -537,7 +537,9 @@ void function CreateTeamUnitFrame( entity player )
 		RuiSetBool( rui, "showProgressBar", true )
 		UpgradeCore_UpdateTeammatesXp( player, player.GetPlayerNetInt( UPGRADE_CORE_XP_NETINT ) )
 	}
+	else
 
+		RuiSetBool( rui, "showProgressMeter",  false )
 }
 
 int function SquadMemberIndexSort( entity a, entity b )
@@ -687,7 +689,12 @@ void function SetUnitFrameDataFromOwner( var rui, entity ent, entity localPlayer
 
 	bool showBleedoutTimer = true
 
-		showBleedoutTimer = !GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_STRIKEOUT )
+		showBleedoutTimer = ! ( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_STRIKEOUT )  )
+
+
+
+
+
 
 
 	RuiSetBool( rui, "showBleedoutTimer", showBleedoutTimer )
@@ -797,18 +804,9 @@ void function SetUnitFrameConsumableData( var rui, entity ent, int ornull kitTyp
 
 	if ( kitType != -1 )
 	{
-		if ( WeaponDrivenConsumablesEnabled() )
-		{
-			ConsumableInfo info = Consumable_GetConsumableInfo( kitType )
-			LootData lootData   = info.lootData
-			hudIcon = lootData.hudIcon
-		}
-		else
-		{
-			HealthPickup kitData = SURVIVAL_Loot_GetHealthKitDataFromStruct( kitType )
-			LootData lootData    = kitData.lootData
-			hudIcon = lootData.hudIcon
-		}
+		ConsumableInfo info = Consumable_GetConsumableInfo( kitType )
+		LootData lootData   = info.lootData
+		hudIcon = lootData.hudIcon
 	}
 
 	RuiSetImage( rui, "healTypeIcon", hudIcon )
@@ -1000,7 +998,7 @@ bool function PlayerShouldHaveUnitFrame( entity player )
 		return false
 
 	int gameState = GetGameState()
-	if ( gameState < eGameState.Playing && !GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_FIRING_RANGE ) )
+	if ( gameState < eGameState.Playing && ( !GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_FIRING_RANGE ) && !GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_TRAINING ) ) )
 	{
 		if( !( gameState == eGameState.Prematch && GetCurrentPlaylistVarBool( "show_teamunitframes_in_prematch", false ) ) )
 			return false

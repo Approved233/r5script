@@ -336,6 +336,8 @@ void function StatsRegister_Gameplay()
 	
 	StatEnumStruct weaponcategory_SES = GetRegisteredStatEnumStruct( eStatEnumStructRefs.WEAPON_CATEGORY )
 
+	CAREER_STATS.weaponcategory_kills_any_mode = RegisterAccumulatedStat_Int( weaponcategory_SES, "kills_any_mode", eChallengeGameMode.ANY, CHALLENGES_CALC_DEPENDS )
+
 	
 	
 	temp_statTemplateReference        = CAREER_STATS.character_weaponcategory_kills
@@ -414,6 +416,7 @@ void function StatsRegister_Gameplay()
 	
 	StatEnumStruct season_SES = GetRegisteredStatEnumStruct( eStatEnumStructRefs.SEASON )
 	CAREER_STATS.season_battlepass_level = RegisterCachedCalculatedStat_Int( season_SES, "battlepass_level", CHALLENGES_CALC_DEPENDS, SetupGetSeasonBattlePassLevelForStat, [], eChallengeGameMode.NON_MODE )
+	CAREER_STATS.season_battlepass_level_split_2 = RegisterCachedCalculatedStat_Int( season_SES, "battlepass_level_split_2", CHALLENGES_CALC_DEPENDS, SetupGetSeasonBattlePassLevelForStat, [], eChallengeGameMode.NON_MODE )
 
 	
 	StatEnumStruct season_character_SES = GetRegisteredStatEnumStruct( eStatEnumStructRefs.SEASON_CHARACTER )
@@ -635,7 +638,13 @@ StatCalcFuncInfo function SetupGetSeasonBattlePassLevelForStat( StatEntry calcEn
 
 	info.calcFunc_Int = (int function ( entity player, array<StatEntry> sourceEntries, int when ) : ( seasonRef ) {
 		ItemFlavor season = GetItemFlavorByGUID( ConvertItemFlavorGUIDStringToGUID( seasonRef ) )
-		ItemFlavor pass   = Season_GetBattlePass( season )
+
+			ItemFlavor ornull pass = Season_GetBattlePassV2( season )
+			Assert( pass != null, "Tried to retrieve current BP V2 but got null instead." )
+			expect ItemFlavor( pass )
+
+
+
 
 		
 		

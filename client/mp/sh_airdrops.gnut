@@ -120,7 +120,11 @@ global enum eAirdropType
 
 
 
-		FREESPAWN,
+	FREESPAWN,
+
+
+
+
 
 	_count
 }
@@ -246,6 +250,15 @@ entity function GetAirdropForHitEnt( entity hitEnt )
 
 	return null
 }
+
+
+
+
+
+
+
+
+
 
 
 

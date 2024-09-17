@@ -24,6 +24,8 @@ const obituaryTextBoxHeight = 20
 const defaultCharacterWidth = 5
 const int MAX_OBITUARY_ENTRIES = 20
 
+const string NAMETAG_RANGE_OBITUARY_PRINTS = "nametag_range_obituary_prints"
+
 struct ObituaryData
 {
 	float startTime
@@ -75,6 +77,7 @@ global struct ObitStringData
 
 void function ClObituary_Init()
 {
+	AddOnSpectatorTagModeChangedCallback( OnSpectatorTagModeChanged )
 }
 
 void function EntitiesDidLoad()
@@ -407,12 +410,6 @@ bool function ShouldShowObituaryLineForPlayer( entity player )
 		if ( IsEnemyTeam( playerTeam, localTeam ) )
 			return false
 	}
-
-
-
-
-
-
 
 	return true
 }
@@ -910,6 +907,39 @@ bool function ObituaryHudIsDisabled()
 void function ClientCodeCallback_Observer_SetObituaryFilter(int obitFlags, string message )
 {
 	file.obituaryFilter = 0 
-	Obituary_Print_Localized( message )
+	Obituary_Print_Localized( Localize( message ) )
 	file.obituaryFilter = obitFlags
+}
+
+void function OnSpectatorTagModeChanged( entity player, int newMode )
+{
+	if ( GetCurrentPlaylistVarBool( NAMETAG_RANGE_OBITUARY_PRINTS, true ) )
+	{
+		switch ( newMode )
+		{
+			case OBS_PLAYERTAG_RANGE_NONE:
+				Obituary_Print_Localized( Localize( "#NOTIFY_PLAYERTAG_RANGE_NONE" ) )
+				break
+
+			case OBS_PLAYERTAG_RANGE_TEAM:
+				Obituary_Print_Localized( Localize( "#NOTIFY_PLAYERTAG_RANGE_TEAM" ) )
+				break
+
+			case OBS_PLAYERTAG_RANGE_SMALL:
+				Obituary_Print_Localized( Localize( "#NOTIFY_PLAYERTAG_RANGE_SMALL" ) )
+				break
+
+			case OBS_PLAYERTAG_RANGE_MEDIUM:
+				Obituary_Print_Localized( Localize( "#NOTIFY_PLAYERTAG_RANGE_MEDIUM" ) )
+				break
+
+			case OBS_PLAYERTAG_RANGE_LARGE:
+				Obituary_Print_Localized( Localize( "#NOTIFY_PLAYERTAG_RANGE_LARGE" ) )
+				break
+
+			case OBS_PLAYERTAG_RANGE_INFINITE:
+				Obituary_Print_Localized( Localize( "#NOTIFY_PLAYERTAG_RANGE_INFINITE" ) )
+				break
+		}
+	}
 }

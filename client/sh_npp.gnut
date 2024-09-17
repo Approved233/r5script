@@ -6,7 +6,6 @@ global function ShNPP_LevelInit
 global function NPP_IsNPP
 global function NPP_IsNPPLegend
 global function NPP_GetIsActiveNPP
-global function NPP_GetPlayerActiveNPP
 global function NPP_ShouldDisableGRXForNPPLegend
 
 global function NPP_GetBattlePassMaxLevelIndex
@@ -16,12 +15,19 @@ global function NPP_GetCurrentLevelProgress
 global function NPP_GetBattlePassRecurringCardChallenge
 global function NPP_GetAllChallenges
 
-global function NPP_GetNPP
+global function NPP_GetLatestVersionNPP
+global function NPP_GetAssignedNPP
 
 global function NPP_GetNPPCompleteAcknowledged
 
 global function NPP_IsFeatureEnabled
 global function NPP_IsFeatureAssignmentEnabled
+
+global function NPP_GetFallbackRewardDataTable
+
+global function NPP_IsNPPActive
+
+
 
 
 
@@ -60,7 +66,7 @@ struct NPPData
 
 struct FileStruct
 {
-	ItemFlavor ornull currentNPP
+	ItemFlavor ornull latestVersionNPP
 	int expirationTimestampNPP
 
 	table<ItemFlavor, NPPData> nppDataMap
@@ -73,7 +79,8 @@ const string NPP_LEVEL_PVAR = "stats.npp_level"
 
 const string	NPP_GRANDFATHER_REWARDSEQ_NAME	= "npp_grandfather_rewardseq"
 const int		NPP_GRANDFATHER_REWARDSEQ_START	= 0
-const int		NPP_GRANDFATHER_REWARDSEQ_DONE	= 1
+
+const int		NPP_GRANDFATHER_REWARDSEQ_DONE	= 2 
 const int		NPP_GRANDFATHER_S22_LAUNCH_TIME	= 1722963600	
 
 const NPP_KILLSWITCH_VAR = "npp_enabled"
@@ -182,9 +189,17 @@ void function OnRegisterRootItemFlavors()
 			continue
 		}
 
-		if ( file.currentNPP == null )
+		if ( GetGlobalSettingsBool( ItemFlavor_GetAsset( battlePass ), "latestVersionNPP" ) )
 		{
-			file.currentNPP = battlePass
+			if ( file.latestVersionNPP != null )
+			{
+				if ( ItemFlavor_GetGUID( battlePass ) != ItemFlavor_GetGUID( expect ItemFlavor( file.latestVersionNPP ) ) )
+				{
+					Assert( false, "Multiple NPPs " + ItemFlavor_GetGUIDString( battlePass ) + " and " + ItemFlavor_GetGUIDString( expect ItemFlavor( file.latestVersionNPP ) ) + " are marked as the current NPP. Correct in bakery." )
+				}
+			}
+
+			file.latestVersionNPP = battlePass
 		}
 	}
 }
@@ -209,9 +224,21 @@ bool function NPP_IsNPP( ItemFlavor battlepass )
 
 
 
-ItemFlavor ornull function NPP_GetNPP()
+ItemFlavor ornull function NPP_GetLatestVersionNPP()
 {
-	return file.currentNPP
+	return file.latestVersionNPP
+}
+
+
+
+ItemFlavor ornull function NPP_GetAssignedNPP( entity player )
+{
+	if ( NPP_IsNPPActive( player ) )
+	{
+		return GetItemFlavorOrNullByGUID( player.GetPersistentVarAsInt( "nppAssignedGUID" ) )
+	}
+
+	return null
 }
 
 
@@ -219,18 +246,6 @@ ItemFlavor ornull function NPP_GetNPP()
 int function NPP_GetXPToCompleteNPPLevel()
 {
 	return CARDS_TO_COMPLETE_NPP_LEVEL
-}
-
-
-
-ItemFlavor ornull function NPP_GetPlayerActiveNPP( entity player )
-{
-	if ( NPP_IsNPPActive( player ) )
-	{
-		return file.currentNPP
-	}
-
-	return null
 }
 
 
@@ -267,13 +282,6 @@ bool function NPP_GetIsActiveNPP( entity player )
 
 	return bool( player.GetPersistentVar( "activeNPP" ) )
 }
-
-
-
-
-
-
-
 
 
 
@@ -332,36 +340,6 @@ int function NPP_GetCurrentLevelProgress( entity player )
 {
 	return player.GetPersistentVarAsInt( NNP_CARD_PVAR ) % CARDS_TO_COMPLETE_NPP_LEVEL
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -558,8 +536,6 @@ int function NPP_GetBattlePassMaxLevelIndex( ItemFlavor pass )
 
 
 
-
-
 ItemFlavor ornull function NPP_GetBattlePassRecurringCardChallenge( ItemFlavor pass )
 {
 	return file.nppDataMap[ pass ].recurringCardChallenge
@@ -608,11 +584,10 @@ bool function NPP_IsFeatureAssignmentEnabled()
 
 bool function NPP_IsNPPLegend( ItemFlavor legendFlav )
 {
-	ItemFlavor legendA = GetItemFlavorByAsset( BLOODHOUND_ITEMFLAV )
-	ItemFlavor legendB = GetItemFlavorByAsset( PATHFINDER_ITEMFLAV )
-	ItemFlavor legendC = GetItemFlavorByAsset( GIBRALTAR_ITEMFLAV )
+	ItemFlavor legendA = GetItemFlavorByAsset( PATHFINDER_ITEMFLAV )
+	ItemFlavor legendB = GetItemFlavorByAsset( GIBRALTAR_ITEMFLAV )
 
-	if ( legendFlav.guid == legendA.guid || legendFlav.guid == legendB.guid || legendFlav.guid == legendC.guid )
+	if ( legendFlav.guid == legendA.guid || legendFlav.guid == legendB.guid )
 	{
 		return true
 	}
@@ -626,6 +601,39 @@ bool function NPP_ShouldDisableGRXForNPPLegend( entity player, ItemFlavor charac
 		return true
 
 	return false
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+var function NPP_GetFallbackRewardDataTable( ItemFlavor npp )
+{
+	Assert( ItemFlavor_GetType( npp ) == eItemType.battlepass )
+
+	asset rewardScheduleAsset = GetGlobalSettingsAsset( ItemFlavor_GetAsset( npp ), "nppFallbackRewardDatatable" )
+
+	if ( rewardScheduleAsset == $"" )
+	{
+		return rewardScheduleAsset
+	}
+
+	return GetDataTable( rewardScheduleAsset )
 }
 
 

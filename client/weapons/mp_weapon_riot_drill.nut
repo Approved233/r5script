@@ -210,7 +210,7 @@ entity function GetRiotDrillFromPlayerIfActive( entity player )
 {
 	if ( IsAlive( player ) )
 	{
-		entity weapon = player.GetOffhandWeapon( OFFHAND_SPECIAL )
+		entity weapon = player.GetOffhandWeapon( OFFHAND_TACTICAL )
 		if ( IsValid( weapon ) && weapon.GetWeaponClassName() == "mp_weapon_riot_drill" )
 			return weapon
 	}

@@ -661,6 +661,7 @@ void function PrivateMatchSpectCharSelectMenu_HideScoreboard()
 
 
 
+
 void function EnablePrivateMatchSpectCharSelectMenu( bool doEnable )
 {
 	file.enableMenu = doEnable

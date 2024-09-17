@@ -57,6 +57,11 @@ global const string JUMP_PAD_UPGRADE_TARGETNAME = "jump_pad_upgrade"
 
 
 
+
+
+
+
+
 global array<string> INVALID_GRAVITY_CANNON_PLACEABLES
 
 
@@ -129,6 +134,7 @@ void function Sh_JumpPad_Init()
 
 		AddCreateCallback( "trigger_cylinder_heavy", OnJumpPadCreated )
 		AddCallback_OnBleedoutStarted( HideDoubleJumpHint )
+		AddCallback_GameStateEnter( eGameState.Resolution, ServerCallback_HideJumpPadHint )
 
 			AddCreateCallback( "trigger_cylinder_heavy", OnGravityCannonCreated )
 
@@ -158,6 +164,28 @@ string function JumpPad_GetLaunchSFX_3p( entity trigger )
 
 	return result
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

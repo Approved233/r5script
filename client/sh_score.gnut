@@ -34,8 +34,8 @@ global function ScoreEvent_SetConversation
 global function ScoreEvent_GetConversation
 global function ScoreEvent_GetPriority
 global function ScoreEvent_HasConversation
-global function ScoreEvent_GetConversationDelay
-global function ScoreEvent_SetConversationDelay
+global function ScoreEvent_GetMessagingDelay
+global function ScoreEvent_SetMessagingDelay
 global function ScoreEvent_GetBurnPointValue
 global function ScoreEvent_SetBurnPointValue
 global function ScoreEvent_GetBurnMeterChallengeType
@@ -74,7 +74,7 @@ global struct ScoreEvent
 	string	conversation = ""
 	int		conversationPriority
 
-	float	conversationDelay = 0.0
+	float	messagingDelay = 0.0 
 
 	int		burnPointValue = 0
 
@@ -308,14 +308,14 @@ bool function ScoreEvent_HasConversation( ScoreEvent scoreEvent )
 	return scoreEvent.conversation != ""
 }
 
-float function ScoreEvent_GetConversationDelay( ScoreEvent scoreEvent )
+float function ScoreEvent_GetMessagingDelay( ScoreEvent scoreEvent )
 {
-	return scoreEvent.conversationDelay
+	return scoreEvent.messagingDelay
 }
 
-void function ScoreEvent_SetConversationDelay( ScoreEvent scoreEvent, float value )
+void function ScoreEvent_SetMessagingDelay( ScoreEvent scoreEvent, float value )
 {
-	scoreEvent.conversationDelay = value
+	scoreEvent.messagingDelay = value
 }
 
 int function ScoreEvent_GetBurnPointValue( ScoreEvent scoreEvent )

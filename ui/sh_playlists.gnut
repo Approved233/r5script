@@ -19,11 +19,8 @@ global function Playlist_GetPlaylistScheduledTimeRange
 global function Playlist_GetScheduleData_Deprecated
 global function Playlist_ShouldBeHiddenForScheduleBlocks
 global function Playlist_GetRankedSeasonEndDate
-global function Playlist_HasRankedSeasonEndDate
 global function Playlist_ShouldLockRankedPlaylistForPatch
-global function Playlist_IsPastRankedSeasonEndDate
 global function ShPlaylist_Init
-global function GetPlaylistRotationGroup
 
 
 
@@ -36,13 +33,13 @@ global function GetThumbnailImageFromImageMap
 global function GetGamemodeLogoFromImageMap
 global function GetImageFromMiniIconMap
 global function GetBinkFromBinkMap
+global function GetMatchRequeuePlaylist
 
 
 
 global function GetEmblemColor
 global function GetPlaylistRotationNextTime
 global function GetPlaylistRotationNextTimeFormatedString
-global function GetCurrentPlaylistInUiSlot
 global function UpdateMatchmakeFromMatchPlaylist_Thread
 global function MatchRequeueCancel
 global function GetDefaultPlaylist
@@ -79,7 +76,7 @@ global const table<string, asset> GAMEMODE_IMAGE_MAP = {
 	solo = $"rui/menu/gamemode/solo_iron_crown",
 	duos = $"rui/menu/gamemode/duos_v2",
 
-		duos_valentines = $"rui/menu/gamemode/duos_valentines",
+
 
 	trios = $"rui/menu/gamemode/trios",
 
@@ -267,9 +264,10 @@ global const table<string, asset> GAMEMODE_IMAGE_MAP = {
 
 
 
-
-
-
+		survival_objectivebr_canyonlands = $"rui/menu/gamemode/objectivebr/playlist_bg_objectivebr_canyonlands",
+		survival_objectivebr_district = $"rui/menu/gamemode/objectivebr/playlist_bg_objectivebr_district",
+		survival_objectivebr_storm_point = $"rui/menu/gamemode/objectivebr/playlist_bg_objectivebr_storm_point",
+		survival_objectivebr = $"rui/menu/gamemode/objectivebr/playlist_bg_objectivebr",
 
 
 
@@ -279,6 +277,12 @@ global const table<string, asset> GAMEMODE_IMAGE_MAP = {
 
 		battle_rush = $"rui/menu/gamemode/trios_ssrevival",
 
+
+
+		trick_or_trios = $"rui/menu/gamemode/playlist_bg_trick_or_trios",
+
+
+	survival_null = $"rui/menu/gamemode/playlist_bg_sq_survival_null",
 }
 
 global const table<string, asset> GAMEMODE_THUMBNAIL_IMAGE_MAP = {
@@ -303,7 +307,7 @@ global const table<string, asset> GAMEMODE_THUMBNAIL_IMAGE_MAP = {
 	solo = $"rui/menu/gamemode/solo_iron_crown",
 	duos = $"rui/menu/gamemode/playlist_bg_sq_duos",
 
-		duos_valentines = $"rui/menu/gamemode/playlist_bg_sq_duos_valentines",
+
 
 
 	trios = $"rui/menu/gamemode/playlist_bg_sq_trios",
@@ -491,9 +495,10 @@ global const table<string, asset> GAMEMODE_THUMBNAIL_IMAGE_MAP = {
 
 
 
-
-
-
+		survival_objectivebr_canyonlands = $"rui/menu/gamemode/objectivebr/playlist_bg_sq_objectivebr_canyonlands",
+		survival_objectivebr_district = $"rui/menu/gamemode/objectivebr/playlist_bg_sq_objectivebr_district",
+		survival_objectivebr_storm_point = $"rui/menu/gamemode/objectivebr/playlist_bg_sq_objectivebr_storm_point",
+		survival_objectivebr = $"rui/menu/gamemode/objectivebr/playlist_bg_sq_objectivebr",
 
 
 
@@ -502,6 +507,10 @@ global const table<string, asset> GAMEMODE_THUMBNAIL_IMAGE_MAP = {
 
 
 		battle_rush = $"rui/menu/gamemode/playlist_bg_sq_trios_ssrevival",
+
+
+
+		trick_or_trios = $"rui/menu/gamemode/playlist_bg_sq_trick_or_trios",
 
 }
 
@@ -783,6 +792,22 @@ asset function GetBinkFromBinkMap( string keyName )
 	return desiredVideoAsset
 }
 
+string function GetMatchRequeuePlaylist()
+{
+	string currentRequeuePlaylist = GetCurrentPlaylistName()
+	string currentPlaylistScheduleName = GetCurrentPlaylistScheduleName()
+
+	
+	if ( currentPlaylistScheduleName != "" )
+		currentRequeuePlaylist = GetCurrentPlaylistForSchedule( currentPlaylistScheduleName )
+
+	
+	if ( !GetPlaylistVarBool( currentRequeuePlaylist, "matchmake_from_match", false ) )
+		return ""
+
+	return currentRequeuePlaylist
+}
+
 
 
 
@@ -800,19 +825,19 @@ int function GetPlaylistIndexForName( PlaylistName playlistName )
 bool function Playlist_PlaylistHasSchedule( string playlistName )
 {
 
+		string ornull schedule = GetScheduleFromPlaylist( playlistName )
+		if ( schedule != null )
+		{
+			return true
+		}
+		else
+		{
+			PlaylistScheduleData scheduleData = Playlist_GetScheduleData_Deprecated( playlistName )
+			return scheduleData.blocks.len() > 0
+		}
 
 
 
-
-
-
-
-
-
-
-
-		PlaylistScheduleData scheduleData = Playlist_GetScheduleData_Deprecated( playlistName )
-		return scheduleData.blocks.len() > 0
 
 
 	return false
@@ -821,22 +846,22 @@ bool function Playlist_PlaylistHasSchedule( string playlistName )
 TimestampRange ornull function Playlist_GetPlaylistScheduledTimeRange( string playlistName )
 {
 
+		string ornull schedule = GetScheduleFromPlaylist( playlistName )
+		if ( schedule == null )
+		{
+			PlaylistScheduleData scheduleData = Playlist_GetScheduleData_Deprecated( playlistName )
+			return scheduleData.currentBlock
+		}
+		else if ( GetCurrentPlaylistForSchedule( expect string( schedule )  ) == playlistName )
+		{
+			TimestampRange range
+			range.startUnixTime = GetCurrentScheduleEntryStartTime( expect string( schedule ) )
+			range.endUnixTime = GetCurrentScheduleEntryEndTime( expect string( schedule ) )
+			return range
+		}
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-		PlaylistScheduleData scheduleData = Playlist_GetScheduleData_Deprecated( playlistName )
-		return scheduleData.currentBlock
 
 
 	return null
@@ -966,11 +991,6 @@ bool function Playlist_ShouldBeHiddenForScheduleBlocks( string plName )
 	return false
 }
 
-bool function Playlist_HasRankedSeasonEndDate()
-{
-	return Playlist_GetRankedSeasonEndDate() != null
-}
-
 int ornull function Playlist_GetRankedSeasonEndDate()
 {
 	string varVal = GetCurrentPlaylistVarString( "ranked_season_end_date", "" )
@@ -984,7 +1004,8 @@ int ornull function Playlist_GetRankedSeasonEndDate()
 
 bool function Playlist_ShouldLockRankedPlaylistForPatch( string plName )
 {
-	if ( !Playlist_HasRankedSeasonEndDate() )
+	int ornull seasonEndDate = Ranked_GetCurrentRankedPeriodEndTime()
+	if ( seasonEndDate == null )
 		return false
 
 	if ( Playlist_PlaylistHasSchedule( plName ) )
@@ -996,24 +1017,11 @@ bool function Playlist_ShouldLockRankedPlaylistForPatch( string plName )
 		TimestampRange currentBlock = expect TimestampRange( currentBlockOrNull )
 
 		bool outsideCurrentBlock = currentBlock.startUnixTime > GetUnixTimestamp() || currentBlock.endUnixTime < GetUnixTimestamp()
-		bool pastEndDate = Playlist_IsPastRankedSeasonEndDate()
+		bool pastEndDate = Ranked_IsPastRankedSeasonEndDate()
 
 		
 		if ( outsideCurrentBlock && !pastEndDate )
 			return true
-	}
-
-	return false
-}
-
-bool function Playlist_IsPastRankedSeasonEndDate()
-{
-	int ornull seasonEndTime = Playlist_GetRankedSeasonEndDate()
-	if ( seasonEndTime != null )
-	{
-		expect int( seasonEndTime )
-		int current = GetUnixTimestamp()
-		return GetUnixTimestamp() >= seasonEndTime
 	}
 
 	return false
@@ -1114,21 +1122,10 @@ array<string> function GetVisiblePlaylistNames( bool isPrivateMatchQuery = false
 	if ( GetPlaylistCount() != file.cachedPlaylistArray.len() )
 		Warning( "Playlist count mismatch: cache (%d) != actual (%d)", file.cachedPlaylistArray.len(), GetPlaylistCount() )
 
-	string forcedVisiblePlaylistsString = GetConVarString( "match_visiblePlaylists" )
-
-	array<string> forcedVisiblePlaylists = split( forcedVisiblePlaylistsString, WHITESPACE_CHARACTERS )
-
-	array<string> list      = []
-	array<string> optInList = []
+	array<string> list = []
 	for ( int i = 0; i < file.cachedPlaylistArray.len(); i++ )
 	{
 		CachedPlaylistData playlistData = file.cachedPlaylistArray[i]
-
-		if ( forcedVisiblePlaylists.contains( playlistData.name ) )
-		{
-			list.append( playlistData.name )
-			continue
-		}
 
 		bool inActiveRotation = IsPlaylistInActiveRotation( playlistData.name )
 		if ( !GetPlaylistVarBool( playlistData.name, "visible", false ) && !inActiveRotation )
@@ -1140,13 +1137,6 @@ array<string> function GetVisiblePlaylistNames( bool isPrivateMatchQuery = false
 		if ( GetPlaylistVarBool( playlistData.name, "private_match", false )  != isPrivateMatchQuery )
 			continue
 
-		if ( GetPlaylistVarBool( playlistData.name, "opt_in_only", false ) )
-		{
-			if ( shouldDisplayOptInOptions )
-				optInList.append( playlistData.name )
-			continue
-		}
-
 		if ( IsPlaylistBeingRotated( playlistData.name ) && !inActiveRotation )
 			continue
 
@@ -1157,39 +1147,31 @@ array<string> function GetVisiblePlaylistNames( bool isPrivateMatchQuery = false
 	}
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	array<string> finalList = []
-
-	if ( forcedVisiblePlaylists.len() > 0 )
-	{
-		foreach ( string name in list )
+		int scheduleCount = GetNumPlaylistSchedules()
+		for ( int i = 0; i < scheduleCount; i++ )
 		{
-			if ( !forcedVisiblePlaylists.contains( name ) )
+			string schedule = GetPlaylistSchedule( i )
+			string playlist = GetCurrentPlaylistForSchedule( schedule )
+			if ( list.contains( playlist ) )
+			{
 				continue
+			}
 
-			finalList.append( name )
+			list.append( playlist )
 		}
+
+
+	if ( shouldDisplayOptInOptions )
+	{
+		list.extend( GetAllOptinPlaylists() )
 	}
 
-	if ( finalList.len() == 0 )
-		finalList = list
+	string forcedVisiblePlaylistsString = GetConVarString( "match_visiblePlaylists" )
+	array<string> forcedVisiblePlaylists = split( forcedVisiblePlaylistsString, WHITESPACE_CHARACTERS )
+	list.extend( forcedVisiblePlaylists )
 
-	finalList.extend( optInList )
-	file.cachedPlaylistNames = finalList
-	return finalList
+	file.cachedPlaylistNames = list
+	return list
 }
 
 array< string > function GetPlaylistsInRotation()
@@ -1227,14 +1209,7 @@ int function GetMaxTeamSizeForAllPlaylistsInRotation()
 
 string function Playlist_GetLTMSlotPlaylist( bool isPrivateMatchQuery = false )
 {
-	array<string> plNames = GetVisiblePlaylistNames( isPrivateMatchQuery )
-	foreach ( plName in plNames )
-	{
-		if ( GetPlaylistVarString( plName, "ui_slot", "" ) == "ltm" )
-			return plName
-	}
-
-	return ""
+	return GetCurrentPlaylistForSchedule( "ltm" )
 }
 
 int function Playlist_GetNewModeVersion()
@@ -1286,7 +1261,8 @@ const table<string, asset> GAMEMODE_EMBLEM_MAP = {
 
 
 
-	freedm = $"rui/menu/gamemode_emblem/emblem_freedm", 
+	freedm = $"rui/menu/gamemode_emblem/emblem_freedm",
+	emblem_freedm_tdm = $"rui/menu/gamemode_emblem/emblem_freedm_tdm",
 
 
 	firing_range = $"rui/menu/gamemode_emblem/emblem_firing_range",
@@ -1301,6 +1277,10 @@ const table<string, asset> GAMEMODE_EMBLEM_MAP = {
 
 
 		emblem_halloween = $"rui/menu/gamemode_emblem/emblem_halloween",
+
+
+
+		emblem_halloween_2024 = $"rui/menu/gamemode_emblem/emblem_halloween_2024",
 
 
 
@@ -1344,7 +1324,7 @@ const table<string, asset> GAMEMODE_EMBLEM_MAP = {
 
 
 
-
+		emblem_objectivebr = $"rui/menu/gamemode_emblem/emblem_objectivebr",
 
 
 
@@ -1356,6 +1336,7 @@ const table<string, asset> GAMEMODE_EMBLEM_MAP = {
 
 const table<string, asset> GAMEMODE_BANNER_LOGO_MAP = {
 	freedm = $"rui/rui_screens/apex_logo_tdm",
+	logo_tdm = $"rui/hud/gametype_icons/ltm/tdm_logo",
 
 		logo_treasure_hunt = $"rui/hud/gametype_icons/ltm/treasure_hunt/logo_treasure_hunt",
 
@@ -1431,24 +1412,6 @@ const DEV_SecondsPerRotation = 3600
 #endif
 
 
-string function GetPlaylistRotationGroup()
-{
-	string rotationGroup = GetDefaultPlaylistRotationGroup()
-#if DEV
-		if ( rotationGroup == "" )
-		{
-			
-			
-			if ( GetUnixTimestamp() % (DEV_SecondsPerRotation * 2) < DEV_SecondsPerRotation )
-				rotationGroup = "kings_canyon"
-			else
-				rotationGroup = "worlds_edge"
-		}
-#endif
-	return rotationGroup
-}
-
-
 int function GetPlaylistRotationNextTime( string rotationName = "" )
 {
 	int nextTime = GetNamedPlaylistRotationNextTime( rotationName )
@@ -1501,46 +1464,18 @@ string function GetPlaylistRotationNextTimeFormatedString( int seconds = -1, str
 
 
 
-string function GetCurrentPlaylistInUiSlot( string uiSlot )
-{
-	array<string> playlistNames = GetPlaylistsInRotation()
-	foreach( playlist in playlistNames )
-	{
-		if ( GetPlaylistVarString( playlist, "ui_slot", "" ) == uiSlot )
-			return playlist
-	}
-
-	return ""
-}
-
-
 void function UpdateMatchmakeFromMatchPlaylist_Thread()
 {
 	Signal( uiGlobal.signalDummy, "UpdateMatchmakeFromMatchPlaylist" )
 	EndSignal( uiGlobal.signalDummy, "UpdateMatchmakeFromMatchPlaylist" )
 	EndSignal( uiGlobal.signalDummy, "LevelShutdown" )
 
-	string uiSlot = GetCurrentPlaylistVarString( "ui_slot", "" )
-	string currentPlaylistName = GetCurrentPlaylistName()
 	string lastMatchmakingPlaylist = ""
 	int emptyPlaylistFrameCount = 0
-	bool isCurrentPlaylistUsingRotation = IsPlaylistBeingRotated( currentPlaylistName )
 
 	while ( true )
 	{
-		string currentMatchmakingPlaylist = currentPlaylistName
-		bool hasMatchmakeFromMatch = true
-
-		if ( isCurrentPlaylistUsingRotation )
-		{
-			string currentUiSlotPlaylist =  GetCurrentPlaylistInUiSlot( uiSlot )
-			if ( GetPlaylistVarBool( currentUiSlotPlaylist, "matchmake_from_match", false ) )
-				currentMatchmakingPlaylist = currentUiSlotPlaylist
-		}
-
-		if ( !GetVisiblePlaylistNames().contains( currentMatchmakingPlaylist ) )
-			currentMatchmakingPlaylist = ""
-
+		string currentMatchmakingPlaylist = GetMatchRequeuePlaylist()
 		if ( currentMatchmakingPlaylist != lastMatchmakingPlaylist )
 		{
 			lastMatchmakingPlaylist = currentMatchmakingPlaylist
@@ -1552,16 +1487,10 @@ void function UpdateMatchmakeFromMatchPlaylist_Thread()
 			else
 			{
 				emptyPlaylistFrameCount = -1
-				if ( hasMatchmakeFromMatch )
-				{
-					CancelMatchmaking()
-					WaitFrame()
-					StartMatchmaking( currentMatchmakingPlaylist )
-				}
-				else
-				{
-					MatchRequeueCancel()
-				}
+
+				CancelMatchmaking()
+				WaitFrame()
+				StartMatchmaking( currentMatchmakingPlaylist )
 			}
 		}
 
@@ -1593,7 +1522,11 @@ string function GetDefaultPlaylist()
 
 
 	if ( FTUEFlow_IsInFTUEFlow( GetLocalClientPlayer() ) )
-		return FTUEFlow_GetLobbyPlaylistRecommendation()
+	{
+		string recommendation = FTUEFlow_GetLobbyPlaylistRecommendation()
+		if ( recommendation != "" )
+			return recommendation
+	}
 
 
 
@@ -1614,17 +1547,12 @@ string function GetDefaultPlaylist()
 
 
 
+	string defaultSchedulePlaylist = GetCurrentPlaylistForSchedule( "regular_1" )
+	if ( defaultSchedulePlaylist != "" )
+		return defaultSchedulePlaylist
+
 	array<string> list = GetVisiblePlaylistNames()
 	Assert( list.len() > 0 )
-
-	foreach ( playlist in list )
-	{
-		if (  PrivateMatchMapSelect_PlaylistIsDefaultSlot( playlist ) || GamemodeSelect_PlaylistIsDefaultSlot( playlist ) && Lobby_IsPlaylistAvailable( playlist ) )
-		{
-			return playlist
-			break
-		}
-	}
 
 	foreach ( playlist in list )
 	{

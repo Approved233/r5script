@@ -121,6 +121,12 @@ string function RTKMutator_ApexCupLockStateText( int input )
 		case CUP_LOCK_TRAINING:
 			return Localize( "#PLAYLIST_STATE_COMPLETED_TRAINING_REQUIRED" )
 			break
+		case CUP_LOCK_NO_POSITION:
+			return Localize( "#PLAYLIST_STATE_NO_POSITION" )
+			break
+		case CUP_LOCK_NOT_REGISTERED:
+			return Localize( "#PLAYLIST_STATE_RANKED_RUMBLE_NOT_REGISTERED" )
+			break
 
 		default:
 			return ""

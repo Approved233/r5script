@@ -353,13 +353,19 @@ table<SettingsAssetGUID, int> function RewardCampaign_GetChallengeOrderMap( Item
 
 			
 			ChallengeCollection challengeCollection = ChallengeCollection_GetByGUID( challengeCollectionFlav.guid )
-			challenges.append( challengeCollection.mainChallenge )
+			if ( challengeCollection.metaChallenge != null )
+			{
+				challenges.append( expect ItemFlavor( challengeCollection.metaChallenge ) )
+			}
 
 			
 			foreach ( ChallengeSet challengeSet in challengeCollection.challengeSets )
 			{
 				
-				challenges.append( challengeSet.mainChallenge )
+				if ( challengeSet.metaChallenge != null )
+				{
+					challenges.append( expect ItemFlavor( challengeSet.metaChallenge ) )
+				}
 				
 				challenges.extend( challengeSet.challenges )
 			}

@@ -95,7 +95,7 @@ bool function OnWeaponAttemptOffhandSwitch_WeaponEmoteProjector( entity weapon )
 	{
 		entity offhandWeapon = activeWeapons[1]
 
-		if ( IsValid( offhandWeapon ) )
+		if ( IsValid( offhandWeapon ) && !offhandWeapon.IsAkimboAlthand() )
 		{
 			return false
 		}

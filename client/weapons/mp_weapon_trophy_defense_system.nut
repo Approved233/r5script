@@ -2735,6 +2735,31 @@ void function OnCreateClientOnlyModel_weapon_trophy_defense_system( entity weapo
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function Trophy_OnWeaponStatusUpdate( entity player, var rui, int slot )
 {
 	if ( slot != OFFHAND_TACTICAL )

@@ -507,6 +507,10 @@ bool function CodeCallback_OnUseEntity( entity player, entity ent, int useInputF
 		}
 
 
+
+
+
+
 	
 	return true
 }

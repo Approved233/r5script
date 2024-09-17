@@ -1640,8 +1640,6 @@ bool function CodeCallback_OnVortexHitBullet( entity weapon, entity vortexSphere
 
 
 
-
-
 	if ( isAmpedWall )
 	{
 

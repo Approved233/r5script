@@ -647,7 +647,7 @@ void function GlobalAnimEvent_FadeOverTime( entity ent, array<string> tokens )
 	int fadeFrom   = int( tokens[ 2 ] )
 	int fadeTo     = int( tokens[ 3 ] )
 
-	thread PROTO_FadeModelAlphaOverTime( ent, fadeTime, fadeFrom, fadeTo )
+	thread FadeModelAlphaOverTime( ent, fadeTime, fadeFrom, fadeTo )
 }
 
 
@@ -662,7 +662,7 @@ void function GlobalAnimEvent_FadeIntensityOverTime( entity ent, array<string> t
 
 
 	if ( fadeTime > 0 )
-		thread PROTO_FadeModelIntensityOverTime( ent, fadeTime, fadeFrom, fadeTo )
+		thread FadeModelIntensityOverTime( ent, fadeTime, fadeFrom, fadeTo )
 	else
 		ent.kv.intensity = fadeTo
 }

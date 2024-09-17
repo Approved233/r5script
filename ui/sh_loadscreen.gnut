@@ -154,7 +154,7 @@ void function Loadscreen_SetCustomLoadscreen( ItemFlavor flavor )
 		EndSignal( player, "OnDestroy" )
 
 		LoadoutEntry loadscreenSlot = Loadout_Loadscreen()
-		array<ItemFlavor> items = clone GetValidItemFlavorsForLoadoutSlot( LocalClientEHI(), loadscreenSlot )
+		array<ItemFlavor> items = clone GetValidItemFlavorsForLoadoutSlot( loadscreenSlot )
 
 		while ( !GRX_IsInventoryReady( player ) )
 			WaitFrame()

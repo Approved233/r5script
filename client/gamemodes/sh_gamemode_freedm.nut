@@ -36,7 +36,6 @@ global function DEV_ScoreTrackAnimateIn
 
 
 
-
 global function FreeDM_GamemodeInitClient
 global function FreeDM_ScoreboardSetup
 global function FreeDM_SetScoreboardSetupFunc
@@ -233,7 +232,6 @@ void function FreeDM_GamemodeInitShared()
 	GamemodeSurvivalShared_Init()
 
 	TimedEvents_Init()
-
 
 
 
@@ -652,6 +650,13 @@ bool function FreeDM_ShouldSpawnOnConnect( entity player )
 
 
 
+
+
+
+
+
+
+
 void function FreeDM_SetAudioEvent( int event, string eventString )
 {
 	if( event < 0 || event >= eFreeDMAudioEvents.Count )
@@ -662,16 +667,6 @@ void function FreeDM_SetAudioEvent( int event, string eventString )
 
 	file.audioEvents[ event ] <- eventString
 }
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -1608,11 +1603,6 @@ const int FramesToWait = 60
 
 
 
-
-
-
-
-
 const string FREEDM_AIRDROP_ANIMATION = "droppod_loot_drop_lifeline"
 
 
@@ -1736,7 +1726,7 @@ void function ServerCallback_FreeDM_AirdropNotification()
 
 
 
-const string FREEDM_DEFAULT_AIRDROP_CONTENTS = "arenas_red_airdrop_weapons arenas_gold_airdrop_weapons arenas_gold_airdrop_weapons"
+const string FREEDM_DEFAULT_AIRDROP_CONTENTS = "crate_weapons_earlygame control_gold_kitted_weapons control_gold_kitted_weapons"
 
 
 
@@ -2279,9 +2269,9 @@ void function FreeDM_DelayedShowScoreboard()
 		if ( GameModeVariant_IsActive( eGameModeVariants.FREEDM_TDM ))
 		{
 			wait FREEDM_POST_ROUND_SCOREBOARD_TIME
-			RunUIScript( "TDM_ShowScoreboard" )
+			RunUIScript( "ShowScoreboardTransition", < 1920, 1080, 0 >, < 0,0,0 >, true )
 			wait FREEDM_POST_ROUND_SCOREBOARD_TIME
-			RunUIScript( "TDM_HideScoreboard" )
+			RunUIScript( "HideScoreboardTransition" )
 		}
 
 }

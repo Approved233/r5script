@@ -108,7 +108,7 @@ void function RTKApexCupGetPlayerTierData( rtk_behavior self , SettingsAssetGUID
 		}
 		else
 		{
-			tierInfo.positionPercentage = Cups_CalculatePositionPercentageDisplay( cupId, cupEntryData )
+			tierInfo.positionPercentage = Cups_CalculatePositionPercentageDisplay( cupId, cupEntryData, tierInfo.tierIndex )
 		}
 	}
 

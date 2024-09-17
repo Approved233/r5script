@@ -617,11 +617,6 @@ void function BangaloreSmokescreenEffectThread( entity ent, int fxHandle, int st
 
 bool function BangSmokeHighlightsEnabled()
 {
-
-
-
-
-
 	return GetCurrentPlaylistVarBool( "bangalore_smoke_highlight", true )
 }
 

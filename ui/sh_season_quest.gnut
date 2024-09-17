@@ -1,3 +1,4 @@
+
 global function SeasonQuest_SharedInit
 global function SeasonQuest_RegisterNetworking
 global function SeasonQuest_GetStatusForComicPageIndex
@@ -154,6 +155,8 @@ const string CC_QueueRadioPlayRewardGranting = "ClientCallback_QueueRadioPlayRew
 
 void function SeasonQuest_SharedInit()
 {
+
+
 
 
 
@@ -1814,19 +1817,6 @@ void function SetupDevMenu_SeasonQuests()
 		} )
 	} )
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

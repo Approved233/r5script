@@ -7,6 +7,7 @@ global function ServerCallback_DeathScreenSwitchTab
 global function ShowDeathScreen
 global function EnableDeathScreenTab
 global function SwitchDeathScreenTab
+global function GetSpecialSummaryTab
 global function SetDeathScreenTabTitle
 global function TryEnableDeathScreenRequeue
 global function DeathScreenUpdate
@@ -304,6 +305,17 @@ bool function SquadSummaryTabIsPlaylistEnabled()
 	return GetCurrentPlaylistVarBool( "squadsummary_tab_enabled", true )
 }
 
+int function GetSpecialSummaryTab()
+{
+	bool showRankedSummary = Ranked_ShowRankedSummary()
+	bool showCupSummary = Cups_ShowCupSummary()
+	if ( showRankedSummary && !showCupSummary )
+		return eDeathScreenPanel.RANK
+	else if ( showCupSummary && Cups_IsCupForLatestMatchActive( GetLocalClientPlayer() ) )
+		return eDeathScreenPanel.CUP
+
+	return eDeathScreenPanel.NONE
+}
 
 void function ServerCallback_SquadEliminated( int eliminiatedTeam )
 {
@@ -333,16 +345,9 @@ void function ServerCallback_SquadEliminated( int eliminiatedTeam )
 			EnableDeathScreenTab( eDeathScreenPanel.SQUAD, false )
 			EnableDeathScreenTab( eDeathScreenPanel.SQUAD_SUMMARY, true )
 
-			bool showRankedSummary = Ranked_ShowRankedSummary()
-			bool showCupSummary = Cups_ShowCupSummary()
-			if ( showRankedSummary && !showCupSummary )
-			{
-				EnableDeathScreenTab( eDeathScreenPanel.RANK, true )
-			}
-			else if ( showCupSummary && Cups_IsCupForLatestMatchActive( GetLocalClientPlayer() ) )
-			{
-				EnableDeathScreenTab( eDeathScreenPanel.CUP, true )
-			}
+			int specialSummaryTab = GetSpecialSummaryTab()
+			if ( specialSummaryTab != eDeathScreenPanel.NONE )
+				EnableDeathScreenTab( specialSummaryTab, true )
 		}
 	}
 
@@ -412,9 +417,9 @@ void function UpdateRequeueUI_Thread( int clientPlayerTeam )
 
 		int partySize                    = GetPartySize()
 		bool fullPartyConnected          = ( partySize == numPartyInSquad )
-		bool partyRankTierDifferences    = Ranked_ShowRankedSummary() && !Ranked_PartyMeetsRankedDifferenceRequirements()
-		bool playerCompletedCup          = Cups_ShowCupSummary() && Cups_IsPlayerCupComplete( GetCurrentPlaylistName() )
-		bool playlistHidden              = Playlist_ShouldBeHiddenForScheduleBlocks( GetCurrentPlaylistName() )
+		bool partyRankTierDifferences    = GameModeVariant_IsActiveForPlaylist( GetCurrentPlaylistName(), eGameModeVariants.SURVIVAL_RANKED ) && !Ranked_PartyMeetsRankedDifferenceRequirements()
+		bool playerCompletedCup          = Cups_ShowCupSummary() && Cups_IsPlayerCupComplete( GetCurrentUndecoratedPlaylistName() )
+		bool playlistHidden              = Playlist_ShouldBeHiddenForScheduleBlocks( GetMatchRequeuePlaylist() )
 		RuiSetInt( requeueRui, "partySize", partySize )
 		RuiSetBool( requeueRui, "amIPartyLeader", AmIPartyLeader() )
 		RuiSetBool( requeueRui, "fullPartyConnected", fullPartyConnected )
@@ -610,7 +615,13 @@ void function DeathScreen_SpectatorTargetChanged( entity player, entity previous
 	}
 
 	if ( ShouldSwitchToSummary() )
-		SwitchDeathScreenTab( eDeathScreenPanel.SQUAD_SUMMARY )
+	{
+		int specialSummaryTab = GetSpecialSummaryTab()
+		if ( specialSummaryTab != eDeathScreenPanel.NONE )
+			SwitchDeathScreenTab( specialSummaryTab )
+		else
+			SwitchDeathScreenTab( eDeathScreenPanel.SQUAD_SUMMARY )
+	}
 
 	DeathScreenUpdate()
 }
@@ -623,7 +634,12 @@ void function ServerCallback_DeathScreenSwitchTab()
 	if ( ShouldSwitchToSummary() )
 	{
 		
-		SwitchDeathScreenTab( eDeathScreenPanel.SQUAD_SUMMARY )
+		int specialSummaryTab = GetSpecialSummaryTab()
+		if ( specialSummaryTab != eDeathScreenPanel.NONE )
+			SwitchDeathScreenTab( specialSummaryTab )
+		else
+			SwitchDeathScreenTab( eDeathScreenPanel.SQUAD_SUMMARY )
+
 		return
 	}
 
@@ -763,7 +779,7 @@ void function UpdateEnabledTabs()
 }
 
 
-void function SwitchDeathScreenTab( int tabIndex )
+void function SwitchDeathScreenTab( int tabIndex, bool force = false )
 {
 	
 
@@ -772,7 +788,7 @@ void function SwitchDeathScreenTab( int tabIndex )
 
 	
 	
-	if ( !IsViewingSpectateOrKillreplayTab() && !IsTabSpectateOrKillreplay( tabIndex ) )
+	if ( !IsViewingSpectateOrKillreplayTab() && !IsTabSpectateOrKillreplay( tabIndex ) && !force )
 	{
 		
 		
@@ -2286,7 +2302,7 @@ void function HideGladCard( bool instant = false )
 }
 
 
-void function DisplaySpectatorCardSidePane( int situation, int playerEHI, asset icon, string titleText )
+void function DisplaySpectatorCardSidePane( int situation, int playerEHI, asset icon = $"", string titleText = "", vector offset = < 0, 0, 0 >, bool showUpgradesToggle = true, float scale = 1.0 )
 {
 	Signal( clGlobal.levelEnt, "DisplaySpectatorCardSidePane" )
 	EndSignal( clGlobal.levelEnt, "DisplaySpectatorCardSidePane" )
@@ -2295,6 +2311,8 @@ void function DisplaySpectatorCardSidePane( int situation, int playerEHI, asset 
 
 	RuiSetImage( file.sidePaneRui, "titleIcon", icon )
 	RuiSetString( file.sidePaneRui, "titleText", Localize( titleText ) ) 
+	RuiSetFloat2( file.sidePaneRui, "offset", offset )
+	RuiSetFloat( file.sidePaneRui, "scale", scale )
 
 	NestedGladiatorCardHandle nestedGCHandleFront = CreateNestedGladiatorCard( file.sidePaneRui, "cardFrontFace", situation, eGladCardPresentation.FULL_BOX )
 	ChangeNestedGladiatorCardOwner( nestedGCHandleFront, playerEHI, null, eGladCardLifestateOverride.ALIVE )
@@ -2302,8 +2320,8 @@ void function DisplaySpectatorCardSidePane( int situation, int playerEHI, asset 
 	SetNestedGladiatorCardIsKiller( nestedGCHandleFront, playerEHI == GetKillerEnum() )
 
 
-		SetNestedGladiatorCardCanShowUpgrades( nestedGCHandleFront, true )
-		SetNestedGladiatorCardShowUpgrades( nestedGCHandleFront, file.showUpgradesGladCard )
+	SetNestedGladiatorCardCanShowUpgrades( nestedGCHandleFront, showUpgradesToggle )
+	SetNestedGladiatorCardShowUpgrades( nestedGCHandleFront, file.showUpgradesGladCard )
 
 
 
@@ -3004,20 +3022,18 @@ asset function GetGladCardReplacementImageForDamageSourceID( int damageSourceID 
 		case eDamageSourceId.nessie_kiss:
 			return $"rui/death_recap/icon_deathrecap_specialcase_spider_ranged"
 
-
 		case eDamageSourceId.spectre_melee:
 		case eDamageSourceId.spectre_ranged_hemlock:
 		case eDamageSourceId.npc_weapon_thermite_grenade:
 			return $"rui/death_recap/icon_deathrecap_specialcase_spectre"
 
 
-
 		case eDamageSourceId.heatwave:
 			return $"rui/pilot_loadout/mods/heatwave_sun_killer_art"
 
 
-
-
+		case eDamageSourceId.score_elimination:
+			return $"rui/death_recap/icon_deathrecap_specialcase_score_elimination"
 
 
 	}

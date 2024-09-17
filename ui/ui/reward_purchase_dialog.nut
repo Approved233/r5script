@@ -12,8 +12,7 @@ global struct RewardPurchaseDialogConfig
 	ItemFlavor functionref()  getPurchaseFlavCallback = null
 	ItemFlavor functionref()  getSecondaryPurchaseFlavCallback = null
 
-	string functionref( int ) eliteBattlePassDescTextCallback = null
-	void functionref()  getEliteBattlePassPurchaseFlavCallback = null
+	array<string> functionref( int ) eliteBattlePassDescTextCallback = null
 
 
 
@@ -78,6 +77,14 @@ struct
 
 } s_rewardPurchaseDialog
 
+void function ResetBPLevelPurchaseQuantity()
+{
+	if ( s_rewardPurchaseDialog.purchaseQuantity > 1 )
+	{
+		s_rewardPurchaseDialog.purchaseQuantity = 1
+		HudElem_SetRuiArg( s_rewardPurchaseDialog.purchaseButtonHeader, "headerText", Localize( file.rpdcfg.quantityText, s_rewardPurchaseDialog.purchaseQuantity ) )
+	}
+}
 
 void function InitRewardPurchaseDialog( var menu )
 {
@@ -143,7 +150,7 @@ void function InitRewardPurchaseDialog( var menu )
 	RuiSetString( Hud_GetRui( s_rewardPurchaseDialog.dec5Button ), "gamepadBindText", Localize( "%[L_SHOULDER|]%" ) )
 
 	AddMenuFooterOption( menu, LEFT, BUTTON_B, true, "#B_BUTTON_BACK", "#B_BUTTON_BACK" )
-	AddMenuFooterOption( menu, LEFT, BUTTON_A, true, "#A_BUTTON_PURCHASE", "", RewardPurchase_OnActivate )
+	AddMenuFooterOption( menu, LEFT, BUTTON_A, true, "#A_BUTTON_PURCHASE", "", RewardPurchase_OnActivate, RewardPurchase_CheckIsOnlyButton )
 	AddMenuFooterOption( menu, LEFT, BUTTON_TRIGGER_RIGHT, true, "", "", void function( var btn ) {
 		UpdatePurchaseQuantity( 1 )
 	} )
@@ -243,6 +250,27 @@ void function RewardPurchaseDialog_OnOpen()
 
 	else if ( file.rpdcfg.eliteBatllePassOptionIsEnabled )
 	{
+		entity player = GetLocalClientPlayer()
+		EHI playerEHI = ToEHI( player )
+
+		ItemFlavor ornull activeBattlePass = GetPlayerActiveBattlePass( playerEHI )
+		if ( activeBattlePass != null && GRX_IsInventoryReady() )
+		{
+			expect ItemFlavor( activeBattlePass )
+			bool ownsPremium = DoesPlayerOwnBattlePassTier( player, activeBattlePass, eBattlePassV2OwnershipTier.PREMIUM )
+			bool ownsUltimate = DoesPlayerOwnBattlePassTier( player, activeBattlePass, eBattlePassV2OwnershipTier.ULTIMATE )
+			bool ownsUltimatePlus = DoesPlayerOwnBattlePassTier( player, activeBattlePass, eBattlePassV2OwnershipTier.ULTIMATE_PLUS )
+			if ( !ownsUltimatePlus && ( ownsPremium || ownsUltimate) )
+			{
+				Hud_SetText( s_rewardPurchaseDialog.eliteBattlePassDescription, ownsUltimate ? "#ULT_TO_ULT_PLUS_BATTLEPASS_UPGRADE_DESC" : "#PREM_TO_ULT_PLUS_BATTLEPASS_UPGRADE_DESC" )
+				Hud_Show( s_rewardPurchaseDialog.eliteBattlePassDescription )
+			}
+			else
+			{
+				Hud_Hide( s_rewardPurchaseDialog.eliteBattlePassDescription )
+			}
+		}
+
 		int purchaseButtonWidth = Hud_GetWidth( s_rewardPurchaseDialog.purchaseButton )
 		int eliteButtonWidth = Hud_GetWidth( s_rewardPurchaseDialog.eliteBattlePassPurchaseButton )
 		UIPos purchaseButtonPos = REPLACEHud_GetPos( s_rewardPurchaseDialog.purchaseButton )
@@ -347,7 +375,11 @@ void function RewardPurchaseDialog_UpdateRewards()
 
 
 	HudElem_SetRuiArg( s_rewardPurchaseDialog.eliteBattlePassPurchaseButton, "buttonText", file.rpdcfg.eliteBattlePassText )
-	HudElem_SetRuiArg( s_rewardPurchaseDialog.eliteBattlePassPurchaseButton, "buttonDescText", file.rpdcfg.eliteBattlePassDescTextCallback( s_rewardPurchaseDialog.purchaseQuantity ) )
+	array<string> elitePurchaseStrings = file.rpdcfg.eliteBattlePassDescTextCallback( s_rewardPurchaseDialog.purchaseQuantity )
+	HudElem_SetRuiArg( s_rewardPurchaseDialog.eliteBattlePassPurchaseButton, "buttonDescText", elitePurchaseStrings[0] )
+	HudElem_SetRuiArg( s_rewardPurchaseDialog.eliteBattlePassPurchaseButton, "buttonDiscountText", elitePurchaseStrings[1] )
+	HudElem_SetRuiArg( s_rewardPurchaseDialog.eliteBattlePassPurchaseButton, "buttonPriceText", elitePurchaseStrings[2] )
+
 
 
 	if ( file.rpdcfg.secondaryButtonIsEnabled )
@@ -396,7 +428,7 @@ void function RewardPurchaseDialog_UpdateRewards()
 		BattlePassReward bpReward = rewards[ rewards.len() - 1 - index]
 		s_rewardPurchaseDialog.buttonToItem[button] <- bpReward
 
-		BattlePass_PopulateRewardButton( bpReward, button, true, false )
+		BattlePass_PopulateRewardButton( bpReward, button, true, false, null, true )
 
 		ToolTipData toolTip
 		toolTip.titleText = GetBattlePassRewardHeaderText( bpReward )
@@ -422,6 +454,10 @@ void function RewardPurchase_OnActivate( var something )
 	}
 }
 
+bool function RewardPurchase_CheckIsOnlyButton()
+{
+	return !file.rpdcfg.eliteBatllePassOptionIsEnabled
+}
 
 void function RewardPurchaseButton_OnActivate( var something )
 {
@@ -454,31 +490,13 @@ void function RewardPurchaseButton_OnActivate( var something )
 
 void function RewardEliteBattlePassPurchaseButton_OnActivate( var button )
 {
-	
-	if ( Hud_IsLocked( s_rewardPurchaseDialog.eliteBattlePassPurchaseButton ) || !GRX_IsInventoryReady() || !GRX_AreOffersReady() )
-		return
-
-	var focus = GetFocus()
-	if ( focus == s_rewardPurchaseDialog.inc1Button || focus == s_rewardPurchaseDialog.inc5Button || focus == s_rewardPurchaseDialog.dec1Button || focus == s_rewardPurchaseDialog.dec5Button || focus == s_rewardPurchaseDialog.secondaryPurchaseButton )
-		return
-
 	PIN_UIInteraction_OnClick( "menu_rewardpurchasedialog", Hud_GetHudName( button ) )
-
-	file.rpdcfg.getEliteBattlePassPurchaseFlavCallback()
-	
-
+	if ( GetActiveMenu() == s_rewardPurchaseDialog.menu )
+		CloseActiveMenu()
 
 
-
-
-
-
-
-
-
-
-
-
+		ResetBPLevelPurchaseQuantity()
+		AdvanceMenu( GetMenu( "RTKBattlepassPurchaseMenu" ) )
 
 
 

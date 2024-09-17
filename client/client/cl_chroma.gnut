@@ -879,7 +879,7 @@ void function BeginProgressOverlay( vector color, float duration )
 		Warning("cl_chroma: Trying to begin progress overlay while one is already running, clearing currently running one first")
 		EndProgressOverlay()
 	}
-	file.consumableOverlayHandle = Chroma_AddPersistentOverlay( CHROMALOOP_SMOOTHNOISE, CHROMALOOP_PROGRESSBAR, CHROMATRANS_BLEND, {[0.0] = color}, 0.0, 1.0, 5.0 / duration )
+	file.consumableOverlayHandle = Chroma_AddPersistentOverlay( CHROMALOOP_SMOOTHNOISE, CHROMALOOP_PROGRESSBAR, CHROMATRANS_BLEND, {[0.0] = color}, 0.0, 1.0, 5.0 / max( duration, 0.0001 ) )
 }
 
 void function EndProgressOverlay()

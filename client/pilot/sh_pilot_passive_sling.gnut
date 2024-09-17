@@ -128,6 +128,11 @@ bool function CanPlayerEquipWeaponRefToSling( entity player, string ref, bool do
 	if( data.tier > 4 )
 		return false
 
+
+
+
+
+
 	return true
 }
 
@@ -180,6 +185,13 @@ string function GetSlingWeaponRefForPlayerUpgradeLevel( entity player, string ba
 			retString += WEAPON_LOCKEDSET_SUFFIX_BLUESET
 	 	}
  	}
+
+	if( !SURVIVAL_Loot_IsRefValid( retString ) )
+	{
+		ReportNonFatalErrorMsg( "Ballistic: a non-valid weapon ended up in the sling" )
+		retString = baseWeaponRef
+	}
+
 	return retString
 }
 
@@ -190,6 +202,10 @@ void function PassiveSling_OnPassiveChanged( entity player, int passive, bool di
 	{
 		player.Signal( "AutoLoaderEnded" )
 		player.Signal( "EndLockon" )
+
+
+
+
 
 
 
@@ -217,6 +233,15 @@ void function PassiveSling_OnPassiveChanged( entity player, int passive, bool di
 
 
 }
+
+
+
+
+
+
+
+
+
 
 
 

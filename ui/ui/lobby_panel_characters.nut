@@ -40,6 +40,13 @@ struct
 	bool 					registeredInputs = false
 } file
 
+struct CharacterToolTipIconConfig
+{
+	asset topRightIcon = $""
+	asset bottomLeftIcon = $""
+	bool topRightIconInactive = false
+}
+
 void function InitCharactersPanel( var panel )
 {
 	file.panel = panel
@@ -127,6 +134,10 @@ void function InitCharactersPanel( var panel )
 	AddPanelFooterOption( panel, LEFT, BUTTON_Y, false, "#Y_BUTTON_SET_FEATURED", "#Y_BUTTON_SET_FEATURED", SetFeaturedCharacterFromFocus, IsReadyAndNonfeaturedCharacterButtonFocused )
 
 		file.upgradesFooter = AddPanelFooterOption( panel, LEFT, BUTTON_STICK_RIGHT, true, "", "", null )
+
+
+
+
 
 
 	file.giftFooter = AddPanelFooterOption( panel, LEFT, BUTTON_BACK, true, "", "", null )
@@ -724,7 +735,7 @@ void function CharacterClassButton_Init( var button, ItemFlavor character, bool 
 
 	Hud_SetVisible( button, true )
 	bool isPlayable = IsItemFlavorUnlockedForLoadoutSlot( LocalClientEHI(), Loadout_Character(), character )
-	bool isOwned = Loadout_IsCharacterOwnedByPlayerIngoringUnlockSources( FromEHI( LocalClientEHI() ), character )
+	bool isOwned = Loadout_IsCharacterOwnedByPlayerIngoringUnlockSources( FromEHI( LocalClientEHI() ), character ) || forceOwned
 
 	if ( forceOwned )
 	{
@@ -744,7 +755,6 @@ void function CharacterClassButton_Init( var button, ItemFlavor character, bool 
 	RuiSetString( buttonRui, "portraitName", Localize( ItemFlavor_GetLongName( character ) ) )
 	RuiSetImage( buttonRui, "roleImage", CharacterClass_GetCharacterRoleImage( character ) )
 
-	bool isCaleventUnlocked = Character_IsCharacterUnlockedForCalevent( character )
 	bool isUnlockedByBP2 = Character_IsUnlockedForBattlePassV2( GetLocalClientPlayer(), character )
 	bool isUnlockableInNPP = Character_IsUnlockableInNewPlayerPass( character )
 
@@ -754,7 +764,9 @@ void function CharacterClassButton_Init( var button, ItemFlavor character, bool 
 	}
 
 	ToolTipData toolTipData
+	toolTipData.tooltipStyle = eTooltipStyle.NONE
 	asset topRightIcon = $""
+	bool topRightIconInactive = false
 	asset bottomLeftIcon = $""
 
 	if ( isUnlockedByBP2 && !isOwned )
@@ -764,8 +776,7 @@ void function CharacterClassButton_Init( var button, ItemFlavor character, bool 
 		toolTipData.boostedToolTipData.state = eBoostedToolTipState.UNLOCKED
 		toolTipData.titleText                = Localize( "#BPV2_LEGEND_SELECT_TOOLTIP_TITLE_UNLOCKED_BY_PREMIUMPLUS" )
 		toolTipData.descText                 = Localize( "#BPV2_LEGEND_SELECT_TOOLTIP_DESC_UNLOCKED_BY_PREMIUMPLUS", Localize( ItemFlavor_GetLongName( character ) ) )
-		Hud_SetToolTipData( button, toolTipData )
-		topRightIcon                         = $"rui/menu/character_select/utility/bp_icon"
+		
 		bottomLeftIcon                       = $"rui/menu/character_select/utility/timer_icon"
 	}
 	else if ( isUnlockableInNPP && !isOwned )
@@ -775,20 +786,91 @@ void function CharacterClassButton_Init( var button, ItemFlavor character, bool 
 		toolTipData.boostedToolTipData.state = eBoostedToolTipState.LOCKED
 		toolTipData.titleText                = Localize( "#BPV2_LEGEND_SELECT_TOOLTIP_TITLE_UNLOCKABLE_BY_NPP" )
 		toolTipData.descText                 = Localize( "#BPV2_LEGEND_SELECT_TOOLTIP_DESC_UNLOCKABLE_BY_NPP", Localize( ItemFlavor_GetLongName( character ) ) )
-		Hud_SetToolTipData( button, toolTipData )
 		topRightIcon                         = $"rui/menu/character_select/utility/npp_icon"
 		bottomLeftIcon                       = $""
 	}
-	else if ( isCaleventUnlocked && !isOwned ) 
+	else
 	{
-		topRightIcon = $""
-		bottomLeftIcon = $"rui/menu/buttons/unlocked"
+		CharacterToolTipIconConfig toolTipConfig = CharacterClassButton_InitTempUnlockToolTip( toolTipData, character, isOwned )
+		topRightIcon = toolTipConfig.topRightIcon
+		topRightIconInactive = toolTipConfig.topRightIconInactive
+		bottomLeftIcon = toolTipConfig.bottomLeftIcon
 	}
+
+	Hud_SetToolTipData( button, toolTipData )
 
 	RuiSetImage( buttonRui, "topRightIcon", topRightIcon )
 	RuiSetImage( buttonRui, "bottomLeftIcon", bottomLeftIcon )
 	RuiSetBool( buttonRui, "topRightIconVisible", topRightIcon != $"" )
+	RuiSetBool( buttonRui, "topRightIconInactive", topRightIconInactive )
 	RuiSetBool( buttonRui, "bottomLeftIconVisible", bottomLeftIcon != $"" )
+}
+
+CharacterToolTipIconConfig function CharacterClassButton_InitTempUnlockToolTip( ToolTipData toolTipData, ItemFlavor character, bool isOwned )
+{
+	CharacterToolTipIconConfig toolTipConfig
+	entity player = GetLocalClientPlayer()
+
+	ItemFlavor ornull latestActiveTempUnlock    = TempUnlock_GetLatestActiveEvent( GetUnixTimestamp() )
+	ItemFlavor ornull boundingEvent             = latestActiveTempUnlock != null ? TempUnlock_GetParentFlav( expect ItemFlavor( latestActiveTempUnlock ) ) : null
+	ItemFlavor ornull activeCharacterTempUnlock = TempUnlock_GetActiveCharacterUnlockEvent( character, boundingEvent )
+
+	
+	if ( activeCharacterTempUnlock != null )
+	{
+		expect ItemFlavor( activeCharacterTempUnlock )
+		ItemFlavor ornull characterChallenge = TempUnlock_GetCharacterUnlockChallenge( character )
+		if ( characterChallenge != null )
+		{
+			expect ItemFlavor( characterChallenge )
+			int characterChallengeTier 			= minint( Challenge_GetCurrentTier( player, characterChallenge ), Challenge_GetTierCount( characterChallenge ) - 1 )
+			int characterChallengeProgressValue = Challenge_GetProgressValue( player, characterChallenge, characterChallengeTier )
+			int characterChallengeGoalValue     = Challenge_GetGoalVal( characterChallenge, characterChallengeTier )
+
+			
+			toolTipData.actionHint1 = Localize( "#N_N_CHALLENGES_COMPLETED", characterChallengeProgressValue, characterChallengeGoalValue, Localize( ItemFlavor_GetShortName( character ) ) )
+			toolTipData.tooltipFlags = toolTipData.tooltipFlags | eToolTipFlag.SOLID
+			toolTipData.tooltipStyle = eTooltipStyle.BOOSTED
+
+			
+			toolTipConfig.bottomLeftIcon = isOwned ? $"" : $"rui/menu/character_select/utility/timer_icon"
+
+			if ( Challenge_IsComplete( GetLocalClientPlayer(), characterChallenge ) ) 
+			{
+				toolTipData.titleText = Localize( TempUnlock_GetTooltipTitleCompleted( activeCharacterTempUnlock ) )
+				toolTipData.descText = Localize( TempUnlock_GetTooltipDescCompleted( activeCharacterTempUnlock ) )
+				toolTipData.boostedToolTipData.state = eBoostedToolTipState.COMPLETED
+				toolTipConfig.topRightIcon = $"rui/menu/buttons/checked"
+			}
+			else 
+			{
+				toolTipData.titleText = Localize( TempUnlock_GetTooltipTitleUnlocked( activeCharacterTempUnlock ) )
+				toolTipData.descText = Localize( TempUnlock_GetTooltipDescUnlocked( activeCharacterTempUnlock ) )
+				toolTipData.boostedToolTipData.state = eBoostedToolTipState.UNLOCKED
+				toolTipConfig.topRightIcon =  $"rui/menu/character_select/utility/legend_challenge_key"
+			}
+		}
+	}
+	else if ( !isOwned )
+	{
+		
+		
+		
+		
+		ItemFlavor ornull upcomingCharacterTempUnlock = latestActiveTempUnlock != null ? TempUnlock_GetUpcomingCharacterUnlockEvent( character, boundingEvent ) : null
+		if ( upcomingCharacterTempUnlock != null )
+		{
+			expect ItemFlavor( upcomingCharacterTempUnlock  )
+			toolTipData.titleText = Localize( TempUnlock_GetTooltipTitleUpcoming( upcomingCharacterTempUnlock ) )
+			toolTipData.descText = Localize( TempUnlock_GetTooltipDescUpcoming( upcomingCharacterTempUnlock ) )
+			toolTipData.tooltipStyle = eTooltipStyle.BOOSTED
+			toolTipData.boostedToolTipData.state = eBoostedToolTipState.LOCKED
+			toolTipConfig.topRightIcon =  $"rui/menu/character_select/utility/legend_challenge_key"
+			toolTipConfig.topRightIconInactive = true
+		}
+	}
+
+	return toolTipConfig
 }
 
 

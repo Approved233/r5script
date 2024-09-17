@@ -234,7 +234,11 @@ const array<string> thematicTeamNames = [
 	"#TEAM_23",
 	"#TEAM_24",
 	"#TEAM_25",
-	"#TEAM_26"
+	"#TEAM_26",
+	"#TEAM_27",
+	"#TEAM_28",
+	"#TEAM_29",
+	"#TEAM_30"
 ]
 global function UseThematicTeamNames
 
@@ -295,6 +299,28 @@ string function GetThematicTeamName( int teamIndex )
 	int squadIndex = Squads_GetSquadUIIndex( teamIndex )
 	return thematicTeamNames[ squadIndex % thematicTeamNames.len() ]
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1666,9 +1692,7 @@ asset function CustomizeMenu_GetRewardButtonImage( ItemFlavor flavor )
 		case eItemType.character_execution:
 		case eItemType.voucher:
 		case eItemType.quest_mission:
-
 		case eItemType.quest_comic:
-
 		case eItemType.melee_skin:
 			buttonImage = ItemFlavor_GetIcon( flavor )
 			break
@@ -1797,9 +1821,7 @@ asset function CustomizeMenu_GetGenericRewardButtonImage( ItemFlavor flavor )
 		case eItemType.character_execution:
 		case eItemType.voucher:
 		case eItemType.quest_mission:
-
 		case eItemType.quest_comic:
-
 		case eItemType.melee_skin:
 			buttonImage = ItemFlavor_GetIcon( flavor )
 			break

@@ -48,13 +48,19 @@ global function CodeCallback_PlayerDecoyStateChange
 global const SOUND_DECOY_CONTROL = "Mirage_PsycheOut_ModeSwitch"
 global const SOUND_DECOY_RELEASE = "Mirage_PsycheOut_ModeSwitch"
 
-global const string DECOY_SCRIPTNAME = "controllable_decoy"
-global const string CONTROLLED_DECOY_SCRIPTNAME = "controlled_decoy"
+global const string DECOY_SCRIPTNAME 				= "controllable_decoy"
+global const string CONTROLLED_DECOY_SCRIPTNAME 	= "controlled_decoy"
+
+
+
 
 const DECOY_FLAG_FX = $"P_flag_fx_foe"
 const HOLO_EMITTER_CHARGE_FX_1P = $"P_mirage_holo_emitter_glow_FP"
 const HOLO_EMITTER_CHARGE_FX_3P = $"P_mirage_emitter_flash"
 const asset DECOY_TRIGGERED_ICON = $"rui/hud/tactical_icons/tactical_mirage_in_world"
+
+
+
 
 enum eDecoyReceiveDamage
 {
@@ -65,6 +71,11 @@ enum eDecoyReceiveDamage
 
 struct
 {
+
+
+
+
+
 
 
 
@@ -99,9 +110,15 @@ void function Decoy_Init()
 
 
 
-		PrecacheParticleSystem( DECOY_AR_MARKER )
 
+
+
+		PrecacheParticleSystem( DECOY_AR_MARKER )
 		RegisterConCommandTriggeredCallback( "+scriptCommand5", AttemptToggleDecoys )
+
+
+
+
 
 
 	file.decoy_ping_min_duration = GetCurrentPlaylistVarFloat( "mirage_sonar_min_duration", 0.0 )
@@ -112,11 +129,14 @@ void function Decoy_Init()
 
 	file.decoyDuration = GetCurrentPlaylistVarFloat( "mirage_decoy_duration", 60.0 )
 
+
+
+
+
+
 	PrecacheScriptString( DECOY_SCRIPTNAME )
 	PrecacheScriptString( CONTROLLED_DECOY_SCRIPTNAME )
 }
-
-
 
 
 
@@ -342,6 +362,78 @@ int function GetMaxAllowedTacticalDecoys( entity player )
 
 	return 1
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1174,6 +1266,88 @@ void function DestroyAfterTime( int fxHandle, float time )
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 bool function PlayerCanUseDecoy( entity ownerPlayer )
 
 {
@@ -1185,6 +1359,8 @@ bool function PlayerCanUseDecoy( entity ownerPlayer )
 
 	return true
 }
+
+
 
 
 
@@ -1390,6 +1566,9 @@ void function AttemptToggleDecoys( entity player )
 	if ( !TryCharacterButtonCommonReadyChecks( player ) )
 		return
 
+	if( !PlayerHasPassive( player, ePassives.PAS_MIRAGE ) )
+			 return
+
 	
 	if ( IsControllerModeActive() )
 	{
@@ -1410,6 +1589,12 @@ void function ServerToClient_ShowHolopilotDestroyedText()
 		AnnouncementMessageRight( player, "#WPN_HOLOPILOT_DESTROYED" )
 	}
 }
+
+
+
+
+
+
 
 
 

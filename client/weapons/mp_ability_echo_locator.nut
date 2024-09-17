@@ -1016,6 +1016,7 @@ void function OnEchoLocatorPlanted( entity projectile, DeployableCollisionParams
 
 
 
+
 void function EchoLocationChamberMonitor_Thread( entity echoLocator )
 {
 	Assert( IsNewThread(), "Must be threaded off" )

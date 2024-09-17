@@ -43,6 +43,7 @@ global enum eTutorialContext
 
 
 
+
 	MOVEMENT = 0,
 
 	LOOT_BIN,
@@ -53,14 +54,20 @@ global enum eTutorialContext
 
 
 
+
 	ORDNANCE,
 	ORDNANCE_DONE,
+
 	WEAPON_LOOT_BIN,
 	WEAPON_PICKUP,
 
 
 
 	WEAPON,
+
+
+
+
 	WEAPON_SWAP,
 	WEAPON_SWAP_DONE,
 	PING,
@@ -107,8 +114,14 @@ void function ShTutorial_Init()
 	AddInputHint( eTutorialContext.MOVEMENT, IN_FORWARD, "%forward%", "#SURVIVAL_TRAINING_MOVE", TryActionMove, "", null, "%S2_UP%" )
 	AddInputHint( eTutorialContext.MOVEMENT, -1, "%speed%", "#SURVIVAL_TRAINING_SPRINT", TryActionSprint )
 	AddInputHint( eTutorialContext.MOVEMENT, IN_JUMP, "%jump%", "#SURVIVAL_TRAINING_JUMP", TryActionJump )
+
 	AddInputHint( eTutorialContext.MOVEMENT, -1, "%duck%", "#SURVIVAL_TRAINING_SLIDE", TryActionSlide )
+
 	AddInputHint( eTutorialContext.MOVEMENT, IN_DUCK, "%duck%", "#SURVIVAL_TRAINING_CROUCH", TryActionCrouch )
+
+
+
+
 
 	AddInputHint( eTutorialContext.LOOT_BIN, -1, "%use%", "#SURVIVAL_TRAINING_OPEN_BIN", Tutorial_TryAction_OpenLootBin1 )
 
@@ -116,10 +129,12 @@ void function ShTutorial_Init()
 	AddInputHint( eTutorialContext.LOOT_BIN_ITEMS, -1, "%use%", "#SURVIVAL_TRAINING_TAKE_THERMITE", Tutorial_TryAction_TakeThermite )
 	AddInputHint( eTutorialContext.LOOT_BIN_ITEMS, -1, "%use%", "#SURVIVAL_TRAINING_TAKE_HEALTH", Tutorial_TryAction_TakeHealth )
 
+
 	AddInputHint( eTutorialContext.ORDNANCE, -1, "%weaponSelectOrdnance%", "#SURVIVAL_TRAINING_SWAP_GRENADE", Tutorial_TryAction_SwapGrenade )
 	AddInputHint( eTutorialContext.ORDNANCE, -1, "%attack%", "#SURVIVAL_TRAINING_THROW_GRENADE", Tutorial_TryAction_ThrewGrenade )
 	AddInputHint( eTutorialContext.ORDNANCE, -1, "#SURVIVAL_TRAINING_TAP_HEAL_BIND", "#SURVIVAL_TRAINING_USE_HEALTHKIT", Tutorial_TryAction_UseHealth )
 	AddInputHint( eTutorialContext.ORDNANCE, -1, "#SURVIVAL_TRAINING_ORDNANCE_MENU_BIND", "#SURVIVAL_TRAINING_USE_ORDNANCE_MENU", Tutorial_TryAction_OrdnanceMenu )
+
 
 
 
@@ -137,8 +152,13 @@ void function ShTutorial_Init()
 	AddInputHint( eTutorialContext.WEAPON_PICKUP, -1, "%use%", "#SURVIVAL_TRAINING_PICK_UP_AMMO", Tutorial_TryAction_PickedUpAmmo )
 
 	AddInputHint( eTutorialContext.WEAPON, IN_ZOOM, "%zoom%", "#SURVIVAL_TRAINING_AIM", TryActionADS )
-	AddInputHint( eTutorialContext.WEAPON, IN_RELOAD, "%&reload%", "#SURVIVAL_TRAINING_RELOAD", TryActionReload )
-	AddInputHint( eTutorialContext.WEAPON, -1, "", "#SURVIVAL_TRAINING_SHOOT_TARGETS", Tutorial_TryAction_ShotTrainingTargets )
+
+
+
+
+
+
+
 
 	AddInputHint( eTutorialContext.WEAPON_SWAP, -1, "%use%", "#SURVIVAL_TRAINING_SECOND_WEAPON", Tutorial_TryAction_SecondWeapon )
 	AddInputHint( eTutorialContext.WEAPON_SWAP, IN_WEAPON_CYCLE, "%weaponcycle%", "#SURVIVAL_TRAINING_SWITCH_WEAPONS", TryActionWeaponCycle )
@@ -430,12 +450,16 @@ void function OnFullUpdate()
 	int context = player.GetPlayerNetInt( "tutorialContext" )
 	array<InputHint> inputHints = file.contextInputHintMap[ context ]
 
+
 	if ( context == eTutorialContext.ORDNANCE )
 	{
 		if ( !IsTutorialInputCompleted( player, inputHints[ ORDINANCE_MENU_STEP_INDEX ] ) )
 			ServerCallback_MonitorCommsMenuUsage( 0 )
 	}
 	else if ( context == eTutorialContext.PING )
+
+
+
 	{
 		if ( !IsTutorialInputCompleted( player, inputHints[ PING_MENU_STEP_INDEX ] ) )
 			ServerCallback_MonitorCommsMenuUsage( 1 )

@@ -61,6 +61,24 @@ global function GetNeededEnergizeConsumableCount
 global function HasEnoughEnergizeConsumable
 global function OnWeaponEnergizedStart
 global function IsWeaponSemiAuto
+global function PlayerHasWeapon
+global function PlayerCanUseWeapon
+global function GetValidLootModsInstalled
+global function GetNonInstallableWeaponMods
+global function GetNonInstallableTrackableWeaponMods
+global function GetWeaponClassName
+global function GetWeaponMods
+global function GetSlotForWeapon
+global function CanAttachToWeapon
+global function GetBaseWeaponRef
+global function GetLockedSetsDisabledByCrafting
+global function AttachmentPointSupported
+global function GetAttachmentPointStyle
+global function GetAttachmentsForPoint
+global function HasWeapon
+global function WeaponHasSameMods
+global function GetWeaponIndex
+global function SimpleShouldNotBlockReloadCallback
 
 
 
@@ -353,8 +371,6 @@ const float LASER_STUN_SEVERITY_SLOWMOVE = 0.30
 
 global const asset FX_EMP_BODY_HUMAN = $"P_emp_body_human"
 global const asset FX_EMP_BODY_TITAN = $"P_emp_body_titan"
-const asset FX_VANGUARD_ENERGY_BODY_HUMAN = $"P_monarchBeam_body_human"
-const asset FX_VANGUARD_ENERGY_BODY_TITAN = $"P_monarchBeam_body_titan"
 const SOUND_EMP_REBOOT_SPARKS = "marvin_weld"
 const FX_EMP_REBOOT_SPARKS = $"weld_spark_01_sparksfly"
 const EMP_GRENADE_BEAM_EFFECT = $"wpn_arc_cannon_beam"
@@ -481,6 +497,8 @@ struct
 
 
 	table< string, table <string, int> > throwableItemStickinessTable
+
+	array<string>				 nonInstalledModsTracked
 } file
 
 global int HOLO_PILOT_TRAIL_FX
@@ -509,12 +527,11 @@ void function WeaponUtility_Init()
 {
 	level.trapChainReactClasses <- {}
 	level.trapChainReactClasses[ "mp_weapon_frag_grenade" ]            <- true
-	level.trapChainReactClasses[ "mp_weapon_satchel" ]                <- true
-	level.trapChainReactClasses[ "mp_weapon_proximity_mine" ]        <- true
-	level.trapChainReactClasses[ "mp_weapon_laser_mine" ]            <- true
+	
+	
+	
 
 	
-	RegisterSignal( "OnKnifeStick" )
 	RegisterSignal( "EMP_FX" )
 	RegisterSignal( "ArcStunned" )
 	RegisterSignal( "CleanupPlayerPermanents" )
@@ -522,7 +539,6 @@ void function WeaponUtility_Init()
 	RegisterSignal( "OnSustainedDischargeEnd" )
 	RegisterSignal( "EnergyWeapon_ChargeStart" )
 	RegisterSignal( "EnergyWeapon_ChargeReleased" )
-	RegisterSignal( "WeaponSignal_EnemyKilled" )
 
 	RegisterSignal( "GoldMagPerkEnd" )
 
@@ -552,8 +568,6 @@ void function WeaponUtility_Init()
 	PrecacheParticleSystem( EMP_GRENADE_BEAM_EFFECT )
 	PrecacheParticleSystem( FX_EMP_BODY_TITAN )
 	PrecacheParticleSystem( FX_EMP_BODY_HUMAN )
-	PrecacheParticleSystem( FX_VANGUARD_ENERGY_BODY_HUMAN )
-	PrecacheParticleSystem( FX_VANGUARD_ENERGY_BODY_TITAN )
 	PrecacheParticleSystem( FX_EMP_REBOOT_SPARKS )
 
 	PrecacheImpactEffectTable( CLUSTER_ROCKET_FX_TABLE )
@@ -585,18 +599,19 @@ void function WeaponUtility_Init()
 
 
 
-
 	HOLO_PILOT_TRAIL_FX = PrecacheParticleSystem( $"P_ar_holopilot_trail" )
 
-		RegisterSignal( SHATTER_ROUNDS_THINK_END_SIGNAL )
+	RegisterSignal( SHATTER_ROUNDS_THINK_END_SIGNAL )
 
 
 
 
-		AddCallback_OnPlayerAddedToggleWeaponMod( ShatterRounds_OnPlayerAddedWeaponMod )
-		AddCallback_OnPlayerRemovedToggleWeaponMod( ShatterRounds_OnPlayerRemovedWeaponMod )
+	AddCallback_OnPlayerAddedToggleWeaponMod( ShatterRounds_OnPlayerAddedWeaponMod )
+	AddCallback_OnPlayerRemovedToggleWeaponMod( ShatterRounds_OnPlayerRemovedWeaponMod )
 
 	InitThrowableItemStickinessDatatable()
+
+	file.nonInstalledModsTracked = [ DRAGON_LMG_ENERGIZED_MOD, "altfire_double_tap", "akimbo_active", "akimbo_offhand", "akimbo_disable" ]
 }
 
 const asset THROWABLE_ITEM_STICKINESS_DATATABLE = $"datatable/throwable_item_stickiness.rpak"
@@ -641,17 +656,6 @@ void function InitThrowableItemStickinessDatatable()
 		file.throwableItemStickinessTable[ item ] <- columnTable
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -1348,7 +1352,6 @@ entity function FireBallisticRoundWithDrop( entity weapon, vector pos, vector di
 	int damageFlags = weapon.GetWeaponDamageFlags()
 
 	float boltGravity  = 0.0
-	vector originalDir = dir
 	if ( weapon.GetWeaponSettingBool( eWeaponVar.bolt_gravity_enabled ) )
 	{
 		var zeroDistance = weapon.GetWeaponSettingFloat( eWeaponVar.bolt_zero_distance )
@@ -1398,17 +1401,8 @@ string function GetDistanceString( float distInches )
 
 vector function GetZVelocityForDistOverTime( float distance, float duration, float gravity )
 {
-	vector startPoint = ZERO_VECTOR
-	vector endPoint   = <distance, 0, 0>
-
-	float vox = distance / duration
 	float voz = 0.5 * gravity * duration * duration / duration
 	return <0, 0, voz>
-
-	
-	
-	
-	
 }
 
 
@@ -1476,12 +1470,12 @@ var function OnWeaponPrimaryAttack_EPG( entity weapon, WeaponPrimaryAttackParams
 }
 
 
-bool function PlantStickyEntityOnWorldThatBouncesOffWalls( entity ent, DeployableCollisionParams collisionParams, float bounceDot, vector angleOffset = ZERO_VECTOR, bool ignoreHullTrace = false )
+bool function PlantStickyEntityOnWorldThatBouncesOffWalls( entity ent, DeployableCollisionParams collisionParams, float bounceDot = DOT_45DEGREE, vector angleOffset = ZERO_VECTOR, bool skipHullTrace = false )
 {
 	entity hitEnt = collisionParams.hitEnt
 	if ( HitEntIsValidToStick( hitEnt ) )
 	{
-		float dot = collisionParams.normal.Dot( <0, 0, 1> )
+		float dot = collisionParams.normal.Dot( UP_VECTOR )
 
 		if ( dot < bounceDot )
 		{
@@ -1502,7 +1496,7 @@ bool function PlantStickyEntityOnWorldThatBouncesOffWalls( entity ent, Deployabl
 
 		}
 
-		return PlantStickyEntity( ent, collisionParams, angleOffset, ignoreHullTrace )
+		return PlantStickyEntity( ent, collisionParams, angleOffset, skipHullTrace )
 	}
 
 	return false
@@ -1543,7 +1537,7 @@ bool function PlantStickyEntityOnConsistentSurface( entity projectile, Deployabl
 	vector forward = CrossProduct( collisionParams.normal, <1, 0, 0> ) 
 	if ( Length( forward ) == 0.0 )
 	{
-		forward = CrossProduct( collisionParams.normal, <0, 0, 1> )
+		forward = CrossProduct( collisionParams.normal, UP_VECTOR )
 	}
 	vector surfaceAngles = AnglesOnSurface( collisionParams.normal, forward )
 	vector right         = AnglesToRight( surfaceAngles )
@@ -1625,7 +1619,7 @@ bool function PlantStickyEntityOnConsistentSurface( entity projectile, Deployabl
 	return PlantStickyEntity( projectile, collisionParams, angleOffset )
 }
 
-bool function PlantStickyEntityThatBouncesOffWalls( entity projectile, DeployableCollisionParams cp, float bounceDot, vector angleOffset = ZERO_VECTOR )
+bool function PlantStickyEntityThatBouncesOffWalls( entity projectile, DeployableCollisionParams cp, float bounceDot = DOT_45DEGREE, vector angleOffset = ZERO_VECTOR )
 {
 
 	if ( IsBitFlagSet( cp.deployableFlags, eDeployableFlags.VEHICLES_LARGE_DEPLOYABLE ) && EntIsHoverVehicle( cp.hitEnt ) )
@@ -1667,7 +1661,7 @@ bool function PlantStickyEntityThatBouncesOffWalls( entity projectile, Deployabl
 const bool DEBUG_DRAW_PLANT_STICKY = false
 #endif
 
-bool function PlantStickyEntity( entity ent, DeployableCollisionParams cp, vector angleOffset = ZERO_VECTOR, bool ignoreHullTrace = false, bool moveOnNoHitTrace = true )
+bool function PlantStickyEntity( entity ent, DeployableCollisionParams cp, vector angleOffset = ZERO_VECTOR, bool skipHullTrace = false, bool moveOnNoHitTrace = true )
 {
 	if ( !EntityShouldStickEx( ent, cp ) )
 		return false
@@ -1683,23 +1677,27 @@ bool function PlantStickyEntity( entity ent, DeployableCollisionParams cp, vecto
 
 	vector plantAngles = AnglesCompose( VectorToAngles( cp.normal ), angleOffset )
 	vector plantPosition
-	if ( ignoreHullTrace )
+	if ( skipHullTrace )
 	{
 		plantPosition = cp.pos
 	}
 	else
 	{
-#if DEV
-		if ( DEBUG_DRAW_PLANT_STICKY )
-		{
-			DebugDrawSphere( cp.pos, 5, COLOR_YELLOW, false, 60 )
-			DebugDrawArrow( cp.pos, cp.pos + cp.normal*20, 10, COLOR_YELLOW, false, 60 )
-		}
-#endif
 		vector traceDir    = cp.normal * -1
+		vector entPos 	   = cp.pos
 		vector mins        = cp.ignoreHullSize ? ZERO_VECTOR: ent.GetBoundingMins()
 		vector maxs        = cp.ignoreHullSize ? ZERO_VECTOR: ent.GetBoundingMaxs()
-		vector entPos 	   = cp.pos
+#if DEV
+		const float DRAW_DURATION = 60
+		if ( DEBUG_DRAW_PLANT_STICKY )
+		{
+			DebugDrawSphere( cp.pos, 5, COLOR_YELLOW, false, DRAW_DURATION )
+			DebugDrawBox( cp.pos, mins , maxs, COLOR_YELLOW, 1, DRAW_DURATION )
+
+			DebugDrawArrow( cp.pos, cp.pos + cp.normal*20, 10, COLOR_YELLOW, false, DRAW_DURATION )
+		}
+#endif
+
 		int traceMask 	   = (ent.IsProjectile() && ent.GetProjectileWeaponSettingBool( eWeaponVar.grenade_use_mask_ability )) ? TRACE_MASK_ABILITY : TRACE_MASK_SHOT
 		array<entity> ignoreEnts = [ent]
 		if ( ent.IsProjectile() && ent.proj.ignoreOwnerForPlaceStickyEnt && IsValid( ent.GetOwner() ) )
@@ -1719,7 +1717,15 @@ bool function PlantStickyEntity( entity ent, DeployableCollisionParams cp, vecto
 		else
 		{
 			trace = TraceHull( entPos, ( entPos + ( traceDir * cp.traceLength ) ), mins, maxs, ignoreEnts, ( traceMask & ~CONTENTS_HITBOX ), TRACE_COLLISION_GROUP_NONE, cp.normal )
+
 		}
+
+#if DEV
+			if ( DEBUG_DRAW_PLANT_STICKY )
+			{
+				DebugDrawArrow( entPos, trace.endPos, 4, COLOR_GREEN, false, DRAW_DURATION )
+			}
+#endif
 
 		if( moveOnNoHitTrace || trace.fraction < 1.0 )
 		{
@@ -1728,7 +1734,8 @@ bool function PlantStickyEntity( entity ent, DeployableCollisionParams cp, vecto
 #if DEV
 			if ( DEBUG_DRAW_PLANT_STICKY )
 			{
-				DebugDrawSphere( plantPosition, 3, COLOR_RED, false, 60 )
+				DebugDrawSphere( plantPosition, 3, COLOR_RED, false, DRAW_DURATION )
+				DebugDrawBox( plantPosition, mins , maxs, COLOR_RED, 1, DRAW_DURATION )
 			}
 #endif
 		}
@@ -1739,7 +1746,7 @@ bool function PlantStickyEntity( entity ent, DeployableCollisionParams cp, vecto
 #if DEV
 			if ( DEBUG_DRAW_PLANT_STICKY )
 			{
-				DebugDrawSphere( plantPosition, 3, COLOR_BLUE, false, 60 )
+				DebugDrawSphere( plantPosition, 3, COLOR_BLUE, false, DRAW_DURATION )
 			}
 #endif
 		}
@@ -1838,33 +1845,30 @@ bool function IsABaseGrenade( entity ent )
 
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 void function HandleDisappearingParent( entity ent, entity parentEnt )
 {
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	parentEnt.EndSignal( "OnDeath" )
 	ent.EndSignal( "OnDestroy" )
 
 	parentEnt.WaitSignal( "StartPhaseShift", "DeathTotem_PreRecallPlayer" )
 
 	ent.ClearParent()
-}
 
+}
 
 string function GetClassnamefromStickyHitEnt( entity hitEnt )
 {
@@ -2673,7 +2677,6 @@ void function InitMissileForRandomDriftForVortexLow( entity missile, vector star
 
 
 
-
 vector function GetVelocityForDestOverTime( vector startPoint, vector endPoint, float duration )
 {
 	const GRAVITY = 750
@@ -2824,7 +2827,7 @@ bool function IsPilotShotgunWeapon( string weaponName )
 
 
 
-void function GiveEMPStunStatusEffects( entity target, float duration, float fadeoutDuration = 0.5, float slowTurn = EMP_SEVERITY_SLOWTURN, float slowMove = EMP_SEVERITY_SLOWMOVE )
+void function GiveEMPStunStatusEffects( entity target, float duration, float fadeoutDuration = 0.5, float slowTurnSeverity = EMP_SEVERITY_SLOWTURN, float slowMoveSeverity = EMP_SEVERITY_SLOWMOVE )
 {
 
 
@@ -2891,20 +2894,6 @@ entity function GetMeleeWeapon( entity player )
 
 	return null
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -4463,6 +4452,20 @@ void function CodeCallback_OnPlayerRemovedToggleWeaponMod( entity player, entity
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 int function GetMaxTrackerCountForTitan( entity titan )
 {
 	array<entity> primaryWeapons = titan.GetMainWeapons()
@@ -5377,6 +5380,12 @@ CrosshairTargetData function GetCrosshairTargetData( entity player, float minDis
 	ignoreEnts.extend( GetEntArrayByScriptName( DEATHBOX_FLYER_SCRIPT_NAME ) )
 	ignoreEnts.extend( GetEntArrayByScriptName( JUMPTOWER_PING_NAME ) )
 	ignoreEnts.extend( GetEntArrayByScriptName( REDEPLOY_BALLOON_INFLATABLE_SCRIPT_NAME ) )
+	ignoreEnts.extend( GetEntArrayByScriptName( BANGALORE_SMOKESCREEN_SCRIPTNAME ) )
+	ignoreEnts.extend( GetEntArrayByScriptName( RESPAWN_DROPSHIP_TARGETNAME ) )
+	ignoreEnts.extend( GetEntArrayByScriptName( VANTAGE_COMPANION_SCRIPTNAME ) )
+	ignoreEnts.extend( GetEntArrayByScriptName( CARE_PACKAGE_SCRIPTNAME ) )
+	ignoreEnts.extend( GetEntArrayByScriptName( WORKBENCH_CLUSTER_AIRDROPPED_SCRIPTNAME ) )
+	ignoreEnts.extend( GetPlayerArray_Alive() )
 	TraceResults crosshairResults = TraceLineHighDetail( data.crosshairStart, crosshairEnd, ignoreEnts, (TRACE_MASK_SHOT | CONTENTS_BLOCKLOS ) & ~CONTENTS_WINDOW, TRACE_COLLISION_GROUP_PROJECTILE )
 
 	data.groundTarget = crosshairResults.endPos
@@ -5478,7 +5487,6 @@ CrosshairTargetData function GetCrosshairTargetDataAngles( entity player, float 
 	data.airburstTarget = data.groundTarget + < 0, 0, airBurstHeight >
 	data.distanceToTarget = Distance( data.groundTarget, data.crosshairStart )
 	data.directionToTarget =  Normalize( data.groundTarget - data.crosshairStart )
-	float flattenedDistanceToTarget = Distance2D( data.groundTarget, data.crosshairStart )
 
 	if ( initialCameraTrace.fraction < 1.0 ) 
 	{
@@ -5677,6 +5685,15 @@ bool function OnWeaponTryEnergize( entity weapon, entity player )
 			return false
 		}
 	}
+	bool isUltWeaponAndUltIsFull = IsBitFlagSet( weapon.GetWeaponTypeFlags(), WPT_ULTIMATE ) && ( weapon.GetWeaponPrimaryClipCount() >= weapon.GetWeaponPrimaryClipCountMax() )
+	if ( isUltWeaponAndUltIsFull )
+	{
+
+			string pingStringData = GetWeaponInfoFileKeyField_GlobalString ( weaponName, "energized_full_text" )
+			AnnouncementMessageRight( player, Localize( pingStringData ) )
+
+		return false
+	}
 
 	if( !HasEnoughEnergizeConsumable( weapon, player ) )
 	{
@@ -5777,12 +5794,17 @@ void function DisplayCenterDotRui( entity weapon, string abortSignal, float appe
 
 bool function MarksmansTempo_Validate( entity weapon, MarksmansTempoSettings settings )
 {
+	bool hasMarksmansTempo = weapon.HasMod( MOD_MARKSMANS_TEMPO )
+
+
+
+
 
 		if ( !InPrediction() )
-			return weapon.HasMod( MOD_MARKSMANS_TEMPO )
+			return hasMarksmansTempo
 
 
-	if ( !weapon.HasMod( MOD_MARKSMANS_TEMPO ) )
+	if ( !hasMarksmansTempo )
 	{
 		MarksmansTempo_RemoveTempo( weapon, settings )
 		return false
@@ -5844,7 +5866,12 @@ void function MarksmansTempo_SetPerfectTempoMoment( entity weapon, MarksmansTemp
 			return
 
 
-	if ( weapon.HasMod( MOD_MARKSMANS_TEMPO ) && (!IsClient() || InPrediction()) )
+	bool hasMarksmansTempo = weapon.HasMod( MOD_MARKSMANS_TEMPO )
+
+
+
+
+	if ( hasMarksmansTempo && (!IsClient() || InPrediction()) )
 	{
 		weapon.SetScriptTime1( time )
 
@@ -7219,11 +7246,396 @@ bool function GetInfiniteAmmo( entity weapon )
 
 
 
-
-
-
 bool function CodeCallback_GetIsModOptic( entity weapon, string modName )
 {
 	return SURVIVAL_Loot_IsRefValid( weapon.GetWeaponClassName() ) && SURVIVAL_Loot_IsRefValid( modName ) && GetAttachPointForAttachmentOnWeapon( weapon.GetWeaponClassName(), modName ) == "sight"
 }
 
+bool function PlayerHasWeapon( entity player, string weaponName )
+{
+	array<entity> weapons = player.GetMainWeapons()
+	weapons.extend( player.GetOffhandWeapons() )
+
+	foreach ( weapon in weapons )
+	{
+		if ( weapon.GetWeaponClassName() == weaponName )
+			return true
+	}
+
+	return false
+}
+
+bool function PlayerCanUseWeapon( entity player, string weaponClass )
+{
+	return ((player.IsTitan() && weaponClass == "titan") || (!player.IsTitan() && weaponClass == "human"))
+}
+
+array<string> function GetValidLootModsInstalled( entity weapon )
+{
+	string weaponName = GetWeaponClassName( weapon )
+
+	if ( !SURVIVAL_Loot_IsRefValid( weaponName ) )
+		return []
+
+	bool dropOpticForKittedWeapons = ShouldDropOpticForKittedWeapon()
+
+	if ( !dropOpticForKittedWeapons )
+	{
+		if ( SURVIVAL_Weapon_IsAttachmentLocked( weaponName ) )
+			return []
+	}
+
+	array<string> mods = GetWeaponMods( weapon )
+	array<string> validMods
+	foreach ( mod in mods )
+	{
+		if ( SURVIVAL_Loot_IsRefValid( mod ) )
+		{
+			if ( dropOpticForKittedWeapons )
+			{
+				string attachPoint = GetAttachPointForAttachmentOnWeapon( weaponName, mod )
+
+				if ( !SURVIVAL_Weapon_IsAttachmentLocked( weaponName ) || attachPoint == "sight" )
+					validMods.append( mod )
+			}
+			else
+			{
+				validMods.append( mod )
+			}
+		}
+	}
+
+	return validMods
+}
+
+array<string> function GetNonInstallableWeaponMods( entity weapon )
+{
+	string weaponName = GetWeaponClassName( weapon )
+
+	if ( weapon.GetNetworkedClassName() != "prop_survival" && !SURVIVAL_Loot_IsRefValid( weaponName ) )
+		return weapon.GetMods()
+
+	bool isAttachmentLocked = SURVIVAL_Weapon_IsAttachmentLocked( weaponName )
+
+	array<string> mods = GetWeaponMods( weapon )
+	array<string> foundMods
+	array<string> installedMods
+
+	foreach ( mod in mods )
+	{
+		if ( ShouldDropOpticForKittedWeapon() )
+		{
+			if ( !CanAttachToWeapon( mod, weaponName ) )
+				foundMods.append( mod )
+			else
+				installedMods.append( mod )
+		}
+		else
+		{
+			if ( !CanAttachToWeapon( mod, weaponName ) || isAttachmentLocked )
+				foundMods.append( mod )
+			else
+				installedMods.append( mod )
+		}
+	}
+
+	VerifyToggleMods( foundMods )
+
+	return foundMods
+}
+
+array<string> function GetNonInstallableTrackableWeaponMods( entity weapon )
+{
+	string weaponName = GetWeaponClassName( weapon )
+
+	if ( weapon.GetNetworkedClassName() != "prop_survival" && !SURVIVAL_Loot_IsRefValid( weaponName ) )
+		return weapon.GetMods()
+
+	bool isAttachmentLocked = SURVIVAL_Weapon_IsAttachmentLocked( weaponName )
+
+	array<string> mods = GetWeaponMods( weapon )
+	array<string> trackedMods
+
+	foreach ( mod in mods )
+	{
+		if ( ( !CanAttachToWeapon( mod, weaponName ) || isAttachmentLocked ) && file.nonInstalledModsTracked.contains( mod ) )
+			trackedMods.append( mod )
+	}
+
+	return trackedMods
+}
+
+string function GetWeaponClassName( entity weaponOrProp )
+{
+	string weaponName
+	if ( weaponOrProp.GetNetworkedClassName() == "prop_survival" )
+	{
+		LootData data = SURVIVAL_Loot_GetLootDataByIndex( weaponOrProp.GetSurvivalInt() )
+		weaponName = data.ref
+	}
+	else
+	{
+		weaponName = weaponOrProp.GetWeaponClassName()
+	}
+
+	return weaponName
+}
+
+array<string> function GetWeaponMods( entity weaponOrProp )
+{
+	array<string> mods
+	if ( weaponOrProp.GetNetworkedClassName() == "prop_survival" )
+		mods = weaponOrProp.GetWeaponMods()
+	else
+		mods = weaponOrProp.GetMods()
+
+	return mods
+}
+
+int function GetSlotForWeapon( entity player, entity weapon )
+{
+
+		array<int> slots = [ WEAPON_INVENTORY_SLOT_PRIMARY_0, WEAPON_INVENTORY_SLOT_PRIMARY_1, SLING_WEAPON_SLOT, WEAPON_INVENTORY_SLOT_ANTI_TITAN, WEAPON_INVENTORY_SLOT_DUALPRIMARY_0, WEAPON_INVENTORY_SLOT_DUALPRIMARY_1, SLING_AKIMBO_WEAPON_SLOT ]
+
+
+
+
+	foreach ( slot in slots )
+	{
+		if ( player.GetNormalWeapon( slot ) == weapon )
+			return slot
+	}
+
+	return -1
+}
+
+
+bool function CanAttachToWeapon( string attachment, string weaponName )
+{
+	if ( weaponName == "" )
+		return false
+
+	if ( !SURVIVAL_Loot_IsRefValid( weaponName ) )
+		return false
+
+	if ( !SURVIVAL_Loot_IsRefValid( attachment ) )
+		return false
+
+	
+	if ( !IsValidAttachment( attachment ) )
+		return false
+
+	bool isValidMode = true
+
+
+
+
+	if ( SURVIVAL_Weapon_IsAttachmentLocked( weaponName ) && isValidMode )
+	{
+		if ( SURVIVAL_IsAttachmentPointLocked( weaponName, GetAttachPointForAttachmentOnWeapon( weaponName, attachment ) ) )
+			return false
+
+		weaponName = GetBaseWeaponRef( weaponName )
+	}
+
+	AttachmentData aData = GetAttachmentData( attachment )
+
+	return (aData.compatibleWeapons.contains( weaponName ))
+}
+
+string function GetBaseWeaponRef( string weaponRef )
+{
+	if ( SURVIVAL_Loot_IsRefValid( weaponRef ) )
+	{
+		LootData weaponData = SURVIVAL_Loot_GetLootDataByRef( weaponRef )
+		return weaponData.baseWeapon != "" ? weaponData.baseWeapon : weaponRef 
+	}
+	return weaponRef
+}
+
+
+
+array<string> function GetLockedSetsDisabledByCrafting()
+{
+	array<string> sets
+
+	sets.append( WEAPON_LOCKEDSET_SUFFIX_WHITESET )
+	sets.append( WEAPON_LOCKEDSET_SUFFIX_BLUESET )
+	sets.append( WEAPON_LOCKEDSET_SUFFIX_PURPLESET )
+	sets.append( WEAPON_LOCKEDSET_SUFFIX_GOLD )
+
+	return sets
+}
+
+bool function AttachmentPointSupported( string attachmentPoint, string weaponName )
+{
+	LootData weaponData = SURVIVAL_Loot_GetLootDataByRef( weaponName )
+
+	array<string> allAttachPoints = weaponData.supportedAttachments
+	return allAttachPoints.contains( attachmentPoint )
+}
+
+string function GetAttachmentPointStyle( string attachmentPoint, string weaponName )
+{
+	switch ( attachmentPoint )
+	{
+		case "sight":
+			break
+
+		case "grip":
+			array<LootData> attachments = SURVIVAL_Loot_GetByType( eLootType.ATTACHMENT )
+			foreach ( attachmentData in attachments )
+			{
+				if ( !CanAttachmentEquipToAttachPoint( attachmentData.ref, "grip" ) )
+					continue
+
+				if ( !CanAttachToWeapon( attachmentData.ref, weaponName ) )
+					continue
+
+				return attachmentData.attachmentStyle
+			}
+			break
+
+		case "barrel":
+			array<LootData> attachments = SURVIVAL_Loot_GetByType( eLootType.ATTACHMENT )
+			foreach ( attachmentData in attachments )
+			{
+				if ( !CanAttachmentEquipToAttachPoint( attachmentData.ref, "barrel" ) )
+					continue
+
+				if ( !CanAttachToWeapon( attachmentData.ref, weaponName ) )
+					continue
+
+				return attachmentData.attachmentStyle
+			}
+
+			break
+
+		case "mag":
+			LootData weaponData = SURVIVAL_Loot_GetLootDataByRef( weaponName )
+			if ( weaponData.ammoType == BULLET_AMMO )
+				return "mag_straight"
+			if ( weaponData.ammoType == SPECIAL_AMMO || weaponData.ammoType == ARROWS_AMMO )
+				return "mag_energy"
+			if ( weaponData.ammoType == SHOTGUN_AMMO )
+				return "mag_shotgun"
+			if ( weaponData.ammoType == SNIPER_AMMO )
+				return "mag_sniper"
+			if ( weaponData.ref == "mp_weapon_car" )
+				return "mag_car"
+
+			break
+
+		case "hopup":
+		case "hopupMulti_a":
+		case "hopupMulti_b":
+			array<LootData> attachments = SURVIVAL_Loot_GetByType( eLootType.ATTACHMENT )
+			string attachmentStyle = ""
+			bool moreThanOneHopup = false
+			foreach ( attachmentData in attachments )
+			{
+				if ( !CanAttachmentEquipToAttachPoint( attachmentData.ref, attachmentPoint ) )
+					continue
+
+				if ( !CanAttachToWeapon( attachmentData.ref, weaponName ) )
+					continue
+
+				if ( attachmentStyle != "" && !attachmentData.lootTags.contains( "FakeHopup" ) )
+				{
+					moreThanOneHopup = true
+					break
+				}
+
+				if ( !attachmentData.lootTags.contains( "FakeHopup" ) )
+					attachmentStyle = attachmentData.attachmentStyle
+			}
+
+			if ( moreThanOneHopup )
+				return attachmentPoint
+			else if ( attachmentStyle != "" )
+				return attachmentStyle
+
+			break
+	}
+
+	return attachmentPoint
+}
+
+array<string> function GetAttachmentsForPoint( string attachmentPoint, string weaponName )
+{
+	array<string> attachmentRefs
+	switch ( attachmentPoint )
+	{
+		case "hopup":
+		case "hopupMulti_a":
+		case "hopupMulti_b":
+			array<LootData> attachments = SURVIVAL_Loot_GetByType( eLootType.ATTACHMENT )
+			foreach ( attachmentData in attachments )
+			{
+				if ( !CanAttachmentEquipToAttachPoint( attachmentData.ref, attachmentPoint ) )
+					continue
+
+				if ( !CanAttachToWeapon( attachmentData.ref, weaponName ) )
+					continue
+
+				if ( attachmentData.lootTags.contains ( "FakeHopup" ) )
+					continue
+
+				attachmentRefs.append( attachmentData.ref )
+			}
+			break
+
+		default:
+			Assert( false, "attachmentPoint " + attachmentPoint + " is not supported, but could be." )
+	}
+
+	return attachmentRefs
+}
+
+bool function HasWeapon( entity ent, string weaponClassName, array<string> mods = [], bool checkMods = true )
+{
+	Assert( ent.IsPlayer() || ent.IsNPC() )
+
+	array<entity> weaponArray = ent.GetMainWeapons()
+	foreach ( weapon in weaponArray )
+	{
+		if ( weapon.GetWeaponClassName() == weaponClassName )
+		{
+			if ( !checkMods )
+				return true
+
+			if ( WeaponHasSameMods( weapon, mods ) )
+				return true
+		}
+	}
+
+	return false
+}
+
+bool function WeaponHasSameMods( entity weapon, array<string> mods = [] )
+{
+	array hasMods = clone mods
+	foreach ( mod in weapon.GetMods() )
+	{
+		hasMods.removebyvalue( mod )
+	}
+
+	
+	return hasMods.len() == 0
+}
+
+int function GetWeaponIndex( entity player, entity weapon )
+{
+	array<int> primarySlots          = [ WEAPON_INVENTORY_SLOT_PRIMARY_0, WEAPON_INVENTORY_SLOT_PRIMARY_1 ]
+	foreach ( slot in primarySlots )
+	{
+		if ( player.GetNormalWeapon( slot ) == weapon )
+			return slot
+	}
+	return -1
+}
+
+bool function SimpleShouldNotBlockReloadCallback( entity player, entity ent )
+{
+	return false
+}

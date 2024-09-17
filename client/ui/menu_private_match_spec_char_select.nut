@@ -478,10 +478,10 @@ void function TryEnablePrivateMatchSpectCharSelectMenu( entity player )
 	float gameStartTime = GetGlobalNetTime( "pickLoadoutGamestateEndTime" )
 	thread CloseCharacterSelectMenuAtTime( gameStartTime )
 
-	bool isShowingAllSquadsGladCardIntro = GetCurrentPlaylistVarBool( "survival_enable_all_squads_intro", false )
-	bool isShowingSquadGladCardIntro = GetCurrentPlaylistVarBool( "survival_enable_squad_intro", true )
-	bool isShowingChampGladCardIntro = GetCurrentPlaylistVarBool( "survival_enable_gladiator_intros", true ) && GetConVarBool( "show_champion_screen" )
-	bool isShowingMVPGladCardIntro = GetCurrentPlaylistVarBool( "survival_enable_mvp_intros", false )
+	bool isShowingAllSquadsGladCardIntro = CharSelect_GetAllSquadIntroEnabled()
+	bool isShowingSquadGladCardIntro = CharSelect_GetSquadIntroEnabled()
+	bool isShowingChampGladCardIntro = CharSelect_GetGladiatorCardsEnabled() && GetConVarBool( "show_champion_screen" )
+	bool isShowingMVPGladCardIntro = CharSelect_GetMVPGladCardEnabled()
 
 
 	while( Time() < GetGlobalNetTime( "allSquadsPresentationStartTime" ) )
@@ -493,17 +493,18 @@ void function TryEnablePrivateMatchSpectCharSelectMenu( entity player )
 	
 	if ( isShowingAllSquadsGladCardIntro )
 	{
-		waitthread DoAllSquadsCardsPresentation("squadPresentationStartTime")
+		float endTime = Character_GetSquadPresentationStartTime( SquadPresentationStartTimePhases.squadPresentationStartTime, GetGlobalNetTime( "allSquadsPresentationStartTime" ) )
+		waitthread DoAllSquadsCardsPresentation( endTime )
 	}
 
 	if ( isShowingMVPGladCardIntro )
 	{
-		waitthread DoMVPSquadCardsPresentation( "championSquadPresentationStartTime" )
+		waitthread DoMVPSquadCardsPresentation()
 	}
 
 	if ( isShowingChampGladCardIntro )
 	{
-		waitthread DoChampionSquadCardsPresentation( "pickLoadoutGamestateEndTime" )
+		waitthread DoChampionSquadCardsPresentation()
 	}
 
 	if( file.backgroundRui != null )

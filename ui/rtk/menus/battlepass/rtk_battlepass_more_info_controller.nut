@@ -3,6 +3,9 @@ global function RTKBattlepassMoreInfo_OnInitialize
 global function RTKBattlepassMoreInfo_OnDestroy
 global function OpenBattlepassMoreInfo
 
+global function BattlePassV2_TierHasInstantRewards
+global function BattlePassV2_GetInstantRewardModelForTier
+
 global struct RTKBattlepassMoreInfo_Properties
 {
 	rtk_behavior purchaseButton
@@ -17,6 +20,18 @@ global struct RTKBattlepassMoreInfoRowData
 	string rowtext = "test"
 }
 
+global struct RTKBattlepassMoreInfoInstantData
+{
+	string packString
+
+	array<asset> rewardIcons
+	array<string> rewardStrings
+
+	array<RTKBattlepassMoreInfoRowData> rewardRows
+
+	bool unlockAllLegends
+}
+
 global struct RTKBattlepassMoreInfoPanelData
 {
 	vector panelTint = < 1, 1, 1>
@@ -28,13 +43,15 @@ global struct RTKBattlepassMoreInfoPanelData
 	int rewardImageOffsetY = 0
 	int orderNumber = 0
 	string description = ""
-	string topTitle = ""
 	string bottomTitle = ""
 	string priceString = ""
 	string originalPriceString = ""
 	bool hasPrice = false
 	bool hasDiscount = false
+	bool hasInstantRewards = false
+	bool hasUpgradeText = false
 	array<RTKBattlepassMoreInfoRowData> rows
+	RTKBattlepassMoreInfoInstantData &instantRewards
 }
 
 global struct RTKBattlepassMoreInfoModel
@@ -97,6 +114,9 @@ void function RTKBattlepassMoreInfo_HandleBackButton( var button )
 
 void function OnMenuClose()
 {
+	if ( !IsFullyConnected() )
+		return
+
 	CloseAllMenus()
 	AdvanceMenu( GetMenu( "LobbyMenu" ) )
 	JumpToSeasonTab( "RTKBattlepassPanel" )
@@ -106,14 +126,17 @@ void function OnMenuClose()
 void function RTKBattlepassMoreInfo_SetUpButtons( rtk_behavior self, rtk_struct modelStruct, ItemFlavor bpFlavor )
 {
 	entity LocalPlayer = GetLocalClientPlayer()
-	bool hasPremiumPass = DoesPlayerOwnBattlePass( LocalPlayer, bpFlavor )
-	bool hasElitePass = DoesPlayerOwnEliteBattlePass( LocalPlayer, bpFlavor )
-	bool canUpgrade = hasPremiumPass && ! hasElitePass
+	bool hasPremiumPass = DoesPlayerOwnBattlePassTier( GetLocalClientPlayer(), bpFlavor, eBattlePassV2OwnershipTier.PREMIUM )
+	bool hasUltimatePass = DoesPlayerOwnBattlePassTier( GetLocalClientPlayer(), bpFlavor, eBattlePassV2OwnershipTier.ULTIMATE )
+	bool hasUltimatePlusPass = DoesPlayerOwnBattlePassTier( GetLocalClientPlayer(), bpFlavor, eBattlePassV2OwnershipTier.ULTIMATE_PLUS )
+	bool isRestricted = GRX_IsOfferRestricted()
+	bool canUpgrade = hasPremiumPass && !hasUltimatePlusPass && !isRestricted
+	bool canPurchase = ( canUpgrade ) || ( !hasPremiumPass )
 	bool userHasEAAccess = Script_UserHasEAAccess()
 
 	RTKStruct_SetBool( modelStruct, "hasDiscount", userHasEAAccess )
-	RTKStruct_SetBool( modelStruct, "canUpgrade" , canUpgrade)
-	RTKStruct_SetBool( modelStruct, "showPurchaseButton" , !hasElitePass)
+	RTKStruct_SetBool( modelStruct, "canUpgrade" , canUpgrade )
+	RTKStruct_SetBool( modelStruct, "showPurchaseButton" , canPurchase )
 
 	rtk_behavior ornull purchaseButton = self.PropGetBehavior( "purchaseButton" )
 	if ( purchaseButton != null )
@@ -123,16 +146,16 @@ void function RTKBattlepassMoreInfo_SetUpButtons( rtk_behavior self, rtk_struct 
 		self.AutoSubscribe( purchaseButton, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( self, hasPremiumPass ) {
 			PIN_UIInteraction_OnClick( "menu_rtkbattlepassmoreinfomenu", button.GetPanel().GetDisplayName() )
 			CloseActiveMenu()
-			OpenBattlepassPurchaseMenu( ePassPurchaseTab.PREMIUMPLUS )
+			OpenBattlepassPurchaseMenu( ePassPurchaseTab.ULTIMATE_PLUS )
 		} )
 	}
 
-	rtk_behavior ornull purchasePremiumButton = self.PropGetBehavior( "battlepassButton" )
-	if ( purchasePremiumButton != null )
+	rtk_behavior ornull battlepassButton = self.PropGetBehavior( "battlepassButton" )
+	if ( battlepassButton != null )
 	{
-		expect rtk_behavior( purchasePremiumButton )
+		expect rtk_behavior( battlepassButton )
 
-		self.AutoSubscribe( purchasePremiumButton, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( self ) {
+		self.AutoSubscribe( battlepassButton, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( self ) {
 			RTKBattlepassMoreInfo_HandleBackButton( button )
 		} )
 	}
@@ -149,7 +172,7 @@ void function SetupMoreInfoDataModel( rtk_struct dataModel , ItemFlavor bpFlavor
 	array<asset> rewardsImages = GetRewardImageArray( bpFlavor )
 
 	moreInfoData.seasonName = ItemFlavor_GetLongName( bpFlavor )
-	moreInfoData.timeRemainingText = Season_GetTimeRemainingText( GetLatestSeason( GetUnixTimestamp() ) )
+	moreInfoData.timeRemainingText = Localize( "#BP_MOREINFO_ENDS_IN", Season_GetTimeRemainingText( GetLatestSeason( GetUnixTimestamp() ) ) )
 	moreInfoData.seasonLogo = GetGlobalSettingsAsset( bpAsset , "largeLogo" )
 	moreInfoData.mainColor = GetGlobalSettingsVector( bpAsset, "moreInfoColor" )
 
@@ -158,6 +181,7 @@ void function SetupMoreInfoDataModel( rtk_struct dataModel , ItemFlavor bpFlavor
 
 	int panelIndex = 0
 	int numPanels = GetDataTableRowCount( panelsDT )
+
 	while ( panelIndex < numPanels )
 	{
 		asset panelAsset = GetDataTableAsset( panelsDT, panelIndex, GetDataTableColumnByName( panelsDT, "panelAsset" ) )
@@ -167,7 +191,6 @@ void function SetupMoreInfoDataModel( rtk_struct dataModel , ItemFlavor bpFlavor
 		int rewardImageOffsetY = GetDataTableInt( panelsDT, panelIndex, GetDataTableColumnByName( panelsDT, "rewardImageOffsetY" ) )
 		bool useTint = GetDataTableBool( panelsDT, panelIndex, GetDataTableColumnByName( panelsDT, "useTint" ) )
 		string description = GetDataTableString( panelsDT, panelIndex, GetDataTableColumnByName( panelsDT, "description" ) )
-		string topTitle = GetDataTableString( panelsDT, panelIndex, GetDataTableColumnByName( panelsDT, "topTitle" ) )
 		string bottomTitle = GetDataTableString( panelsDT, panelIndex, GetDataTableColumnByName( panelsDT, "bottomTitle" ) )
 
 		Assert ( panelAsset != $"", format( "Battlepass flav (%s) More Info Panels Data Table has empty asset fields.", string( ItemFlavor_GetAsset( bpFlavor ) ) ) )
@@ -175,22 +198,24 @@ void function SetupMoreInfoDataModel( rtk_struct dataModel , ItemFlavor bpFlavor
 		RTKBattlepassMoreInfoPanelData panelData
 
 		panelData.panelBackground = panelAsset
-		panelData.rewardImage = rewardsImages[panelIndex]
-		if ( useTint )	panelData.panelTint = moreInfoData.mainColor
+		if ( rewardsImages.isvalidindex( panelIndex ) )
+			panelData.rewardImage = rewardsImages[panelIndex]
+		if ( useTint )
+			panelData.panelTint = moreInfoData.mainColor
 		panelData.rewardImageHeight = rewardImageHeight
 		panelData.rewardImageWidth = rewardImageWidth
 		panelData.rewardImageOffsetY = rewardImageOffsetY
 		panelData.panelWidth = panelWidth
 		panelData.orderNumber = panelIndex + 1
 		panelData.description = description
-		panelData.topTitle = topTitle
 		panelData.bottomTitle = bottomTitle
+		panelData.hasInstantRewards = BattlePassV2_TierHasInstantRewards( bpFlavor, panelIndex )
 
 		moreInfoData.panels.append( panelData )
 		panelIndex++
 	}
 
-	array<int> bpTierEntitlements = [ R5_BATTLEPASS_1, R5_BATTLEPASS_1_PLUS ]
+	array<int> bpTierEntitlements = [ BattlepassGetEntitlementUltimate(), BattlepassGetEntitlementUltimatePlus(), BattlepassGetEntitlementUltToUltPlus() ]
 	array<string> bpTierEntitlementsPriceStrings =  GetEntitlementPricesAsStr( bpTierEntitlements )
 	array<string> bpTierOriginalPriceStrings = GetEntitlementOriginalPricesAsStr( bpTierEntitlements )
 	bool hasDiscount =  Script_UserHasEAAccess()
@@ -198,20 +223,36 @@ void function SetupMoreInfoDataModel( rtk_struct dataModel , ItemFlavor bpFlavor
 	if ( bpTierEntitlementsPriceStrings.len() != bpTierEntitlements.len() )
 		return
 
-	
-	moreInfoData.panels[1].hasPrice = true
-	moreInfoData.panels[1].priceString = bpTierEntitlementsPriceStrings[0]
-	moreInfoData.panels[1].hasDiscount = hasDiscount
-	moreInfoData.panels[1].originalPriceString = bpTierOriginalPriceStrings[0]
+	array<GRXScriptOffer> premiumPassOfferArray = GRX_GetItemDedicatedStoreOffers( bpFlavor, "battlepass" )
 
-	
-	moreInfoData.panels[2].hasPrice = true
-	moreInfoData.panels[2].priceString = bpTierEntitlementsPriceStrings[1]
-	moreInfoData.panels[2].hasDiscount = hasDiscount
-	moreInfoData.panels[2].originalPriceString = bpTierOriginalPriceStrings[1]
+	for (int i = 1; i < moreInfoData.panels.len(); i++ )
+	{
+		if ( i == 1 ) 
+		{
+			if ( premiumPassOfferArray.len() > 0 )
+			{
+				string priceStringPremium = Localize( GRX_GetFormattedPrice( premiumPassOfferArray[0].prices[0], 1 ) )
+				moreInfoData.panels[i].hasPrice = true
+				moreInfoData.panels[i].priceString = priceStringPremium
+				moreInfoData.panels[i].hasDiscount = false
+				moreInfoData.panels[i].originalPriceString = ""
+			}
+		}
+		else 
+		{
+			int entitlementIndex = i - 2
+			if ( entitlementIndex >= 0 && entitlementIndex < bpTierEntitlements.len() )
+			{
+				moreInfoData.panels[i].hasPrice = true
+				moreInfoData.panels[i].priceString = bpTierEntitlementsPriceStrings[entitlementIndex]
+				moreInfoData.panels[i].hasDiscount = hasDiscount
+				moreInfoData.panels[i].originalPriceString = bpTierOriginalPriceStrings[entitlementIndex]
+			}
+		}
+	}
 
 	array<int> cosmeticsCountPerTier = GetCosmeticsCountPerTier( bpFlavor )
-	if( cosmeticsCountPerTier.len() == moreInfoData.panels.len() )
+	if( cosmeticsCountPerTier.len() >= moreInfoData.panels.len() )
 	{
 		foreach (int index, RTKBattlepassMoreInfoPanelData panel in moreInfoData.panels )
 		{
@@ -219,6 +260,23 @@ void function SetupMoreInfoDataModel( rtk_struct dataModel , ItemFlavor bpFlavor
 			cosmeticsRow.hasIcon = false
 			cosmeticsRow.rowtext = Localize( "#BP_MOREINFO_PANEL_COSMETICS_ROW", cosmeticsCountPerTier[index] )
 			panel.rows.append( cosmeticsRow )
+		}
+	}
+
+	array<bool> tierShowUpgradeText = GetHasUpgradeText( bpFlavor )
+	if ( tierShowUpgradeText.len() >= moreInfoData.panels.len() )
+	{
+		foreach (int index, RTKBattlepassMoreInfoPanelData panel in moreInfoData.panels )
+		{
+			panel.hasUpgradeText = tierShowUpgradeText[index]
+		}
+	}
+
+	foreach (int index, RTKBattlepassMoreInfoPanelData panel in moreInfoData.panels )
+	{
+		if ( panel.hasInstantRewards )
+		{
+			panel.instantRewards = BattlePassV2_GetInstantRewardModelForTier( bpFlavor, index )
 		}
 	}
 
@@ -239,11 +297,25 @@ void function SetupMoreInfoDataModel( rtk_struct dataModel , ItemFlavor bpFlavor
 			rowData.hasIcon     = hasIcon
 			rowData.hasLongText = hasLongText
 			rowData.icon        = rowsIcons[iconIndex]
+
+			if ( rowText.isnumeric() )
+				rowText = LocalizeNumber( rowText, true )
+
 			rowData.rowtext     = rowText
 
-			moreInfoData.panels[ownerIndex].rows.append( rowData )
+			if ( ownerIndex < moreInfoData.panels.len() )
+			{
+				moreInfoData.panels[ownerIndex].rows.append( rowData )
+			}
 		}
 
+	}
+
+	
+	if ( GRX_IsOfferRestricted() )
+	{
+		moreInfoData.panels.remove( moreInfoData.panels.len() - 1 )
+		moreInfoData.panels.remove( moreInfoData.panels.len() - 1 )
 	}
 
 	RTKStruct_SetValue( dataModel, moreInfoData )
@@ -280,6 +352,61 @@ array<int> function GetCosmeticsCountPerTier( ItemFlavor pass )
 		rtnArray.append(tierCount)
 	}
 	return rtnArray
+}
+
+array<bool> function GetHasUpgradeText( ItemFlavor pass )
+{
+	array<bool> rtnArray
+	bool isRestricted = GRX_IsOfferRestricted()
+	foreach ( var block in IterateSettingsAssetArray( ItemFlavor_GetAsset( pass ), "moreInfoTierShowUpgradeTexts" ) )
+	{
+		bool showUpgradeText = GetSettingsBlockBool( block, "showUpgradeText" ) && !isRestricted
+		rtnArray.append( showUpgradeText )
+	}
+	return rtnArray
+}
+
+bool function BattlePassV2_TierHasInstantRewards( ItemFlavor pass, int tier )
+{
+	array<var> boolArray = IterateSettingsAssetArray( ItemFlavor_GetAsset( pass ), "tierHasInstantRewards" )
+	if ( tier < boolArray.len() )
+	{
+		return GetSettingsBlockBool(boolArray[tier], "hasInstantRewards" )
+	}
+
+	return false
+}
+
+RTKBattlepassMoreInfoInstantData function BattlePassV2_GetInstantRewardModelForTier( ItemFlavor pass, int tier )
+{
+	RTKBattlepassMoreInfoInstantData model
+
+	array<var> packStringsArray = IterateSettingsAssetArray( ItemFlavor_GetAsset( pass ), "moreInfoTierInstantPacksStrings" )
+	if ( tier < packStringsArray.len() )
+		model.packString = GetSettingsBlockString( packStringsArray[tier], "instantPacksString" )
+
+	array<var> unlockAllLegendsArray = IterateSettingsAssetArray( ItemFlavor_GetAsset( pass ), "moreInfoTierUnlocksAllLegends" )
+	if ( tier < unlockAllLegendsArray.len() )
+		model.unlockAllLegends = GetSettingsBlockBool( unlockAllLegendsArray[tier], "unlocksAllLegends" )
+
+	array<var> rewardIconsArrayArray = IterateSettingsAssetArray( ItemFlavor_GetAsset( pass ), "moreInfoTierInstantRewardIcons" )
+	array<var> rewardStringsArrayArray = IterateSettingsAssetArray( ItemFlavor_GetAsset( pass ), "moreInfoTierInstantRewardStrings" )
+	if ( tier < rewardIconsArrayArray.len() && tier < rewardStringsArrayArray.len() )
+	{
+		array<var> stringsArray  = IterateSettingsArray( GetSettingsBlockArray( rewardStringsArrayArray[tier], "moreInfoInstantRewardStrings" ) )
+		array<var> iconsArray  = IterateSettingsArray( GetSettingsBlockArray( rewardIconsArrayArray[tier], "moreInfoInstantRewardIcons" ) )
+		for ( int i = 0; i < iconsArray.len(); i++ )
+		{
+			RTKBattlepassMoreInfoRowData row
+			row.hasIcon = true
+			row.icon = GetSettingsBlockAsset( iconsArray[i], "rewardIcon" )
+			row.rowtext  = GetSettingsBlockString( stringsArray[i], "instantRewardString" )
+
+			model.rewardRows.append( row )
+		}
+	}
+
+	return model
 }
 
 var function MoreInfoPanelsDatatable( ItemFlavor pass )

@@ -185,6 +185,15 @@ const asset LOADOUTSELECTION_WEAPON_DATA_DATATABLE = $"datatable/loadoutselectio
 
 
 
+
+
+
+
+
+
+
+
+
 global enum eLoadoutSelectionSlotType
 {
 	INVALID,
@@ -1855,6 +1864,9 @@ int function LoadoutSelection_GetLoadoutSlotTypeForLoadoutIndex( int loadoutSlot
 
 	return slotType
 }
+
+
+
 
 
 

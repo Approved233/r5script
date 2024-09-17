@@ -792,8 +792,21 @@ void function OnVaultPanelUse( entity panel, entity playerUser, int useInputFlag
 
 	UniqueVaultData data = GetUniqueVaultData( panel )
 
+
+
+
 	if ( !HasVaultKey( playerUser ) )
-		return
+	{
+
+
+
+
+
+
+		{
+			return
+		}
+	}
 
 	ExtendedUseSettings settings
 
@@ -808,6 +821,18 @@ void function OnVaultPanelUse( entity panel, entity playerUser, int useInputFlag
 		settings.displayRui = $"ui/health_use_progress.rpak"
 		settings.icon = $"rui/hud/gametype_icons/survival/data_knife"
 		settings.hint = data.hintVaultUnlocking
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -853,6 +878,22 @@ void function VaultPanelUseSuccess( entity panel, entity player, ExtendedUseSett
 	if ( panelData.panelState != ePanelState.UNLOCKING )
 		SetVaultPanelState( panelData, ePanelState.UNLOCKING )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 void function VaultPanelUnlocking( VaultData panelData, int panelState )
@@ -1076,7 +1117,6 @@ string function VaultPanel_TextOverride( entity panel )
 		if ( currentUnixTime < expect int( keyAccessTimeStamp ) )
 		{
 			int timeDelta        = expect int(keyAccessTimeStamp) - currentUnixTime
-			TimeParts timeParts  = GetUnixTimeParts( timeDelta )
 			string timeString    = GetDaysHoursMinutesSecondsString( timeDelta )
 
 			textOverride = Localize( data.hintVaultNeedTimestamp, timeString )
@@ -1087,8 +1127,15 @@ string function VaultPanel_TextOverride( entity panel )
 	{
 		if ( HasVaultKey( player ) )
 			textOverride = data.hintVaultKeyUse
+
+
+
+
+
+
 		else
 			textOverride = data.hintVaultKeyNeeded
+
 	}
 
 	return textOverride
@@ -1673,11 +1720,6 @@ bool function PingVaultUnderAim( entity vault )
 
 	return true
 }
-
-
-
-
-
 
 
 

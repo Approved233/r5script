@@ -100,8 +100,13 @@ void function OpenPromoLink( string linkType, string link, string fromPageId = "
 			OpenBattlepassPurchaseMenu( ePassPurchaseTab.PREMIUM )
 			break
 
+		case "battlepass_purchase_ultimate":
+			OpenBattlepassPurchaseMenu( ePassPurchaseTab.ULTIMATE )
+			break
+
 		case "battlepass_purchase_plus":
-			OpenBattlepassPurchaseMenu( ePassPurchaseTab.PREMIUMPLUS )
+		case "battlepass_purchase_ultimate_plus":
+			OpenBattlepassPurchaseMenu( ePassPurchaseTab.ULTIMATE_PLUS )
 			break
 
 
@@ -159,27 +164,18 @@ void function OpenPromoLink( string linkType, string link, string fromPageId = "
 			}
 			break
 
-		case "themedstoreskin":
-			EmitUISound( "UI_Menu_Accept" )
-			ItemFlavor ornull activeThemedShopEvent = GetActiveThemedShopEvent( GetUnixTimestamp() )
-			if ( activeThemedShopEvent != null )
-			{
-				if ( link != "" )
-					JumpToThemeShopOffer( link )
-				else
-					JumpToEventTab( "ThemedShopPanel" )
-			}
-			else
-				JumpToStoreTab()
-			break
-
 		case "collectionevent":
 			EmitUISound( "UI_Menu_Accept" )
 			ItemFlavor ornull activeCollectionEvent = GetActiveCollectionEvent( GetUnixTimestamp() )
 			if ( activeCollectionEvent != null )
+			{
+				EventsPanel_SetOpenPageIndex( eEventsPanelPage.COLLECTION_EVENT )
 				JumpToEventTab( "CollectionEventPanel" )
+			}
 			else
+			{
 				JumpToStoreTab()
+			}
 			break
 
 		case "url":
@@ -195,11 +191,6 @@ void function OpenPromoLink( string linkType, string link, string fromPageId = "
 		case "monthlystoreoffer":
 			EmitUISound( "UI_Menu_Accept" )
 			JumpToStoreOffer( SEASONAL_STORE_PANEL, link )
-			break
-
-		case "whatsnew":
-			EmitUISound( "UI_Menu_Accept" )
-			JumpToSeasonTab( "WhatsNewPanel" )
 			break
 
 		case "storyevent":

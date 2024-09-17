@@ -21,10 +21,18 @@ global function CharSelect_GetOutroMVPPresentDuration
 global function CharSelect_GetOutroChampionPresentDuration
 global function CharSelect_GetOutroTransitionDuration
 
+global function CharSelect_GetAllSquadIntroEnabled
+global function CharSelect_GetSquadIntroEnabled
+global function CharSelect_GetGladiatorCardsEnabled
+global function CharSelect_GetMVPGladCardEnabled
+
+
+
+
+
 
 global function GamemodeSurvivalShared_Init
 
-global function Survival_CanUseHealthPack
 global function Survival_PlayerCanDrop
 
 global function Survival_GetCharacterSelectDuration
@@ -39,6 +47,7 @@ global function GetVictorySequencePlatformModel
 global function PredictHealthPackUse
 
 global function GetMusicForJump
+global function Survival_SetCallback_GetMusicForJump
 
 global function PositionIsInMapBounds
 global function Survival_IsPlayerHealing
@@ -50,24 +59,29 @@ global function Survival_SetCallback_IsDropshipClampedToRing
 global function Survival_GetPlaneMoveSpeed
 global function Survival_SetCallback_GetPlaneMoveSpeed 
 global function Survival_GetPlaneJumpDelay
+global function Survival_SetCallback_GetPlaneJumpDelay
 global function Survival_GetPlaneLeaveMapDurationMultiplier
 
 
-
-
-
-
-
-
-
-
-
-
-
-
+global function Survival_GetDropshipCount
+global function Survival_SetCallback_GetDropshipCount 
+global function Survival_ShowEnemyPlanePathsOnMap
+global function Survival_StopDropshipsEarly
+global function Survival_ShipsGoSameDirection
+global function Survival_GetCustomPlaneHeight
+global function Survival_AllowDropBeforeEarlyStop
+global function Survival_EvenlyDisperseStopEarlyPoints
+global function Survival_PlanesFlyAtCenter
+global function Survival_GetPlaneHeightMultiplier
+global function Survival_SetCallback_GetPlaneHeightMultiplier 
+global function Survival_RunTropicsSpecificLogic
 
 
 global function Survival_RequireJumpmasterInPlane
+
+
+
+
 
 
 
@@ -150,8 +164,18 @@ const string PODIUM_FX_CONFETTI = "confetti_burst"
 
 
 
+
+
+
+
 global const int NUMBER_OF_SUMMARY_DISPLAY_VALUES = 7 
 global const array< int > SUMMARY_DISPLAY_EMPTY_SET = [ 0, 0, 0, 0, 0, 0, 0 ]
+
+
+global const float DEFAULT_PLANE_JUMP_DELAY = 9.0
+global const float DEFAULT_PLANE_MOVE_SPEED = 2000.0
+global const float DEFAULT_PLANE_HEIGHT_MULTIPLIER = 1.0
+
 
 enum eUseHealthKitResult
 {
@@ -262,6 +286,8 @@ struct
 		float functionref() GetPlaneHeightMultiplier_Callback
 		bool functionref() IsDropshipClampedToRing_Callback
 		float functionref() GetPlaneMoveSpeed_Callback
+		float functionref() GetPlaneJumpDelay_Callback
+		string functionref( entity ) GetMusicForJump_Callback
 
 } file
 
@@ -292,12 +318,54 @@ float function CharSelect_GetPickingSingleDurationMin()			{ return (HasFastIntro
 float function CharSelect_GetPickingDelayAfterEachLock()		{ return GetCurrentPlaylistVarFloat( "charselect_picking_delay_after_each_lock", 0.5 ) }
 float function CharSelect_GetPickingDelayAfterAll()				{ return GetCurrentPlaylistVarFloat( "charselect_picking_delay_after_all", 1.5 ) }
 
+
+bool function CharSelect_GetAllSquadIntroEnabled()					{ return GetCurrentPlaylistVarBool( "survival_enable_all_squads_intro", false ) }
+
+
+
+bool function CharSelect_GetSquadIntroEnabled()					{ return GetCurrentPlaylistVarBool( "survival_enable_squad_intro", true ) }
+bool function CharSelect_GetGladiatorCardsEnabled()				{ return GetCurrentPlaylistVarBool( "survival_enable_gladiator_intros", true ) }
+bool function CharSelect_GetMVPGladCardEnabled()				{ return GetCurrentPlaylistVarBool( "survival_enable_mvp_intros", false ) }
+
 float function CharSelect_GetOutroSceneChangeDuration()			{ return GetCurrentPlaylistVarFloat( "charselect_outro_scene_change_duration", 4.0 ) }
-float function CharSelect_GetOutroAllSquadsPresentDuration()	{ return GetCurrentPlaylistVarFloat( "charselect_outro_all_squads_present_duration", 0.0 ) }
-float function CharSelect_GetOutroSquadPresentDuration()		{ return GetCurrentPlaylistVarFloat( "charselect_outro_squad_present_duration", 6.0  ) }
-float function CharSelect_GetOutroMVPPresentDuration()			{ return GetCurrentPlaylistVarFloat( "charselect_outro_mvp_present_duration", 0.0 ) }
-float function CharSelect_GetOutroChampionPresentDuration()		{ return GetCurrentPlaylistVarFloat( "charselect_outro_champion_present_duration", 8.0 ) }
 float function CharSelect_GetOutroTransitionDuration()			{ return GetCurrentPlaylistVarFloat( "charselect_outro_transition_duration", 3.0 ) }
+
+float function CharSelect_GetOutroAllSquadsPresentDuration() {
+	if( CharSelect_GetAllSquadIntroEnabled() )
+		return GetCurrentPlaylistVarFloat( "charselect_outro_all_squads_present_duration", 0.0 )
+
+	return 0
+}
+
+
+
+
+
+
+
+
+
+
+float function CharSelect_GetOutroSquadPresentDuration() {
+	if( CharSelect_GetSquadIntroEnabled() )
+		return GetCurrentPlaylistVarFloat( "charselect_outro_squad_present_duration", 6.0  )
+
+	return 0
+}
+
+float function CharSelect_GetOutroMVPPresentDuration() {
+	if( CharSelect_GetMVPGladCardEnabled() )
+		return GetCurrentPlaylistVarFloat( "charselect_outro_mvp_present_duration", 0.0 )
+
+	return 0
+}
+
+float function CharSelect_GetOutroChampionPresentDuration()	{
+	if( CharSelect_GetGladiatorCardsEnabled() )
+		return GetCurrentPlaylistVarFloat( "charselect_outro_champion_present_duration", 8.0 )
+
+	return 0
+}
 
 
 
@@ -339,7 +407,6 @@ void function GamemodeSurvivalShared_Init()
 		
 		var dt = GetDataTable( LOOT_DATATABLE )
 		int numRows = GetDataTableRowCount( dt )
-		Remote_RegisterServerFunction( "ClientCallback_Sur_UseHealthPack", "int", -1, numRows )
 		Remote_RegisterServerFunction( "ClientCallback_Sur_DropBackpackItem", "int", -1, numRows, "int", 0, INT_MAX )
 		Remote_RegisterServerFunction( "ClientCallback_Sur_DropBackpackItem_Box", "int", -1, numRows, "int", 0, INT_MAX, "int",INT_MIN, INT_MAX )
 		Remote_RegisterServerFunction( "ClientCallback_Sur_DropEquipment", "int", 0, eEquipmentSlotType.COUNT )
@@ -468,7 +535,16 @@ bool function Survival_PlayerCanDrop( entity player )
 
 
 	if ( player.ContextAction_IsActive() && !player.ContextAction_IsRodeo() )
-		return false
+	{
+		if ( player.ContextAction_IsZipline() )
+		{
+			return true
+		}
+		else
+		{
+			return false
+		}
+	}
 
 	if ( Bleedout_IsBleedingOut( player ) )
 		return false
@@ -497,137 +573,6 @@ bool function Survival_PlayerCanDrop( entity player )
 		return false
 
 	return true
-}
-
-bool function Survival_CanUseHealthPack( entity player, int itemType, bool checkInventory = false, bool printReason = false )
-{
-	if ( itemType == eHealthPickupType.INVALID )
-		return false
-
-	int canUseResult = Survival_TryUseHealthPack( player, itemType )
-	if ( canUseResult == eUseHealthKitResult.ALLOW )
-	{
-		if ( checkInventory )
-		{
-			if ( SURVIVAL_CountItemsInInventory( player, SURVIVAL_Loot_GetHealthPickupRefFromType( itemType ) ) > 0 )
-				return true
-
-			bool needHeal   = GetHealthFrac( player ) < 1.0
-			bool needShield = GetShieldHealthFrac( player ) < 1.0
-
-			if ( needHeal && needShield )
-				canUseResult = eUseHealthKitResult.DENY_NO_KITS
-			else if ( needShield )
-				canUseResult = eUseHealthKitResult.DENY_NO_SHIELD_KIT
-			else
-				canUseResult = eUseHealthKitResult.DENY_NO_HEALTH_KIT
-		}
-		else
-		{
-			return true
-		}
-	}
-
-
-		if ( printReason )
-		{
-			switch( canUseResult )
-			{
-				case eUseHealthKitResult.DENY_NONE:
-					
-					break
-
-				case eUseHealthKitResult.DENY_NO_HEALTH_KIT:
-				case eUseHealthKitResult.DENY_NO_KITS:
-				case eUseHealthKitResult.DENY_NO_SHIELD_KIT:
-					Remote_ServerCallFunction( "ClientCallback_Quickchat", eCommsAction.INVENTORY_NEED_HEALTH, eCommsFlags.NONE )
-					
-				default:
-					AnnouncementMessageRight( player, healthKitResultStrings[canUseResult] )
-					break
-			}
-		}
-
-
-	return false
-
-	
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 }
 
 int function Survival_TryUseHealthPack( entity player, int itemType )
@@ -890,89 +835,89 @@ void function Sur_SetPlaneEnt( entity ent )
 
 
 
+int function Survival_GetDropshipCount()
+{
+	if ( file.GetDropshipCount_Callback != null )
+		return file.GetDropshipCount_Callback()
 
+	return GetCurrentPlaylistVarInt( "multi_survival_plane_count", 1 )
+}
 
 
 
+void function Survival_SetCallback_GetDropshipCount( int functionref() func )
+{
+	Assert( file.GetDropshipCount_Callback == null, "Tried setting a function override in " + FUNC_NAME() + " but one already exists" )
+	file.GetDropshipCount_Callback = func
+}
 
 
+bool function Survival_ShowEnemyPlanePathsOnMap()
+{
+	return GetCurrentPlaylistVarBool( "multi_survival_plane_show_enemy_path", false )
+}
 
+bool function Survival_ShouldSplitUpAlliancesIntoShips()
+{
+	return GetCurrentPlaylistVarBool( "multi_survival_plane_split_alliances_into_planes", false )
+}
 
+bool function Survival_ShipsGoSameDirection()
+{
+	return GetCurrentPlaylistVarBool( "multi_survival_plane_same_direction", false )
+}
 
+float function Survival_GetCustomPlaneHeight( int planeNum )
+{
+	return GetCurrentPlaylistVarFloat( "multi_survival_plane_custom_plane_height_" + planeNum, 0.0 )
+}
 
+bool function Survival_StopDropshipsEarly()
+{
+	return GetCurrentPlaylistVarBool( "dropship_stops_early", false )
+}
 
+bool function Survival_AllowDropBeforeEarlyStop()
+{
+	return GetCurrentPlaylistVarBool( "dropship_stops_early_allow_early_drop", true )
+}
 
+bool function Survival_EvenlyDisperseStopEarlyPoints()
+{
+	return GetCurrentPlaylistVarBool( "dropship_stops_early_evenly_dispersed", true )
+}
 
+bool function Survival_PlanesFlyAtCenter()
+{
+	return GetCurrentPlaylistVarBool( "multi_dropship_fly_at_center", false )
+}
 
 
+float function Survival_GetPlaneHeightMultiplier()
+{
+	if ( file.GetPlaneHeightMultiplier_Callback != null )
+		return file.GetPlaneHeightMultiplier_Callback()
 
+	return GetCurrentPlaylistVarFloat( "multi_survival_plane_height_multiplier", DEFAULT_PLANE_HEIGHT_MULTIPLIER )
+}
 
 
 
+void function Survival_SetCallback_GetPlaneHeightMultiplier( float functionref() func )
+{
+	Assert( file.GetPlaneHeightMultiplier_Callback == null, "Tried setting a function override in " + FUNC_NAME() + " but one already exists" )
+	file.GetPlaneHeightMultiplier_Callback = func
+}
 
 
+bool function Survival_RunTropicsSpecificLogic()
+{
 
+		return GetCurrentPlaylistVarBool( "multi_dropship_tropics_specific_logic", false ) && GetMapName().find( "tropic_island" ) >= 0
 
+	return GetCurrentPlaylistVarBool( "multi_dropship_tropics_specific_logic", false )
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+}
 
 
 
@@ -999,7 +944,7 @@ float function Survival_GetPlaneMoveSpeed()
 	if ( file.GetPlaneMoveSpeed_Callback != null )
 		return file.GetPlaneMoveSpeed_Callback()
 
-	return GetCurrentPlaylistVarFloat( "survival_plane_move_speed", 2000.0 )
+	return GetCurrentPlaylistVarFloat( "survival_plane_move_speed", DEFAULT_PLANE_MOVE_SPEED )
 }
 
 
@@ -1011,10 +956,23 @@ void function Survival_SetCallback_GetPlaneMoveSpeed( float functionref() func )
 }
 
 
+
 float function Survival_GetPlaneJumpDelay()
 {
-	return GetCurrentPlaylistVarFloat( "survival_plane_jump_delay", 9.0 )
+	if ( file.GetPlaneJumpDelay_Callback != null )
+		return file.GetPlaneJumpDelay_Callback()
+
+	return GetCurrentPlaylistVarFloat( "survival_plane_jump_delay", DEFAULT_PLANE_JUMP_DELAY )
 }
+
+
+
+void function Survival_SetCallback_GetPlaneJumpDelay( float functionref() func )
+{
+	Assert( file.GetPlaneJumpDelay_Callback == null, "Tried setting a function override in " + FUNC_NAME() + " but one already exists" )
+	file.GetPlaneJumpDelay_Callback = func
+}
+
 
 float function Survival_GetPlaneLeaveMapDurationMultiplier()
 {
@@ -1032,13 +990,13 @@ entity function Sur_GetPlaneCenterEnt()
 entity function Sur_GetPlaneEnt( int teamNum = -1 )
 {
 
-
-
-
-
-
-
-
+		if (teamNum >= 0 && GetPlayerArrayOfTeam( teamNum ).len() > 0 )
+		{
+			entity player = GetPlayerArrayOfTeam( teamNum )[0]
+			entity planeEnt = player.GetPlayerNetEnt( "planeEnt" )
+			if ( IsValid( planeEnt ) )
+				return planeEnt
+		}
 
 
 	return file.planeEnt
@@ -1456,30 +1414,29 @@ VictoryPlatformModelData function GetVictorySequencePlatformModel()
 	return file.victorySequencePlatforData
 }
 
+void function Survival_SetCallback_GetMusicForJump( string functionref( entity ) func )
+{
+	Assert( file.GetMusicForJump_Callback == null, "Tried setting a function override in " + FUNC_NAME() + " but one already exists" )
+	file.GetMusicForJump_Callback = func
+}
+
+
 string function GetMusicForJump( entity player )
 {
+	if ( file.GetMusicForJump_Callback != null )
+		return file.GetMusicForJump_Callback( player )
+
 	string override = GetCurrentPlaylistVarString( "music_override_skydive", "" )
-
-
-
-
-
-
-
-
-
-
-
-
 
 	if ( override.len() > 0 )
 		return override
+
 	return MusicPack_GetSkydiveMusic( GetMusicPackForPlayer( player ) )
 }
 
 bool function PositionIsInMapBounds( vector pos )
 {
-	return VectorWithinBounds( pos, MAX_MAP_BOUNDS )
+	return IsVectorWithinBounds( pos, MAX_MAP_BOUNDS )
 }
 
 bool function Survival_IsPlayerHealing( entity player )
@@ -1530,6 +1487,13 @@ bool function Survival_RequireJumpmasterInPlane()
 
 	return true
 }
+
+
+
+
+
+
+
 
 
 

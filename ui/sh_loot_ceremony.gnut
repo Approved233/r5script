@@ -45,6 +45,9 @@ global function LootBoxCeremony_SharedInit
 
 
 
+
+
+
 global function InitLootBoxMenu
 global function OnLobbyOpenLootBoxMenu_ButtonPress
 
@@ -80,6 +83,29 @@ global function IsItemEquipped
 global function GetCurrentlyEquippedItemNameForItemTypeSlot
 global function GetCurrentlyEquippedItemRarityForItemTypeSlot
 global function EquipButton_GetItemLoadoutEntries
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -238,6 +264,9 @@ struct FileForeverStruct
 	var inspectVideoPanel
 	var storeButton
 	var lootBoxOpenButton
+
+
+
 	var inspectRewardButton1
 	var inspectRewardButton2
 	var inspectRewardButton3
@@ -250,6 +279,10 @@ FileForeverStruct& fileForever
 
 struct FileLevelStruct
 {
+
+
+
+
 
 
 
@@ -342,6 +375,18 @@ void function LootBoxCeremony_SharedInit()
 	Remote_RegisterServerFunction( "Server_GrantLegendaryStickersIfCollectionCompleted" )
 	Remote_RegisterUIFunction( "ForceOpenRewardPacks" )
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1951,6 +1996,44 @@ bool function IsInvalidTypeForRewardCeremony( int type )
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 const float REWARDS_DELAY_TIER5 = 1.1
 const float REWARDS_DELAY_TIER4 = 1.0
 const float REWARDS_DELAY_TIER3 = 0.4
@@ -2180,6 +2263,8 @@ const float REWARDS_DELAY_TIER1 = 0.2
 
 const float MODEL_ROTATE_SPEED = 15.0
 const float CURRENCY_Z_OFFSET = 26.0
+
+
 
 
 
@@ -4875,6 +4960,9 @@ const float INSPECT_UP_OFFSET_CHARM = 30.0
 
 
 
+
+
+
 bool function IsItemEquipped( ItemFlavor item )
 {
 	array<LoadoutEntry> entries = EquipButton_GetItemLoadoutEntries( item, true )
@@ -5947,6 +6035,13 @@ void function InitLootBoxMenu( var newMenuArg )
 	HudElem_SetRuiArg( fileForever.lootBoxOpenButton, "descText", "" )
 	AddButtonEventHandler( fileForever.lootBoxOpenButton, UIE_CLICK, LootBoxOpenAdditional )
 
+
+
+
+
+
+
+
 	
 	fileForever.inspectMenu = Hud_GetChild( fileForever.menu, "InspectBar" )
 	HudElem_SetRuiArg( fileForever.inspectMenu, "itemType", "#UNKNOWN_LOOT_REWARD" )
@@ -6013,12 +6108,13 @@ void function InitLootBoxMenu( var newMenuArg )
 void function LootCeremony_UpdateOpenAdditionalButton()
 {
 	bool showButton = false
+	int ownedPacks = 0
 
 	if ( HasLootBeenPresented() && !IsInspectModeActive() && !IsSpecialItemPresentationModeActive() )
 	{
-		
 		if ( GRX_IsInventoryReady() )
 		{
+			ownedPacks = GRX_GetTotalPackCount()
 			showButton = true
 			array<ItemFlavor> specificPackFlavs = []
 			if ( fileLevel.forceParticularPackFlav != null )
@@ -6026,7 +6122,7 @@ void function LootCeremony_UpdateOpenAdditionalButton()
 			UpdateLootBoxButton( fileForever.lootBoxOpenButton, specificPackFlavs )
 
 			Hud_ClearToolTipData( fileForever.lootBoxOpenButton )
-			int ownedPacks = GRX_GetTotalPackCount()
+
 			if ( ownedPacks > 0 )
 			{
 				ItemFlavor ornull pack = GetNextLootBox()
@@ -6043,6 +6139,24 @@ void function LootCeremony_UpdateOpenAdditionalButton()
 
 	Hud_SetEnabled( fileForever.lootBoxOpenButton, showButton )
 	Hud_SetVisible( fileForever.lootBoxOpenButton, showButton )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 	if ( fileLevel.considerFocusOpenButton )
 	{
@@ -6164,6 +6278,7 @@ void function SetStoreItemPresentationModeActive( GRXScriptOffer grxOffer )
 	fileLevel.onNavigatingBackFunc = null
 	fileLevel.isBpOwned = false
 	fileLevel.isBpRewardPremium = false
+	fileLevel.isBpRewardElite = false
 	AdvanceMenu( GetMenu( "LootBoxOpen" ) )
 }
 
@@ -6177,8 +6292,10 @@ void function SetBattlePassItemPresentationModeActive( BattlePassReward bpReward
 	fileLevel.storeItemPresentationModeItemPrereq = null
 
 
+		bool isRestricted = GRX_IsOfferRestricted()
+
 		fileLevel.specialItemFormattedPrice = bpReward.rewardTier == eBattlePassV2RewardTier.ELITE
-		? "#BATTLE_PASS_ELITE_REWARD" : bpReward.rewardTier == eBattlePassV2RewardTier.PREMIUM
+		? ( isRestricted ? "#BATTLE_PASS_PREMIUM_REWARD" : "#BATTLE_PASS_ULTIMATE_PLUS_REWARD" ) : bpReward.rewardTier == eBattlePassV2RewardTier.PREMIUM
 		? "#BATTLE_PASS_PREMIUM_REWARD"
 		: "#BATTLE_PASS_FREE_REWARD"
 
@@ -6188,15 +6305,7 @@ void function SetBattlePassItemPresentationModeActive( BattlePassReward bpReward
 	fileLevel.specialItemOverrideOwned = null
 	fileLevel.specialItemHideEquipButton = !(IsItemFlavorEquippable( bpReward.flav ))
 	fileLevel.specialItemHidePurchaseButton = ( ItemFlavor_GetType( bpReward.flav ) == eItemType.gladiator_card_badge )
-
-	if( bpReward.isRumble )
-	{
-		fileLevel.specialItemPriceHeader = Localize( "#TIER_REQUIRED", bpReward.level )
-	}
-	else
-	{
-		fileLevel.specialItemPriceHeader = Localize( "#BATTLE_PASS_LEVEL_REQUIRED", bpReward.level + 1 )
-	}
+	fileLevel.specialItemPriceHeader = Localize( bpReward.isRumble ? "#TIER_REQUIRED" : "#BATTLE_PASS_LEVEL_REQUIRED", bpReward.level + 1 )
 
 	fileLevel.specialItemLockPurchaseButton = true
 	fileLevel.specialItemPackName = null
@@ -6204,20 +6313,25 @@ void function SetBattlePassItemPresentationModeActive( BattlePassReward bpReward
 	fileLevel.specialPurchaseDialogConfig = null
 	fileLevel.onNavigatingBackFunc = null
 
-	ItemFlavor ornull activeBattlePass = GetPlayerLastActiveBattlePass( ToEHI( GetLocalClientPlayer() ) )
+
+		ItemFlavor ornull activeBattlePass = GetActiveBattlePassV2()
+
+
+
 	bool hasActiveBattlePass = activeBattlePass != null && GRX_IsInventoryReady()
 	if ( hasActiveBattlePass )
 	{
 		expect ItemFlavor( activeBattlePass )
-		fileLevel.isBpOwned = DoesPlayerOwnBattlePass( GetLocalClientPlayer(), activeBattlePass )
+		fileLevel.isBpOwned = DoesPlayerOwnBattlePassTier( GetLocalClientPlayer(), activeBattlePass, eBattlePassV2OwnershipTier.PREMIUM )
 
-			fileLevel.isBpEliteOwned = DoesPlayerOwnEliteBattlePass( GetLocalClientPlayer(), activeBattlePass )
+			fileLevel.isBpEliteOwned = DoesPlayerOwnBattlePassTier( GetLocalClientPlayer(), activeBattlePass, eBattlePassV2OwnershipTier.ULTIMATE_PLUS )
 
 	}
 
 
 		fileLevel.isBpRewardPremium = bpReward.rewardTier == eBattlePassV2RewardTier.PREMIUM
 		fileLevel.isBpRewardElite = bpReward.rewardTier == eBattlePassV2RewardTier.ELITE
+
 
 
 
@@ -6235,8 +6349,10 @@ void function SetTreasurePackItemPresentationModeActive( BattlePassReward bpRewa
 	fileLevel.storeItemPresentationModeItemPrereq = null
 
 
+		bool isRestricted = GRX_IsOfferRestricted()
+
 		fileLevel.specialItemFormattedPrice = bpReward.rewardTier == eBattlePassV2RewardTier.ELITE
-		? "#BATTLE_PASS_ELITE_REWARD" : bpReward.rewardTier == eBattlePassV2RewardTier.PREMIUM
+		? ( isRestricted ? "#BATTLE_PASS_PREMIUM_REWARD" : "#BATTLE_PASS_ULTIMATE_PLUS_REWARD" ) : bpReward.rewardTier == eBattlePassV2RewardTier.PREMIUM
 		? "#BATTLE_PASS_PREMIUM_REWARD"
 		: "#BATTLE_PASS_FREE_REWARD"
 
@@ -6254,16 +6370,17 @@ void function SetTreasurePackItemPresentationModeActive( BattlePassReward bpRewa
 	fileLevel.onNavigatingBackFunc = null
 	fileLevel.isBpOwned = false
 	fileLevel.isBpRewardPremium = false
+	fileLevel.isBpRewardElite = false
 
 	AdvanceMenu( GetMenu( "LootBoxOpen" ) )
 }
 
-void function SetGenericItemPresentationModeActiveWithNavBack( ItemFlavor itemFlav, string priceHeader, string subHeader, void functionref() onNavigatingBackFunc )
+void function SetGenericItemPresentationModeActiveWithNavBack( ItemFlavor itemFlav, string priceHeader, string subHeader, void functionref() onNavigatingBackFunc, int quantity = 1 )
 {
 	fileLevel.specialItemPresentationModeActive = true
 	fileLevel.storeItemPresentationModeOffer = null
 	fileLevel.specialItemPresentationModeItemFlav = itemFlav
-	fileLevel.specialItemPresentationModeItemQty = 1
+	fileLevel.specialItemPresentationModeItemQty = quantity
 	fileLevel.specialItemPresentationModeItemBadgeTier = -1
 	fileLevel.storeItemPresentationModeItemPrereq = null
 	fileLevel.specialItemFormattedPrice = subHeader
@@ -6278,6 +6395,7 @@ void function SetGenericItemPresentationModeActiveWithNavBack( ItemFlavor itemFl
 	fileLevel.onNavigatingBackFunc = onNavigatingBackFunc
 	fileLevel.isBpOwned = false
 	fileLevel.isBpRewardPremium = false
+	fileLevel.isBpRewardElite = false
 
 	AdvanceMenu( GetMenu( "LootBoxOpen" ) )
 }
@@ -6317,6 +6435,7 @@ void function SetCollectionEventItemPresentationModeActive( ItemFlavor flav, GRX
 	fileLevel.onNavigatingBackFunc = null
 	fileLevel.isBpOwned = false
 	fileLevel.isBpRewardPremium = false
+	fileLevel.isBpRewardElite = false
 
 	AdvanceMenu( GetMenu( "LootBoxOpen" ) )
 }
@@ -6339,6 +6458,7 @@ void function SetChallengeRewardPresentationModeActive( ItemFlavor itemFlav, int
 	fileLevel.onNavigatingBackFunc = null
 	fileLevel.isBpOwned = false
 	fileLevel.isBpRewardPremium = false
+	fileLevel.isBpRewardElite = false
 
 	if( Mythics_IsItemFlavorMythicSkin( itemFlav ) )
 	{
@@ -6462,7 +6582,7 @@ void function OnLootBoxMenu_Open()
 		Hud_SetEnabled( fileForever.battlePassButton, false )
 
 		AddCallbackAndCallNow_OnGRXInventoryStateChanged( LootCeremony_UpdateOpenAdditionalButton )
-		thread LootBoxOpenSequenceUI( true )
+		thread LootBoxOpenSequenceUI( true, false )
 	}
 }
 
@@ -6501,6 +6621,7 @@ void function OnLootBoxMenu_Close()
 		fileLevel.onNavigatingBackFunc = null
 		fileLevel.isBpOwned = false
 		fileLevel.isBpRewardPremium = false
+		fileLevel.isBpRewardElite = false
 	}
 	else
 	{
@@ -6557,8 +6678,16 @@ void function OnLootBoxMenu_NavBack()
 
 void function LootBoxOpenAdditional( var button )
 {
-	thread LootBoxOpenSequenceUI( false )
+	thread LootBoxOpenSequenceUI( false, false )
 }
+
+
+
+
+
+
+
+
 
 
 
@@ -6735,7 +6864,7 @@ void function BattlePassButtonOnClick( var button )
 		else if ( !fileLevel.isBpEliteOwned && fileLevel.isBpRewardElite )
 		{
 			CloseActiveMenu()
-			OpenBattlepassPurchaseMenu( ePassPurchaseTab.PREMIUMPLUS )
+			OpenBattlepassPurchaseMenu( ePassPurchaseTab.ULTIMATE_PLUS )
 		}
 		else
 		{
@@ -6783,7 +6912,7 @@ void function PreviewButtonOnLeaveHover( var button )
 
 
 
-void function LootBoxOpenSequenceUI( bool firstTime )
+void function LootBoxOpenSequenceUI( bool firstTime, bool openAll )
 {
 	int ownedPacks = GRX_IsInventoryReady() ? GRX_GetTotalPackCount() : 0
 
@@ -6801,8 +6930,13 @@ void function LootBoxOpenSequenceUI( bool firstTime )
 	Hud_SetVisible( fileForever.storeButton, false )
 	Hud_SetEnabled( fileForever.storeButton, false )
 
+
+
+
+
 	
 	ItemFlavor ornull pack = GetNextLootBox()
+
 	if ( fileLevel.forceParticularPackFlav )
 	{
 		ItemFlavor ornull forcePack = fileLevel.forceParticularPackFlav
@@ -6822,27 +6956,59 @@ void function LootBoxOpenSequenceUI( bool firstTime )
 	{
 		RunClientScript( "UIToClient_EnterLootCeremony", ItemFlavor_GetGUID( pack ) )
 	}
+
+
+
+
+
+
 	else
 	{
 		RunClientScript( "UIToClient_AdditionalLootTick_Sequence", ItemFlavor_GetGUID( pack ) )
 	}
 
 	ScriptGRXOperationInfo operation
-	operation.expectedQueryGoal = GRX_HTTPQUERYGOAL_OPEN_PACK
-	operation.doOperationFunc = (void function( int opID ) : ( pack ) {
-		printt( "GRX_OpenPack", opID, ItemFlavor_GetGRXIndex( pack ) )
-		GRX_OpenPack( opID, ItemFlavor_GetGRXIndex( pack ) )
-	})
-	operation.onDoneCallback = (void function( int status ) : ( operation, pack ) {
-		if ( status == eScriptGRXOperationStatus.DONE_SUCCESS )
-		{
-			
-			UpdateOpenedMilestonePackCounts( pack )
-			RunClientScript( "UIToClient_OnGRXPackOpeningResultsAvailable" )
-		}
-		else
-			CloseActiveMenu()
-	})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	{
+		operation.expectedQueryGoal = GRX_HTTPQUERYGOAL_OPEN_PACK
+		operation.doOperationFunc = (void function( int opID ) : ( pack ) {
+			printt( "GRX_OpenPack", opID, ItemFlavor_GetGRXIndex( pack ) )
+			GRX_OpenPack( opID, ItemFlavor_GetGRXIndex( pack ) )
+		})
+		operation.onDoneCallback = (void function( int status ) : ( operation, pack ) {
+			if ( status == eScriptGRXOperationStatus.DONE_SUCCESS )
+			{
+				
+				UpdateOpenedMilestonePackCounts( pack )
+				RunClientScript( "UIToClient_OnGRXPackOpeningResultsAvailable" )
+			}
+			else
+				CloseActiveMenu()
+		})
+	}
 	QueueGRXOperation( GetLocalClientPlayer(), operation )
 }
 
@@ -6986,14 +7152,33 @@ void function UpdateSpecialItemPresentationPurchaseButton()
 	Hud_SetLocked( fileForever.equipButton, false )
 
 
-		Hud_SetVisible( fileForever.battlePassButton, !fileLevel.isBpOwned && fileLevel.isBpRewardPremium || !fileLevel.isBpEliteOwned && fileLevel.isBpRewardElite )
-		Hud_SetEnabled( fileForever.battlePassButton, !fileLevel.isBpOwned && fileLevel.isBpRewardPremium || !fileLevel.isBpEliteOwned && fileLevel.isBpRewardElite )
-		if ( !fileLevel.isBpOwned && fileLevel.isBpRewardPremium )
+		bool isRestricted = GRX_IsOfferRestricted()
+		bool unowned = false
+		if ( isRestricted )
 		{
-			HudElem_SetRuiArg( fileForever.battlePassButton, "descText", Localize( "#STORE_WITH_PREMIUM" ) )
-		} else if ( !fileLevel.isBpEliteOwned && fileLevel.isBpRewardElite )
+			unowned = ( ( !fileLevel.isBpOwned && fileLevel.isBpRewardPremium ) || ( !fileLevel.isBpOwned && fileLevel.isBpRewardElite ) )
+		}
+		else
 		{
-			HudElem_SetRuiArg( fileForever.battlePassButton, "descText", Localize( "#STORE_WITH_PREMIUM_PLUS" ) )
+			unowned = ( ( !fileLevel.isBpOwned && fileLevel.isBpRewardPremium ) || ( !fileLevel.isBpEliteOwned && fileLevel.isBpRewardElite ) )
+		}
+
+		Hud_SetVisible( fileForever.battlePassButton, unowned )
+		Hud_SetEnabled( fileForever.battlePassButton, unowned )
+
+		if ( !fileLevel.isBpOwned && ( fileLevel.isBpRewardPremium || ( fileLevel.isBpRewardElite && isRestricted ) ) )
+		{
+			if ( isRestricted )
+			{
+				HudElem_SetRuiArg( fileForever.battlePassButton, "descText", Localize( "#STORE_WITH_PREMIUM" ) )
+			}
+			else
+			{
+				HudElem_SetRuiArg( fileForever.battlePassButton, "descText", Localize( "#STORE_WITH_PREM_OR_ULT" ) )
+			}
+		} else if ( !fileLevel.isBpEliteOwned && fileLevel.isBpRewardElite && !isRestricted )
+		{
+			HudElem_SetRuiArg( fileForever.battlePassButton, "descText", Localize( "#STORE_WITH_ULTIMATE_PLUS" ) )
 		}
 
 

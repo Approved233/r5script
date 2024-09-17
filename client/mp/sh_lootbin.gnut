@@ -71,6 +71,9 @@ global function LootBin_ArePerkBinsEnabled
 
 
 
+
+
+
 global function CL_LootBinOpening
 
 
@@ -105,7 +108,7 @@ global enum eLootBinCompartment
 	BOTH,
 	_COUNT
 }
-global enum lootBinType
+global enum lootBinType 
 {
 	REGULAR,
 
@@ -131,6 +134,11 @@ global enum eLootBinSequenceKind
 
 
 global typedef OnLootBinOpeningCallbackType void functionref( entity )
+
+
+
+
+
 
 
 
@@ -348,6 +356,16 @@ void function AddCallback_OnLootBinOpening( OnLootBinOpeningCallbackType callbac
 	Assert( !file.onLootBinOpeningCallbacks.contains( callbackFunc ), "Already added " + string( callbackFunc ) + " with Survival_AddCallback_OnLootbinOpened" )
 	file.onLootBinOpeningCallbacks.append( callbackFunc )
 }
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1808,6 +1826,65 @@ array<entity> function LootBin_GetSpawnedLoot( entity lootBin, bool includeRegul
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function CL_LootBinOpening( entity lootBin, int sequenceType )
 {
 	foreach ( OnLootBinOpeningCallbackType cb in file.onLootBinOpeningCallbacks )
@@ -2047,6 +2124,26 @@ bool function LootBin_ArePerkBinsEnabled()
 {
 	return ( GetCurrentPlaylistVarBool( "enable_perk_bins", true ) )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -2,7 +2,7 @@ global function ClSurvivalShip_Init
 global function IsPlayerInPlane
 global function GetPlayersInPlaneCount
 
-
+global function GetNumPlayersInMyPlaneVsOther
 
 global function PlayerPlaneStatusChanged
 global function JumpmasterStatusChanged
@@ -18,7 +18,7 @@ struct
 	EnvironmentSpeaker& planeSpeaker
 
 
-
+		bool alreadyPlayedZoomSequence
 
 } file
 
@@ -28,8 +28,8 @@ void function ClSurvivalShip_Init()
 	RegisterSignal( "CancelTryRelinquishSquadLeaderOrBreakFromSquad" )
 	RegisterSignal( "CreateSquadLeaderBox" )
 
-
-
+		RegisterSignal( "PlayerPanningOnShips" )
+		RegisterSignal( "ForceEndPlayerPanningOnShips" )
 
 
 	AddEventNotificationCallback( eEventNotifications.SURVIVAL_DroppingSolo, SURVIVAL_DroppingSolo )
@@ -59,33 +59,33 @@ int function GetPlayersInPlaneCount()
 }
 
 
+int[2] function GetNumPlayersInMyPlaneVsOther( entity basePlayer )
+{
+	int[2] counts = [ 0, 0 ]
+	entity myPlane = basePlayer.GetPlayerNetEnt( "planeEnt" )
+	if ( !IsValid( myPlane ) )
+		return counts
 
+	foreach( entity player in GetPlayerArray() )
+	{
+		if ( !IsValid( player ) )
+			continue
 
+		if ( !( player.GetPlayerNetBool( "playerInPlane" ) ) )
+			continue
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+		entity plane = player.GetPlayerNetEnt( "planeEnt" )
+		if ( myPlane == plane )
+		{
+			counts[0]++
+		}
+		else if ( IsValid( plane ) )
+		{
+			counts[1]++
+		}
+	}
+	return counts
+}
 
 
 void function PlaneCreated( entity plane )
@@ -149,19 +149,19 @@ void function __PlayerPlaneStatusChanged( entity statusChangePlayer )
 	var gamestateRui = ClGameState_GetRui()
 	Assert( gamestateRui != null )
 
+		if ( Survival_GetDropshipCount() > 1 )
+		{
+			int[2] playersInPlanes = GetNumPlayersInMyPlaneVsOther( player )
+			RuiSetInt( gamestateRui, "playersInPlane1", IsPlayerInPlane( player ) ? playersInPlanes[0] : 0 )
+			RuiSetInt( gamestateRui, "playersInPlane2", IsPlayerInPlane( player ) ? playersInPlanes[1] : 0 )
+			RuiSetBool( gamestateRui, "multiOtherPlanes", Survival_GetDropshipCount() != 2 )
 
-
-
-
-
-
-
-
-
-
-
-
-
+			if ( IsPlayerInPlane( player ) && isLocalPlayer && !file.alreadyPlayedZoomSequence && GetCurrentPlaylistVarBool( "multi_survival_plane_do_zoom_sequence", false ) )
+			{
+				thread ZoomInOnOtherShip_Thread( player )
+			}
+		}
+		else
 
 	{
 		RuiSetInt( gamestateRui, "playersInPlane", IsPlayerInPlane( player ) ? GetPlayersInPlaneCount() : 0 )
@@ -220,172 +220,172 @@ void function __PlayerPlaneStatusChanged( entity statusChangePlayer )
 
 
 
+void function ZoomInOnOtherShip_Thread( entity player )
+{
+	player.Signal( "PlayerPanningOnShips" )
+
+	player.EndSignal( "OnDeath", "OnDestroy", "PlayerPanningOnShips", "ForceEndPlayerPanningOnShips" )
+
+	entity playerPlane
+	while ( true ) 
+	{
+		if ( IsValid( player.GetPlayerNetEnt( "planeEnt" ) ) )
+		{
+			playerPlane = player.GetPlayerNetEnt( "planeEnt" )
+			break
+		}
+
+		WaitFrame()
+	}
+
+	array< entity > planes = GetEntArrayByScriptName( SURVIVAL_PLANE_NAME )
+
+	
+	planes.sort( int function( entity a, entity b ) {
+		float angleA = atan2( a.GetOrigin().y, a.GetOrigin().x )
+		float angleB = atan2( b.GetOrigin().y, b.GetOrigin().x )
+		if ( angleA < angleB )
+			return -1
+		else if ( angleA > angleB )
+			return 1
+		return 0
+	} )
+
+	array< entity > otherPlanes
+	int planeIdx = 0
+	for ( int i = 0; i < planes.len(); i++ )
+	{
+		if ( planes[i] != playerPlane )
+		{
+			otherPlanes.append( planes[i] )
+		}
+		else
+		{
+			planeIdx = i
+		}
+	}
+
+	
+	entity leftMostPlane
+	entity rightMostPlane
+	if ( planeIdx == planes.len() - 1 )
+	{
+		rightMostPlane = planes[ 0 ]
+		leftMostPlane = planes[ planeIdx - 1]
+	}
+	else if ( planeIdx == 0 )
+	{
+		rightMostPlane = planes[ 1 ]
+		leftMostPlane = planes[ planes.len() - 1 ]
+	}
+	else
+	{
+		rightMostPlane = planes[ planeIdx + 1 ]
+		leftMostPlane = planes[ planeIdx - 1 ]
+	}
+
+	if ( !IsValid( otherPlanes[0] ) )
+		return
+
+	vector abovePlaneDisplacement = AnglesToUp( playerPlane.GetAngles() ) * 2000 - AnglesToForward( playerPlane.GetAngles() ) * 3000
+	vector otherPlaneAngles = otherPlanes[0].GetAngles()
+	vector startPos = playerPlane.GetOrigin() + abovePlaneDisplacement
+	vector startAng = VectorToAngles( ( playerPlane.GetOrigin() + AnglesToForward( playerPlane.GetAngles() ) * 4000 ) - startPos )
+
+	entity cameraMover = CreateClientsideScriptMover( $"mdl/dev/empty_model.rmdl", startPos, startAng )
+	entity camera      = CreateClientSidePointCamera( startPos, startAng, 100 )
+	player.SetMenuCameraEntity( camera )
+	player.SetMenuCameraBloomAmountOverride( GetMapBloomSettings().dropship )
+	camera.SetTargetFOV( 100, true, EASING_CUBIC_INOUT, 0.0 )
+	camera.SetParent( cameraMover, "", false )
+
+	file.alreadyPlayedZoomSequence = true
+
+	OnThreadEnd(
+		function() : ( player, camera, cameraMover )
+		{
+			if ( IsValid( camera ) )
+			{
+
+				camera.Destroy()
+				cameraMover.Destroy()
+			}
+
+			if ( IsValid( player ) )
+			{
+				player.ClearMenuCameraEntity()
+				player.Signal( "ForceEndPlayerPanningOnShips" )
+			}
+		}
+	)
+
+	thread CheckForTeamJumpedOutOfPlane( player )
+
+	float initialWaitTime = 2
+	cameraMover.NonPhysicsMoveTo( playerPlane.GetOrigin() + abovePlaneDisplacement + playerPlane.GetVelocity() * initialWaitTime, initialWaitTime, 0, 0 )
 
+	wait initialWaitTime
 
+	if ( !IsValid( camera ) )
+		return
 
+	player.SetMenuCameraEntity( camera ) 
+	player.SetMenuCameraBloomAmountOverride( GetMapBloomSettings().dropship )
 
+	
+	float panLeftTime = 0.5
+	vector leftPlaneFutureLocation = leftMostPlane.GetOrigin() + leftMostPlane.GetVelocity() * panLeftTime
+	vector cameraFutureLocation = cameraMover.GetOrigin() + playerPlane.GetVelocity() * panLeftTime
+	vector anglesToLeftPlaneFutureLocation = VectorToAngles( leftPlaneFutureLocation - cameraFutureLocation )
+	cameraMover.NonPhysicsRotateTo( anglesToLeftPlaneFutureLocation, panLeftTime, panLeftTime / 3, panLeftTime / 3 )
 
+	cameraMover.NonPhysicsMoveTo( playerPlane.GetOrigin() + abovePlaneDisplacement + playerPlane.GetVelocity() * 1.5, 1.5, 0, 0 )
 
+	wait 1.5
 
+	if ( otherPlanes.len() > 1 )
+	{
+		float panRightTime = 0.5
 
+		vector rightPlaneFutureLocation = rightMostPlane.GetOrigin() + rightMostPlane.GetVelocity() * panRightTime
+		cameraFutureLocation = cameraMover.GetOrigin() + playerPlane.GetVelocity() * panLeftTime
+		vector anglesToRightPlaneFutureLocation = VectorToAngles( rightPlaneFutureLocation - cameraFutureLocation )
+		cameraMover.NonPhysicsRotateTo( anglesToRightPlaneFutureLocation, panRightTime, panRightTime / 3, panRightTime / 3 )
 
+		cameraMover.NonPhysicsMoveTo( playerPlane.GetOrigin() + abovePlaneDisplacement + playerPlane.GetVelocity() * 1.5, 1.5, 0, 0 )
 
+		wait 1.5
+	}
 
 
+	cameraMover.NonPhysicsMoveTo( player.EyePosition() + playerPlane.GetVelocity() * 2, 1, 0.5, 0.5 )
+	cameraMover.NonPhysicsRotateTo( player.GetAngles(), 1, 0, 0 )
 
+	wait 1.0
+}
 
+void function CheckForTeamJumpedOutOfPlane( entity player )
+{
+	player.EndSignal( "OnDeath", "OnDestroy", "ForceEndPlayerPanningOnShips" )
+	entity plane = player.GetPlayerNetEnt( "planeEnt" )
 
+	while ( IsValid( player ) && player.GetOrigin() == ZERO_VECTOR ) 
+	{
+		WaitFrame()
+	}
 
+	while ( IsValid( player ) && IsValid( plane ) )
+	{
+		float dist = DistanceSqr( player.GetOrigin(), plane.GetOrigin() )
+		if ( dist > 1000000 ) 
+		{
+			player.Signal( "ForceEndPlayerPanningOnShips" )
+			return
+		}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+		WaitFrame()
+	}
+}
 
 
 void function PlayDoorsOpenTimerSounds( entity player )
@@ -487,10 +487,10 @@ void function CreateSquadLeaderBox( entity player )
 	RuiSetBool( file.sqadLeaderBoxRui, "hasHoldButtonAction", HasHoldButtonAction() )
 
 
-
-
-
-
+		if ( Survival_StopDropshipsEarly() )
+		{
+			thread WaitAndShowStoppedShipCountdown()
+		}
 
 }
 
@@ -509,21 +509,21 @@ void function DestroySquadLeaderBox( entity vehicle )
 }
 
 
+void function WaitAndShowStoppedShipCountdown()
+{
+	while( GetGlobalNetTime( "PlaneDoorsOpenTime" ) <= 0 )
+	{
+		WaitFrame()
+	}
 
+	wait GetGlobalNetTime( "PlaneDoorsOpenTime" ) - Time()
 
+	if ( !IsPlayerInPlane( GetLocalViewPlayer() ) )
+		return
 
-
-
-
-
-
-
-
-
-
-
-
-
+	RuiTrackFloat( file.sqadLeaderBoxRui, "doorsOpenTime", null, RUI_TRACK_SCRIPT_NETWORK_VAR_GLOBAL, GetNetworkedVariableIndex( "PlaneDoorsCloseTime" ) )
+	RuiSetBool( file.sqadLeaderBoxRui, "dropAllowedOverride", true )
+}
 
 
 void function UpdateDOFForPlayerView()

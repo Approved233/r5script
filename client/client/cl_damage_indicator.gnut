@@ -391,6 +391,9 @@ bool function ShouldShowDamageArrows( int damageSourceId )
 
 		case eDamageSourceId.damagedef_ability_silence:
 
+
+
+
 		case eDamageSourceId.burn:
 
 

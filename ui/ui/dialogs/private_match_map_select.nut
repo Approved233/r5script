@@ -1,6 +1,5 @@
 global function InitPrivateMatchMapSelect
 global function PrivateMatchMapSelect_IsEnabled
-global function PrivateMatchMapSelect_PlaylistIsDefaultSlot
 global function UpdatePrivateMatchMapSelectDialog
 
 struct {
@@ -169,13 +168,6 @@ void function InitPrivateMatchMapSelect( var newMenuArg )
 	AddMenuFooterOption( menu, LEFT, BUTTON_A, true, "#A_BUTTON_SELECT" )
 }
 
-const string DEFAULT_PLAYLIST_UI_SLOT_NAME = "regular_1"
-bool function PrivateMatchMapSelect_PlaylistIsDefaultSlot( string playlist )
-{
-	string uiSlot = GetPlaylistVarString( playlist, "ui_slot", "" )
-	return (uiSlot == DEFAULT_PLAYLIST_UI_SLOT_NAME)
-}
-
 void function OnOpenModeSelectDialog()
 {
 	SetModeSelectMenuOpen( true )
@@ -198,28 +190,8 @@ void function UpdatePrivateMatchMapSelectDialog()
 		ltm = "",
 	}
 
-	array<string> playlistNames = GetVisiblePlaylistNames( IsPrivateMatchLobby() )
-	foreach ( string plName in playlistNames )
-	{
-		string uiSlot = GetPlaylistVarString( plName, "ui_slot", "" )
-		if ( uiSlot == "" )
-			continue
-
-		if ( !(uiSlot in slotToPlaylistNameMap) )
-		{
-			Assert( false, format( "Playlist '%s' has invalid value '%s' for 'ui_slot' setting.", plName, uiSlot ) )
-			continue
-		}
-
-		if ( slotToPlaylistNameMap[uiSlot] != "" )
-		{
-			
-			
-			continue
-		}
-
-		slotToPlaylistNameMap[uiSlot] = plName
-	}
+	foreach ( string slot, string playlist in slotToPlaylistNameMap )
+		slotToPlaylistNameMap[slot] = GetCurrentPlaylistForSchedule( slot )
 
 	table<string, var > slotToButtonMap = {
 		training =		Hud_GetChild( file.menu, "GamemodeButton0" ),

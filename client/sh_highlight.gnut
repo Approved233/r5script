@@ -57,7 +57,9 @@ global function ClHighlight_YouDied
 global function ReconScan_ShowHudForTarget
 global function ReconScan_RemoveHudForTarget
 
+#if DEV
 global function DumpEntityHighlight
+#endif
 global function AddCallback_HighlightContextChanged
 global function Highlight_SetAllianceProximityDrawFunc
 
@@ -593,23 +595,13 @@ void function ClHighlight_UpdateHighlightFlags( entity ent, int contextId, int t
 	if ( contextId == HIGHLIGHT_INVALID_ID )
 		return
 
-	if ( Freelance_IsHubLevel() )
+	if ( type == eHighlightGenericType.FRIENDLY )
 	{
-		if ( type == eHighlightGenericType.FRIENDLY )
-			ent.Highlight_SetFlag( HIGHLIGHT_FLAG_REQUIRE_SAME_TEAM, true )
-		else if ( type == eHighlightGenericType.ENEMY )
-			ent.Highlight_SetFlag( HIGHLIGHT_FLAG_REQUIRE_ENEMY_TEAM, true )
+		ent.Highlight_SetFlag( HIGHLIGHT_FLAG_REQUIRE_FRIENDLY_TEAM, true )
 	}
-	else
+	else if ( type == eHighlightGenericType.ENEMY )
 	{
-		if ( type == eHighlightGenericType.FRIENDLY )
-		{
-			ent.Highlight_SetFlag( HIGHLIGHT_FLAG_REQUIRE_FRIENDLY_TEAM, true )
-		}
-		else if ( type == eHighlightGenericType.ENEMY )
-		{
-			ent.Highlight_SetFlag( HIGHLIGHT_FLAG_REQUIRE_ENEMY_TEAM, true )
-		}
+		ent.Highlight_SetFlag( HIGHLIGHT_FLAG_REQUIRE_ENEMY_TEAM, true )
 	}
 
 	if ( ent.GetNetworkedClassName() == "prop_survival" )
@@ -949,6 +941,7 @@ void function HideEntityHighlight( entity ent, float duration )
 		ent.Highlight_HideOutline( duration )
 }
 
+#if DEV
 void function DumpEntityHighlight( entity ent )
 {
 	int currentContext = ent.Highlight_GetCurrentContext()
@@ -965,6 +958,7 @@ void function DumpEntityHighlight( entity ent )
 	printt( "    Highlight_IsAfterPostProcess:", HighlightContext_IsAfterPostProcess( currentContext ) )
 	printt( "" )
 }
+#endif
 
 
 
@@ -983,9 +977,6 @@ bool function UseDefaultOwnedHighlightBehavior( entity ent )
 
 
 
-
-	if ( GetCurrentPlaylistVarBool( "squad_pets_enabled", false ) && IsValid( ent ) && ent.IsNPC() )
-		return false
 
 	return true
 }

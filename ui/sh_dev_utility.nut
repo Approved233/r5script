@@ -18,6 +18,7 @@ TestVars function TV()
 
 struct
 {
+	int entTracker = 0
 	float dev_finisherFOV = 0.0
 } file
 
@@ -140,6 +141,9 @@ void function PrintFloatArray( array<float> arr )
 	foreach ( int index, float val in arr )
 		printf( " [%d] - %f", index, val )
 }
+
+
+
 
 
 

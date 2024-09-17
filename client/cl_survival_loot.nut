@@ -6,7 +6,6 @@ global function GetCrosshairEntity
 
 global function Survival_Health_SetSelectedHealthPickupType
 global function Survival_Health_GetSelectedHealthPickupType
-global function Survival_UseHealthPack
 
 global function DumpAttachmentTags
 global function AttachmentTags
@@ -18,8 +17,6 @@ global function SURVIVAL_Loot_UpdateRuiLastUseTime
 global function SURVIVAL_Loot_GetUniqueWeaponNames
 
 global function PlayLootPickupFeedbackFX
-
-global function ServerToClient_OnStartedUsingHealthPack
 
 global function GetLootPromptStyle
 global function GetDeathBoxOwnerEHI
@@ -43,6 +40,7 @@ global function ShouldOpenQuickswap
 
 global function GetWeaponLootIcon_ItemLootHint
 global function GetWeaponLootIcon_WeaponLootHint
+global function GetWeaponLootIcon_Square
 
 
 #if DEV
@@ -112,10 +110,6 @@ struct {
 
 void function Cl_Survival_LootInit()
 {
-	if ( !WeaponDrivenConsumablesEnabled() )
-	{
-		RegisterConCommandTriggeredCallback( "+weaponcycle", AttemptCancelHeal )
-	}
 	RegisterConCommandTriggeredCallback( "+offhand2", AttemptCancelHeal )
 	RegisterConCommandTriggeredCallback( "+attack", AttemptCancelHeal )
 	RegisterConCommandTriggeredCallback( "+melee", AttemptCancelHeal )
@@ -170,6 +164,9 @@ void function Cl_Survival_LootInit()
 
 	RegisterSignal( "TrackLootToPing" )
 	RegisterSignal( "CreateDeathBoxRui" )
+	RegisterSignal( "SurvivalLoot_MoveToPodium" )
+
+	AddCallback_GameStateEnter( eGameState.Resolution, SurvivalLoot_OnGameState_Podium )
 
 	var lootPromptRui   = CreateFullscreenRui( LOOT_PICKUP_HINT_DEFAULT_RUI, 1 )
 	var weaponPromptRui = CreateFullscreenRui( WEAPON_PICKUP_HINT_DEFAULT_RUI, 1 )
@@ -213,6 +210,10 @@ void function SurvivalLoot_EntitiesDidLoad()
 	thread ManageVerticalLines()
 }
 
+void function SurvivalLoot_OnGameState_Podium()
+{
+	Signal( clGlobal.signalDummy, "SurvivalLoot_MoveToPodium" )
+}
 
 void function PlayLootPickupFeedbackFX( entity ent )
 {
@@ -339,80 +340,14 @@ void function UseSelectedHealthPickupType( entity player )
 	if ( HealthkitWheelToggleEnabled() && IsCommsMenuActive() )
 		return
 
-	if ( WeaponDrivenConsumablesEnabled() )
-	{
-		Consumable_UseCurrentSelectedItem( player )
-	}
-	else
-	{
-		int selectedPickupType = Survival_Health_GetSelectedHealthPickupType()
-		if ( selectedPickupType == -1 )
-		{
-			selectedPickupType = SURVIVAL_GetBestHealthPickupType( player )
-			if ( !Survival_CanUseHealthPack( player, selectedPickupType, true ) )
-			{
-				
-				
-				int idealKitType = SURVIVAL_GetBestHealthPickupType( player, false )
-				Survival_CanUseHealthPack( player, idealKitType, true, true )
-				return
-			}
-		}
-		else
-		{
-			if ( !Survival_CanUseHealthPack( player, selectedPickupType, true, true ) )
-				return
-		}
-
-		Survival_UseHealthPack( player, SURVIVAL_Loot_GetHealthPickupRefFromType( selectedPickupType ) )
-	}
-}
-
-
-void function Survival_UseHealthPack( entity player, string ref )
-{
-	
-	
-
-	
-	LootData data = SURVIVAL_Loot_GetLootDataByRef( ref )
-	Remote_ServerCallFunction( "ClientCallback_Sur_UseHealthPack", data.index )
-}
-
-
-void function ServerToClient_OnStartedUsingHealthPack( int kitType )
-{
-	HealthPickup kitData = SURVIVAL_Loot_GetHealthKitDataFromStruct( kitType )
-	LootData lootData    = kitData.lootData
-
-	float waitScale
-	if ( PlayerHasPassive( GetLocalViewPlayer(), ePassives.PAS_FAST_HEAL ) && (kitData.healAmount > 0) )
-		waitScale = 0.5
-	else
-		waitScale = 1.0
-	float waitTime = (kitData.interactionTime * waitScale)
-
-	RuiSetBool( file.healthUseProgressRui, "isVisible", true )
-	RuiSetImage( file.healthUseProgressRui, "icon", lootData.hudIcon )
-
-	RuiSetGameTime( file.healthUseProgressRui, "startTime", Time() )
-	RuiSetGameTime( file.healthUseProgressRui, "endTime", Time() + waitTime )
+	Consumable_UseCurrentSelectedItem( player )
 }
 
 void function AttemptCancelHeal( entity player )
 {
 	if ( Survival_IsPlayerHealing( player ) )
-	{
-		if ( WeaponDrivenConsumablesEnabled() )
-		{
-			Consumable_CancelHeal( player )
-		}
-		else
-		{
-			RuiSetBool( file.healthUseProgressRui, "isVisible", false )
-			Remote_ServerCallFunction( "ClientCallback_Sur_CancelHeal" )
-		}
-	}
+		Consumable_CancelHeal( player )
+
 
 		TransportPortal_CancelUse()
 
@@ -423,11 +358,6 @@ void function AttemptCancelHeal( entity player )
 
 
 		Perk_QuickPackup_Cancel( player )
-
-
-
-
-
 
 }
 
@@ -1097,7 +1027,11 @@ void function UpdateLootRuiWithData( entity player, var rui, LootData data, int 
 
 	bool useCustomLootColor = false
 	bool useAltTextColor = false
-	if( data.ref == "expired_banners" )
+
+
+
+	if( data.ref == CRAFTED_BANNER_REF )
+
 	{
 		useCustomLootColor = true
 		RuiSetFloat3( rui, "customLootColor", SrgbToLinear( GetKeyColor( COLORID_HUD_HEAL_COLOR ) / 255.0 ) )
@@ -1690,6 +1624,26 @@ void function UpdateLootRuiWithData( entity player, var rui, LootData data, int 
 		}
 	}
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	if ( data.ref in s_customItemPromptUpdateCallbacks )
 		(s_customItemPromptUpdateCallbacks[data.ref])( player, rui, data, lootContext, lootRef, isInMenu )
 }
@@ -1700,9 +1654,15 @@ array<string> function SURVIVAL_Loot_GetUniqueWeaponNames( array<string> weaponR
 	array<string> uniqueNames
 	foreach ( index, weaponRef in weaponRefs )
 	{
-		string baseWeapon = Weapon_GetBaseClassNameOrEmpty( weaponRef )
-		if ( baseWeapon != "" )
-			continue
+
+
+
+
+		{
+			string baseWeapon = Weapon_GetBaseClassNameOrEmpty( weaponRef )
+			if ( baseWeapon != "" )
+				continue
+		}
 
 		string weaponName = GetWeaponInfoFileKeyField_GlobalString( weaponRef, "shortprintname" )
 		if ( uniqueNames.contains( weaponName ) )
@@ -1891,7 +1851,7 @@ void function ManageDeathBoxLoot()
 	}
 }
 
-void function ManageVerticalLines()
+void function ManageVerticalLines() 
 {
 	while ( true )
 	{
@@ -1913,6 +1873,10 @@ void function ManageVerticalLines()
 
 		array<entity> loot
 
+
+
+
+
 		int l
 		int v
 
@@ -1931,18 +1895,57 @@ void function ManageVerticalLines()
 			{
 				loot = GetSurvivalLootNearbyPos( org, VERTICAL_LINE_DIST_MAX, false, true, false, player )
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 				if ( useEntity != null )
 				{
 					bool showVerticalLineForUseEnt = true
 
-					int index = useEntity.GetSurvivalInt()
+
+
+					int index                      = useEntity.GetSurvivalInt()
 					if ( index >= 0 )
 					{
 						LootData data = SURVIVAL_Loot_GetLootDataByIndex( index )
-						if ( data.lootType == eLootType.COLLECTABLE_NESSIE )
-						{
-							showVerticalLineForUseEnt = false
-						}
+
+							if ( data.lootType == eLootType.COLLECTABLE_NESSIE )
+							{
+								showVerticalLineForUseEnt = false
+							}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 					}
 
 					if ( showVerticalLineForUseEnt )
@@ -1954,6 +1957,11 @@ void function ManageVerticalLines()
 
 						if ( useEntity == player.GetUsePromptEntity() )
 							width *= 3.0
+
+
+
+
+
 
 						float dist = Distance( useEntity.GetOrigin(), player.CameraPosition() ) / scalar
 						if ( LOOT_PING_DISTANCE > VERTICAL_LINE_DIST_MAX )
@@ -1973,45 +1981,107 @@ void function ManageVerticalLines()
 
 		while ( v < VERTICAL_LINE_COUNT )
 		{
-			if ( loot.len() > l )
-			{
-				entity item = loot[ l++ ]
 
-				if ( IsValid( item.GetParent() ) )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+			{
+				if ( loot.len() > l )
 				{
-					entity p = item.GetParent()
-					if ( p.IsPlayer() )
+					entity item = loot[ l++ ]
+
+					if ( IsValid( item.GetParent() ) )
+					{
+						entity p = item.GetParent()
+						if ( p.IsPlayer() )
+							continue
+
+						if ( p.GetTargetName() == DEATH_BOX_TARGETNAME )
+							continue
+					}
+
+					if ( IsValid( item ) && !item.DoesShareRealms( player ) )
 						continue
 
-					if ( p.GetTargetName() == DEATH_BOX_TARGETNAME )
+					if ( !PlayerCanSeePos( player, item.GetOrigin(), false, 65 ) )
 						continue
+
+					if ( PropSurvivalFlagsHas( item, ePropSurvivalFlag.HIDE_LOOT_LINE ) )
+						continue
+
+					vector fwd = AnglesToForward( player.CameraAngles() )
+					fwd = Normalize( < fwd.x, fwd.y, 0.0 > )
+					vector rgt = CrossProduct( fwd, <0, 0, 1> )
+
+					RuiTopology_UpdatePos( file.verticalLines[v].topo, item.GetRenderOrigin() - (0.5 * rgt * VERTICAL_LINE_WIDTH / scalar), rgt * VERTICAL_LINE_WIDTH / scalar, <0, 0, VERTICAL_LINE_HEIGHT> )
+					ShowVerticalLineStruct( file.verticalLines[v], item )
+
+					file.verticalLines[v].ent = item
+
+					v++
 				}
-
-				if ( IsValid( item ) && !item.DoesShareRealms( player ) )
-					continue
-
-				if ( !PlayerCanSeePos( player, item.GetOrigin(), false, 65 ) )
-					continue
-
-				if ( PropSurvivalFlagsHas( item, ePropSurvivalFlag.HIDE_LOOT_LINE ) )
-					continue
-
-				vector fwd = AnglesToForward( player.CameraAngles() )
-				fwd = Normalize( < fwd.x, fwd.y, 0.0 > )
-				vector rgt = CrossProduct( fwd, <0, 0, 1> )
-
-				RuiTopology_UpdatePos( file.verticalLines[v].topo, item.GetRenderOrigin() - (0.5 * rgt * VERTICAL_LINE_WIDTH / scalar), rgt * VERTICAL_LINE_WIDTH / scalar, <0, 0, VERTICAL_LINE_HEIGHT> )
-				ShowVerticalLineStruct( file.verticalLines[v], item )
-
-				file.verticalLines[v].ent = item
-
-				v++
-			}
-			else
-			{
-				file.verticalLines[v].ent = null
-				HideVerticalLineStruct( file.verticalLines[v] )
-				v++
+				else
+				{
+					file.verticalLines[v].ent = null
+					HideVerticalLineStruct( file.verticalLines[v] )
+					v++
+				}
 			}
 		}
 	}
@@ -2105,6 +2175,7 @@ void function TrackLootToPing( entity player )
 	player.EndSignal( "TrackLootToPing" )
 	player.EndSignal( "OnDeath" )
 	player.EndSignal( "OnDestroy" )
+	EndSignal( clGlobal.signalDummy, "SurvivalLoot_MoveToPodium" )
 
 	if ( !IsPingEnabledForPlayer( player ) )
 		return
@@ -2128,6 +2199,9 @@ void function TrackLootToPing( entity player )
 
 	while ( IsValid( player ) )
 	{
+		if ( GetGameState() >= eGameState.Resolution )
+			return
+
 		bool shouldLookForLoot = ( GetAimAssistCurrentTarget() == null &&
 									player.GetTargetInCrosshairRange() == null &&
 									!player.IsPhaseShifted() )
@@ -2190,6 +2264,14 @@ void function TrackLootToPing( entity player )
 				loot = GetSurvivalLootNearbyPos( player.EyePosition(), LOOT_PING_DISTANCE * GetFovScalar( player ), false, false, false, player )
 			else
 				loot = GetSurvivalLootNearbyPlayer( player, LOOT_PING_DISTANCE * GetFovScalar( player ), false, false, false )
+
+
+
+
+
+
+
+
 			file.crosshairEntity = GetEntityPlayerIsLookingAt( player, loot )
 		}
 		else
@@ -2201,9 +2283,10 @@ void function TrackLootToPing( entity player )
 
 		if ( IsValid( file.crosshairEntity ) )
 		{
+			LootData lootData = SURVIVAL_Loot_GetLootDataByIndex( file.crosshairEntity.GetSurvivalInt() )
+
 			if ( e.farRui == null )
 			{
-				LootData lootData = SURVIVAL_Loot_GetLootDataByIndex( file.crosshairEntity.GetSurvivalInt() )
 				switch ( lootData.lootType )
 				{
 					case eLootType.MAINWEAPON:
@@ -2223,6 +2306,38 @@ void function TrackLootToPing( entity player )
 			}
 
 			UpdateUseHintForEntity( file.crosshairEntity, e.farRui )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 		}
 		else
 		{
@@ -2261,7 +2376,6 @@ int function PlayerLookSort( PlayerLookAtItem entA, PlayerLookAtItem entB )
 entity function GetEntityPlayerIsLookingAt( entity player, array<entity> ents, float degrees = 8 )
 {
 	entity theEnt
-	float largestDot = -1.0
 
 	float playerFOVScalar = GetFovScalar( player )
 
@@ -2523,6 +2637,10 @@ string function CreateLootDevDisplayString( LootData data )
 
 	if ( data.baseMods.contains( WEAPON_LOCKEDSET_MOD_AKIMBO ) )
 		displayString = "[AKIMBO]/ AKIMBO " + displayString
+
+
+
+
 
 	return displayString
 }
@@ -2849,6 +2967,23 @@ void function ApplyEquipmentColorAndFXOverrides( entity prop )
 	}
 }
 
+
+asset function GetWeaponLootIcon_Square( LootData weaponData ) 
+{
+	asset icon = weaponData.hudIcon
+
+	
+	if ( weaponData.lootType != eLootType.MAINWEAPON )
+		return icon
+
+	bool showAkimboIcon = CanWeaponAkimbo( weaponData.baseWeapon ) && weaponData.baseMods.contains( WEAPON_LOCKEDSET_MOD_AKIMBO )
+	string iconField = showAkimboIcon ? "hud_icon_akimbo_square" : "hud_icon_square"
+
+	if ( IsWeaponKeyFieldDefined( weaponData.baseWeapon, iconField ) )
+		icon = GetWeaponInfoFileKeyFieldAsset_Global( weaponData.baseWeapon, iconField )
+
+	return icon
+}
 
 asset function GetWeaponLootIcon_WeaponLootHint( entity player, LootData weaponData ) 
 {

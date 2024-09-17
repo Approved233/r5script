@@ -292,6 +292,7 @@ void function SquadSummaryOnOpenPanel( var panel )
 	Hud_SetVisible( chatBoxContainer, true )
 	RunClientScript( "UICallback_ShowSquadSummary", headerElement, headerDataElement )
 
+	DeathScreenUpdateCursor()
 	SetMenuReceivesCommands( menu, false)
 }
 
@@ -308,6 +309,12 @@ void function SquadSummaryOnClosePanel( var panel )
 	RunClientScript( "UICallback_HideSquadSummary" )
 	RunClientScript( "SignalShowRoundEndSquadResults" )
 }
+
+
+
+
+
+
 
 
 

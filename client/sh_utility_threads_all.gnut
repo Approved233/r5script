@@ -1,0 +1,370 @@
+untyped
+globalize_all_functions
+
+global struct Timeout
+{
+	float startTime
+	float duration
+}
+
+global struct DebounceData
+{
+	float              lastRunTime = 0.0
+	bool               isQueued = false
+	void functionref() latestFunc
+}
+
+const int THROTTLE_DEFAULT_MAXPERINTERVAL = 1
+const float THROTTLE_DEFAULT_INTERVAL = 1.0
+global struct ThrottleData
+{
+	float lastProcessTime = 0.0
+	float decayingActionCount = 0
+	float interval = THROTTLE_DEFAULT_INTERVAL
+	int   maxPerInterval = THROTTLE_DEFAULT_MAXPERINTERVAL
+}
+
+global struct WaitQuotaItem
+{
+	int _count
+	int _budget
+}
+
+Timeout function BeginTimeout( float duration )
+{
+	Timeout to
+
+
+
+		to.startTime = Time()
+
+	to.duration = duration
+	thread __RunTimeoutInternal( to )
+	return to
+}
+
+
+void function __RunTimeoutInternal( Timeout to )
+{
+	EndSignal( to, "CancelTimeout" )
+	wait to.duration
+	Signal( to, "Timeout" )
+}
+
+
+void function CancelTimeoutIfAlive( Timeout to )
+{
+	Signal( to, "CancelTimeout" )
+}
+
+
+
+string function GetStack( int offset = 2 )
+{
+	string stackInfo = ""
+
+	for ( int i = offset; i < 20; i++ )
+	{
+		if ( !("src" in getstackinfos( i )) )
+			break
+
+		if ( i != offset )
+		{
+			stackInfo += "\n"
+		}
+
+		stackInfo += getstackinfos( i )["src"] + " [" + getstackinfos( i )["line"] + "], " + getstackinfos( i )["func"] + "()"
+	}
+
+	return stackInfo
+}
+
+string function GetPreviousFunction()
+{
+	int i = 3
+	if ( !("src" in getstackinfos( i )) )
+		return ""
+	return "Called from: " + getstackinfos( i )["src"] + " [" + getstackinfos( i )["line"] + "] : " + getstackinfos( i )["func"] + "() "
+}
+
+bool function IsThreadTop()
+{
+	return getstackinfos( 3 ) == null
+}
+
+
+string function ThisFunc()
+{
+	return expect string( expect table( getstackinfos( 2 ) )[ "func" ] )
+}
+
+
+bool function IsNewThread()
+{
+	int i
+	for ( i = 0 ; i < 20; i++ )
+	{
+		if ( !("src" in getstackinfos( i )) )
+			break
+	}
+
+	return (i == 3)
+}
+
+bool function CallingFuncIsNewThread()
+{
+	int i
+	for ( i = 0 ; i < 20; i++ )
+	{
+		if ( !("src" in getstackinfos( i )) )
+			break
+	}
+
+	const int CHECK_DEPTH = 4
+	return (i == CHECK_DEPTH)
+}
+
+
+void function AssertIsNewThread()
+{
+	Assert( CallingFuncIsNewThread(), "Must be threaded" )
+}
+
+
+void function WaitFrame()
+{
+	
+	wait 0.0001
+}
+
+
+void function WaitFrames( int frames )
+{
+	int framesRemaining = frames
+	while ( framesRemaining > 0 )
+	{
+		WaitFrame()
+		framesRemaining--
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+void function WaitForever()
+{
+
+
+
+
+		clGlobal.levelEnt.WaitSignal( "forever" )
+
+
+
+}
+
+
+void function Debounce( DebounceData data, float interval, void functionref() func )
+{
+	data.latestFunc = func
+
+	if ( data.isQueued )
+		return
+
+	thread __DebounceInternalThread( data, interval )
+}
+
+
+void function __DebounceInternalThread( DebounceData data, float interval )
+{
+	OnThreadEnd( void function() : ( data ) {
+		data.isQueued = false
+		data.latestFunc = null
+	} )
+
+	data.isQueued = true
+
+
+
+
+
+		wait max( 0.01, interval - (Time() - data.lastRunTime) )
+		data.lastRunTime = Time()
+
+	data.latestFunc()
+}
+
+
+ThrottleData function InitThrottle( float interval = THROTTLE_DEFAULT_INTERVAL, int maxPerInterval = THROTTLE_DEFAULT_MAXPERINTERVAL )
+{
+	ThrottleData data
+	data.interval = interval
+	data.maxPerInterval = maxPerInterval
+
+	return data
+}
+
+
+bool function Throttle( ThrottleData data )
+{
+
+
+
+
+		float timeSinceLastAction = Time() - data.lastProcessTime
+		data.lastProcessTime = Time()
+
+
+	data.decayingActionCount = max( 0.0, data.decayingActionCount - timeSinceLastAction / (data.interval / data.maxPerInterval) )
+	if ( data.decayingActionCount > data.interval )
+		return true
+
+	data.decayingActionCount += 1.0
+	return false
+}
+
+void function SetSignalDelayed( entity ent, string signal, float delay )
+{
+	thread __SetSignalDelayedThread( ent, signal, delay )
+}
+
+
+void function __SetSignalDelayedThread( entity ent, string signal, float delay )
+{
+	EndSignal( ent, signal )    
+
+	wait delay
+	if ( IsValid( ent ) )
+		Signal( ent, signal )
+}
+
+void function WaitSignals( var obj, array<string> signals )
+{
+	Assert( signals.len() > 0 )
+	waitthread __WaitSignalsInternal( obj, signals )
+}
+
+
+void function __WaitSignalsInternal( var obj, array<string> signals )
+{
+	foreach ( string signal in signals )
+		EndSignal( obj, signal )
+	WaitForever()
+}
+
+void function WaitEndSignal( var obj, string signal )
+{
+	waitthread __WaitEndSignalInternal( obj, signal )
+}
+
+
+void function __WaitEndSignalInternal( var obj, string signal )
+{
+	EndSignal( obj, signal )
+	WaitForever()
+}
+
+
+WaitQuotaItem function WaitFrameQuota_Init( int maxPerFrame )
+{
+	WaitQuotaItem wq
+	wq._count = 0
+	wq._budget = maxPerFrame
+	return wq
+}
+
+
+void function WaitFrameQuota_Reset( WaitQuotaItem wq )
+{
+	wq._count = 0
+}
+
+
+void function WaitFrameQuota( WaitQuotaItem wq )
+{
+	wq._count += 1
+	if ( wq._count < wq._budget )
+		return
+	wq._count = 0
+	WaitFrame()
+}
+
+
+void function WaittillAnimDone( entity animatingEnt )
+{
+	waitthread WaittillAnimDone_Thread( animatingEnt )
+}
+
+void function WaittillAnimDone_Thread( entity animatingEnt )
+{
+	if ( animatingEnt.IsPlayer() )
+		animatingEnt.EndSignal( "OnDestroy" )
+
+	animatingEnt.EndSignal( "OnAnimationInterrupted" )
+	animatingEnt.WaitSignal( "OnAnimationDone" )
+}
+
+void function WaitSignalOrTimeout( entity ent, float timeout, string signal1, string signal2 = "", string signal3 = "" )
+{
+	Assert( IsValid( ent ) )
+
+	ent.EndSignal( signal1 )
+
+	if ( signal2 != "" )
+		ent.EndSignal( signal2 )
+
+	if ( signal3 != "" )
+		ent.EndSignal( signal3 )
+
+	wait(timeout)
+}
+
+
+void function AddWaitMultipleSignal( table signalTable, string signalToWait, string signalToReturn )
+{
+	EndSignal( signalTable, signalToReturn )
+	WaitSignal( signalTable, signalToWait )
+
+	Signal( signalTable, signalToReturn, { addWaitSignal = signalToWait } )
+}
+
+
+string function GetWaitMultipleSignal( table signalTable, array<string> signalsToWait, string signalToReturn )
+{
+	foreach ( string signalToWait in signalsToWait )
+		thread AddWaitMultipleSignal( signalTable, signalToWait, signalToReturn )
+
+	table results = WaitSignal( signalTable, signalToReturn )
+
+	string finalSignal = expect string( results.addWaitSignal )
+	return finalSignal
+}
+
+
+void function AddWaitMultipleSignal_Entity( entity signalEnt, string signalToWait, string signalToReturn )
+{
+	EndSignal( signalEnt, signalToReturn )
+	WaitSignal( signalEnt, signalToWait )
+
+	Signal( signalEnt, signalToReturn, { addWaitSignal = signalToWait } )
+}
+
+
+string function GetWaitMultipleSignal_Entity( entity signalEnt, array<string> signalsToWait, string signalToReturn )
+{
+	foreach ( string signalToWait in signalsToWait )
+		thread AddWaitMultipleSignal_Entity( signalEnt, signalToWait, signalToReturn )
+
+	table results = WaitSignal( signalEnt, signalToReturn )
+
+	string finalSignal = expect string( results.addWaitSignal )
+	return finalSignal
+}
+

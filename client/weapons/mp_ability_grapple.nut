@@ -202,6 +202,13 @@ void function CodeCallback_OnGrappleAttach( entity player, entity hitent, vector
 
 
 
+
+
+
+
+
+
+
 	
 	{
 		if ( !IsValid( player ) )
@@ -261,18 +268,13 @@ void function GrappleDecreaseAmmo( entity player, entity grappleWeapon )
 	info.distanceTraveled_z = 0.0
 
 	float startTime = Time()
-	float fireDuration = grappleWeapon.GetWeaponSettingFloat( eWeaponVar.fire_duration )
 
 	int maxAmmo = grappleWeapon.GetWeaponSettingInt( eWeaponVar.ammo_min_to_fire )
 	int startAmmo = grappleWeapon.GetWeaponPrimaryClipCount()
 
-	{
-		int amountToReduce = file.grappleDrainBaseCost
-
-		grappleWeapon.SetWeaponPrimaryClipCount( 0 )
-		grappleWeapon.AddMod( "grapple_regen_stop" )
-		grappleWeapon.RegenerateAmmoReset()
-	}
+	grappleWeapon.SetWeaponPrimaryClipCount( 0 )
+	grappleWeapon.AddMod( "grapple_regen_stop" )
+	grappleWeapon.RegenerateAmmoReset()
 
 	OnThreadEnd(
 		function() : ( player, info, startAmmo, maxAmmo, grappleWeapon )
@@ -281,6 +283,11 @@ void function GrappleDecreaseAmmo( entity player, entity grappleWeapon )
 			{
 				if ( IsValid( grappleWeapon ) )
 				{
+
+						if ( grappleWeapon.GetWeaponOwner() != player || !IsLocalViewPlayer( player ) )
+							return
+
+
 					if ( grappleWeapon.GetWeaponPrimaryClipCount() > 10 )
 					{
 

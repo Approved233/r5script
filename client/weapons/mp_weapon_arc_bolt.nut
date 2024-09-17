@@ -53,7 +53,7 @@ const asset ARC_BOLT_TETHER_RADIUS_FX = $"P_ash_arcbolt_tether_radius"
 const asset ARC_BOLT_TETHER_SCREEN_FX = $"P_ash_tether_screen_edge"    
 const asset ARC_BOLT_TETHER_INDICATOR_FX = $"P_ash_tether_indicator_cp10"  
 const asset ARC_BOLT_TETHER_BREAK_CORE = $"P_emp_body_human"
-const asset ARC_BOLT_TETHER_BREAK_SNAP = $"P_tesla_trap_dmg"
+const asset ARC_BOLT_TETHER_BREAK_SNAP = $"P_tether_snap_break"
 
 const asset ARC_BOLT_TETHER_ANCHOR = $"mdl/weapons_r5/misc_ash_glaive/ash_glaive_solo_fx.rmdl"
 
@@ -426,6 +426,8 @@ float function GetBoltLifetime( entity player )
 
 	return result
 }
+
+
 
 
 

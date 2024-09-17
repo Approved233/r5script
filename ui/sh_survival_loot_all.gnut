@@ -8,11 +8,14 @@ global function SURVIVAL_Loot_IsRefValid
 global function SURVIVAL_Loot_IsRefDisabled
 global function SURVIVAL_Loot_IsReforBaseWeaponDisabled
 global function SURVIVAL_Loot_AddDisabledRef
+global function SURVIVAL_Loot_RemoveDisabledRef
 global function SURVIVAL_Loot_GetByType
 global function SURVIVAL_Loot_GetLootTypeFromString
 global function SURVIVAL_Loot_GetAttachmentType_Enum
 global function SURVIVAL_Loot_GetByTier
 global function SURVIVAL_Loot_GetSortedStringArrayFromSupportedAttachmentsString
+global function SURVIVAL_Loot_AddCallback_LootFinalized
+global function SURVIVAL_Loot_RemoveCallback_LootFinalized
 
 
 
@@ -59,6 +62,10 @@ global function DEV_PrintDisabledLoot
 
 global function GetFXRarityColorForTier 
 global function GetFXRarityColorForUnlockable 
+
+
+
+
 
 
 
@@ -324,6 +331,7 @@ struct
 		array< OverrideDeathBoxRUI_NetworkOptimizedStruct >              handcraftedProfilesMasterList 
 
 
+	array<void functionref( )> lootFinalizedCallbacks
 
 	array<string functionref( string, entity , string)> editLootDescCallbacks
 
@@ -718,7 +726,24 @@ void function SURVIVAL_Loot_All_InitShared()
 
 	SURVIVAL_Loot_InitRestrictedLoot()
 
+	
+	foreach ( func in file.lootFinalizedCallbacks )
+	{
+		func( )
+	}
+
 	file.initialized = true
+}
+
+void function SURVIVAL_Loot_AddCallback_LootFinalized( void functionref( ) callback )
+{
+	Assert( !file.lootFinalizedCallbacks.contains( callback ), "Tried to add a callback that was already added" )
+	file.lootFinalizedCallbacks.append( callback )
+}
+void function SURVIVAL_Loot_RemoveCallback_LootFinalized( void functionref( ) callback )
+{
+	Assert( file.lootFinalizedCallbacks.contains( callback ), "Tried to remove a callback that was not added" )
+	file.lootFinalizedCallbacks.fastremovebyvalue( callback )
 }
 
 
@@ -1049,6 +1074,15 @@ void function SURVIVAL_Loot_AddDisabledRef( string ref )
 	if ( !file.disabledRefs.contains( ref ) )
 	{
 		file.disabledRefs.append( ref )
+	}
+}
+
+void function SURVIVAL_Loot_RemoveDisabledRef( string ref )
+{
+	int index = file.disabledRefs.find( ref )
+	if ( index >= 0 )
+	{
+		file.disabledRefs.fastremove( index )
 	}
 }
 
@@ -1743,6 +1777,21 @@ void function SURVIVAL_Loot_InitRestrictedLoot()
 
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

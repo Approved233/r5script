@@ -944,9 +944,18 @@ void function UICallback_PingUpgrade( var button )
 	RunUIScript( "ClientToUI_SurvivalQuickInventory_MarkInventoryButtonPinged", button )
 	Remote_ServerCallFunction( "ClientCallback_QuickchatSubject_Player", eCommsAction.PING_XP_LEVEL_UP_ABILITY, eCommsFlags.NONE, player )
 }
-void function UIToClient_PingUpgrade()
+void function UIToClient_PingUpgrade( int upgradeIndex )
 {
-	Remote_ServerCallFunction( "ClientCallback_QuickchatSubject_Player", eCommsAction.PING_XP_LEVEL_UP_ABILITY, eCommsFlags.NONE, GetLocalClientPlayer() )
+	entity player    = GetLocalClientPlayer()
+	bool isSelected = UpgradeCore_IsUpgradeSelected( player, upgradeIndex )
+	if( isSelected )
+	{
+		Remote_ServerCallFunction( "ClientCallback_QuickchatSubject_Player", eCommsAction.PING_HAS_UPGRADE_0 + upgradeIndex, eCommsFlags.NONE, GetLocalClientPlayer() )
+	}
+	else if( UpgradeCore_IsUpgradeSelectable( player, upgradeIndex ) )
+	{
+		Remote_ServerCallFunction( "ClientCallback_QuickchatSubject_Player", eCommsAction.PING_XP_LEVEL_UP_ABILITY, eCommsFlags.NONE, GetLocalClientPlayer() )
+	}
 }
 
 
@@ -1394,9 +1403,7 @@ void function UICallback_UpdateEquipmentButton( var button )
 		RuiSetInt( rui, "skinTier", 0 )
 		RuiSetInt( rui, "count", 0 )
 
-
-			RuiSetBool( rui, "isPaintballWeapon", false )
-
+		ClearWeaponBrand( rui )
 
 		entity weapon = player.GetNormalWeapon( es.weaponSlot )
 
@@ -1419,8 +1426,10 @@ void function UICallback_UpdateEquipmentButton( var button )
 			RuiSetString( rui, "weaponName", data.pickupString )
 
 
-				if ( weapon.HasMod( WEAPON_LOCKEDSET_MOD_PAINTBALL ) )
-					RuiSetBool( rui, "isPaintballWeapon", true )
+				TrySetWeaponBrand_Paintball( rui, weapon )
+
+
+
 
 
 			ItemFlavor ornull weaponItemOrNull = GetWeaponItemFlavorByClass( weapon.GetWeaponClassName() )
@@ -2668,19 +2677,10 @@ bool function ShouldShowUltHint( entity player )
 
 void function UseHealthPickupRefFromInventory( entity player, string ref )
 {
-	if ( WeaponDrivenConsumablesEnabled() )
-	{
-		Consumable_UseItemByRef( player, ref )
-	}
-	else
-	{
-		int itemType = SURVIVAL_Loot_GetHealthPickupTypeFromRef( ref )
+	if ( !( player == GetLocalClientPlayer() && player == GetLocalViewPlayer() ) )
+		return
 
-		if ( !Survival_CanUseHealthPack( player, itemType ) )
-			return
-
-		Survival_UseHealthPack( player, ref )
-	}
+	Consumable_UseItemByRef( player, ref )
 }
 
 
@@ -3343,6 +3343,9 @@ void function TEMP_UpdatePlayerRui( var rui, entity player )
 				else if ( equipSlot == "armor" && data.ref == "" )
 				{
 					RuiSetBool( rui, "isEvolvingShield", false )
+
+						RuiSetBool( rui, "showProgressMeter",  UpgradeCore_ArmorTiedToUpgrades() && UpgradeCore_ShowUpgradesUnitframe() )
+
 				}
 
 				if ( es.unitFrameTierVar != "" )
@@ -3431,8 +3434,6 @@ void function TEMP_UpdateTeammateRui( var elem, bool isCompact )
 			player.EndSignal( "Control_PlayerHasChosenRespawn" )
 		}
 
-
-	bool weaponDrivenConsumables = WeaponDrivenConsumablesEnabled()
 
 	while ( true )
 	{
@@ -3601,7 +3602,9 @@ void function TEMP_UpdateTeammateRui( var elem, bool isCompact )
 				vector shieldTierColor = GetKeyColor( COLORID_TEXT_LOOT_TIER0, GetPlayerExtraShieldsTier( player ) ) / 255.0
 				RuiSetFloat3( rui, "playerShieldTierColor", shieldTierColor )
 			}
+			else
 
+				RuiSetBool( rui, "showProgressMeter", false )
 
 			bool showBleedoutTimer = true
 

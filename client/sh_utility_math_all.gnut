@@ -1,0 +1,507 @@
+globalize_all_functions
+
+global const float FLOAT_INFINITY = 3.40282e+38 + 3.40282e+38
+global const float FLOAT_INDETERMINATE = FLOAT_INFINITY * 0.0
+global const float FLOAT_NAN = -FLOAT_INDETERMINATE
+
+global const float DEG_TO_RAD = 0.01745329251994 
+global const float RAD_TO_DEG = 57.29577951308232 
+
+global const float DOT_1DEGREE =	0.9998476951564
+global const float DOT_2DEGREE =	0.9993908270191
+global const float DOT_3DEGREE =	0.9986295347546
+global const float DOT_4DEGREE =	0.9975640502598
+global const float DOT_5DEGREE =	0.9961946980917
+global const float DOT_6DEGREE =	0.9945218953683
+global const float DOT_7DEGREE =	0.9925461516413
+global const float DOT_8DEGREE =	0.9902680687416
+global const float DOT_9DEGREE =	0.9876883405951
+global const float DOT_10DEGREE =	0.9848077530122
+global const float DOT_15DEGREE =	0.9659258262891
+global const float DOT_20DEGREE =	0.9396926207859
+global const float DOT_25DEGREE =	0.9063077870367
+global const float DOT_30DEGREE =	0.866025403784
+global const float DOT_45DEGREE =	0.707106781187
+global const float DOT_50DEGREE =	0.64278760968
+global const float DOT_60DEGREE =	0.5
+global const float DOT_80DEGREE =	0.17364817766
+global const float DOT_85DEGREE =	0.0871557427477
+
+global struct ShuffleData
+{
+	array<int> _indices
+	int        _pos
+}
+
+bool function IsOdd( int num )
+{
+	return (num % 2) == 1
+}
+
+bool function IsEven( int num )
+{
+	return !IsOdd( num )
+}
+
+bool function IsEqualFloat( float left, float right )
+{
+	return fabs( left - right ) < FLT_EPSILON
+}
+
+float function Round( float num, float decimalPoints )
+{
+	float retVal = num
+	if ( decimalPoints >= 0 )
+	{
+		float factor = pow(10, decimalPoints)
+		retVal *= factor
+		retVal = floor( retVal + 0.5 )
+		retVal /= factor
+
+	}
+	return retVal
+}
+
+float function RoundToNearestInt( float value )
+{
+	return floor( value + 0.5 )
+}
+
+float function RoundToNearestMultiplier( float value, float multiplier )
+{
+	Assert( multiplier > 0 )
+	bool neg = value < 0
+	value = fabs( value )
+
+	float remainder = value % multiplier
+
+	value -= remainder
+
+	if ( remainder >= (multiplier / 2) )
+		value += multiplier
+
+	return neg ? -value : value
+}
+
+float function DegToRad( float degrees )
+{
+	return degrees * DEG_TO_RAD
+}
+
+float function RadToDeg( float radians )
+{
+	return radians * RAD_TO_DEG
+}
+
+float function RadWrap( float ang, float lowValue = -PI )
+{
+	return ((ang - lowValue) % (2.0 * PI)) + lowValue
+}
+
+float function GetArcLengthDeg( float startDeg, float endDeg )
+{
+	if ( endDeg < startDeg )
+		endDeg += 360
+
+	return fabs( startDeg - endDeg )
+}
+
+bool function CirclesAreIntersecting( vector org1, float rad1, vector org2, float rad2 )
+{
+	float distBetweenCircles = Distance( org1, org2 )
+	float epsilon = 1
+
+	
+	if ( distBetweenCircles < fabs( rad1 - rad2 ) + epsilon )
+		return false
+	else if ( distBetweenCircles < fabs( rad2 - rad1 ) + epsilon )
+		return false
+
+	
+	else if ( distBetweenCircles == 0 && rad2 == rad1 )
+		return false
+
+	
+	else if ( distBetweenCircles > ( rad1 + rad2 + epsilon ) )
+		return false
+
+	return true
+}
+
+bool function IsCircleAEncompassingCircleB( vector org1, float rad1, vector org2, float rad2 )
+{
+	float epsilon
+	float distBetweenCircles = Distance( org1, org2 )
+	if ( ( distBetweenCircles < fabs( rad1 - rad2 ) + epsilon ) && ( rad1 > rad2 ) )
+		return true
+
+	return false
+}
+
+array<vector> function GetCircleToCircleIntersectionPoints( vector org1, float rad1, vector org2, float rad2, vector up = < 0, 0, 1 >, bool debugDraw = false )
+{
+	float distBetweenCircles        = Distance( org1, org2 )
+	float distOrg1ToIntersectCenter = ( ( rad1 * rad1 ) - ( rad2 * rad2 ) + ( distBetweenCircles * distBetweenCircles ) ) / ( 2.0 * distBetweenCircles )
+
+	vector intersectDir    = Normalize( org2 - org1 )
+	vector intersectCenter = intersectDir * distOrg1ToIntersectCenter
+
+	float intersectHeight = sqrt( ( rad1 * rad1 ) - ( distOrg1ToIntersectCenter * distOrg1ToIntersectCenter ) )
+	vector heightDir      = CrossProduct( up, intersectDir )
+
+	array<vector> intersectionPoints = [ intersectCenter + ( heightDir * intersectHeight ), intersectCenter - ( heightDir * intersectHeight ) ]
+
+	if ( debugDraw )
+	{
+
+			
+			DebugDrawLine( org1, org1 + < 0, 0, 32 >, COLOR_RED, true, 1.0 )
+			DebugDrawLine( org2, org2 + < 0, 0, 32 >, COLOR_GREEN, true, 1.0 )
+
+			
+			DebugDrawLine( org2, intersectionPoints[ 0 ] + org1, COLOR_WHITE, true, 1.0 )
+			DebugDrawLine( org2, intersectionPoints[ 1 ] + org1, COLOR_BLACK, true, 1.0 )
+
+	}
+
+	return intersectionPoints
+}
+
+float function LerpFloat( float startValue, float endValue, float time )
+{
+	return ((1 - time) * startValue + time * endValue)
+}
+
+
+
+float function EaseIn( float val )
+{
+	return AttackDecay( 0, 2, val )
+}
+
+
+float function EaseOut( float val )
+{
+	return AttackDecay( 2, 0, val )
+}
+
+float function AttackDecay( float attack, float decay, float time )
+{
+	float sum = attack + decay
+	float a   = sum - 2.0
+	float b   = (3.0 - attack) - sum
+	float c   = attack
+	float t   = max( min( time, 1.0 ), 0.0 )
+
+	return t * (c + t * (b + t * a))
+}
+
+
+
+
+
+
+
+
+
+float function Tween_Linear( float frac )
+{
+	Assert( frac >= 0.0 && frac <= 1.0 )
+	return frac
+}
+
+
+float function Tween_QuadEaseOut( float frac )
+{
+	Assert( frac >= 0.0 && frac <= 1.0 )
+	return -1.0 * frac * (frac - 2)
+}
+
+
+float function Tween_ExpoEaseOut( float frac )
+{
+	Assert( frac >= 0.0 && frac <= 1.0 )
+	return -pow( 2.0, -10.0 * frac ) + 1.0
+}
+
+
+float function Tween_QuadEaseIn( float frac )
+{
+	return 1 * frac * frac
+}
+
+
+float function Tween_QuadEaseInOut( float frac )
+{
+	frac *= 2
+	if ( frac < 1 )
+		return 0.5 * frac * frac
+	frac--
+	return -0.5 * frac * (frac - 2) + 0.5
+}
+
+
+float function Tween_ExpoEaseIn( float frac )
+{
+	Assert( frac >= 0.0 && frac <= 1.0 )
+	return pow( 2, 10 * (frac - 1) )
+}
+
+float function GetFraction( float value, float min, float max )
+{
+	return ( value - min ) / ( max - min )
+}
+
+float function GetFractionClamped( float value, float min, float max )
+{
+	float frac = GetFraction( value, min, max )
+	return clamp( frac, 0.0, 1.0 )
+}
+
+float function GetValueFromFraction( float value, float value_min, float value_max, float return_min, float return_max )
+{
+	float frac = GetFractionClamped( value, value_min, value_max )
+	float retVal = return_min + ( ( return_max - return_min ) * frac )
+	return clamp( retVal, return_min, return_max )
+}
+
+float function Clamp( float value, float minValue, float maxValue )
+{
+	return max( min( value, maxValue ), minValue )
+}
+
+
+float function ClampFloor( float value, float floor )
+{
+	return max( value, floor )
+}
+
+
+float function ClampCeiling( float value, float ceiling )
+{
+	return min( value, ceiling )
+}
+
+int function ClampInt( int value, int minValue, int maxValue )
+{
+	return maxint( minint( value, maxValue ), minValue )
+}
+
+
+int function ClampFloorInt( int value, int floor )
+{
+	return maxint( value, floor )
+}
+
+
+int function ClampCeilingInt( int value, int ceiling )
+{
+	return minint( value, ceiling )
+}
+
+float function real_float_modulo( float x, float n )
+{
+	return ((x % n) + n) % n
+}
+
+
+int function real_int_modulo( int x, int n )
+{
+	return ((x % n) + n) % n
+}
+
+bool function CoinFlip()
+{
+	return RandomInt( 2 ) != 0
+}
+
+
+
+
+void function Shuffle_Init( ShuffleData sd, int count )
+{
+	Assert( count > 0 )
+	sd._indices.resize( count )
+	for ( int idx = 0; idx < count; ++idx )
+		sd._indices[idx] = idx
+
+	sd._pos = count
+}
+
+
+int function Shuffle_GetNextIndex( ShuffleData sd )
+{
+	Assert( sd._indices.len() > 0 )
+
+	array<int> idxs = sd._indices
+	int count       = idxs.len()
+	if ( count == 1 )
+		return idxs[0]
+
+	++(sd._pos)
+	if ( sd._pos >= count )
+	{
+		int lastIndexPlayed = ((sd._pos == count) ? idxs.top() : -1)
+		idxs.randomize()
+		if ( idxs[0] == lastIndexPlayed )
+			idxs.reverse()    
+
+		sd._pos = 0
+	}
+
+	return idxs[sd._pos]
+}
+
+
+int function Shuffle_GetCount( ShuffleData sd )
+{
+	return sd._indices.len()
+}
+
+var function GetRandomWeighted( ... )
+{
+	Assert( int(vargc) % 2 == 0, "Must pass pairs to GetRandomWeighted!" )
+	float total = 0.0
+	for ( int argIdx = 0; argIdx < vargc; argIdx += 2 )
+		total += expect float(vargv[argIdx + 0])
+
+	float choice = RandomFloat( total )
+	total = 0.0
+	for ( int argIdx = 0; argIdx < vargc; argIdx += 2 )
+	{
+		total += expect float(vargv[argIdx + 0])
+		if ( choice < total )
+			return vargv[argIdx + 1]
+	}
+
+	Assert( false )
+	return null
+}
+
+float function GetAverageValueInArray( array<float> values )
+{
+	Assert( values.len() > 0, "Can not get average of empty float array" )
+	float sum
+	foreach ( float value in values )
+		sum += value
+	return (sum / values.len())
+}
+
+
+float function CalculateFloatArrayVarianceWithGivenPercentile( array<float> inArr, float percentile )
+{
+	array<float> arr = inArr
+	arr.sort()
+
+	
+	int maxIndex = int( percentile * arr.len() )
+
+	float average = 0
+	for( int i = 0; i < maxIndex; i++ )
+	{
+		average += arr[i]
+	}
+
+	average /= maxIndex
+
+	float sumOfSquares = 0
+	for( int i = 0; i < maxIndex; i++ )
+	{
+		float deviationFromAvg = arr[i] - average
+		sumOfSquares += ( deviationFromAvg * deviationFromAvg )
+	}
+
+	return sumOfSquares / maxIndex
+}
+
+float function CalculateIntArrayVarianceWithGivenPercentile( array<int> inArr, float percentile )
+{
+	array<int> arr = inArr
+	arr.sort()
+
+	
+	int maxIndex = int( 0.9 * arr.len() )
+
+	float average = 0
+	for( int i = 0; i < maxIndex; i++ )
+	{
+		average += float( arr[i] )
+	}
+
+	average /= maxIndex
+
+	float sumOfSquares = 0
+	for( int i = 0; i < maxIndex; i++ )
+	{
+		float deviationFromAvg = ( float( arr[i] ) - average )
+		sumOfSquares += ( deviationFromAvg * deviationFromAvg )
+	}
+
+	return sumOfSquares / maxIndex
+}
+
+
+
+
+
+
+float function EvaluatePolynomial( float x, array<float> coefficientArray )
+{
+	float sum = 0.0
+
+	for ( int i = 0; i < coefficientArray.len() - 1; ++i )
+		sum += coefficientArray[ i ] * pow( x, coefficientArray.len() - 1 - i )
+
+	if ( coefficientArray.len() >= 1 )
+		sum += coefficientArray[ coefficientArray.len() - 1 ]
+
+	return sum
+}
+
+int function RandomWeightedIndex( array Array )
+{
+	int count = Array.len()
+	Assert( count != 0, "Array is empty" )
+
+	int sum     = int( (count * (count + 1)) / 2.0 )        
+	int randInt = RandomInt( sum )
+	for ( int i = 0; i < count; i++ )
+	{
+		int rangeForThisIndex = count - i
+		if ( randInt < rangeForThisIndex )
+			return i
+
+		randInt -= rangeForThisIndex
+	}
+
+	Assert( false )
+	unreachable
+}
+
+
+
+int function SortLowestFloat( float a, float b )
+{
+	if ( a > b )
+		return 1
+
+	if ( a < b )
+		return -1
+
+	return 0
+}
+
+
+int function SortLowestInt( int a, int b )
+{
+	if ( a > b )
+		return 1
+
+	if ( a < b )
+		return -1
+
+	return 0
+}
+
+
+

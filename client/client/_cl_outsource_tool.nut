@@ -489,10 +489,10 @@ void function RefreshSkinItemFlavorsForCurrentAsset()
 			switch ( ItemFlavor_GetType( currentAsset ) )
 			{
 				case eItemType.character:
-					file.availableAssetSkins = clone GetValidItemFlavorsForLoadoutSlot( EHI_null, Loadout_CharacterSkin( currentAsset ) )
+					file.availableAssetSkins = clone GetValidItemFlavorsForLoadoutSlot( Loadout_CharacterSkin( currentAsset ) )
 					break
 				case eItemType.loot_main_weapon:
-					file.availableAssetSkins = clone GetValidItemFlavorsForLoadoutSlot( EHI_null, Loadout_WeaponSkin( currentAsset ) )
+					file.availableAssetSkins = clone GetValidItemFlavorsForLoadoutSlot( Loadout_WeaponSkin( currentAsset ) )
 					break
 				default:
 					Warning( "Art Viewer - Unhandled flavor type" )
@@ -1020,7 +1020,7 @@ void function UpdateCharacterSkin()
 
 	
 	LoadoutEntry defaultLoadoutSkin = Loadout_CharacterSkin( file.availableAssets[ file.currentAsset ] )
-	ItemFlavor defaultFlavor = GetDefaultItemFlavorForLoadoutSlot( EHI_null, defaultLoadoutSkin )
+	ItemFlavor defaultFlavor = GetDefaultItemFlavorForLoadoutSlot( defaultLoadoutSkin )
 	file.viewerBaseSkinModel.SetModel( CharacterSkin_GetBodyModel( defaultFlavor ) )
 
 	file.modelMover.SetOrigin( GetViewerModelRotatePoint() )
@@ -1042,7 +1042,7 @@ void function UpdateWeaponSkin()
 	}
 
 	ItemFlavor skinToApply = file.availableAssetSkins[ file.currentAssetSkin ]
-	ItemFlavor baseSkin = GetDefaultItemFlavorForLoadoutSlot( EHI_null, Loadout_WeaponSkin( file.availableAssets[ file.currentAsset ] ) )
+	ItemFlavor baseSkin = GetDefaultItemFlavorForLoadoutSlot( Loadout_WeaponSkin( file.availableAssets[ file.currentAsset ] ) )
 
 	file.viewerModel.Show()
 	if ( IsValid( file.viewerCharmModel ) )

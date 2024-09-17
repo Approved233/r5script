@@ -876,7 +876,12 @@ bool function HoverVehicle_IsVehicleEmpty( entity vehicle )
 
 bool function VehicleCanUseEntityCallback( entity player, entity vehicle, int useFlags )
 {
-	if ( Bleedout_IsBleedingOut( player ) )
+	bool checkBleedout = true
+
+
+
+
+	if ( checkBleedout && Bleedout_IsBleedingOut( player ) )
 		return false
 	if ( player.ContextAction_IsActive() )
 		return false
@@ -884,7 +889,7 @@ bool function VehicleCanUseEntityCallback( entity player, entity vehicle, int us
 		return false
 	if ( player.IsJetDriveActive() )
 		return false
-	if ( !PlayerCommonItemPickupCheck( player ) )
+	if ( !PlayerCommonItemPickupCheck( player, 0, checkBleedout ) )
 		return false
 	if ( !VehicleHasRoomForNormalOccupants( vehicle ) )
 		return false
@@ -929,6 +934,22 @@ array<entity> function HoverVehicle_GetExtendedPlayerArray( entity vehicle )
 
 	return results
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1783,6 +1804,15 @@ void function ManageHudForDriver( entity vehicle, entity player )
 
 
 		} )
+
+
+
+
+
+
+
+
+
 
 
 

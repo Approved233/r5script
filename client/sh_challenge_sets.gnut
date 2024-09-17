@@ -7,8 +7,8 @@ global function ChallengeCollection_GetRegisteredCollections
 global function ChallengeCollection_GetActiveCollections
 global function ChallengeCollection_GetByGUID
 global function ChallengeCollection_GetAllChallengeSets
-global function ChallengeCollection_GetMainChallenge
-global function ChallengeCollection_GetAllMainChallenges
+global function ChallengeCollectionFlav_GetMetaChallenge
+global function ChallengeCollection_GetAllMetaChallenges
 global function ChallengeCollection_GetAllChallenges
 global function ChallengeCollection_GetFirstActiveForMetaChallenge
 global function ChallengeCollection_HasChallenges
@@ -24,7 +24,7 @@ global function ChallengeCollection_GetEndTime
 global function ChallengeSet_GetByGUID
 global function ChallengeSet_GetUnlockConditions
 global function ChallengeSet_IsUnlockedForPlayer
-global function ChallengeSet_GetMainChallenge
+global function ChallengeSetFlav_GetMetaChallenge
 global function ChallengeSet_GetChallenges
 global function ChallengeSet_GetProgress
 global function ChallengeSet_IsComplete
@@ -40,10 +40,11 @@ global function ChallengeSet_MeetsUnlockCompletionRequirements
 
 
 
+
 global struct ChallengeSet
 {
-	ItemFlavor&         itemFlav 
-	ItemFlavor&         mainChallenge 
+	ItemFlavor&            itemFlav 
+	ItemFlavor ornull   metaChallenge 
 	ItemFlavor ornull   parentCollection
 	ChallengeSet ornull	prevLinkInChain
 	ChallengeSet ornull	nextLinkInChain
@@ -54,13 +55,12 @@ global struct ChallengeSet
 	int personalUnlockHour = -1
 	bool requiresPriorSetMetaCompletion = false
 	int metaSetCompletionPercentage = 0
-	int spanKind
 }
 
 global struct ChallengeCollection
 {
 	ItemFlavor&           itemFlav 
-	ItemFlavor&           mainChallenge 
+	ItemFlavor ornull     metaChallenge 
 	array< ChallengeSet > challengeSets
 
 	int baseAvailabilitySeconds = 0
@@ -162,8 +162,7 @@ void function RegisterChallengeCollectionFlavs( ItemFlavor challengeCollectionIt
 
 	ChallengeCollection challengeCollection
 	challengeCollection.itemFlav      = challengeCollectionItemFlav
-	challengeCollection.mainChallenge = RegisterMainChallenge( challengeCollectionAsset, collectionGUID )
-	int timeSpan = Challenge_GetTimeSpanKind ( challengeCollection.mainChallenge )
+	challengeCollection.metaChallenge = RegisterMetaChallenge( challengeCollectionAsset, collectionGUID )
 
 	challengeCollection.hasGlobalTimestamps = GetGlobalSettingsBool( challengeCollectionAsset, "hasGlobalTimer" )
 	challengeCollection.hasPersonalTimestamps = GetGlobalSettingsBool( challengeCollectionAsset, "hasPersonalTimer" )
@@ -188,7 +187,6 @@ void function RegisterChallengeCollectionFlavs( ItemFlavor challengeCollectionIt
 
 		ChallengeSet challengeSet = RegisterChallengeSetData( challengeSetFlav, challengeCollection )
 		challengeSet.parentCollection = challengeCollectionItemFlav
-		challengeSet.spanKind = timeSpan
 
 		if ( challengeCollection.hasGlobalTimestamps )
 		{
@@ -230,15 +228,19 @@ void function RegisterChallengeCollectionFlavs( ItemFlavor challengeCollectionIt
 	file.challengeCollections[ collectionGUID ] <- challengeCollection
 }
 
-ItemFlavor function RegisterMainChallenge( asset challengeCollectionOrSetAsset, SettingsAssetGUID parentGUID )
+ItemFlavor ornull function RegisterMetaChallenge( asset challengeCollectionOrSetAsset, SettingsAssetGUID parentGUID )
 {
-	
-	ItemFlavor ornull mainChallenge = RegisterItemFlavorFromSettingsAsset( GetGlobalSettingsAsset( challengeCollectionOrSetAsset, "mainChallengeFlav" ) )
-	Assert( mainChallenge != null, format( "Challenge Collection/Set '%i' does not have a valid mainChallenge", parentGUID ) )
-	expect ItemFlavor( mainChallenge )
-	Assert( ItemFlavor_GetType( mainChallenge ) == eItemType.challenge )
+	asset metaChallengeAsset = GetGlobalSettingsAsset( challengeCollectionOrSetAsset, "mainChallengeFlav" )
+	if ( metaChallengeAsset != $"" )
+	{
+		ItemFlavor ornull metaChallenge = RegisterItemFlavorFromSettingsAsset( GetGlobalSettingsAsset( challengeCollectionOrSetAsset, "mainChallengeFlav" ) )
+		Assert( metaChallenge != null, format( "Challenge Collection/Set '%i' does not have a valid mainChallenge", parentGUID ) )
+		expect ItemFlavor( metaChallenge )
+		Assert( ItemFlavor_GetType( metaChallenge ) == eItemType.challenge )
+		return metaChallenge
+	}
 
-	return mainChallenge
+	return null
 }
 
 ChallengeSet function RegisterChallengeSetData( ItemFlavor challengeSetFlav, ChallengeCollection parentCollection )
@@ -246,7 +248,7 @@ ChallengeSet function RegisterChallengeSetData( ItemFlavor challengeSetFlav, Cha
 	asset challengeSetAsset = ItemFlavor_GetAsset( challengeSetFlav )
 	ChallengeSet challengeSet
 	challengeSet.itemFlav      = challengeSetFlav
-	challengeSet.mainChallenge = RegisterMainChallenge( challengeSetAsset, ItemFlavor_GetGUID( challengeSetFlav ) )
+	challengeSet.metaChallenge = RegisterMetaChallenge( challengeSetAsset, ItemFlavor_GetGUID( challengeSetFlav ) )
 
 	int sortOrdinal = 0
 	foreach ( var challengeData in IterateSettingsAssetArray( challengeSetAsset, "challenges" ) )
@@ -313,6 +315,13 @@ int function ChallengeCollection_GetActiveState( entity player, ChallengeCollect
 		return eChallengeCollectionActiveState.INACTIVE_KEPLER
 	}
 
+
+	if ( !NPP_IsNPPActive( player ) && ChallengeTile_GetNPPChallengeCollection() == challengeCollection  )
+	{
+		return eChallengeCollectionActiveState.INACTIVE_CALEVENT
+	}
+
+
 	return eChallengeCollectionActiveState.ACTIVE
 }
 
@@ -350,20 +359,34 @@ array< ChallengeSet > function ChallengeCollection_GetAllChallengeSets( Challeng
 	return challengeCollection.challengeSets
 }
 
-ItemFlavor function ChallengeCollection_GetMainChallenge( ItemFlavor challengeCollectionFlav )
+ItemFlavor ornull function ChallengeCollectionFlav_GetMetaChallenge( ItemFlavor challengeCollectionFlav )
 {
 	Assert( ItemFlavor_GetType( challengeCollectionFlav ) == eItemType.challenge_collection )
-	ItemFlavor challenge = GetItemFlavorByAsset( GetGlobalSettingsAsset( ItemFlavor_GetAsset( challengeCollectionFlav ), "mainChallengeFlav" ) )
+	asset metaChallengeAsset = GetGlobalSettingsAsset( ItemFlavor_GetAsset( challengeCollectionFlav ), "mainChallengeFlav" )
+	ItemFlavor ornull challenge
+	if ( metaChallengeAsset != $"" )
+	{
+		challenge = GetItemFlavorByAsset( metaChallengeAsset )
+	}
 	return challenge
 }
 
-array< ItemFlavor > function ChallengeCollection_GetAllMainChallenges( ChallengeCollection challengeCollection )
+array< ItemFlavor > function ChallengeCollection_GetAllMetaChallenges( ChallengeCollection challengeCollection )
 {
 	array<ItemFlavor> challenges
-	challenges.append( ChallengeCollection_GetMainChallenge( challengeCollection.itemFlav ) )
+
+	ItemFlavor ornull collectionMetaChallenge = ChallengeCollectionFlav_GetMetaChallenge( challengeCollection.itemFlav )
+	if ( collectionMetaChallenge != null )
+	{
+		challenges.append( expect ItemFlavor( collectionMetaChallenge ) )
+	}
+
 	foreach ( ChallengeSet set in challengeCollection.challengeSets )
 	{
-		challenges.append( set.mainChallenge )
+		if ( set.metaChallenge != null )
+		{
+			challenges.append( expect ItemFlavor( set.metaChallenge ) )
+		}
 	}
 
 	return challenges
@@ -373,12 +396,20 @@ array< ItemFlavor > function ChallengeCollection_GetAllMainChallenges( Challenge
 array< ItemFlavor > function ChallengeCollection_GetAllChallenges( ChallengeCollection challengeCollection )
 {
 	array<ItemFlavor> challenges
-	if ( IsItemFlavorStructValid( challengeCollection.itemFlav.guid, eValidation.DONT_ASSERT ) && IsItemFlavorStructValid( challengeCollection.mainChallenge.guid, eValidation.DONT_ASSERT ) )
+	if ( IsItemFlavorStructValid( challengeCollection.itemFlav.guid, eValidation.DONT_ASSERT ) )
 	{
-		challenges.append( challengeCollection.mainChallenge )
+		if ( challengeCollection.metaChallenge != null && IsItemFlavorStructValid( expect ItemFlavor( challengeCollection.metaChallenge ).guid, eValidation.DONT_ASSERT ))
+		{
+			challenges.append( expect ItemFlavor( challengeCollection.metaChallenge ) )
+		}
+
 		foreach ( ChallengeSet set in challengeCollection.challengeSets )
 		{
-			challenges.append( set.mainChallenge )
+			if ( set.metaChallenge != null )
+			{
+				challenges.append( expect ItemFlavor( set.metaChallenge ) )
+			}
+
 			foreach ( ItemFlavor challenge in set.challenges )
 			{
 				challenges.append( challenge )
@@ -393,14 +424,14 @@ ChallengeCollection ornull function ChallengeCollection_GetFirstActiveForMetaCha
 {
 	foreach ( challengeCollection in ChallengeCollection_GetActiveCollections() )
 	{
-		if ( challengeCollection.mainChallenge == metaChallengeFlav )
+		if ( challengeCollection.metaChallenge == metaChallengeFlav )
 		{
 			return challengeCollection
 		}
 
 		foreach ( challengeSet in challengeCollection.challengeSets )
 		{
-			if ( challengeSet.mainChallenge == metaChallengeFlav )
+			if ( challengeSet.metaChallenge == metaChallengeFlav )
 			{
 				return challengeCollection
 			}
@@ -472,8 +503,16 @@ int function ChallengeCollection_GetProgress( entity player, ChallengeCollection
 
 bool function ChallengeCollection_IsComplete( entity player, ChallengeCollection challengeCollection )
 {
-	int goal = MetaChallenge_GetGoalVal( challengeCollection.mainChallenge )
+	int goal
 	int progress = ChallengeCollection_GetProgress( player, challengeCollection )
+	if ( challengeCollection.metaChallenge != null )
+	{
+		goal = MetaChallenge_GetGoalVal( expect ItemFlavor( challengeCollection.metaChallenge ) )
+	}
+	else
+	{
+		goal = challengeCollection.challengeSets.len()
+	}
 
 	return progress >= goal
 }
@@ -654,17 +693,27 @@ bool function ChallengeSet_IsUnlockedForPlayer( entity player, ChallengeSet chal
 	}
 
 
-	if ( challengeSet.spanKind == eChallengeTimeSpanKind.BEGINNER && !NPP_GetIsActiveNPP( player )  )
-		isUnlocked = false
+	ItemFlavor ornull setMetaChallenge = challengeSet.metaChallenge
+	if ( setMetaChallenge != null )
+	{
+		expect ItemFlavor( setMetaChallenge )
+		if ( Challenge_GetTimeSpanKind ( setMetaChallenge ) == eChallengeTimeSpanKind.BEGINNER && !NPP_GetIsActiveNPP( player )  )
+			isUnlocked = false
+	}
 
 
 	return isUnlocked
 }
 
-ItemFlavor function ChallengeSet_GetMainChallenge( ItemFlavor challengeSetFlav )
+ItemFlavor ornull function ChallengeSetFlav_GetMetaChallenge( ItemFlavor challengeSetFlav )
 {
 	Assert( ItemFlavor_GetType( challengeSetFlav ) == eItemType.challenge_set )
-	ItemFlavor challenge = GetItemFlavorByAsset( GetGlobalSettingsAsset( ItemFlavor_GetAsset( challengeSetFlav ), "mainChallengeFlav" ) )
+	asset metaChallengeAsset = GetGlobalSettingsAsset( ItemFlavor_GetAsset( challengeSetFlav ), "mainChallengeFlav" )
+	ItemFlavor ornull challenge
+	if ( metaChallengeAsset != $"" )
+	{
+		challenge = GetItemFlavorByAsset( metaChallengeAsset )
+	}
 	return challenge
 }
 
@@ -706,6 +755,33 @@ bool function ChallengeSet_IsComplete( entity player, ChallengeSet challengeSet 
 	return progress >= goal
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 int function ChallengeSet_GetPersonalTimerForPlayer( entity player, ChallengeSet challengeSet )
 {
 	for ( int i = 0; i < NUM_CHALLENGE_CHAINS; i++ )
@@ -725,6 +801,18 @@ int function ChallengeSet_GetPersonalTimerForPlayer( entity player, ChallengeSet
 
 	return UNIX_TIME_FALLBACK_1970
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -8,6 +8,7 @@ global function Cups_GetVisibleEvents
 global function Cups_WaitForResponse
 global function Cups_GetEligbleCup
 global function Cups_HasParticipated
+global function Cups_IsCupEventRegistered
 global function Cups_RegisterForCup
 global function Cups_IsCurrentSelectedPlaylistACupGame
 global function Cups_GetPlayerTierIndexForCup
@@ -140,6 +141,8 @@ array< SettingsAssetGUID > function Cups_GetVisibleEvents()
 	{
 		if ( CalEvent_IsVisible( cupEvent, unixTime ) )
 		{
+			if ( RankedRumble_IsContainerRankedRumble( cupEvent ) && !GetConVarBool( RANKED_RUMBLE_CONVAR ) )
+				continue
 			result.append( cupEvent.guid )
 		}
 	}
@@ -171,6 +174,8 @@ UserFullCupData function Cups_WaitForResponse()
 
 ItemFlavor ornull function Cups_GetEligbleCup( ItemFlavor cupEvent )
 {
+	if ( !Cups_IsInitialized() )
+		return null
 	CommunityUserInfo ornull userInfo = GetUserInfo( GetPlayerHardware(), GetPlayerUID() )
 	if ( userInfo == null )
 	{
@@ -242,6 +247,20 @@ bool function Cups_HasParticipated( ItemFlavor cupEvent )
 	expect CupEntry( entry )
 
 	return entry.matchSummaryData.len() > 0
+}
+
+bool function Cups_IsCupEventRegistered( ItemFlavor cupEvent )
+{
+	ItemFlavor ornull cupFlavor = Cups_GetEligbleCup( cupEvent )
+	if ( cupFlavor == null )
+		return false
+	expect ItemFlavor( cupFlavor )
+
+	int persistenceDataIndex = Cups_GetPlayersPDataIndexForCupID( GetLocalClientPlayer(), cupFlavor.guid )
+	if ( persistenceDataIndex < 0 )
+		return false
+
+	return true
 }
 
 bool function Cups_RegisterForCup( SettingsAssetGUID cupID )
@@ -357,7 +376,7 @@ int function Cups_GetPlayerTierIndexForCup( SettingsAssetGUID cupID )
 
 CupTierData ornull function Cups_GetPlayerTierDataForCup( SettingsAssetGUID cupID )
 {
-	if( !GetConVarBool( "cups_enabled" ) ) return null
+	if( !GetConVarBool( "cups_enabled" ) || !Cups_IsInitialized() ) return null
 
 	int index = Cups_GetPlayerTierIndexForCup( cupID )
 	if( index < 0 )
@@ -431,16 +450,22 @@ void function UICodeCallback_OnServerMessageRecieved( int messageType, SettingsA
 	}
 }
 
-int function Cups_CalculatePositionPercentageDisplay( SettingsAssetGUID cupID, CupEntry cupEntryData )
+int function Cups_CalculatePositionPercentageDisplay( SettingsAssetGUID cupID, CupEntry cupEntryData, int tierIndex )
 {
+	if ( !Cups_IsValidCupID( cupID ) )
+		return 0
 	CupBakeryAssetData cupData = Cups_GetCupBakeryAssetDataFromGUID( cupID )
 	float percent = float( maxint( 1, cupEntryData.currSquadPosition - cupData.topPlacementCount ) ) / maxint( 1, cupEntryData.leaderboardCount - cupData.topPlacementCount )
-	if ( percent > 0.1 )
-		return int( ceil( percent * 10 ) ) * 10
-	else
-		return int( ceil( percent * 100 ) )
+	int rawPercentInt = int( ceil( percent * 100 ) )
 
-	unreachable
+	int tierPercent = 100
+	if ( tierIndex >= 0 && tierIndex < cupData.tiers.len() )
+	{
+		CupTierData tierData = cupData.tiers[tierIndex]
+		tierPercent = tierData.tierType == eCupTierType.ABSOLUTE ? 1 : tierData.bound
+	}
+
+	return minint( rawPercentInt, tierPercent )
 }
 
 string function Cups_GetProperTabTitleName()

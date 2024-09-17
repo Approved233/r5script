@@ -155,8 +155,11 @@ void function OnPostGameBattlePassMenu_Show()
 		file.buttonsRegistered = true
 	}
 
-	
-	ItemFlavor ornull battlepass = GetActiveBattlePass()
+
+		ItemFlavor ornull battlepass = GetActiveBattlePassV2()
+
+
+
 	if ( battlepass == null )
 		return    
 	expect ItemFlavor( battlepass )
@@ -403,7 +406,7 @@ void function ShowChallengeProgression( ItemFlavor battlePass )
 							}
 
 							var rewardButton = file.rewardButtonArray[ archiveButtonIndex ]
-							BattlePass_PopulateRewardButton( rewardData, rewardButton, false, true, null )
+							BattlePass_PopulateRewardButton( rewardData, rewardButton, false, true, null, true )
 
 							if ( InspectItemTypePresentationSupported( rewardData.flav ) )
 								AssignRewardToButton( rewardButton, rewardData )
@@ -642,7 +645,7 @@ int function AddBattlePassRewardsToArchive( ItemFlavor battlePass, int battlePas
 		if ( ( reward.isPremium && ownBattlePass ) || !reward.isPremium )
 		{
 			var rewardButton = file.rewardButtonArray[ archiveButtonIndex ]
-			BattlePass_PopulateRewardButton( reward, rewardButton, false, true, null )
+			BattlePass_PopulateRewardButton( reward, rewardButton, false, true, null, true )
 
 			if ( InspectItemTypePresentationSupported( reward.flav ) )
 				AssignRewardToButton( rewardButton, reward )

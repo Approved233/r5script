@@ -1,0 +1,193 @@
+
+
+
+global function GetLocalPlayerFromSoul
+
+void function CoreActivatedVO( entity player )
+{
+	player.EndSignal( "OnDeath" )
+
+	string ornull conversationName = GetCoreOSConversationName( player, "core_activated" )
+	if ( conversationName == null )
+		return
+
+	expect string( conversationName )
+	
+}
+
+void function MonitorFlickerAndChange( entity screen, asset modelname )
+{
+	screen.EndSignal( "OnDestroy" )
+
+	screen.SetModel( modelname )
+	bool state = false
+	int flickers = RandomIntRange( 2, 6 ) * 2 + 1
+
+	for ( int i = 0; i < flickers; i++ )
+	{
+		if ( !state )
+		{
+			screen.Show()
+			state = true
+		}
+		else
+		{
+			screen.Hide()
+			state = false
+		}
+		wait RandomFloat( 0.15 )
+	}
+}
+
+void function ReCalculatePetTurretNumbers()
+{
+	entity clientPlayer = GetLocalClientPlayer()
+	if ( !IsValid( clientPlayer ) )
+		return
+
+	array<entity> allTurrets = GetNPCArrayByClass( "npc_turret_sentry" )
+	int petTurrets = 0
+
+	foreach ( turret in allTurrets )
+	{
+		if ( turret.GetBossPlayer() == clientPlayer )
+			petTurrets++
+	}
+
+	level.petSentryTurrets = petTurrets
+}
+
+entity function GetLocalPlayerFromSoul( entity soul )
+{
+	if ( !soul.HasValidTitan() )
+		return null
+
+	entity titan = soul.GetTitan()
+
+	if ( !IsValid( titan ) )
+		return null
+
+	if ( titan.IsNPC() )
+		return null
+
+	Assert( titan.IsPlayer(), titan + " should be a player" )
+
+	if ( titan != GetLocalViewPlayer() )
+		return null
+
+	return titan
+}
+
+bool function ShouldShowWeakpoints( entity ent )
+{
+	entity player = GetLocalViewPlayer()
+
+	if ( !IsAlive( ent ) )
+		return false
+
+	if ( !IsValid( player ) )
+		return false
+
+	if ( !ent.IsNPC() && !ent.IsPlayer() )
+	{
+		if ( ent.GetNetworkedClassName() == "prop_dynamic" )
+			return true
+	}
+
+	if ( ent.GetTeam() == player.GetTeam() )
+		return false
+
+	if ( ent.IsCloaked( true ) )
+		return false
+
+	entity soul = ent.GetTitanSoul()
+	if ( IsValid( soul ) )
+	{
+		if ( soul.GetShieldHealth() > 0 )
+			return false
+
+		if ( soul.GetCritsPrevented() == true )
+			return false
+
+		if ( soul.GetInvalidHealthBarEnt() )
+			return false
+	}
+	else if ( ent.GetShieldHealthMax() > 0 )
+	{
+		if ( soul.GetShieldHealth() > 0 )
+			return false
+	}
+
+	if ( player.GetWeaponDisableFlags() == WEAPON_DISABLE_FLAGS_ALL )
+		return false
+
+	if ( !WeaponCanCrit( player.GetActiveWeapon( eActiveInventorySlot.mainHand ) ) )
+		return false
+
+	
+	{
+		vector eyePos = player.EyePosition()
+		eyePos.z = 0
+
+		vector entPos = ent.GetWorldSpaceCenter()
+		entPos.z = 0
+
+		vector eyeVec = player.GetViewVector()
+		eyeVec.z = 0
+		eyeVec = Normalize( eyeVec )
+
+		vector dirToEnt = (entPos - eyePos)
+		dirToEnt = Normalize( dirToEnt )
+
+		if ( DotProduct( dirToEnt, eyeVec ) < 0.996 )
+			return false
+	}
+
+#if DEV
+		if ( Dev_CommandLineHasParm( "-noweakpoints" ) )
+			return false
+#endif
+
+	return true
+}
+
+var function CreateTitanCockpitRui( asset ruiAsset, int sortKey = 0 )
+{
+	var rui = RuiCreate( ruiAsset, clGlobal.topoTitanCockpitHud, RUI_DRAW_COCKPIT, sortKey )
+	entity player = GetLocalViewPlayer()
+	TitanCockpitRUI tcRUI
+	tcRUI.rui = rui
+	player.p.titanCockpitRUIs.append( tcRUI )
+	return rui
+}
+
+var function CreateTitanCockpitLowerRui( asset ruiAsset, int sortKey = -1 )
+{
+	var rui = RuiCreate( ruiAsset, clGlobal.topoTitanCockpitLowerHud, RUI_DRAW_COCKPIT, sortKey )
+	entity player = GetLocalViewPlayer()
+	TitanCockpitRUI tcRUI
+	tcRUI.rui = rui
+	player.p.titanCockpitRUIs.append( tcRUI )
+	return rui
+}
+
+var function CreateTitanCockpitInstrument1Rui( asset ruiAsset, int sortKey = -1 )
+{
+	var rui = RuiCreate( ruiAsset, clGlobal.topoTitanCockpitInstrument1, RUI_DRAW_COCKPIT, sortKey )
+	entity player = GetLocalViewPlayer()
+	TitanCockpitRUI tcRUI
+	tcRUI.rui = rui
+	player.p.titanCockpitRUIs.append( tcRUI )
+	return rui
+}
+
+var function CreateFixedTitanCockpitRui( asset ruiAsset, int sortKey = 0 )
+{
+	var rui = RuiCreate( ruiAsset, clGlobal.topoFullscreenHud, RUI_DRAW_HUD, sortKey )
+
+	entity player = GetLocalViewPlayer()
+	TitanCockpitRUI tcRUI
+	tcRUI.rui = rui
+	player.p.titanCockpitRUIs.append( tcRUI )
+	return rui
+}

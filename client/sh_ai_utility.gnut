@@ -1,0 +1,228 @@
+globalize_all_functions
+
+bool function IsFragDrone( entity npc )
+{
+	return npc.GetNetworkedClassName() == "npc_frag_drone"
+}
+
+
+array<entity> function GetAllSoldiers()
+{
+	return GetNPCArrayByClass( "npc_soldier" )
+}
+
+bool function IsTitanNPC( entity ent )
+{
+	return ent.IsTitan() && ent.IsNPC()
+}
+
+bool function IsPlayerControlledSpectre( entity ent )
+{
+	return ent.GetNetworkedClassName() == "npc_spectre" && ent.GetBossPlayer() != null
+}
+
+bool function IsPlayerControlledTurret( entity ent )
+{
+	return IsTurret( ent ) && ent.GetBossPlayer() != null
+}
+
+bool function IsSpecialist( entity ent )
+{
+	return ent.IsNPC() && ent.IsMechanical() && ent.GetNetworkedClassName() == "npc_soldier"
+}
+
+bool function IsGrunt( entity ent )
+{
+	return ent.IsNPC() && !ent.IsMechanical() && !IsCreature( ent ) && ent.GetNetworkedClassName() == "npc_soldier"
+}
+
+
+bool function IsMarvin( entity ent )
+{
+	return ent.IsNPC() && ent.GetAIClass() == AIC_MARVIN
+}
+
+bool function IsCreature( entity ent )
+{
+	if ( !ent.IsNPC() )
+		return false
+
+	if ( !IsValid( ent ) )
+		return false
+
+	string aiSettings = ent.GetAISettingsName()
+	if ( aiSettings == "" )
+		return false
+
+	if ( Dev_GetAISettingByKeyField_Global( aiSettings, "creature" ) == 1 )
+		return true
+
+	return false
+}
+
+bool function IsSpectre( entity ent )
+{
+	return ent.IsNPC() && ent.GetAIClass() == AIC_SPECTRE
+}
+
+
+
+
+
+
+
+
+
+bool function IsDropship( entity ent )
+{
+
+		if ( !ent.IsNPC() )
+			return false
+
+
+	return ent.GetNetworkedClassName() == "npc_dropship"
+}
+
+
+bool function IsWorldSpawn( entity ent )
+{
+	return ent.GetNetworkedClassName() == "worldspawn"
+}
+
+
+bool function IsSuperSpectre( entity ent )
+{
+	return ent.GetNetworkedClassName() == "npc_super_spectre"
+}
+
+
+bool function IsAndroidNPC( entity ent )
+{
+	return (IsSpectre( ent ) || IsStalker( ent ) || IsMarvin( ent ))
+}
+
+
+bool function IsBiologicalNPC( entity ent )
+{
+	if ( IsNessie( ent ) )
+		return true
+	return (IsProwler( ent ) || IsSpider( ent ))
+}
+
+bool function IsStalker( entity ent )
+{
+	return ent.IsNPC() && (ent.GetAIClass() == AIC_STALKER || ent.GetAIClass() == AIC_STALKER_CRAWLING)
+}
+
+
+bool function IsProwler( entity ent )
+{
+	return ent.GetNetworkedClassName() == "npc_prowler"
+}
+
+bool function IsSpider( entity ent )
+{
+	if ( IsNessie( ent ) )
+		return false
+	return ent.GetNetworkedClassName() == "npc_spider" || ent.GetNetworkedClassName() == "npc_spider_ranged"
+}
+
+bool function IsNessie( entity ent )
+{
+	return (ent.IsNPC() && ent.GetAISettingsName() == "npc_nessie")
+}
+
+bool function IsAirDrone( entity ent )
+{
+	return ent.GetNetworkedClassName() == "npc_drone"
+}
+
+
+bool function IsAttackDrone( entity ent )
+{
+	return (ent.IsNPC() && !ent.IsNonCombatAI() && IsAirDrone( ent ))
+}
+
+
+bool function IsGunship( entity ent )
+{
+	return ent.GetNetworkedClassName() == "npc_gunship"
+}
+
+
+bool function IsTrainingDummie( entity ent )
+{
+	string ornull networkedClassName = ent.GetNetworkedClassName()
+
+	if( networkedClassName == null )
+		return false
+
+	expect string( networkedClassName )
+	return (( networkedClassName == "npc_training_dummy" ) || ( networkedClassName == "npc_combatrange_dummy" ) || ( networkedClassName == "npc_dummie" ))
+}
+
+
+
+
+
+
+
+bool function IsCombatNPC( entity ent )
+{
+	return ( ent.IsNPC() && !ent.IsNonCombatAI() )
+}
+
+bool function IsMinion( entity ent )
+{
+	if ( IsGrunt( ent ) )
+		return true
+
+	if ( IsSpectre( ent ) )
+		return true
+
+	return false
+}
+
+
+bool function IsShieldDrone( entity ent )
+{
+	if ( ent.GetNetworkedClassName() != "npc_drone" )
+		return false
+
+	return GetDroneType( ent ) == "drone_type_shield"
+}
+
+
+bool function IsEnvDecoy( entity ent )
+{
+	return ent.GetNetworkedClassName() == "env_decoy"
+}
+
+bool function CanNPCDoDamageOnBehalfOfPlayer( entity ent )
+{
+	if (!IsValid(ent))
+		return false
+
+	if ( IsNessie( ent ) )
+		return true
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	return false
+}
+
+string function GetDroneType( entity npc )
+{
+	return expect string( npc.Dev_GetAISettingByKeyField( "drone_type" ) )
+}

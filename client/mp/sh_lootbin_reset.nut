@@ -1,34 +1,19 @@
 
+
 global function LootbinResetEnabled
 global function LootbinReset_AllowPerkBinReuse_Enabled
 global function MythicBin_ExtendedUseSuccess
 global function MythicBin_OnUse
-global function LootbinReset_UpdatedGroundLoot_Enabled
-
 global function LootbinReset_UseUniqueSpawnSources_Enabled
-
-
 global function LootBinReset_IsLootBinSpecial
 global function LootBinReset_IsLootBin_GoldBin
 global function LootBinReset_IsLootBin_Mythic
 global function LootBinReset_LootBinsHaveReset
-
+global function LootbinReset_RecentlyOpened_BinsEjectLoot_Enabled
+global function LootbinReset_RecentlyOpened_TimeThreshold
 global function LootBinReset_MythicBins_HaveUniqueInteractPrompt
 global function ServerToClient_MythicBinOpened
-
-
-
-
-
-
-
 global function Sh_Lootbin_Reset_Init
-
-
-
-
-
-
 
 const string MYTHIC_BIN_USE_SFX = "menu_deny"
 global const string MYTHIC_BIN_SKIN_NAME = "Reroll_Mythic"
@@ -56,14 +41,12 @@ global const string ASSAULT_BIN_RESET_SKIN_NAME = "Munitions_Alt_Emissive"
 
 
 
-
 const BIN_RESET_FX = $"P_LBReset_CP"
 const vector COLOR_GOLD_BIN_VFX = <255, 190, 70>
 const vector COLOR_MYTHIC_BIN_VFX = <232, 53, 86>
 const float BIN_RESET_OPENED_BIN_UPDATE_TIME_OFFSET = 1.4
 
 const string MYTHIC_BIN_OPENING_LOOP_SFX = "Lootbin_Mythic_Unlock_Loop"
-
 
 const string FUNCNAME_LootBinReset_Warning_Announcement = "ServertoClient_LootBinReset_Warning_Announcement"
 const string FUNCNAME_LootBinReset_Warning_HUD_Indicator_Set = "ServertoClient_LootBinReset_Warning_HUD_Indicator_Set" 
@@ -72,7 +55,6 @@ const string FUNCNAME_RegisterMythicBinEnt = "LootBinReset_ServerToClient_SetMyt
 const string FUNCNAME_RegisterGoldBinEnts = "LootBinReset_ServerToClient_SetGoldBinEnts"
 
 const string FUNCNAME_Ping_MythicBinFromMap = "LootBinReset_ClientToServer_Ping_MythicBinFromMap"
-
 
 
 global function ServertoClient_LootBinAnnouncement
@@ -91,19 +73,14 @@ const asset MYTHIC_BIN_MINIMAP_ICON = $"rui/hud/gametype_icons/survival/bin_inwo
 
 struct
 {
-	bool lootbinResetTriggered
-	entity		  mythicBinEnt
+	bool 			lootbinResetTriggered
+	entity		  	mythicBinEnt
 
 	array< entity > goldBinEnts
 
+	table< entity, bool > potentialGoldBins
 
-
-
-
-
-
-
-
+	array< string > blockedWeaponsForGoldUpgrades
 
 
 
@@ -114,13 +91,14 @@ struct
 } file
 
 
-
 void function Sh_Lootbin_Reset_Init()
 {
 	if ( !LootbinResetEnabled() )
 		return
 
 	Sh_Lootbin_Reset_RegisterNetworking()
+
+	LootBinReset_InitTuningVars()
 
 	PrecacheParticleSystem( BIN_RESET_FX )
 
@@ -130,8 +108,11 @@ void function Sh_Lootbin_Reset_Init()
 
 		RegisterMinimapPackage( "prop_script", eMinimapObject_prop_script.MYTHIC_BIN, MINIMAP_OBJECT_RUI, MinimapPackage_MythicBin, FULLMAP_OBJECT_RUI, FullmapPackage_MythicBin )
 
-		if( LootbinReset_PingFromMap_Enabled() )
+		if ( LootbinReset_PingFromMap_Enabled() )
 			AddCallback_OnFindFullMapAimEntity( GetMythicBinUnderAim, PingMythicBinUnderAim )
+
+		if ( LootbinResetEnabled() && LootbinReset_SupportedMode_ForHUD() )
+			AddOnSpectatorTargetChangedCallback( OnSpectateTargetChanged )
 
 
 
@@ -141,9 +122,6 @@ void function Sh_Lootbin_Reset_Init()
 
 
 }
-
-
-
 
 void function Sh_Lootbin_Reset_RegisterNetworking()
 {
@@ -160,11 +138,246 @@ void function Sh_Lootbin_Reset_RegisterNetworking()
 	Remote_RegisterServerFunction( FUNCNAME_Ping_MythicBinFromMap, "typed_entity", "prop_dynamic" )
 }
 
+void function LootBinReset_InitTuningVars()
+{
+	LootBinReset_Init_BlockedGoldWeaponRegistry()
+}
+
+void function LootBinReset_Init_BlockedGoldWeaponRegistry()
+{
+	string blockedGoldWeaponStr = GetCurrentPlaylistVarString( "lootbin_reset_blocked_gold_weapon_list", "" )
+	array< string > blockedGoldKeyValueStrs = GetTrimmedSplitString( blockedGoldWeaponStr, " " )
+
+	if ( blockedGoldKeyValueStrs.len() > 0 )
+		file.blockedWeaponsForGoldUpgrades = blockedGoldKeyValueStrs
+}
 
 #if INTELLIJ_OUTLINE_SECTION_MARKER
 void function _____________SERVER___________________________()
 {}
 #endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -895,6 +1108,7 @@ void function _____________Mythic_Bin___________________________()
 
 
 
+
 void function MythicBin_OnUse( entity lootbin, entity player, int useInputFlags )
 {
 	if ( !IsValid( player ) )
@@ -906,7 +1120,6 @@ void function MythicBin_OnUse( entity lootbin, entity player, int useInputFlags 
 	{
 		thread MythicBin_UseThink_Thread( lootbin, player )
 	}
-
 	else
 	{
 
@@ -915,7 +1128,7 @@ void function MythicBin_OnUse( entity lootbin, entity player, int useInputFlags 
 	}
 }
 
-void function MythicBin_UseThink_Thread ( entity lootbin, entity player )
+void function MythicBin_UseThink_Thread( entity lootbin, entity player )
 {
 	lootbin.EndSignal( "OnDestroy" )
 
@@ -923,8 +1136,9 @@ void function MythicBin_UseThink_Thread ( entity lootbin, entity player )
 	
 	
 	
-	settings.duration = GetPlaylistVar_MythicBinChannelDuration()
+	settings.duration = LootbinReset_MythicBins_ChannelDuration()
 	settings.successFunc = MythicBin_ExtendedUseSuccess
+
 
 
 
@@ -1034,27 +1248,9 @@ void function MythicBin_ExtendedUseSuccess( entity lootbin, entity player, Exten
 
 
 
-
-
-
-
 	lootbin.Signal( "OpenMythicBin" )
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -1099,12 +1295,17 @@ void function _____________CLIENT___________________________()
 #endif
 
 
-void function PlayWarningSFX()
+void function PlayWarningSFX_Thread()
 {
-	EmitSoundOnEntity( GetLocalViewPlayer(), "UI_3Strikes_RespawningDisabled" )
+	string audioRef
+
+	if ( LootbinReset_Announce_SFX_Old_Enabled() )
+		audioRef = "UI_3Strikes_RespawningDisabled"
+	else
+		audioRef = "LootBin_UI_InGame_LootBinsReset"
+
+	EmitSoundOnEntity( GetLocalViewPlayer(), audioRef )
 }
-
-
 
 void function ServertoClient_LootBinAnnouncement()
 {
@@ -1118,7 +1319,7 @@ void function ServertoClient_LootBinAnnouncement()
 
 	AnnouncementFromClass( localViewPlayer, announcement )
 
-	thread PlayWarningSFX()
+	thread PlayWarningSFX_Thread()
 }
 
 void function ServertoClient_LootBinReset_Warning_Announcement( float duration )
@@ -1128,10 +1329,15 @@ void function ServertoClient_LootBinReset_Warning_Announcement( float duration )
 
 void function ServertoClient_LootBinReset_Warning_HUD_Indicator_Set( bool reveal )
 {
+	LootBinReset_Warning_HUD_Indicator_Set( reveal )
+}
+
+void function LootBinReset_Warning_HUD_Indicator_Set( bool reveal )
+{
 	string message
-	if( reveal )
+	if ( reveal )
 	{
-		if( LootbinReset_Announce_Warning_HudIndicator_UseLongText() )
+		if ( LootbinReset_Announce_Warning_HudIndicator_UseLongText() )
 			message = Localize( "#LOOTBIN_REFRESH_HUD_WARNING_MESSAGE_LONG" )
 		else
 			message = Localize( "#LOOTBIN_REFRESH_HUD_WARNING_MESSAGE_SHORT" )
@@ -1145,7 +1351,7 @@ void function ServertoClient_LootBinReset_Warning_Announcement_Internal_Thread( 
 {
 	float timeToWait
 
-	if( LootbinReset_Announce_Warning_NearTrigger_TimeOffset() > 0 )
+	if ( LootbinReset_Announce_Warning_NearTrigger_TimeOffset() > 0 )
 		timeToWait = duration - LootbinReset_Announce_Warning_NearTrigger_TimeOffset()
 	else
 		timeToWait = 20.0
@@ -1155,32 +1361,29 @@ void function ServertoClient_LootBinReset_Warning_Announcement_Internal_Thread( 
 	string message         = Localize( "#LOOTBIN_REFRESH_WARNING_ANNOUNCEMENT" )
 	entity localViewPlayer = GetLocalViewPlayer()
 
-	AnnouncementData announcement = Announcement_Create( message )
+	AnnouncementData announcement  = Announcement_Create( message )
 	announcement.useColorOnSubtext = true
 	announcement.announcementStyle = ANNOUNCEMENT_STYLE_GENERIC_WARNING
 	announcement.duration          = 5.0
 
 	AnnouncementFromClass( localViewPlayer, announcement )
 
-	thread PlayWarningSFX()
+	thread PlayWarningSFX_Thread()
 }
-
-
 
 void function ServerCallback_MythicBinSpawnedClient( entity binFromServer )
 {
+	if ( !IsValid( binFromServer ) )
+		return
+
 	AddCallback_OnUseEntity_ClientServer( binFromServer, MythicBin_OnUse )
 	thread Bin_CreateClientSideHUDMarker_thread( MYTHIC_BIN_ICON, binFromServer, 12, true )
 }
-
-
 
 void function ServerCallback_UpdateBinPulse( entity binFromServer )
 {
 	binFromServer.kv.rendercolor = "255 255 255"
 }
-
-
 
 var function Bin_CreateClientSideHUDMarker_thread ( asset hudImage, entity lootbin, float upOffset, bool trackPosition )
 {
@@ -1199,7 +1402,7 @@ var function Bin_CreateClientSideHUDMarker_thread ( asset hudImage, entity lootb
 
 
 	RuiSetGameTime( rui, "startTime", Time() )
-	if( trackPosition )
+	if ( trackPosition )
 	{
 		RuiTrackFloat3( rui, "pos", lootbin, RUI_TRACK_ABSORIGIN_FOLLOW  )
 	}
@@ -1240,8 +1443,6 @@ void function LootBinReset_ServerToClient_SetGoldBinEnts( entity lootBin )
 	file.goldBinEnts.append( lootBin )
 }
 
-
-
 void function MinimapPackage_MythicBin( entity ent, var rui )
 {
 	RuiSetImage( rui, "defaultIcon", MYTHIC_BIN_MINIMAP_ICON )
@@ -1267,35 +1468,44 @@ void function FullmapPackage_MythicBin( entity ent, var rui )
 	RuiSetBool( rui, "hasSmallIcon", true )
 }
 
+void function OnSpectateTargetChanged( entity spectatingPlayer, entity oldSpectatorTarget, entity newSpectatorTarget )
+{
+	int deathStage   = SURVIVAL_GetCurrentDeathFieldStage()
+	int triggerStage = LootbinReset_DeathstageCloseTrigger()
+
+	if ( LootbinReset_Announce_Warning_HUD_OnTriggerRoundStart_Enabled() )
+	{
+		if ( deathStage == triggerStage )
+		{
+			if ( LootbinReset_Announce_Warning_HUD_OnTriggerRoundStart_Enabled() )
+			{
+				LootBinReset_Warning_HUD_Indicator_Set( true )
+			}
+		}
+		else
+		{
+			if ( LootbinReset_Announce_Warning_HUD_OnTriggerRoundStart_Enabled() )
+			{
+				LootBinReset_Warning_HUD_Indicator_Set( false )
+			}
+		}
+	}
+}
+
 
 #if INTELLIJ_OUTLINE_SECTION_MARKER
 void function _____________PlaylistVars___________________________()
 {}
 #endif
 
-int function GetPlaylistVar_LootbinRefreshDeathstageCloseTrigger()
+int function LootbinReset_DeathstageCloseTrigger()
 {
 	return GetCurrentPlaylistVarInt( "lootbin_reset_deathstage_trigger", 1 )
 }
 
-int function GetPlaylistVar_LootbinRefreshMaxGoldBins()
-{
-	return GetCurrentPlaylistVarInt( "lootbin_reset_gold_bins_maximum", 8 )
-}
-
-float function GetPlaylistVar_LootbinRefreshGoldBinSpawnDistance()
-{
-	return GetCurrentPlaylistVarFloat( "lootbin_reset_gold_bin_spawn_distance", 2000 )  
-}
-
-float function GetPlaylistVar_MythicBinChannelDuration()
-{
-	return GetCurrentPlaylistVarFloat( "lootbin_reset_mythic_channel_duration", 11.0 )
-}
-
 bool function LootbinResetEnabled()
 {
-	return GetCurrentPlaylistVarBool( "lootbin_reset_enabled", true )
+	return GetCurrentPlaylistVarBool( "lootbin_reset_enabled", false )
 }
 
 bool function LootbinReset_UseUniqueSpawnSources_Enabled()
@@ -1308,19 +1518,29 @@ bool function LootbinReset_AllowPerkBinReuse_Enabled()
 	return GetCurrentPlaylistVarBool( "lootbin_reset_perkbin_reuse_enabled", true )
 }
 
+bool function LootbinReset_RecentlyOpened_BinsEjectLoot_Enabled()
+{
+	return GetCurrentPlaylistVarBool( "lootbin_reset_recentlyopenedbins_ejectloot_onclose_enabled", true )
+}
+
+float function LootbinReset_RecentlyOpened_TimeThreshold()
+{
+	return GetCurrentPlaylistVarFloat( "lootbin_reset_recentlyopenedbins_timethreshold", 3.0 )
+}
+
 bool function LootbinReset_PingFromMap_Enabled()
 {
 	return GetCurrentPlaylistVarBool( "lootbin_reset_ping_from_map_enabled", true )
 }
 
-bool function LootbinReset_UpdatedGroundLoot_Enabled()
-{
-	return GetCurrentPlaylistVarBool( "lootbin_reset_updated_groundloot_enabled", true )
-}
-
 bool function LootbinReset_Announce_VO_Enabled()
 {
 	return GetCurrentPlaylistVarBool( "lootbin_reset_announce_vo_enabled", true )
+}
+
+bool function LootbinReset_Announce_SFX_Old_Enabled()
+{
+	return GetCurrentPlaylistVarBool( "lootbin_reset_announce_old_sfx_enabled", false )
 }
 
 bool function LootbinReset_Announce_OnResetTrigger_Enabled()
@@ -1353,43 +1573,68 @@ bool function LootbinReset_ReSkin_UsedPerkBins_Enabled()
 	return GetCurrentPlaylistVarBool( "lootbin_reset_reskin_used_perkbins_enabled", true )
 }
 
-bool function LootbinReset_Deflated_ResetLootPools_Enabled()
-{
-	return GetCurrentPlaylistVarBool( "lootbin_reset_deflated_resetlootpools_enabled", false )
-}
-
-bool function GetPlaylistVar_MythicBinsEnabled()
+bool function LootbinReset_MythicBins_Enabled()
 {
 	return GetCurrentPlaylistVarBool( "lootbin_reset_mythic_bins_enabled", true )
 }
 
-bool function GetPlaylistVar_GoldBinsEnabled()
+bool function LootbinReset_GoldBins_Enabled() 
 {
 	return GetCurrentPlaylistVarBool( "lootbin_reset_gold_bins_enabled", true )
 }
 
-bool function GetPlaylistVar_GoldBins_UseSmartLoot()
+bool function LootbinReset_GoldBins_UseSmartLoot() 
 {
 	return GetCurrentPlaylistVarBool( "lootbin_reset_gold_bins_reward_smart_loot", true )
 }
 
-int function GetPlaylistVar_GoldBins_NumOfItemsToSpawn()
+int function LootbinReset_GoldBins_MaxGoldBins()
+{
+	return GetCurrentPlaylistVarInt( "lootbin_reset_gold_bins_maximum", 5 )
+}
+
+float function LootbinReset_GoldBins_GoldBinSpawnDistance()
+{
+	return GetCurrentPlaylistVarFloat( "lootbin_reset_gold_bin_spawn_distance", 5500 ) 
+}
+
+bool function LootBinReset_GoldBins_LimitGoldOutput() 
+{
+	return GetCurrentPlaylistVarBool( "lootbin_reset_gold_bins_limit_gold_loot_output", true )
+}
+
+int function LootBinReset_GGoldBins_MaxGoldItemsPerOpen()
+{
+	return GetCurrentPlaylistVarInt( "lootbin_reset_gold_bins_num_gold_items_to_spawn", 1 )
+}
+
+int function LootbinReset_GoldBins_NumOfItemsToSpawn()
 {
 	return GetCurrentPlaylistVarInt( "lootbin_reset_gold_bins_num_items_to_spawn", 6 )
 }
 
-bool function GetPlaylistVar_MythicBins_ReawrdDynamicLoot()
+bool function LootbinReset_MythicBins_ReawrdDynamicLoot()
 {
 	return GetCurrentPlaylistVarBool( "lootbin_reset_mythic_bins_reward_dynamic_loot", true )
 }
 
-array<string> function LootBinReset_MythicBins_GetStaticRewards()
+bool function LootbinReset_MythicBins_GuaranteedBattery_Enabled()
 {
-	array<string> rewards
+	return GetCurrentPlaylistVarBool( "lootbin_reset_mythic_bins_guaranteedbattery_enabled", true )
+}
+
+float function LootbinReset_MythicBins_ChannelDuration()
+{
+	return GetCurrentPlaylistVarFloat( "lootbin_reset_mythic_channel_duration", 11.0 )
+}
+
+array< string > function LootBinReset_MythicBins_GetStaticRewards()
+{
+	array< string > rewards
 
 	string defaults = GetCurrentPlaylistVarString( "lootbin_reset_mythic_bins_static_loot_rewards", "mp_pickup_xp_cache_dynamic mp_weapon_sniper mp_pickup_xp_cache_dynamic mp_weapon_esaw_crate mp_pickup_xp_cache_dynamic" )
 
-	if( GetCurrentPlaylistVarString( "pin_match_type", "survival" ) == "duo" )
+	if ( GetCurrentPlaylistVarString( "pin_match_type", "survival" ) == "duo" )
 	{
 		defaults = GetCurrentPlaylistVarString( "lootbin_reset_mythic_bins_static_loot_rewards_duos", "mp_pickup_xp_cache_dynamic mp_weapon_sniper mp_pickup_xp_cache_dynamic mp_weapon_esaw_crate" )
 	}
@@ -1399,7 +1644,7 @@ array<string> function LootBinReset_MythicBins_GetStaticRewards()
 	return rewards
 }
 
-bool function GetPlaylistVar_MythicBins_AwardTeamEvoOnOpen()
+bool function LootbinReset_MythicBins_AwardTeamEvoOnOpen()
 {
 	return GetCurrentPlaylistVarBool( "lootbin_reset_mythic_bins_award_evo_onopen", true )
 }
@@ -1424,11 +1669,10 @@ int function LootBinReset_MythicBins_OnOpen_ConfettiLoot_SwitchThreshold()
 	return GetCurrentPlaylistVarInt( "lootbin_reset_mythic_bins_confetti_switchThreshold", 3 )
 }
 
-int function GetPlaylistVar_MythicBins_MinItemCount()
+int function LootbinReset_MythicBins_MinItemCount()
 {
-	return GetCurrentPlaylistVarInt( "lootbin_reset_mythic_bins_min_item_count", 5 )
+	return GetCurrentPlaylistVarInt( "lootbin_reset_mythic_bins_min_item_count", 6 )
 }
-
 
 
 bool function LootBinReset_LootBinsHaveReset()
@@ -1441,15 +1685,14 @@ bool function LootBinReset_MythicBins_HaveUniqueInteractPrompt()
 	return GetCurrentPlaylistVarBool( "lootbin_reset_mythic_bins_unique_use_prompt", true )
 }
 
-
 bool function LootBinReset_IsLootBinSpecial( entity lootBin )
 {
-	if( lootBin == file.mythicBinEnt )
+	if ( lootBin == file.mythicBinEnt )
 		return true
 
-	foreach( bin in file.goldBinEnts )
+	foreach ( bin in file.goldBinEnts )
 	{
-		if( bin == lootBin )
+		if ( bin == lootBin )
 			return true
 	}
 
@@ -1458,7 +1701,7 @@ bool function LootBinReset_IsLootBinSpecial( entity lootBin )
 
 bool function LootBinReset_IsLootBin_Mythic( entity lootBin )
 {
-	if( lootBin == file.mythicBinEnt )
+	if ( lootBin == file.mythicBinEnt )
 		return true
 
 	return false
@@ -1472,19 +1715,27 @@ bool function LootBinReset_IsLootBin_GoldBin( entity lootBin )
 	
 	
 
-	foreach( bin in file.goldBinEnts )
+	foreach ( bin in file.goldBinEnts )
 	{
-		if( bin == lootBin )
+		if ( bin == lootBin )
 			return true
 	}
 
 	return false
 }
 
+bool function LootbinReset_SupportedMode_ForHUD()
+{
+	if ( GameMode_IsActive( eGameModes.SURVIVAL ) )
+	{
+		if ( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_FIRING_RANGE ) )
+			return false
 
+		return true
+	}
 
-
-
+	return false
+}
 
 
 
@@ -1512,14 +1763,14 @@ entity function GetMythicBinUnderAim( vector worldPos, float worldRange )
 
 	entity binEnt = file.mythicBinEnt
 
-	if( !IsValid( binEnt ) )
+	if ( !IsValid( binEnt ) )
 		return null
 
-	if( MapPing_Modify_DistanceCheck_Enabled() )
+	if ( MapPing_Modify_DistanceCheck_Enabled() )
 	{
 		float modifier = MapPing_DistanceCheck_GetModifier()
 
-		if( worldRange >= MapPing_DistanceCheck_GetDistanceRange() )
+		if ( worldRange >= MapPing_DistanceCheck_GetDistanceRange() )
 			modifier *= 0.5
 
 		worldRangeSqr = ( worldRange * modifier ) * ( worldRange * modifier )
@@ -1553,8 +1804,8 @@ bool function PingMythicBinUnderAim( entity binEnt )
 	if ( !IsPingEnabledForPlayer( player ) )
 		return false
 
-	if( LootbinReset_PingFromMap_Enabled() )
-		Remote_ServerCallFunction( FUNCNAME_Ping_MythicBinFromMap, binEnt ) 
+	if ( LootbinReset_PingFromMap_Enabled() )
+		Remote_ServerCallFunction( FUNCNAME_Ping_MythicBinFromMap, binEnt )
 
 	EmitSoundOnEntity( GetLocalViewPlayer(), PING_SOUND_LOCAL_CONFIRM )
 
@@ -1562,11 +1813,6 @@ bool function PingMythicBinUnderAim( entity binEnt )
 }
 
 
-#if DEV
-#if INTELLIJ_OUTLINE_SECTION_MARKER
-void function _____________DEV___________________________()
-{}
-#endif
 
 
 
@@ -1652,6 +1898,8 @@ void function _____________DEV___________________________()
 
 
 
-#endif
 
-      
+
+
+
+

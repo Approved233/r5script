@@ -39,7 +39,7 @@ const string TRANSPORT_PORTAL_START_CHANNEL_KNOCKED_SOUND_1P = "Alter_Ult_Telepo
 const string TRANSPORT_PORTAL_START_CHANNEL_KNOCKED_SOUND_3P = "Alter_Ult_Teleport_Buildup_Downed_3p"
 const string TRANSPORT_PORTAL_START_CHANNEL_TRANSLOCATOR_SOUND_3P = "Alter_Ult_Base_Alert_RemotelyUsed_3p"
 
-const bool TRANSPORT_PORTAL_DATAPAD_DEBUG = true
+const bool TRANSPORT_PORTAL_DATAPAD_DEBUG = false
 
 struct{
 	float warpDelayAfterUse = 2.0
@@ -135,7 +135,7 @@ void function OnWeaponActivate_ability_transport_portal_datapad( entity weapon )
 
 
 #if TRANSPORT_PORTAL_DATAPAD_DEBUG
-	printf( "Alter - " + weapon.GetOwner() + ": ACTIVATE portal datapad" )
+	printt( "Alter - " + weapon.GetOwner() + ": ACTIVATE portal datapad" )
 #endif
 
 	entity player = weapon.GetWeaponOwner()
@@ -168,7 +168,7 @@ void function OnWeaponDeactivate_ability_transport_portal_datapad( entity weapon
 
 
 #if TRANSPORT_PORTAL_DATAPAD_DEBUG
-	printf( "Alter - " + weapon.GetOwner() + ": Data pad DEACTIVATE" )
+	printt( "Alter - " + weapon.GetOwner() + ": Data pad DEACTIVATE" )
 #endif
 
 	entity player = weapon.GetWeaponOwner()
@@ -179,7 +179,7 @@ void function OnWeaponDeactivate_ability_transport_portal_datapad( entity weapon
 	{
 		player.Signal( TRANSPORT_PORTAL_CANCEL_CHANNEL_SIGNAL )
 #if TRANSPORT_PORTAL_DATAPAD_DEBUG
-		printf("Alter - " + weapon.GetOwner() + ": datapad WAS CANCELLED " + weapon.GetWeaponChargeFraction() )
+		printt("Alter - " + weapon.GetOwner() + ": datapad WAS CANCELLED " + weapon.GetWeaponChargeFraction() )
 #endif
 	}
 	else
@@ -534,7 +534,7 @@ void function PlayScreenFXWarpJumpTransportPortal( entity player )
 	OnThreadEnd(
 		function() : ( player, fxHandle )
 		{
-			printf("ALTER - FX Done Portal " + Time())
+			printt("ALTER - FX Done Portal " + Time())
 			if ( fxHandle > -1 )
 				EffectStop( fxHandle, true, false )
 		}
@@ -556,7 +556,7 @@ void function PlayScreenFXWarpJumpTransportPortal( entity player )
 	}
 
 #if TRANSPORT_PORTAL_DATAPAD_DEBUG
-	printf("ALTER - " + player + " - wait done " + Time())
+	printt("ALTER - " + player + " - wait done " + Time())
 #endif
 }
 
@@ -573,7 +573,7 @@ void function TransportPortal_CancelUse( )
 	if ( IsValid( datapadWeapon ) && datapadWeapon.GetWeaponClassName() == TRANSPORT_PORTAL_DATAPAD_WEAPON_NAME )
 	{
 #if TRANSPORT_PORTAL_DATAPAD_DEBUG
-		printf("Alter - " + player + ": TransportPortal_CancelUse - doing cancel")
+		printt("Alter - " + player + ": TransportPortal_CancelUse - doing cancel")
 #endif
 		player.ClientCommand( "invnext" )
 	}

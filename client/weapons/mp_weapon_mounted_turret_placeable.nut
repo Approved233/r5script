@@ -1135,6 +1135,13 @@ bool function OnWeaponAttemptOffhandSwitch_weapon_mounted_turret_placeable( enti
 
 
 
+
+
+
+
+
+
+
 bool function MountedTurretPlaceable_CanUse( entity player, entity ent, int useFlags )
 {
 	if ( IsValid( ent.GetDriver() ) )

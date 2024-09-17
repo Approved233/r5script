@@ -5,12 +5,9 @@ global function OnWeaponPrimaryAttack_weapon_lstar
 global function OnWeaponCooldown_weapon_lstar
 global function OnWeaponActivate_weapon_lstar
 global function OnWeaponDeactivate_weapon_lstar
-
-
 global function OnWeaponStartZoomIn_weapon_lstar
 global function OnWeaponStartZoomOut_weapon_lstar
 global function OnWeaponOwnerChanged_weapon_lstar
-
 
 
 
@@ -101,7 +98,6 @@ void function OnWeaponCooldown_weapon_lstar( entity weapon, bool isFirstTimeCool
 	}
 }
 
-
 void function OnWeaponStartZoomIn_weapon_lstar( entity weapon )
 {
 	HopupGunshield_OnWeaponStartZoomIn( weapon )
@@ -116,7 +112,6 @@ void function OnWeaponOwnerChanged_weapon_lstar( entity weapon, WeaponOwnerChang
 {
 
 }
-
 
 
 
@@ -171,9 +166,7 @@ void function OnWeaponActivate_weapon_lstar( entity weapon )
 		GoldenHorseGreen_OnWeaponActivate( weapon )
 
 
-
-		HopupGunshield_OnWeaponActivate( weapon )
-
+	HopupGunshield_OnWeaponActivate( weapon )
 }
 
 void function OnWeaponDeactivate_weapon_lstar( entity weapon )
@@ -184,7 +177,9 @@ void function OnWeaponDeactivate_weapon_lstar( entity weapon )
 
 
 
+	HopupGunshield_OnWeaponDeactivate( weapon )
 
-		HopupGunshield_OnWeaponDeactivate( weapon )
+
+
 
 }

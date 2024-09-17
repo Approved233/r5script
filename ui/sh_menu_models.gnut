@@ -16,6 +16,27 @@
 
 
 
+#if DEV
+global function DEV_LobbyStageSwitching_FoceEvent
+#endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -378,10 +399,61 @@ struct
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	array<void functionref()> mouseWheelDownCallbacks
 	array<void functionref()> mouseWheelUpCallbacks
-} file
 
+
+
+
+
+
+#if DEV
+	int DEV_forceLobbyEvent = -1
+#endif
+} file
 
 
 
@@ -499,13 +571,83 @@ global function IsPlayPresentationType
 
 
 
+
+
+
+
+
 void function ShMenuModels_UIInit()
 {
 	RegisterButtonPressedCallback( MOUSE_WHEEL_DOWN, OnMouseWheelDown )
 	RegisterButtonPressedCallback( MOUSE_WHEEL_UP, OnMouseWheelUp )
 
-	AddCallback_LobbyPlaylist_OnSelectedPlaylistChanged( LSS_Callback_SelectedPlaylistChanged )
+	AddCallback_LobbyPlaylist_OnSelectedPlaylistChanged( LobbyStageSwitching_Callback_SelectedPlaylistChanged )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6230,7 +6372,12 @@ bool function IsCallbackRegistered_OnMouseWheelDown( void functionref() cb )
 
 bool function IsPlayPresentationType( int presentationType )
 {
-	return presentationType == ePresentationType.PLAY || presentationType == ePresentationType.PLAY_QUADS || presentationType == ePresentationType.PLAY_STAGE_B
+	return presentationType == ePresentationType.PLAY
+		|| presentationType == ePresentationType.PLAY_QUADS
+		|| presentationType == ePresentationType.PLAY_STAGE_B_TRIOS
+		|| presentationType == ePresentationType.PLAY_STAGE_B_QUADS
+		|| presentationType == ePresentationType.PLAY_STAGE_C_TRIOS
+		|| presentationType == ePresentationType.PLAY_STAGE_C_QUADS
 }
 
 
@@ -6250,19 +6397,232 @@ bool function IsPlayPresentationType( int presentationType )
 
 
 
-void function LSS_Callback_SelectedPlaylistChanged( string playlistName )
+void function LobbyStageSwitching_Callback_SelectedPlaylistChanged( string playlistName )
 {
 	UpdateLobbyButtons()
 
 	if ( CanRunClientScript() )
-		RunClientScript( "LSS_UpdateLobbyStage", playlistName )
+		RunClientScript( "LobbyStageSwitching_UpdateLobbyStage", playlistName )
 }
 
 void function ClientToUI_CheckPlaylist()
 {
 	if ( CanRunClientScript() )
-		RunClientScript( "LSS_UpdateLobbyStage", LobbyPlaylist_GetSelectedPlaylist() )
+		RunClientScript( "LobbyStageSwitching_UpdateLobbyStage", LobbyPlaylist_GetSelectedPlaylist() )
 }
+
+
+bool function IsLobbyEvent1Active()
+{
+#if DEV
+		if ( file.DEV_forceLobbyEvent != -1 )
+			return file.DEV_forceLobbyEvent == 1
+#endif
+
+	return IsMTXEventActive( "MTX_Event_1" )
+}
+
+bool function IsLobbyEvent2Active()
+{
+#if DEV
+		if ( file.DEV_forceLobbyEvent != -1 )
+			return file.DEV_forceLobbyEvent == 2
+#endif
+
+	return IsMTXEventActive( "MTX_Event_2" )
+}
+
+#if DEV
+void function DEV_LobbyStageSwitching_FoceEvent( int newEvent )
+{
+	file.DEV_forceLobbyEvent = newEvent
+
+
+
+	ClientToUI_CheckPlaylist()
+
+}
+#endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

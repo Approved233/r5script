@@ -264,12 +264,14 @@ void function BuildMilestoneRewardsItemsInfo()
 		
 		RTKMilestoneCollectedItemInfo infoData
 		ItemFlavor item = milestone.rewardFlav
-		infoData.quality = ItemFlavor_GetQuality( item )
+		infoData.quality = GRX_GetRarityOverrideFromQuantity( item, ItemFlavor_GetQuality( item ), milestone.quantity )
 		infoData.icon = milestone.customImage == "" ? CustomizeMenu_GetRewardButtonImage( item ) : milestone.customImage
-		infoData.isOwned = GRX_IsItemOwnedByPlayer( item )
+		infoData.isStackable = milestone.isStackable
+		infoData.isOwned = milestone.isStackable ? false : GRX_IsItemOwnedByPlayer( item )
 		infoData.state = infoData.isOwned ? eShopItemState.OWNED : eShopItemState.AVAILABLE
 		infoData.isPurchasable = false
 		infoData.price = -1
+		infoData.quantity = milestone.quantity
 		infoData.tooltipInfo.titleText = milestone.customName == "" ? ItemFlavor_GetLongName( item ) : milestone.customName
 
 		if ( MilestoneEvent_IsEventStoreOnly( event ) )
@@ -299,6 +301,14 @@ void function BuildMilestoneRewardsItemsInfo()
 		RTKMilestoneProgressTrackerTierInfo tier
 		tier.grantLevel = grantLevel
 		tier.tierStartLevel = currentTierStartLevel
+		foreach ( RTKMilestoneCollectedItemInfo reward in rewardsArray )
+		{
+			reward.isOwned = reward.isOwned || ( reward.isStackable && totalCollectedItems >= grantLevel )
+			if ( reward.isStackable )
+			{
+				reward.state = reward.isOwned ? eShopItemState.OWNED : eShopItemState.AVAILABLE
+			}
+		}
 		tier.items = rewardsArray
 		tier.currentLevel = minint( grantLevel, totalCollectedItems )
 		tier.prefabIndex = 0
@@ -420,7 +430,7 @@ void function BuildMilestoneCollectedItemsInfo()
 		RTKMilestoneCollectedItemInfo infoData
 		infoData.quality = ItemFlavor_GetQuality( item )
 		infoData.icon = customImage != "" ? customImage : CustomizeMenu_GetRewardButtonImage( item )
-		infoData.isOwned = GRX_IsItemOwnedByPlayer( item )
+		infoData.isOwned = ItemFlavorIsStackable( item ) ? false : GRX_IsItemOwnedByPlayer( item )
 		infoData.state = infoData.isOwned ? eShopItemState.OWNED : eShopItemState.AVAILABLE
 		array<GRXScriptOffer> offers = GRX_GetItemDedicatedStoreOffers( item, MilestoneEvent_GetFrontPageGRXOfferLocation( event, file.isRestricted ) )
 		infoData.isPurchasable = offers.len() > 0
@@ -454,7 +464,7 @@ void function BuildMilestoneChaseItemInfo()
 	RTKMilestoneChaseItemInfo infoData
 	infoData.quality = ItemFlavor_GetQuality( chaseItem )
 	infoData.icon = MilestoneEvent_GetChaseItemIcon( event )
-	infoData.isOwned = GRX_IsItemOwnedByPlayer( chaseItem )
+	infoData.isOwned = GRX_IsItemOwnedByPlayer( chaseItem ) 
 	infoData.state = infoData.isOwned ? eShopItemState.OWNED : eShopItemState.AVAILABLE
 	infoData.name = Localize( ItemFlavor_GetLongName( chaseItem ) )
 	int totalItems = file.isRestricted ? file.items.len() : file.items.len() + file.chaseItems.len()
@@ -507,7 +517,7 @@ int function GetNumberOfOwnedRewardsPerCategory( CollectionEventRewardGroup rewa
 	int counter = 0
 	foreach	( flav in rewardGroup.rewards )
 	{
-		if ( GRX_IsItemOwnedByPlayer( flav ) )
+		if ( !ItemFlavorIsStackable( flav) && GRX_IsItemOwnedByPlayer( flav ) )
 		{
 			counter++
 		}
@@ -534,14 +544,9 @@ void function SetUpGridButtons( rtk_behavior self )
 
 		self.AutoSubscribe( offersGrid, "onChildAdded", function ( rtk_panel newChild, int newChildIndex ) : ( self, event, milestoneEventModel ) {
 			array< rtk_behavior > gridItems = newChild.FindBehaviorsByTypeName( "Button" )
-			if ( !GRX_AreOffersReady( false ) )
-			{
-				return
-			}
+
 			foreach( button in gridItems )
 			{
-				array<GRXScriptOffer> offers = GRX_GetItemDedicatedStoreOffers( file.items[newChildIndex], MilestoneEvent_GetFrontPageGRXOfferLocation( event, file.isRestricted ) )
-
 				self.AutoSubscribe( button, "onHighlighted", function( rtk_behavior button, int prevState ) : ( self, newChildIndex, milestoneEventModel ) {
 					BuildMilestoneItemViewerModel( file.items[newChildIndex] )
 					OnItemButtonEnter( self, button )
@@ -551,10 +556,18 @@ void function SetUpGridButtons( rtk_behavior self )
 					OnItemButtonExit( self, button )
 				} )
 
-				if( offers.len() > 0 )
-				{
-					GRXScriptOffer offer = offers[0]
-					self.AutoSubscribe( button, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( self, newChildIndex, offer ) {
+				self.AutoSubscribe( button, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( self, newChildIndex, event ) {
+					if ( !GRX_AreOffersReady( false ) )
+					{
+						return
+					}
+
+					array<GRXScriptOffer> offers = GRX_GetItemDedicatedStoreOffers( file.items[newChildIndex], MilestoneEvent_GetFrontPageGRXOfferLocation( event, file.isRestricted ) )
+
+					if ( offers.len() > 0 )
+					{
+						GRXScriptOffer offer = offers[0]
+
 						bool isStoreOnly = false
 						ItemFlavor ornull event = file.activeEvent
 						if ( event != null )
@@ -569,12 +582,9 @@ void function SetUpGridButtons( rtk_behavior self )
 							RTKEventsPanelController_SendPageViewEventOffer( self, newChildIndex, ItemFlavor_GetLongName( file.items[newChildIndex] ) )
 
 						StoreInspectMenu_AttemptOpenWithOffer( offer )
-					} )
-				}
-				else
-				{
-					bool hasOffers = offers.len() > 0
-					self.AutoSubscribe( button, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( self, newChildIndex, event, hasOffers ) {
+					}
+					else
+					{
 						bool isStoreOnly = false
 						ItemFlavor ornull event = file.activeEvent
 						if ( event != null )
@@ -585,7 +595,7 @@ void function SetUpGridButtons( rtk_behavior self )
 
 						string title = file.isRestricted ? "#MILESTONE_EVENT_LOCKED_PRESENTATION_BUTTON_TITLE" : ( isStoreOnly ? "#MILESTONE_STORE_PURCHASE_PRESENTATION_BUTTON_TITLE" : "#MILESTONE_EVENT_PURCHASE_PRESENTATION_BUTTON_TITLE" )
 						string desc = isStoreOnly ? "#MILESTONE_STORE_PURCHASE_PRESENTATION_BUTTON_DESC" : "#MILESTONE_EVENT_PURCHASE_PRESENTATION_BUTTON_DESC"
-						if ( file.isRestricted && !hasOffers )
+						if ( file.isRestricted )
 							desc = isStoreOnly ? "#MILESTONE_STORE_LOCKED_PRESENTATION_BUTTON_DESC" : "#MILESTONE_EVENT_LOCKED_PRESENTATION_BUTTON_DESC"
 
 						file.eventToReturnToOnNavBack = event
@@ -596,8 +606,8 @@ void function SetUpGridButtons( rtk_behavior self )
 							RTKEventsPanelController_SendPageViewEventOffer( self, newChildIndex, ItemFlavor_GetLongName( file.items[newChildIndex] ) )
 
 						SetGenericItemPresentationModeActiveWithNavBack( file.items[newChildIndex], title, desc, void function() : () {} )
-					} )
-				}
+					}
+				} )
 			}
 		} )
 	}
@@ -635,6 +645,7 @@ void function SetupMilestoneButtons( rtk_behavior self )
 				foreach( button in rewardButtons )
 				{
 					SettingsAssetGUID itemGuid = file.milestoneTierInfo[tierIndex].items[rewardIndex].itemGuid
+					int itemQuantity = file.milestoneTierInfo[tierIndex].items[rewardIndex].quantity
 					ItemFlavor item = GetItemFlavorByGUID( itemGuid )
 
 					self.AutoSubscribe( button, "onHighlighted", function( rtk_behavior button, int prevState ) : ( self, item, milestoneEventModel ) {
@@ -646,7 +657,7 @@ void function SetupMilestoneButtons( rtk_behavior self )
 						OnItemButtonExit( self, button )
 					} )
 
-					self.AutoSubscribe( button, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( self, rewardIndex, item, event ) {
+					self.AutoSubscribe( button, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( self, rewardIndex, item, event, itemQuantity ) {
 						bool isStoreOnly = IsMilestoneEventStoreOnly( event )
 						string desc = isStoreOnly ? "#MILESTONE_STORE_LOCKED_PRESENTATION_BUTTON_DESC" : "#MILESTONE_EVENT_LOCKED_PRESENTATION_BUTTON_DESC"
 						string itemName = "milestoneReward_" + ItemFlavor_GetLongName( item )
@@ -656,9 +667,7 @@ void function SetupMilestoneButtons( rtk_behavior self )
 						else
 							RTKEventsPanelController_SendPageViewEventOffer( self, rewardIndex, itemName, true )
 
-						SetGenericItemPresentationModeActiveWithNavBack( item, "#MILESTONE_EVENT_LOCKED_PRESENTATION_BUTTON_TITLE", desc, void function() : ()
-						{
-						} )
+						SetGenericItemPresentationModeActiveWithNavBack( item, "#MILESTONE_EVENT_LOCKED_PRESENTATION_BUTTON_TITLE", desc, void function() : () {}, itemQuantity )
 					} )
 				}
 			} )
@@ -875,8 +884,22 @@ void function BuildMilestoneItemViewerModel( ItemFlavor ornull itemToDisplay )
 		
 		itemInfo.eventOverviewPanelAlpha = file.currentEventInfoPanelAlpha
 		itemInfo.itemViewerPanelAlpha = 1.0 - file.currentEventInfoPanelAlpha
+		if ( IsItemFlavorRewardItem( item ) )
+		{
+			itemInfo.isOwned = true
+		}
+		else
+		{
+			if ( ItemFlavorIsStackable( item ) )
+			{
+				itemInfo.isOwned = false
+			}
+			else
+			{
+				itemInfo.isOwned = GRX_IsItemOwnedByPlayer( item )
+			}
+		}
 
-		itemInfo.isOwned = IsItemFlavorRewardItem( item ) ? true : GRX_IsItemOwnedByPlayer( item )
 		itemInfo.quality = ItemFlavor_GetQuality( item )
 		itemInfo.name = ItemFlavor_GetLongName( item )
 		itemInfo.itemTypeDescription = MilestoneEvent_GetCarouselItemDescriptionText(item )

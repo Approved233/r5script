@@ -50,6 +50,7 @@ global function ItemFlavor_GetShortDescription
 global function ItemFlavor_GetRewardShortDescription
 global function ItemFlavor_GetIcon
 global function ItemFlavor_GetChallengeIcon
+global function ItemFlavor_GetBattlepassIcon
 global function IsItemFlavorTypeEquippable
 global function ItemFlavor_GetTypeUICategory
 
@@ -194,9 +195,7 @@ global enum eItemType
 	
 	quest
 	quest_mission
-
-		quest_comic
-
+	quest_comic
 
 	
 	grx_sentinel
@@ -256,7 +255,7 @@ global enum eItemType
 	artifact_component_END
 
 
-
+	melee_addon
 
 
 	
@@ -327,7 +326,7 @@ const table<int, int> itemTypeUICategoryMap = {
 	[eItemType.artifact_component_activation_emote] = eItemTypeUICategory.CHARACTER,
 	[eItemType.artifact_component_power_source] = eItemTypeUICategory.CHARACTER,
 
-
+	[eItemType.melee_addon] = eItemTypeUICategory.CHARACTER,
 
 	[eItemType.battlepass_purchased_xp] = eItemTypeUICategory.NONE,
 	[eItemType.skydive_emote] = eItemTypeUICategory.CHARACTER,
@@ -344,9 +343,7 @@ const table<int, int> itemTypeUICategoryMap = {
 	[eItemType.emote_icon] = eItemTypeUICategory.CHARACTER,
 	[eItemType.character_emote] = eItemTypeUICategory.CHARACTER,
 	[eItemType.sticker] = eItemTypeUICategory.MISC_LOADOUT,
-
-		[eItemType.quest_comic] = eItemTypeUICategory.NON_EQUIPPABLE,
-
+	[eItemType.quest_comic] = eItemTypeUICategory.NON_EQUIPPABLE,
 	[eItemType.account_flag] = eItemTypeUICategory.NON_EQUIPPABLE,
 }
 
@@ -379,7 +376,7 @@ global const table<int, string> itemTypeNameMap = {
 	[eItemType.artifact_component_activation_emote] = "#itemtype_artifact_component_activation_emote_NAME",
 	[eItemType.artifact_component_power_source] = "#itemtype_artifact_component_power_source_NAME",
 
-
+	[eItemType.melee_addon] = "#itemtype_melee_addon_NAME",
 
 	[eItemType.battlepass_purchased_xp] = "#itemtype_battlepass_purchased_xp_NAME",
 	[eItemType.skydive_emote] = "#itemtype_skydive_emote_NAME",
@@ -390,9 +387,7 @@ global const table<int, string> itemTypeNameMap = {
 	[eItemType.emote_icon] = "#itemtype_character_emote_icon_NAME",
 	[eItemType.character_emote] = "#itemtype_character_emote_NAME",
 	[eItemType.sticker] = "#itemtype_sticker_NAME",
-
-		[eItemType.quest_comic] = "#itemtype_quest_comic_NAME",
-
+	[eItemType.quest_comic] = "#itemtype_quest_comic_NAME",
 
 	[eItemType.reward_set_tracker] = "#itemtype_reward_set_tracker_NAME",
 
@@ -1207,6 +1202,13 @@ asset function ItemFlavor_GetChallengeIcon( ItemFlavor flavor )
 
 
 
+asset function ItemFlavor_GetBattlepassIcon( ItemFlavor flavor )
+{
+	Assert( IsItemFlavorStructValid( flavor.guid, eValidation.ASSERT ) )
+	return GetGlobalSettingsAsset( ItemFlavor_GetAsset( flavor ), "battlepassIcon" )
+}
+
+
 
 asset function ItemFlavor_GetSourceIcon( ItemFlavor flavor )
 {
@@ -1789,11 +1791,7 @@ ItemFlavor ornull function RegisterItemFlavorFromSettingsAsset( asset settingsAs
 	int availability = flavor.typeIndex == eItemType.character ? GetPlaylistAvailabilityByRef( [ humanReadableRef, guidString ] ) : GetPlaylistAvailabilityByRef( [ guidString ] )
 	if ( availability == eItemFlavorPlaylistAvailability.DISABLED )
 	{
-#if DEV
-			printt( "Item flavor disabled by dev-only playlist vars: " + humanReadableRef + " | " + guidString )
-#else
-			Warning( "Item flavor disabled by dev-only playlist vars: " + humanReadableRef + " | " + guidString )
-#endif
+		printt( "Item flavor disabled by playlist vars: " + humanReadableRef + " | " + guidString )
 
 #if DEBUG_ITEM_FLAVOR_REGISTRATION
 			printt( "DEBUG_ITEM_FLAVOR_REGISTRATION", FUNC_NAME(), settingsAsset, "Disabled by playlist!" )
@@ -2626,11 +2624,20 @@ table<string, string> function GetChallengeMetaDataFromAsset( asset settingsAsse
 
 table<string, string> function GetTimestampMetaDataFromAsset( asset settingsAsset, int itemType, bool showWarning )
 {
+	MetaDataFieldMapping fieldMapping = itemType in ITEMTYPE_TO_DATETIME_METADATA_FIELD_MAPPINGS ? ITEMTYPE_TO_DATETIME_METADATA_FIELD_MAPPINGS[ itemType ] : DEFAULT_METADATA_FIELD_MAPPING
 	table<string, string> metaData = {}
 
+	
+	if ( itemType == eItemType.battlepass && GetGlobalSettingsAsset( settingsAsset, "rewardScheduleDatatableV2" ) == $"" )
+	{
+		
+		return metaData
+	}
+
+	
 	int tempTimeStamp
 	int defaultUnixTime = UNIX_TIME_FALLBACK_2038
-	string tempKey = "defaultStartTime"
+	string tempKey = fieldMapping[ eDateTimeFieldType.START ]
 	string str = GetGlobalSettingsString( settingsAsset, tempKey )
 	if ( str != "" )
 	{
@@ -2654,7 +2661,7 @@ table<string, string> function GetTimestampMetaDataFromAsset( asset settingsAsse
 	}
 
 	defaultUnixTime = UNIX_TIME_FALLBACK_1970
-	tempKey = "defaultFinishTime"
+	tempKey = fieldMapping[ eDateTimeFieldType.FINISH ]
 	str = GetGlobalSettingsString( settingsAsset, tempKey )
 	if ( str != "" )
 	{

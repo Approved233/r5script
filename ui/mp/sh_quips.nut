@@ -474,10 +474,6 @@ void function AssertEmoteIsValid( ItemFlavor flavor )
 
 
 
-
-
-
-
 bool function ItemFlavor_CanEquipToWheel( ItemFlavor item )
 {
 	switch ( ItemFlavor_GetType( item ) )

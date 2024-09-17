@@ -1426,6 +1426,23 @@ bool function EvilFlyersEnabled()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function ServerToClient_PlayLootRarityFXOnDeathboxDrop( entity deathBox  )
 {
 	thread PlayLootRarityFXOnDeathboxDrop_threaded( deathBox  )
@@ -1434,13 +1451,8 @@ void function ServerToClient_PlayLootRarityFXOnDeathboxDrop( entity deathBox  )
 void function PlayLootRarityFXOnDeathboxDrop_threaded( entity deathBox  )
 {
 	
-	bool bDeathBoxIsValid = IsValid( deathBox )
-	Assert( bDeathBoxIsValid, "ERROR: Deathbox Invalid!" )
-
-	if( !bDeathBoxIsValid )
-	{
+	if( !IsValid( deathBox ) )
 		return
-	}
 
 	EndSignal( deathBox, "OnDeath" )
 	EndSignal( deathBox, "OnDestroy" )

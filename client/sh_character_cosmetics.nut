@@ -950,7 +950,7 @@ void function DEV_TestCharacterSkinData()
 
 	foreach ( character in GetAllCharacters() )
 	{
-		array<ItemFlavor> characterSkins = GetValidItemFlavorsForLoadoutSlot( LocalClientEHI(), Loadout_CharacterSkin( character ) )
+		array<ItemFlavor> characterSkins = GetValidItemFlavorsForLoadoutSlot( Loadout_CharacterSkin( character ) )
 
 		foreach ( skin in characterSkins )
 		{

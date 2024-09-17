@@ -186,6 +186,7 @@ global function OpenDevMenu
 global function DEV_SetLoadScreenFinished
 global function AutomateUi
 global function AutomateUiWaitForPostmatch
+global function AutomateUiRequeue
 global function DEV_AdvanceToBattlePassMilestoneMenu
 #endif
 
@@ -249,6 +250,10 @@ struct
 
 
 	bool navigateBackDisabled = false
+
+#if DEV
+		int cachedFakeTime = -1
+#endif
 } file
 
 
@@ -318,7 +323,8 @@ void function UICodeCallback_ToggleInGameMenu()
 
 
 
-			|| MenuStack_Contains( GetMenu( "PrivateMatchSpectCharSelectMenu" ) ) )
+			|| MenuStack_Contains( GetMenu( "ScoreboardTransition" ) )
+			|| MenuStack_Contains( GetMenu( "PrivateMatchSpectCharSelectMenu" ) ))
 		return
 
 	if ( IsDialog( activeMenu ) )
@@ -900,11 +906,6 @@ void function UIFullyConnectedInitialization()
 
 
 
-
-
-
-
-	StorePanelThemedShopEvent_LevelInit()
 	StorePanelHeirloomShopEvent_LevelInit()
 	Entitlements_LevelInit()
 	CustomizeCommon_Init()
@@ -940,6 +941,11 @@ void function UIFullyConnectedInitialization()
 
 
 		Sh_ArenasRanked_Init()
+
+
+
+
+
 
 	ShWeapons_LevelInit()
 	ShWeaponCosmetics_LevelInit()
@@ -980,7 +986,7 @@ void function UIFullyConnectedInitialization()
 	MeleeSyncedShared_Init()
 	ShArtifacts_LevelInit()
 
-
+	ShUniversalMelees_LevelInit()
 
 	ShPing_Init()
 	ShQuickchat_Init()
@@ -1067,6 +1073,24 @@ void function UICodeCallback_FullyConnected( string levelname )
 		printt( "UICodeCallback_FullyConnected: Performing partial initialization" )
 	}
 
+#if DEV
+		if ( GetCurrentPlaylistVarBool( "dev_assert_on_fake_time_mismatch", true ) )
+		{
+			int fakeTimeDays     = GetConVarInt( "test_fakeTimeDays" )
+			int fakeTimeStamp    = GetConVarInt( "test_fakeTimeStamp" )
+			bool useFakeTimeDays = (fakeTimeDays != 0)
+			if ( shouldFullyInitialize )
+			{
+				file.cachedFakeTime = useFakeTimeDays ? fakeTimeDays : fakeTimeStamp
+			}
+			else
+			{
+				int fakeTimeToCheckAgainst = useFakeTimeDays ? fakeTimeDays : fakeTimeStamp
+				Assert( file.cachedFakeTime == fakeTimeToCheckAgainst )
+			}
+		}
+#endif
+
 	UIFullyConnectedInitialization_ForLevel( levelname )
 }
 
@@ -1084,10 +1108,6 @@ void function UICodeCallback_LevelShutdown()
 	ImagePakLoad_OnLevelShutdown()
 	ShGRX_LevelShutdown()
 	Kepler_LevelShutdown()
-
-
-
-	StorePanelThemedShopEvent_LevelShutdown()
 	StorePanelHeirloomShopEvent_LevelShutdown()
 	PlayPanel_LevelShutdown()
 	OffersPanel_LevelShutdown()
@@ -2140,28 +2160,18 @@ void function DialogFlow()
 	bool hasActiveBattlePass = GetActiveBattlePass() != null
 
 
-	bool isFTUEDialogFlow = FTUEFlow_ShouldShowFTUEPopup()
+	if ( FTUEFlow_DialogFlowCheck( GetLocalClientPlayer() ) )
+	{
+		FTUEFlow_DialogFlow()
+	}
+	else
 
-	if ( DialogFlow_ShouldOpenPromoDialog() && !isFTUEDialogFlow )
-
-
-
+	if ( DialogFlow_ShouldOpenPromoDialog() )
 	{
 		
 		OpenPromoDialogIfNewUM()
 	}
-
-	else if ( isFTUEDialogFlow )
-	{
-		FTUEFlow_DialogFlow()
-	}
-	else if ( FTUEFlow_GetFTUEFlowStage() == eFTUEFlowStage.POST_BOT_MATCH_1 && !GetLocalClientPlayer().GetPersistentVar( "hasSeenNPPInfoDialog" ) )
-	{
-		OpenNewPlayerPassInfo()
-	}
-
-
-	if ( DisplayQueuedRewardsGiven() )
+	else if ( DisplayQueuedRewardsGiven() )
 	{
 		
 		IncrementNumDialogFlowDialogsDisplayed()
@@ -2555,12 +2565,7 @@ void function InitMenus()
 	AddMenu( "NewPlayerPassInfoMenu", $"resource/ui/menus/new_player_pass_info.menu", NewPlayerPassInfoInitMenu )
 
 
-	var eventPanel = AddPanel( lobbyMenu, "EventPanel", InitEventPanel )
-	AddPanel( eventPanel, "RTKEventsPanel", InitRTKEventsPanel )
-	AddPanel( eventPanel, "ThemedShopPanel", ThemedShopPanel_Init )
-
-
-
+	var eventPanel = AddPanel( lobbyMenu, "EventPanel", InitRTKEventsPanel )
 
 
 		var challengesPanel = AddPanel( lobbyMenu, "ChallengesPanel", InitChallengesPanel )
@@ -2607,6 +2612,9 @@ void function InitMenus()
 
 
 
+
+
+
 	AddMenu( "GiftInfoDialog", $"resource/ui/menus/dialogs/gift_information_dialog.menu", InitGiftInformationDialog )
 	AddMenu( "TwoFactorInfoDialog", $"resource/ui/menus/dialogs/two_factor_information_dialog.menu", InitTwoFactorInformationDialog )
 
@@ -2615,6 +2623,9 @@ void function InitMenus()
 	AddMenu( "ArtifactsInspectMenu", $"resource/ui/menus/artifacts_inspect.menu", InitArtifactsInspectMenu )
 
 
+
+
+		AddMenu( "UniversalMeleeInspectMenu", $"resource/ui/menus/universal_melee_inspect.menu", InitUniversalMeleeInspectMenu )
 
 	var storeOfferSetItemsMenu = AddMenu( "StoreOfferSetItemsMenu", $"resource/ui/menus/store_offer_set_items.menu", InitStoreOfferSetItemsMenu )
 	AddPanel( storeOfferSetItemsMenu, "StoreOfferSetItemsPanel", InitStoreOfferSetItemsPanel )
@@ -2907,7 +2918,6 @@ void function InitMenus()
 	AddPanel( promoDialog, "PromoPanel", InitPromoPanel )
 	AddPanel( promoDialog, "InboxPanel", InitInboxPanel )
 
-	AddMenu( "BuffetEventAboutDialog", $"resource/ui/menus/dialogs/buffet_event_about.menu", InitBuffetEventAboutDialog )
 	AddMenu( "StoryEventAboutDialog", $"resource/ui/menus/dialogs/story_event_about.menu", InitStoryEventAboutDialog )
 
 	AddMenu( "RadioPlayDialog", $"resource/ui/menus/dialogs/radio_play.menu", InitRadioPlayDialog )
@@ -2956,11 +2966,8 @@ void function InitMenus()
 
 
 
-
-		var tdmRoundTransitionMenu = AddMenu( "TDMRoundTransition", $"resource/ui/menus/tdm_round_transition.menu", InitTDMRoundTransition )
-		
-		
-
+	var scoreboardTransitionsMenu = AddMenu( "ScoreboardTransition", $"resource/ui/menus/scoreboard_transition.menu", InitScoreboardTransition )
+	
 
 	AddMenu( "LoadoutSelectionSystemLoadoutSelector", $"resource/ui/menus/loadout_selection_system_select.menu", LoadoutSelectionMenu_InitLoadoutMenu )
 	AddMenu( "LoadoutSelectionSystemSelectOptic", $"resource/ui/menus/dialogs/loadoutselection_select_optic.menu", LoadoutSelectionOptics_InitSelectOpticDialog )
@@ -3040,10 +3047,6 @@ void function InitMenus()
 	AddPanel( LaserSightOptionseMenu, "LaserSightOptionsColorPanel", InitLaserSightOptionsColorPanel )
 
 	AddMenu( "LoreReaderMenu", $"resource/ui/menus/lore_reader.menu", InitLoreReaderMenu )
-
-
-		
-		
 
 
 
@@ -4051,7 +4054,8 @@ void function UICodeCallback_PartyUpdated()
 	foreach ( callbackFunc in file.partyUpdatedCallbacks )
 		callbackFunc()
 
-	ShowNotification()
+	if ( CanShowNotification() )
+		ShowNotification()
 
 	if ( AmIPartyLeader() )
 	{
@@ -4077,6 +4081,16 @@ void function UICodeCallback_PartyUpdated()
 
 		file.partyMemberCount = partyMemberCount
 	}
+}
+
+bool function CanShowNotification()
+{
+
+
+
+
+
+	return IsLobby()
 }
 
 bool function HasCallback_OnPartyMemberRemoved( void functionref() callbackFunc )
@@ -4474,5 +4488,10 @@ bool function AutomateUi(float delayFactor = 1)
 bool function AutomateUiWaitForPostmatch()
 {
 	return GetConVarBool( "ui_automation_wait_for_postmatch" )
+}
+
+bool function AutomateUiRequeue()
+{
+	return GetConVarBool( "ui_automation_requeue" )
 }
 #endif

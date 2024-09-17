@@ -2447,8 +2447,8 @@ void function PreviewFriendCosmetics( bool isForLocalPlayer, CommunityUserInfo o
 
 	}
 
-	OnThreadEnd( void function() : ( introQuipSoundEventName ) {
-		SetupMenuGladCard( null, "", false )
+	OnThreadEnd( void function() : ( introQuipSoundEventName, isForLocalPlayer ) {
+		SetupMenuGladCard( null, "", isForLocalPlayer )
 
 		if ( introQuipSoundEventName != "" )
 			StopUISoundByName( introQuipSoundEventName )

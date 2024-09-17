@@ -118,22 +118,9 @@ void function SetUpLandingButtons( rtk_behavior self )
 						case eEventLandingPageButtonRedirect.PLAY_MODE:
 							OpenGameModeSelectDialog()
 							break
-						case eEventLandingPageButtonRedirect.VGUI_PRIZE_TRACKER: 
+						case eEventLandingPageButtonRedirect.PRIZE_TRACKER:
 
 							EventsPanel_GoToPage( eEventsPanelPage.PRIZE_TRACKER )
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 							break
 						case eEventLandingPageButtonRedirect.CUSTOM_DEEPLINK:

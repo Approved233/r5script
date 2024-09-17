@@ -25,6 +25,9 @@ const string PVAR_BATTLE_SENSE_DISTANCE = "battle_sense_distance"
 const string PVAR_BATTLE_SENSE_ENABLED = "battle_sense_enabled"
 const string PVAR_BATTLE_SENSE_TRACK_SKYDIVE = "battle_sense_track_skydive"
 const string PVAR_BATTLE_SENSE_TRACK_GROUND = "battle_sense_track_ground"
+
+
+
 const float PVAR_BATTLE_SENSE_DISTANCE_DEFAULT = 768.0
 const bool PVAR_BATTLE_SENSE_ENABLED_DEFAULT = false
 const bool PVAR_BATTLE_SENSE_TRACK_SKYDIVE_DEFAULT = true
@@ -87,6 +90,10 @@ void function ShPassiveBattleSense_Init()
 	{
 		return
 	}
+
+
+
+
 
 
 
@@ -385,4 +392,10 @@ bool function GetPlaylistVar_BattleSense_TrackGround()
 {
 	return GetCurrentPlaylistVarBool( PVAR_BATTLE_SENSE_TRACK_GROUND, PVAR_BATTLE_SENSE_TRACK_GROUND_DEFAULT )
 }
+
+
+
+
+
+
 

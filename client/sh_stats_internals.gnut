@@ -330,15 +330,12 @@ int function GetStat_Int( entity player, StatEntry entry, int when = eStatGetWhe
 
 
 	bool useStatCaching = HasStatCachingOptimizations()
+
 	
-	if ( GetCurrentPlaylistVarBool( "s22_free_bp_challenges_fix", true ) )
-	{
-		
-		
-		
-		bool isLobbyOnlyStat = IsLobby() 
-		useStatCaching = useStatCaching && !isLobbyOnlyStat
-	}
+	
+	
+	bool shouldRecalculateLobbyStat = IsLobby() && entry.gameMode == eChallengeGameMode.NON_MODE
+	useStatCaching = useStatCaching && !shouldRecalculateLobbyStat
 	if ( useStatCaching )
 	{
 		int unixTime = GetUnixTimestamp()
@@ -612,6 +609,10 @@ string function GetStatTemplateDebugName( StatTemplate template )
 
 	return format( "stats%s.%s", sesPart, template.fieldName )
 }
+
+
+
+
 
 
 

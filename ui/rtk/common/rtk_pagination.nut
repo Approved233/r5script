@@ -975,8 +975,17 @@ void function RTKPagination_RegisterGlobalInput( rtk_behavior self )
 	}
 	else
 	{
-		keycodesPrev.extend( [ STICK2_LEFT ] )
-		keycodesNext.extend( [ STICK2_RIGHT ] )
+		if ( !IsRTL() )
+		{
+			keycodesPrev.extend( [ STICK2_LEFT ] )
+			keycodesNext.extend( [ STICK2_RIGHT ] )
+		}
+		else 
+		{
+			keycodesPrev.extend( [ STICK2_RIGHT ] )
+			keycodesNext.extend( [ STICK2_LEFT ] )
+		}
+
 
 		if ( self.PropGetBool( "supportDpadButtonNav" ) )
 		{

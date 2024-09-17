@@ -47,11 +47,17 @@ void function Perk_DeathBoxInsight_Init()
 		AddShouldSeeEntityCallbackForPassive( ePassives.PAS_ORDNANCE_HIGHLIGHT, OrdnanceHighlight_ShouldSeeLoot )
 		AddShouldSeeEntityCallbackForPassive( ePassives.PAS_ULTACCEL_HIGHLIGHT, UltAccelHighlight_ShouldSeeLoot )
 
+
+
+
 		AddCallback_OnPassiveChanged( ePassives.PAS_AMMUVISION, OnPassiveChanged )
 		AddCallback_OnPassiveChanged( ePassives.PAS_HEALING_ITEM_VISION, OnPassiveChanged )
 		AddCallback_OnPassiveChanged( ePassives.PAS_ORDNANCE_HIGHLIGHT, OnPassiveChanged )
 		AddCallback_OnPassiveChanged( ePassives.PAS_DEATHBOX_BATTERY_COUNT, OnPassiveChanged )
 		AddCallback_OnPassiveChanged( ePassives.PAS_ULTACCEL_HIGHLIGHT, OnPassiveChanged )
+
+
+
 
 
 
@@ -211,6 +217,17 @@ bool function HealingItemVision_ShouldSeeLoot( entity loot, entity player, LootD
 	return false
 }
 
+
+
+
+
+
+
+
+
+
+
+
 bool function ReconClass_ShouldSeeLoot( entity loot, entity player, LootData lootData )
 {
 	return lootData.lootType == eLootType.ATTACHMENT && lootData.attachmentStyle == "sight"
@@ -222,13 +239,15 @@ void function DeathBoxInsight_CreateInWorldMarker()
 	var rui                = CreateFullscreenRui( $"ui/death_box_insight_icon.rpak", RuiCalculateDistanceSortKey( localViewPlayer.EyePosition(), <0,0,0> ) )
 
 
+
+
 	if ( PlayerHasPassive( localViewPlayer, ePassives.PAS_ALTER ) )
+
 	{
 		RuiSetFloat( rui, "minAlphaDist", 2500 )
 		RuiSetFloat( rui, "maxAlphaDist", 3000 )
 	}
 	else
-
 	{
 		RuiSetFloat( rui, "minAlphaDist", 500 )
 		RuiSetFloat( rui, "maxAlphaDist", 1000 )
@@ -291,6 +310,21 @@ DeathboxContentsInfo function GetContentsToDisplayFromDeathbox( entity box )
 				result.contents.append( lootData.index )
 			}
 		}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	}
 	return result
 }
@@ -357,6 +391,12 @@ bool function DeathBoxInsight_UpdateLookatPing()
 		maxVisibleDist = GetRemoteDeathboxInteractRangeForAlter( player )
 	}
 
+
+
+
+
+
+
 	array<entity> candidateBoxes = GetEntitiesFromArrayNearPos( allBoxes, playerEyePos, maxVisibleDist )
 	ArrayRemoveInvalid( candidateBoxes )
 	entity lookatEnt = null
@@ -388,6 +428,8 @@ bool function DeathBoxInsight_UpdateLookatPing()
 			if( !IsValid( wp ) )
 				continue
 			entity pingedEnt =  Waypoint_GetItemEntForLootWaypoint( wp )
+			if( !IsValid( pingedEnt ) )
+				continue
 			entity pingedParent = pingedEnt.GetParent()
 			if( IsValid( pingedParent ) && candidateBoxes.contains( pingedParent ) )
 			{

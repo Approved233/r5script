@@ -4,13 +4,13 @@ global function FTUEFlow_OpenCYOAMenu
 
 global function FTUEFlow_IsFTUEFlowEnabled
 global function FTUEFlow_GetFTUEFlowStage
-global function FTUEFlow_ShouldShowFTUEPopup
 global function FTUEFlow_GetAdventureChosen
 
 global function FTUEFlow_OnPress_NewPlayer
 global function FTUEFlow_OnPress_ExperiencedPlayer
 global function FTUEFlow_OnPress_BaldWraithPlayer
 
+global function FTUEFlow_DialogFlowCheck
 global function FTUEFlow_DialogFlow
 global function FTUEFlow_GameModeSelectRecommendation
 global function FTUEFlow_GetLobbyPlaylistRecommendation
@@ -28,7 +28,6 @@ global function FTUEFlow_SetFTUEFlowStage
 
 
 global function FTUEFlow_IsInFTUEFlow
-
 
 
 global enum eFTUEFlowStage
@@ -96,6 +95,15 @@ bool function FTUEFlow_IsInFTUEFlow( entity player )
 		return false
 	}
 
+
+	if ( Kepler_IsReady() && !Kepler_IsPlayerInVariant( player, eKeplerScenario.FTUE_LANDING_FLOW_22_0, "treatment-a" ) )
+
+
+
+	{
+		return false
+	}
+
 	int installTime = expect int( player.GetPersistentVar( "installUnixTime" ) )
 
 	
@@ -110,28 +118,6 @@ bool function FTUEFlow_IsInFTUEFlow( entity player )
 
 
 
-
-bool function FTUEFlow_ShouldShowFTUEPopup()
-{
-	if ( !FTUEFlow_IsFTUEFlowEnabled( GetLocalClientPlayer()) )
-	{
-		return false
-	}
-
-	int installTime = expect int( GetPersistentVar( "installUnixTime" ) )
-
-	
-	if ( installTime == 0 )
-	{
-		return true
-	}
-
-	int flowStage = expect int( GetPersistentVar( "activeFTUEFlow" ) )
-	return flowStage < eFTUEFlowStage.POST_TUTORIAL
-}
-
-
-
 int function FTUEFlow_GetFTUEFlowStage()
 {
 #if DEV
@@ -142,7 +128,18 @@ int function FTUEFlow_GetFTUEFlowStage()
 	}
 #endif
 
-	if ( !FTUEFlow_IsFTUEFlowEnabled( GetLocalClientPlayer()) )
+	entity player = GetLocalClientPlayer()
+
+	if ( !FTUEFlow_IsFTUEFlowEnabled( player ) )
+	{
+		return eFTUEFlowStage.READY_FOR_PRED
+	}
+
+
+	if ( Kepler_IsReady() && !Kepler_IsPlayerInVariant( player, eKeplerScenario.FTUE_LANDING_FLOW_22_0, "treatment-a" ) )
+
+
+
 	{
 		return eFTUEFlowStage.READY_FOR_PRED
 	}
@@ -187,19 +184,10 @@ void function FTUEFlow_SetFTUEFlowStage( entity player, int stage )
 
 void function FTUEFlow_OpenCYOAMenu()
 {
-	if ( !Kepler_IsPlayerInVariant( GetLocalClientPlayer(), eKeplerScenario.FTUE_LANDING_FLOW_22_0, "treatment-a" ) )
-	{
-		FTUEFlow_SetFTUEFlowStage( GetLocalClientPlayer(), eFTUEFlowStage.READY_FOR_PRED )
-		return
-	}
-
 	RTKPanelImageButtonModal_Show( CYOA_MENU_ID, "#FTUE_REDIRECTION_TITLE", AddFTUEOptions, OnFTUENavigateBack )
 
 	
-	if ( AreWeMatchmaking() )
-	{
-		FTUEFlow_StopMatchMaking()
-	}
+	FTUEFlow_StopMatchMaking()
 
 	file.closeCYOAMenuOnBack = file.adventureChosen > 0
 }
@@ -238,27 +226,32 @@ const string TUT_SLOT = "training"
 const string CYOA_MENU_ID = "CYOAMenu"
 
 
+bool function FTUEFlow_DialogFlowCheck( entity player )
+{
+	if ( FTUEFlow_IsInFTUEFlow ( player ) )
+	{
+		return true
+	}
+
+	FTUEFlow_SetFTUEFlowStage( player, eFTUEFlowStage.READY_FOR_PRED )
+	return false
+}
+
+
+
 void function FTUEFlow_DialogFlow()
 {
-	if ( !IsPartyLeader() ) return
-
 	int ftueStage = FTUEFlow_GetFTUEFlowStage()
 
 	switch ( ftueStage )
 	{
 		case eFTUEFlowStage.CYOA_MENU:
-			if ( file.adventureChosen == 0 )
+			if ( IsPartyLeader() && file.adventureChosen == 0 )
 				FTUEFlow_OpenCYOAMenu()
 			break
-		case eFTUEFlowStage.POST_TUTORIAL:
 		case eFTUEFlowStage.POST_BOT_MATCH_1:
-		case eFTUEFlowStage.POST_BOT_MATCH_2:
-			table< string, string > slotToPlaylistNameMap = GameModeSelect_GetPlaylists()
-			LobbyPlaylist_SetSelectedPlaylist( slotToPlaylistNameMap[ BOTS_SLOT ] )
-			break
-		case eFTUEFlowStage.POST_BOT_MATCH_3:
-			table< string, string > slotToPlaylistNameMap = GameModeSelect_GetPlaylists()
-			LobbyPlaylist_SetSelectedPlaylist( slotToPlaylistNameMap[ TRIOS_SLOT ] )
+			if ( !GetLocalClientPlayer().GetPersistentVar( "hasSeenNPPInfoDialog" ) )
+				OpenNewPlayerPassInfo()
 			break
 	}
 }
@@ -347,7 +340,8 @@ void function FTUEFlow_StartMatchMaking()
 void function FTUEFlow_StopMatchMaking()
 {
 	RTKPanelImageButtonModal_ChangeBackButtonText( "#B_BUTTON_BACK", "#B_BUTTON_BACK" )
-	ReadyShortcut_OnActivate( null )
+	CancelMatchmaking()
+	Remote_ServerCallFunction( "ClientCallback_CancelMatchSearch" )
 	file.cyoaMenuMatchMaking = false
 }
 

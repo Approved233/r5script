@@ -5,6 +5,7 @@ global function RespawnBeacons_RegisterNetworking
 global function GetRespawnStyle
 global function GetRemainingRespawnsForPlayer
 global function IsRespawnBeacon
+global function GetAllRespawnBeacons
 global function RespawnChamberOnUse
 global function GetStartingRespawnCount
 global function ShouldRestoreKittedWeapons
@@ -583,6 +584,11 @@ bool function IsRespawnBeacon( entity ent )
 	return false
 }
 
+array<entity> function GetAllRespawnBeacons()
+{
+	return file.allStations
+}
+
 bool function ShouldFastBannerPickup()
 {
 	return GetCurrentPlaylistVarBool( "fast_banner_pickup", true )
@@ -595,21 +601,7 @@ bool function HasInterruptableBannerPickup()
 
 bool function ShouldRestoreKittedWeapons()
 {
-	bool isKittedWeaponsGameMode = false
-
-
-		isKittedWeaponsGameMode = GetCurrentPlaylistVarBool( "is_gamemode_battle_rush", false )
-
-
-
-
-
-
-
-
-
-
-	return isKittedWeaponsGameMode
+	return GetCurrentPlaylistVarBool( "restore_kitted_weapons", false )
 }
 
 void function RespawnEntitySpawned( entity ent )
@@ -2021,6 +2013,49 @@ void function AddBeaconEntToRespawnBeaconsArray( entity beacon )
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 bool function IsNotBusy( entity player, entity ent, int useFlags )
 {
 	if ( Bleedout_IsBleedingOut( player ) )
@@ -2066,6 +2101,9 @@ bool function RespawnEquipped_PLV_DontResetInventory()
 bool function RespawnEquipped_DontResetInventory()
 {
 	bool result = RespawnEquipped_PLV_DontResetInventory()
+
+	
+	result = result || GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_FIRING_RANGE )
 
 
 		result = result || ( FreeRespawns_Feature_Exists() && FreeRespawns_DontResetInventory() )
@@ -2197,6 +2235,8 @@ array< string > function RestorableAttachments_GetRestorableTypes()
 	array< string > results = GetTrimmedSplitString( plv, " " )
 	return results
 }
+
+
 
 
 
@@ -2954,6 +2994,35 @@ void function AttemptCancelBannerPickup( entity player )
 
 	Remote_ServerCallFunction( "ClientToServer_CancelBannerPickupAnim" )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

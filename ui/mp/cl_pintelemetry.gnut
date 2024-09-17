@@ -965,7 +965,7 @@ void function PIN_BattlepassPurchase( string currentID, bool isBundle )
 	)
 }
 
-void function PIN_BattlepassMilestonePageView( string currentID, float openDuration, int currentMilestone, bool hasPurchased, array<string> rewardClicked )
+void function PIN_BattlepassMilestonePageView( string currentID, float openDuration, int currentMilestone, bool hasPurchased, array<string> rewardClicked, int tabIndex )
 {
 	const float VALID_VIEW_DURATION = 3.0
 
@@ -992,6 +992,7 @@ void function PIN_BattlepassMilestonePageView( string currentID, float openDurat
 			pgdur = openDuration
 			milestone_level = currentMilestone
 			hasPurchased = hasPurchased
+			tabIndex = tabIndex
 
 			rewardIndex = rewardTable
 		}

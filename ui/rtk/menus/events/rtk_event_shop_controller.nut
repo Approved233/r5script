@@ -333,7 +333,7 @@ void function RTKEventShopPanel_OnInitialize( rtk_behavior self )
 	{
 		expect rtk_behavior( challengesGridButton )
 		self.AutoSubscribe( challengesGridButton, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( self ) {
-			JumpToChallenges( "challengeseventshop" )
+			JumpToChallenges( "event" )
 		} )
 	}
 

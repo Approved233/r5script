@@ -765,6 +765,15 @@ global struct WaypointClusterInfo
 	int numPointsNear
 }
 
+global struct EdgeGrappleResults
+{
+	bool edgeFound
+	bool isValid
+	vector grapplePos
+	vector grappleNormal
+	float distFrac
+}
+
 global struct PlayersInViewInfo
 {
 	entity player

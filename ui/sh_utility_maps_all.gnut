@@ -1,0 +1,211 @@
+globalize_all_functions
+
+
+global struct UpdraftTriggerSettings
+{
+	float minShakeActivationHeight = 500.0               
+	float maxShakeActivationHeight = 400.0               
+	float liftSpeed                = 300.0                   	
+	float liftAcceleration         = 100.0                 		
+	float liftExitDuration         = 2.5                   		
+}
+
+struct
+{
+	UpdraftTriggerSettings&      updraftSettings = { ... }
+} file
+
+
+
+
+
+
+
+
+
+
+
+
+bool function IsLobbyMapName( string levelname )
+{
+	if ( levelname == "mp_lobby" )
+		return true
+
+	return false
+}
+
+bool function IsStormPoint()
+{
+	string mapName
+
+		mapName = GetActiveLevel()
+
+
+
+	return mapName == "mp_rr_tropic_island"
+}
+
+bool function IsNightMap()
+{
+	string mapName
+
+		mapName = GetActiveLevel()
+
+
+
+
+	switch ( mapName )
+	{
+		case "mp_rr_olympus_mu1_night":
+		case "mp_rr_canyonlands_mu1_night":
+		case "mp_rr_desertlands_night":
+			return true
+			break
+		default:
+			break
+	}
+
+	return false
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+string function GetMapDisplayNameAllCaps( string mapname )
+{
+	return "#" + mapname + "_ALLCAPS"
+}
+
+
+string function GetMapDisplayName( string mapname )
+{
+	return "#" + mapname
+}
+
+
+string function GetMapDisplayDesc( string mapname )
+{
+	return "#" + mapname + "_CLASSIC_DESC"
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

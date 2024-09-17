@@ -37,6 +37,7 @@ global function Perks_AddMinimapEntityForPerk
 global function Perks_GetIconForPerk
 global function Perks_GetRoleForPlayer
 global function Perks_AddPerk
+global function Perks_RemovePerk
 
 
 
@@ -101,6 +102,9 @@ global enum ePerkIndex
 
 
 
+
+
+
 	COUNT	
 }
 
@@ -113,6 +117,7 @@ global struct PerkInfo
 	void functionref( entity ) deactivateCallback
 	void functionref( var, entity) ruiThinkThread
 	array<entity> minimapEntities
+	array<entity> temporarilyHiddenMinimapEntities
 	table<entity, array<int> > teamsToHideMinimapEntitiesFrom
 	int minimapStateIndex = -1
 	int minimapPingType = -1
@@ -551,6 +556,34 @@ void function Perks_AddPerk( entity player, int perkIndex )
 
 }
 
+void function Perks_RemovePerk( entity player, int perkIndex )
+{
+	if( !Perks_Enabled() )
+		return
+
+	if( !player.p.activePerks.contains( perkIndex ) )
+		return
+
+	PerkInfo perk = file.perkInfoTable[perkIndex]
+	if ( perk.deactivateCallback != null )
+		perk.deactivateCallback( player ) 
+
+	player.p.activePerks.fastremovebyvalue( perkIndex )
+
+
+
+
+
+
+		entity localPlayer = GetLocalViewPlayer()
+		if( localPlayer.GetTeam() == player.GetTeam() )
+		{
+			Perks_UpdatePerkPropMinimapVisibility( localPlayer )
+			Perks_UpdatePerkPropMapFeatureVisibility( localPlayer )
+		}
+
+}
+
 bool function Perks_DoesPlayerHavePerk( entity player, int perkIndex )
 {
 	Assert( IsValid( player ) )
@@ -645,6 +678,18 @@ int function GetPingTypeForEntity( entity ent )
 	}
 	return -1
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -935,9 +980,13 @@ void function ServerToClient_HidePerkPropMinimapVisibility( entity prop, int per
 	prop.Signal( "HidePerkMinimapVisibility" )
 
 
-		if( !LootbinReset_AllowPerkBinReuse_Enabled() )
+		if ( LootbinReset_AllowPerkBinReuse_Enabled() )
+		{
+			file.perkInfoTable[perkId].temporarilyHiddenMinimapEntities.append( prop )
+		}
 
-		file.perkInfoTable[perkId].minimapEntities.fastremovebyvalue(prop)
+
+	file.perkInfoTable[perkId].minimapEntities.fastremovebyvalue(prop)
 }
 
 void function Perks_UpdatePerkPropMinimapVisibility( entity player )

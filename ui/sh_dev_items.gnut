@@ -211,6 +211,36 @@ const array< string > MELEE_WEAPON_ITEM_TYPES =
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function DEV_PrintItemFlavorsOfType( int itemFlavType = eItemType.account_pack )
 {
 	

@@ -49,6 +49,14 @@ global function ShouldShowChargeBar_Energize
 global function OnPrimaryWeaponStatusUpdate_Akimbo
 
 
+global function ClearWeaponBrand
+
+global function TrySetWeaponBrand_Paintball
+
+
+
+
+
 global function UpdateAmmoMinToFireForTacRui
 global function ClWeaponStatus_OverrideReloadHintText
 
@@ -711,6 +719,9 @@ void function UpdateHudDataForMainWeapons( entity player, entity selectedWeapon 
 		RuiSetFloat( file.ammo_status_hint, "lowAmmoFrac", 0.0 )
 
 		
+		RuiSetFloat( file.ammo_status_hint, "displayNoReserveAmmoEndTime", 0.0 )
+
+		
 		if ( IsWeaponInPrimarySlot( player, file.lastSelectedPrimaryWeapon ) && !isTurret )
 			UpdateModsOnSurvivalWeaponRui( rui, file.lastSelectedPrimaryWeapon )
 	}
@@ -791,8 +802,10 @@ void function UpdateHudDataForSling( entity player, entity selectedWeapon, var r
 	int stackSize = SURVIVAL_GetInventorySlotCountForPlayer( player, ammoLootData )
 	int minReserveAmmo = stackSize / 3
 	float minReserveAmmoFrac = float( minReserveAmmo ) / float( 2000 )
-
+	float lowAmmoFrac = selectedWeapon.GetWeaponSettingFloat( eWeaponVar.low_ammo_fraction )
 	string lowAmmoText = GetLowAmmoTypeString( selectedWeapon.GetWeaponAmmoPoolType(), false )
+
+	RuiSetFloat( file.ammo_status_hint, "lowAmmoFrac", lowAmmoFrac )
 	RuiSetFloat( file.ammo_status_hint, "minReserveAmmoFrac", minReserveAmmoFrac )
 	RuiSetString( file.ammo_status_hint, "lowAmmoOverrideText",  lowAmmoText )
 
@@ -1066,11 +1079,12 @@ void function UpdateRUIWeaponData( entity player, var rui, entity weapon, int ta
 				{
 					if ( weaponData.lootType == eLootType.MAINWEAPON && weapon.GetGrade() > 0 )
 					{
+						ClearWeaponBrand( rui )
 
-							if ( weapon.HasMod( WEAPON_LOCKEDSET_MOD_PAINTBALL ) )
-								RuiSetBool( rui, "isPaintballWeapon", true )
-							else
-								RuiSetBool( rui, "isPaintballWeapon", false )
+							TrySetWeaponBrand_Paintball( rui, weapon )
+
+
+
 
 					}
 				}
@@ -1151,6 +1165,37 @@ void function UpdateRUIWeaponData( entity player, var rui, entity weapon, int ta
 		}
 	}
 }
+
+void function ClearWeaponBrand( var rui )
+{
+	RuiSetBool( rui, "hasWeaponBrand", false )
+	RuiSetImage( rui, "weaponBrandLogo", $"" )
+	RuiSetImage( rui, "weaponBrandTexture", $"" )
+}
+
+
+void function TrySetWeaponBrand_Paintball( var rui, entity weapon )
+{
+	if ( !weapon.HasMod( WEAPON_LOCKEDSET_MOD_PAINTBALL ) )
+		return
+
+	RuiSetBool( rui, "hasWeaponBrand", true )
+	RuiSetImage( rui, "weaponBrandLogo", $"rui/menu/inventory/weapon_slot_logo_Rampart" )
+	RuiSetImage( rui, "weaponBrandTexture", $"rui/menu/inventory/weapon_slot_paintball_texture_Rampart" )
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 void function Weapon_UpdateAltAmmoRui( var rui, entity player, entity weapon, bool useRuiTrack = true, bool useDefaultAmmoIcons = true )
 {
@@ -2439,6 +2484,16 @@ void function TrackPlayerDebuffInfo( entity player, var rui )
 
 
 
+
+
+
+
+
+
+
+
+
+
 		
 		if ( StatusEffect_HasSeverity( player, eStatusEffect.silenced_seer_visuals ) )
 		{
@@ -2473,6 +2528,15 @@ void function TrackPlayerDebuffInfo( entity player, var rui )
 			debuff.icon = $"rui/hud/character_abilities/overheat_icon"
 			debuffQueue.append( debuff )
 		}
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3007,12 +3071,11 @@ void function SetFiringModeIndicatorColorOverrides( array<vector> colorOverrides
 }
 
 
-void function UpdateWeaponEnergizeRui( entity player, entity weapon, asset crosshairRuiAsset, asset consumableIcon, asset ammoIconOverride )
+void function UpdateWeaponEnergizeRui( entity player, entity weapon, asset consumableIcon, asset crosshairRuiAsset = $"", asset ammoIconOverride = $"" )
 {
 	AssertIsNewThread()
-	weapon.Signal( ENERGIZE_STATUS_RUI_ABORT_SIGNAL )
 	weapon.EndSignal( "OnDestroy" )
-	weapon.EndSignal( ENERGIZE_STATUS_RUI_ABORT_SIGNAL )
+	weapon.EndSignal( SENTINEL_DEACTIVATE_SIGNAL )
 
 	if ( !IsValid( player ) || !IsLocalViewPlayer( player ) )
 		return
@@ -3025,25 +3088,6 @@ void function UpdateWeaponEnergizeRui( entity player, entity weapon, asset cross
 	var rui = ClWeaponStatus_GetWeaponHudRui( player )
 	RuiDestroyNestedIfAlive( rui, "chargedHandle" )
 
-	var crosshairRui = CreateCockpitPostFXRui( crosshairRuiAsset )
-	var nestedRui = RuiCreateNested( rui, "chargedHandle", $"ui/weapon_hud_charged.rpak" )
-	weapon.w.sentinelEnergizeHintRui = crosshairRui
-
-	float energizeActivityTime =  GetWeaponInfoFileKeyField_GlobalFloat( weaponName, "energize_activity_time" )
-	float energizedDuration = GetWeaponInfoFileKeyField_GlobalFloat( weaponName, "energized_duration" )
-	LootData weaponData = SURVIVAL_GetLootDataFromWeapon( weapon )
-
-	OnThreadEnd(
-		function() : ( player, weapon, rui, crosshairRui, nestedRui )
-		{
-			RuiSetBool( rui, "showChargeBar", false )
-			RuiDestroy( crosshairRui )
-			RuiDestroyNested( rui, "chargedHandle" )
-			if ( IsValid( weapon ) )
-				weapon.w.sentinelEnergizeHintRui = null
-		}
-	)
-
 	vector energizedColor = SrgbToLinear( GetWeaponInfoFileKeyField_GlobalVectorInt( weaponName, "energized_ui_color" ) / 255.0 )
 	vector energizedLeftBarColor = SrgbToLinear( GetWeaponInfoFileKeyField_GlobalVectorInt( weaponName, "energized_ui_left_bar_color" ) / 255.0 )
 	vector energizedBgColor = SrgbToLinear( GetWeaponInfoFileKeyField_GlobalVectorInt( weaponName, "energized_ui_bg_color" ) / 255.0 )
@@ -3051,11 +3095,34 @@ void function UpdateWeaponEnergizeRui( entity player, entity weapon, asset cross
 	vector energizingBarLeftColor = SrgbToLinear( GetWeaponInfoFileKeyField_GlobalVectorInt( weaponName, "energizing_ui_left_bar_color" ) / 255.0 )
 	vector energizingBarRightColor = SrgbToLinear( GetWeaponInfoFileKeyField_GlobalVectorInt( weaponName, "energizing_ui_right_bar_color" ) / 255.0 )
 
+	var crosshairRui
+	var nestedRui = RuiCreateNested( rui, "chargedHandle", $"ui/weapon_hud_charged.rpak" )
+	if ( crosshairRuiAsset != $"" )
+	{
+		crosshairRui = CreateCockpitPostFXRui( crosshairRuiAsset )
+		weapon.w.sentinelEnergizeHintRui = crosshairRui
+
+		RuiSetBool( crosshairRui, "isActive", false )
+		RuiSetFloat3( crosshairRui, "energizeColor", energizedColor )
+	}
+
 	RuiSetFloat3( rui, "chargedAmmoOverrideColor", energizedColor )
 	RuiSetImage( rui, "chargedAmmoIconOverride", ammoIconOverride )
 
-	RuiSetBool( crosshairRui, "isActive", false )
-	RuiSetFloat3( crosshairRui, "energizeColor", energizedColor )
+	float energizedDuration = weapon.GetWeaponSettingFloat( eWeaponVar.energized_duration )
+	LootData weaponData = SURVIVAL_GetLootDataFromWeapon( weapon )
+
+	OnThreadEnd(
+		function() : ( player, weapon, rui, crosshairRui, nestedRui )
+		{
+			RuiSetBool( rui, "showChargeBar", false )
+			if ( crosshairRui )
+				RuiDestroyIfAlive( crosshairRui )
+			RuiDestroyNested( rui, "chargedHandle" )
+			if ( IsValid( weapon ) )
+				weapon.w.sentinelEnergizeHintRui = null
+		}
+	)
 
 	RuiSetImage( nestedRui, "chargeIcon", consumableIcon )
 
@@ -3084,11 +3151,18 @@ void function UpdateWeaponEnergizeRui( entity player, entity weapon, asset cross
 		if( IsValid ( activeWeapon ) )
 		{
 			bool IsPrimaryWeapon = IsBitFlagSet( activeWeapon.GetWeaponTypeFlags(), WPT_PRIMARY )
+
 			bool IsUltimateWeapon = IsBitFlagSet( activeWeapon.GetWeaponTypeFlags(), WPT_ULTIMATE )
-			if ( ( IsPrimaryWeapon && !activeWeapon.IsEnergizeWeapon() ) || IsUltimateWeapon )
+			bool UltCanEnergize = false
+
+
+
+
+			if ( ( IsPrimaryWeapon && !activeWeapon.IsEnergizeWeapon() ) || ( IsUltimateWeapon && !UltCanEnergize ) )
 				break
 		}
 
+		float energizeActivityTime =  weapon.GetWeaponSettingFloat( eWeaponVar.energize_activity_time )
 		energizeState = weapon.GetEnergizeState()
 		curWeaponName = weapon.GetWeaponClassName()
 
@@ -3111,7 +3185,15 @@ void function UpdateWeaponEnergizeRui( entity player, entity weapon, asset cross
 			}
 			RuiSetFloat( nestedRui, "chargeBarTimeRemaining", -1.0 )
 
-			if ( HasEnoughEnergizeConsumable( weapon, player ) )
+			bool isUltWeaponAndUltIsFull = IsBitFlagSet( weapon.GetWeaponTypeFlags(), WPT_ULTIMATE ) && ( weapon.GetWeaponPrimaryClipCount() >= weapon.GetWeaponPrimaryClipCountMax() )
+			if ( isUltWeaponAndUltIsFull )
+			{
+				RuiSetFloat3( nestedRui, "chargeBGcolor", energizedBgColor )
+				RuiSetFloat( nestedRui, "chargeBorderSaturation", 0.0 )
+				RuiSetFloat( nestedRui, "chargeIconSaturation", 1.0 )
+				RuiSetString( nestedRui, "chargeBarTextLeftLong", Localize( "#ULTIMATE_ENERGIZED_FULL_TEXT" ) )
+			}
+			else if ( HasEnoughEnergizeConsumable( weapon, player ) )
 			{
 				RuiSetFloat3( nestedRui, "chargeBGcolor", energizedBgColor )
 				RuiSetFloat( nestedRui, "chargeBorderSaturation", 1.0 )
@@ -3214,6 +3296,7 @@ void function UpdateWeaponEnergizeRui( entity player, entity weapon, asset cross
 		}
 
 		
+		if ( crosshairRui )
 		{
 			if( weapon == activeWeapon && energizeState == ENERGIZE_ENERGIZED )
 			{

@@ -311,6 +311,7 @@ global struct RTKSquadSummaryModel
 
 
 
+
 void function RTKDeathScreenSquadSummary_PopulateData( string path = "&menus.squadSummary")
 {
 	if ( !RTKDataModel_HasDataModel( path ) )
@@ -383,6 +384,8 @@ void function RTKDeathScreenSquadSummary_PopulateData( string path = "&menus.squ
 		}
 		else
 		{
+			cardModel.unspoofedUID = teammateEHISS.unspoofedUid
+
 			int reportStyle = GetReportStyle()
 
 			switch ( reportStyle )
@@ -440,7 +443,11 @@ void function RTKDeathScreenSquadSummary_PopulateData( string path = "&menus.squ
 
 		cardModel.platformIDString = PlatformIDToIconString( teammateEHISS.platformID )
 
-		cardModel.playerName = GetDisplayablePlayerNameFromEHI( playerData.eHandle )
+		if ( EEHHasValidScriptStruct( playerData.eHandle ) )
+			cardModel.playerName = GetDisplayablePlayerNameFromEHI( playerData.eHandle )
+		else
+			cardModel.playerName = ""
+
 		cardModel.isLocalPlayer = isLocalPlayer
 
 		
@@ -456,7 +463,7 @@ void function RTKDeathScreenSquadSummary_PopulateData( string path = "&menus.squ
 		
 		RTKSquadSummaryCardStatModel damage
 		damage.title = "#DEATH_SCREEN_SUMMARY_DAMAGE_DEALT"
-		damage.value = string( playerData.damageDealt )
+		damage.value = FormatAndLocalizeNumber( "1", float( playerData.damageDealt ), true )
 
 		stats.append(damage)
 

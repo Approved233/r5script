@@ -22,6 +22,7 @@ global function ItemFlavor_GetGRXOwnershipTarget
 global function ItemFlavor_GetGRXOwnershipTargettedBy
 global function ItemFlavor_GetGRXMultipleOwnershipRequirementsList
 global function ItemFlavor_GetGRXMultipleOwnershipTarget
+global function ItemFlavorIsStackable
 global function GRXCurrency_RegisterNewCurrencyAssetInEventSlot
 global function GRXCurrency_GetCurrencyIndex
 global function GRXCurrency_GetPurchaseSound
@@ -233,6 +234,7 @@ global function GRXPack_GetTickSoundAlias
 global function GRX_GetMostRecentPackOpeningResults
 global function GRXPack_GetCustomColor
 global function GRXPack_GetCustomCountTextCol
+global function GRX_GetRarityOverrideFromQuantity
 
 
 #if DEV
@@ -253,7 +255,6 @@ global function DEV_GRX_ForcePackResults
 
 
 #endif
-
 
 
 
@@ -319,6 +320,18 @@ global enum eItemFlavorGRXMode
 	OWNERSHIP_TARGET = -1337,
 	MULTIPLE_OWNERSHIP_TARGET = -9001,
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -848,6 +861,21 @@ global enum eIneligibilityCode
 	PURCHASE_LIMIT = 101,
 	BUNDLE_ITEMS_OWNED = 102,
 	CONTENTS_NOT_GRANTABLE = 103
+}
+
+
+const table<int, int> CRAFTING_MATERIAL_MAX_QUANTITY_TO_RARITY_MAP = {
+	[24] = eRarityTier.COMMON,
+	[199] = eRarityTier.RARE,
+	[599] = eRarityTier.EPIC,
+	[INT_MAX] = eRarityTier.LEGENDARY,
+}
+
+const table<int, int> LEGEND_TOKENS_MAX_QUANTITY_TO_RARITY_MAP = {
+	[11999] = eRarityTier.COMMON,
+	
+	
+	[INT_MAX] = eRarityTier.LEGENDARY,
 }
 
 
@@ -2762,6 +2790,26 @@ ItemFlavorBag function GRX_GetMostRecentPackOpeningResults()
 
 
 
+int function GRX_GetRarityOverrideFromQuantity( ItemFlavor item, int currentRarity, int quantity )
+{
+	bool isCrafting = ( item == GRX_CURRENCIES[GRX_CURRENCY_CRAFTING] )
+	if ( !isCrafting && item != GRX_CURRENCIES[GRX_CURRENCY_CREDITS] )
+		return currentRarity
+
+	int rarity = eRarityTier.COMMON
+	table<int, int> tableToIterate = isCrafting ? CRAFTING_MATERIAL_MAX_QUANTITY_TO_RARITY_MAP : LEGEND_TOKENS_MAX_QUANTITY_TO_RARITY_MAP
+	foreach ( int maxQuantity, int associatedRarity in tableToIterate )
+	{
+		rarity = associatedRarity
+		if ( maxQuantity >= quantity )
+			break
+	}
+
+	return rarity
+}
+
+
+
 
 asset function GRXPack_GetOpenButtonIcon( ItemFlavor flav )
 {
@@ -2920,6 +2968,9 @@ bool function GRXPack_PlayerOwnsAllItemsInPack( entity player, ItemFlavor pack )
 
 	return true
 }
+
+
+
 
 
 
@@ -4148,6 +4199,12 @@ PlayerGRXScriptState function GetPlayerGRXScriptState( entity player )
 
 
 
+
+
+
+
+
+
 void function UIToClient_GRXInventoryCleanStateChange( bool isClean, int marketplaceEdition, bool isOfferResticted )
 {
 	PlayerGRXScriptState scriptState = GetPlayerGRXScriptState( GetLocalClientPlayer() )
@@ -4169,6 +4226,26 @@ void function UIToClient_GRXInventoryCleanStateChange( bool isClean, int marketp
 		SetConVarInt( "client_boostcount", GRX_GetConsumableCount( ItemFlavor_GetGRXIndex( xpBoostFlav ) ) )
 	}	
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6925,34 +7002,6 @@ array<ItemFlavor> function GRX_GetStickerPacksWithRewards()
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 bool function GRX_IsOfferRestricted( entity player = null )
 {
 
@@ -7247,9 +7296,12 @@ bool function GRX_IsItemCoveredByOfferRestrictions( ItemFlavor flav )
 
 
 
-
-
-
+bool function ItemFlavorIsStackable( ItemFlavor itemFlav )
+{
+	return ItemFlavor_GetGRXMode( itemFlav ) == eItemFlavorGRXMode.PACK ||
+	ItemFlavor_GetGRXMode( itemFlav ) == eItemFlavorGRXMode.CONSUMABLE ||
+	ItemFlavor_GetGRXMode( itemFlav ) == eItemFlavorGRXMode.CURRENCY
+}
 
 
 

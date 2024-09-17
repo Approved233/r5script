@@ -357,10 +357,13 @@ void function SmartAmmo_LockedOntoWarningHUD_Update()
 		else if ( (StatusEffect_HasSeverity( player, eStatusEffect.camera_detected )
 			|| StatusEffect_HasSeverity( player, eStatusEffect.maphack_detected )
 			|| StatusEffect_HasSeverity( player, eStatusEffect.sonar_detected )
-			|| StatusEffect_HasSeverity( player, eStatusEffect.sonar_round_embedded )
 
-			|| StatusEffect_HasSeverity( player, eStatusEffect.mortar_ring_reveal ) )
+			|| StatusEffect_HasSeverity( player, eStatusEffect.mortar_ring_reveal )
 
+
+
+
+			|| StatusEffect_HasSeverity( player, eStatusEffect.sonar_round_embedded ) )
 			
 			|| ( !GetSonicBlastDoesSonarScan() && StatusEffect_HasSeverity( player, eStatusEffect.seer_detected ) )
 
@@ -410,6 +413,14 @@ void function SmartAmmo_LockedOntoWarningHUD_Update()
 				RuiSetString( file.lockon_hud, "lockMessage", "#FUSE_MORTAR_DETECTED_WARNING" )
 				RuiSetImage( file.lockon_hud, "characterIcon", $"rui/menu/buttons/battlepass/character_skin_fuse" )
 			}
+
+
+
+
+
+
+
+
 
 
 			else if ( StatusEffect_HasSeverity( player, eStatusEffect.freespawn_victim_teammate ) )
@@ -767,6 +778,21 @@ void function SmartAmmo_LockedOntoWarningHUD_Update()
 			 RuiSetFloat3( file.lockon_hud, "borderColor", <ballisticTacColor.x, ballisticTacColor.y, ballisticTacColor.z> / 255.0 )
 			 RuiSetBool( file.lockon_hud, "showProgress", false )
 		 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -8,12 +8,9 @@ global function OnWeaponPrimaryAttack_weapon_dragon_lmg
 global function OnWeaponEnergizedStart_weapon_dragon_lmg
 global function OnWeaponStartEnergizing_weapon_dragon_lmg
 global function OnWeaponEnergizedEnd_weapon_dragon_lmg
-
-
 global function OnWeaponStartZoomIn_weapon_dragon_lmg
 global function OnWeaponStartZoomOut_weapon_dragon_lmg
 global function OnWeaponOwnerChanged_weapon_dragon_lmg
-
 
 global const string DRAGON_LMG_ENERGIZED_MOD = "energized"
 
@@ -85,6 +82,16 @@ void function OnWeaponActivate_weapon_dragon_lmg( entity weapon )
 
 
 
+
+
+
+
+
+
+
+
+
+
 		if ( IsValid( player ) )
 		{
 			int slot = GetSlotForWeapon( player, weapon )
@@ -93,7 +100,7 @@ void function OnWeaponActivate_weapon_dragon_lmg( entity weapon )
 			else
 				weapon.w.activeOptic = ""
 
-			thread UpdateWeaponEnergizeRui( player, weapon, ENERGIZED_CROSSHAIR_RUI, ENERGIZE_UI_CONSUMABLE_ICON, AMMO_ENERGIZED_ICON )
+			thread UpdateWeaponEnergizeRui( player, weapon, ENERGIZE_UI_CONSUMABLE_ICON, ENERGIZED_CROSSHAIR_RUI, AMMO_ENERGIZED_ICON )
 		}
 
 		if ( weapon.HasMod( DRAGON_LMG_ENERGIZED_MOD ) )
@@ -122,9 +129,7 @@ void function OnWeaponActivate_weapon_dragon_lmg( entity weapon )
 
 
 
-
-		HopupGunshield_OnWeaponActivate( weapon )
-
+	HopupGunshield_OnWeaponActivate( weapon )
 }
 
 void function OnWeaponDeactivate_weapon_dragon_lmg( entity weapon )
@@ -142,9 +147,7 @@ void function OnWeaponDeactivate_weapon_dragon_lmg( entity weapon )
 
 
 
-
-		HopupGunshield_OnWeaponDeactivate( weapon )
-
+	HopupGunshield_OnWeaponDeactivate( weapon )
 }
 
 var function OnWeaponPrimaryAttack_weapon_dragon_lmg( entity weapon, WeaponPrimaryAttackParams attackParams )
@@ -207,7 +210,6 @@ void function OnWeaponOwnerChanged_weapon_dragon_lmg( entity weapon, WeaponOwner
 {
 
 }
-
 
 
 

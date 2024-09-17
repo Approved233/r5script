@@ -42,7 +42,7 @@ global enum eEventLandingPageButtonRedirect
 	COLLECTION_EVENT = 4
 	EVENT_STORE = 5
 	PLAY_MODE = 6
-	VGUI_PRIZE_TRACKER = 7 
+	PRIZE_TRACKER = 7
 	CUSTOM_DEEPLINK = 8
 }
 

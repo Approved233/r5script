@@ -1040,6 +1040,7 @@ void function OnPINWaypointCreated( entity wp )
 
 
 
+
 void function PIN_UltimateReadyPing( entity player, string pingType, bool isUltinInventory )
 {
 	AddPINTelemetryEvent( "tag",

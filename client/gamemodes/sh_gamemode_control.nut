@@ -103,6 +103,7 @@ global function Control_IsSpawnWaypointHomebaseForAlliance
 
 global function Control_GetPlayerExpTotal
 global function Control_GetPlayerExpTier
+global function Control_AddExpLeaderChangedCallback
 global function Control_GetStarterPingFromTraceBlockerPing
 global function Control_GetDefaultWeaponTier
 global function Control_SetHomeBaseBadPlacesForMRBForAlliance
@@ -314,6 +315,12 @@ const float CONTROL_LOCKOUT_EVENT_DURATION = 90.0
 const int CONTROL_MRB_ISMRBAIRDROP_BITFIELD = 1
 
 const float TIME_BETWEEN_CONTROL_ZONES_CROWD_NOISE_UPDATES = 1.0
+
+
+const int CONTROL_OBJECTIVE_WAYPOINT_TYPE = eWaypoint.CONTROL_OBJECTIVE
+const vector CONTROL_OBJECTIVE_TRACEBLOCKER_BOXMINS =  < -10, -10, 0 >
+const vector CONTROL_OBJECTIVE_TRACEBLOCKER_BOXMAXS = < 10, 10, 65 >
+const vector CONTROL_OBJECTIVE_PING_OFFSET = ZERO_VECTOR
 
 
 
@@ -686,6 +693,8 @@ struct {
 		array< vector > allianceABlockedHomeBasePositionsForMRB = []
 		array< vector > allianceBBlockedHomeBasePositionsForMRB = []
 
+		array< void functionref( entity ) > expLeaderChangeCallbackFuncs = []
+
 
 
 		array<entity> waypointList
@@ -759,8 +768,6 @@ global enum eControlStat {
 
 
 
-
-
 void function Control_Init()
 {
 	if ( !GameMode_IsActive( eGameModes.CONTROL ) )
@@ -788,7 +795,6 @@ void function Control_Init()
 
 
 
-
 		TimedEvents_Init()
 		CausticTT_SetGasFunctionInvertedValue( true )
 		PrecacheScriptString( "Control_SetUsableVehicleBase" )
@@ -796,8 +802,6 @@ void function Control_Init()
 		PrecacheParticleSystem( $"P_wpn_evo_upgrade_FP" )
 		PrecacheParticleSystem( $"P_wpn_evo_upgrade" )
 		Control_RegisterTimedEvents()
-		CaptureObjectivePing_AddCallback_SetGetCaptureObjectiveIDFromWaypointFunction( Control_GetObjectiveIDFromWaypoint )
-		CaptureObjectivePing_AddCallback_SetIsCaptureObjectivePingObjectiveWaypoint( Control_IsObjectiveWaypoint )
 
 
 
@@ -813,6 +817,30 @@ void function Control_Init()
 			printt( "CONTROL: CONTROL_DETAILED_DEBUG is set to true, debug prints that fire very frequently are enabled" )
 		else
 			printt( "CONTROL: CONTROL_DETAILED_DEBUG is set to false, to enable debug prints that fire frequently set CONTROL_DETAILED_DEBUG to true" )
+
+
+	
+
+		ObjectivePing_Interface controlObjectivePingInterface
+		controlObjectivePingInterface.waypointType = CONTROL_OBJECTIVE_WAYPOINT_TYPE
+
+		
+		controlObjectivePingInterface.pingSettings.objectiveScriptName = CONTROL_OBJECTIVE_SCRIPTNAME
+		controlObjectivePingInterface.pingSettings.traceBlockerBoxMins = CONTROL_OBJECTIVE_TRACEBLOCKER_BOXMINS
+		controlObjectivePingInterface.pingSettings.traceBlockerBoxMaxs = CONTROL_OBJECTIVE_TRACEBLOCKER_BOXMAXS
+		controlObjectivePingInterface.pingSettings.debugDraw = false
+
+
+			controlObjectivePingInterface.getObjectiveWaypointsArray = Control_GetObjectiveWaypointsArray
+			controlObjectivePingInterface.onUpdatePingCount = Ping_CaptureObjective_OnUpdatePingCount
+			controlObjectivePingInterface.getObjectiveName = Control_GetObjectiveName
+
+
+
+
+
+
+		Ping_AddObjectiveWaypointType( controlObjectivePingInterface )
 
 
 
@@ -969,8 +997,6 @@ void function Control_Init()
 		AddCallback_OnPlayerDisconnected( Control_OnPlayerDisconnected )
 
 		AddCreateCallback( "prop_script", OnVehicleBaseSpawned )
-		CaptureObjectivePing_AddCallback_SetIsCaptureObjectivePingCommsActionFunction( Control_IsControlObjectiveCommsAction )
-		CaptureObjectivePing_AddCallback_SetGetObjectivesArrayFunction( Control_GetObjectiveWaypointsArray )
 
 		CircleAnnouncementsEnable( false )
 		CircleBannerAnnouncementsEnable( false )
@@ -2109,15 +2135,6 @@ float function Control_GetMRBAirdropDelay()
 
 
 
-
-
-
-
-
-
-
-
-
 void function Control_SetHomeBaseBadPlacesForMRBForAlliance( int alliance, array < vector > locations )
 {
 	if ( alliance == ALLIANCE_A )
@@ -2383,7 +2400,7 @@ void function Control_PingObjectiveFromObjID( int objID )
 	if ( !IsValid( player ) )
 		return
 
-	foreach ( ping in CaptureObjectivePing_GetStarterPingsArray() )
+	foreach ( ping in Ping_GetStarterPingsArray() )
 	{
 		if ( !IsValid( ping ) )
 			continue
@@ -2401,6 +2418,9 @@ void function Control_PingObjectiveFromObjID( int objID )
 		}
 	}
 }
+
+
+
 
 
 
@@ -4586,10 +4606,46 @@ void function ManageObjectiveWaypoint( entity wp, var rui )
 
 
 
-array < entity > function Control_GetObjectiveWaypointsArray()
+array< entity > function Control_GetObjectiveWaypointsArray()
 {
 	return file.waypointList
 }
+
+
+
+array< string > function Control_GetObjectiveName( entity objectiveWaypoint )
+{
+	int objectiveID = Control_GetObjectiveIDFromWaypoint( objectiveWaypoint )
+	if ( objectiveID >= 0 )
+	{
+		return [ CaptureObjectivePing_GetObjectiveNameFromObjectiveID_Localized( objectiveID ) ]
+	}
+
+	return ["<objectiveUnkown:[" + objectiveWaypoint + "]>"]
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5117,15 +5173,7 @@ void function Control_SetRatingsVisibility( entity player )
 		int gameState = GetGameState()
 
 		HudVisibilityStatus hudStatus = GetHudStatus( player )
-
-		if ( Control_IsPlayerPrivateMatchObserver( GetLocalClientPlayer() ) )
-		{
-			RuiSetBool( rui, "shouldDisplayExpUI", false )
-		}
-		else
-		{
-			RuiSetBool( rui, "shouldDisplayExpUI", Control_GetIsWeaponEvoEnabled() && hudStatus.mainHud && gameState >= eGameState.Playing )
-		}
+		RuiSetBool( rui, "shouldDisplayExpUI", Control_GetIsWeaponEvoEnabled() && hudStatus.mainHud && gameState >= eGameState.Playing )
 	}
 }
 
@@ -6078,55 +6126,43 @@ bool function Control_IsObjectiveWaypoint( entity waypoint )
 
 
 
-
-
-
-
-
-
-
-
-
-
 entity function Control_GetStarterPingFromTraceBlockerPing( entity pingedEnt, int playerTeam )
 {
-	entity starterPing = null
+	if ( !IsValid( pingedEnt ) || pingedEnt.GetScriptName() != CONTROL_OBJECTIVE_SCRIPTNAME || !IsValid( pingedEnt.GetOwner() ) )
+		return null
 
-	if ( IsValid( pingedEnt ) && pingedEnt.GetScriptName() == CONTROL_OBJECTIVE_SCRIPTNAME && IsValid( pingedEnt.GetOwner() ) )
-	{
-		array<entity> objectiveStartPings = CaptureObjectivePing_GetStarterPingsArray()
+	entity objectiveWaypoint = pingedEnt.GetOwner()
 
-		if ( objectiveStartPings.len() > 0 )
+
 		{
-			entity objective = pingedEnt.GetOwner()
-			int pingType
+			array< entity > objectiveStarterPings = Ping_GetStarterPingsArray()
+			if ( objectiveStarterPings.len() == 0 )
+				return null
 
-			foreach ( ping in objectiveStartPings )
+			foreach ( entity ping in objectiveStarterPings )
 			{
-				if ( !IsValid( ping ) )
+				if ( !IsValid( ping ) || !IsValid( ping.GetParent() ) || !IsValid( ping.GetParent().GetOwner() ) )
 					continue
 
-				
-				if ( IsValid( ping ) && IsValid( ping.GetParent() ) && IsValid( ping.GetParent().GetOwner() ) )
-				{
-					entity pingedObjective = ping.GetParent().GetOwner()
-					if ( pingedObjective == objective )
-					{
-						int objectiveWaypointPingType = Waypoint_GetPingTypeForWaypoint( ping )
-						bool isPingTeamPlayerTeam = AllianceProximity_GetAllianceFromTeam( playerTeam ) == AllianceProximity_GetAllianceFromTeam( ping.GetTeam() )
+				entity pingedObjective = ping.GetParent().GetOwner()
+				if ( pingedObjective != objectiveWaypoint )
+					continue
 
-						if ( isPingTeamPlayerTeam )
-						{
-							starterPing = ping
-							pingType = objectiveWaypointPingType
-						}
-					}
-				}
+				bool isPingTeamPlayerTeam = AllianceProximity_GetAllianceFromTeam( playerTeam ) == AllianceProximity_GetAllianceFromTeam( ping.GetTeam() )
+				if ( !isPingTeamPlayerTeam )
+					continue
+
+				return ping
 			}
 		}
-	}
 
-	return starterPing
+
+
+
+
+
+
+	return null
 }
 
 
@@ -8347,12 +8383,6 @@ bool function Control_IsValidRespawnChoice( int respawnChoice )
 
 
 
-
-
-
-
-
-
 void function UICallback_Control_SpawnButtonClicked( int respawnChoice )
 {
 	if ( !Control_IsValidRespawnChoice( respawnChoice ) )
@@ -9378,8 +9408,17 @@ void function Control_OpenCharacterSelect()
 	const bool showLockedCharacters = true
 	bool isJIP = GamemodeUtility_IsJIPPlayerSpawnBonusPending( clientPlayer )
 	HideScoreboard()
+	HideHUD()
 
 	OpenCharacterSelectMenu( browseMode, showLockedCharacters, isJIP )
+}
+
+
+
+void function HideHUD()
+{
+	RuiTopology_UpdatePos( clGlobal.topoFullscreenHudPermanent, <0, 0, 0>, <0, 0, 0>, <0, 0, 0> )
+	RuiTopology_UpdatePos( clGlobal.topoFullscreenFullMap, <0, 0, 0>, <0, 0, 0>, <0, 0, 0> )
 }
 
 
@@ -10594,6 +10633,9 @@ void function ServerCallback_Control_NewEXPLeader( entity expLeader, int exp )
 	}
 
 	SquadLeader_UpdateAllUnitFramesRui()
+
+	foreach ( void functionref( entity ) callback in file.expLeaderChangeCallbackFuncs )
+		callback( expLeader )
 }
 
 
@@ -11653,6 +11695,14 @@ int function Control_GetPlayerExpTier( entity player, bool useClampedValue = tru
 		expTier = minint( expTier, CONTROL_MAX_EXP_TIER )
 
 	return expTier
+}
+
+
+
+void function Control_AddExpLeaderChangedCallback( void functionref( entity ) callbackFunc )
+{
+	Assert( !file.expLeaderChangeCallbackFuncs.contains( callbackFunc ) )
+	file.expLeaderChangeCallbackFuncs.append( callbackFunc )
 }
 
 

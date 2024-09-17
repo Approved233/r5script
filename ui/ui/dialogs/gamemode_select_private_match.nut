@@ -189,23 +189,6 @@ void function UpdateOpenPrivateMatchModeSelectDialog()
 	GatherGamemodeCategoryPlaylists()
 }
 
-
-array<string> function GetPlaylistsInRegularSlots()
-{
-	array<string> playlistNames = GetVisiblePlaylistNames( IsPrivateMatchLobby() )
-	array<string> regularList
-	foreach ( string plName in playlistNames )
-	{
-		string uiSlot = GetPlaylistVarString( plName, "ui_slot", "" )
-
-		if ( uiSlot.find( "regular" ) == 0 )
-			regularList.append( plName )
-	}
-
-	return regularList
-}
-
-
 void function OnCloseModeSelectDialog()
 {
 	foreach( button, playlistName in file.buttonToPlaylistNameMap )

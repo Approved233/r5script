@@ -774,7 +774,7 @@ float function TitanSword_GetFuelScale( entity player )
 
 	float fuel = StatusEffect_GetTimeRemaining( player, eStatusEffect.titan_sword_fuel )
 	float diff = fuel / GetWeaponInfoFileKeyField_GlobalFloat( TITAN_SWORD_WEAPON_REF, "fuel_cooldown_sec" )
-	return 1.0 - diff
+	return clamp( 1.0 - diff, 0.0, 1.0 )
 }
 
 

@@ -635,13 +635,13 @@ void function PopulateBattlePassButton( RewardButtonData rbd, var rewardButton, 
 
 	bool isOwned = (!bpReward.isPremium || hasPremiumPass) && bpReward.level <= battlePassLevelIdx
 
-	BattlePass_PopulateRewardButton( bpReward, rewardButton, isOwned, bpReward.isPremium )
+	BattlePass_PopulateRewardButton( bpReward, rewardButton, isOwned, bpReward.isPremium, null, true )
 
 	var btnRui = Hud_GetRui( rewardButton )
 	RuiSetBool( btnRui, "isPassPanel", true )
 }
 
-void function BattlePass_PopulateRewardButton( BattlePassReward bpReward, var rewardButton, bool isOwned, bool canUseTallButton, var ruiOverride = null )
+void function BattlePass_PopulateRewardButton( BattlePassReward bpReward, var rewardButton, bool isOwned, bool canUseTallButton, var ruiOverride = null, bool showWeaponRender = false )
 {
 	var btnRui
 	if ( rewardButton != null )
@@ -654,11 +654,19 @@ void function BattlePass_PopulateRewardButton( BattlePassReward bpReward, var re
 	RuiSetBool( btnRui, "isOwned", isOwned )
 	RuiSetBool( btnRui, "isPremium", bpReward.isPremium )
 
-	int rarity = ItemFlavor_HasQuality( bpReward.flav ) ? ItemFlavor_GetQuality( bpReward.flav ) : 0
+	int rarity = GRX_GetRarityOverrideFromQuantity( bpReward.flav, maxint( 0, ItemFlavor_GetQuality( bpReward.flav ) ), bpReward.quantity ) 
 	RuiSetInt( btnRui, "rarity", rarity )
 
-	asset rewardImage = CustomizeMenu_GetRewardButtonImage( bpReward.flav )
+	asset rewardImage = ItemFlavor_GetBattlepassRewardButtonImage( bpReward.flav )
 	RuiSetImage( btnRui, "buttonImage", rewardImage )
+	if ( RuiHasFloat2Arg( btnRui, "fullIconSize") )
+	{
+		RuiSetFloat2( btnRui, "fullIconSize", GetImageSize( rewardImage ) )
+	}
+	if ( RuiHasBoolArg( btnRui, "showWeaponRender") )
+	{
+		RuiSetBool( btnRui, "showWeaponRender", showWeaponRender )
+	}
 	
 	RuiSetImage( btnRui, "buttonImageSecondLayer", $"" )
 	RuiSetFloat2( btnRui, "buttonImageSecondLayerOffset", <0.0, 0.0, 0.0> )
@@ -697,7 +705,7 @@ void function BattlePass_PopulateRewardButton( BattlePassReward bpReward, var re
 		}
 	}
 
-	BattlePass_SetRewardButtonIconSettings( bpReward.flav, btnRui, rewardButton, canUseTallButton )
+	BattlePass_SetRewardButtonIconSettings( bpReward.flav, btnRui, rewardButton, canUseTallButton, showWeaponRender )
 
 	RuiSetBool( btnRui, "forceShowRarityBG", ShouldForceShowRarityBG( bpReward.flav ) )
 
@@ -724,7 +732,7 @@ void function BattlePass_ForceFullIconForWeaponSkin( ItemFlavor flav, var btnRui
 	}
 }
 
-void function BattlePass_SetRewardButtonIconSettings( ItemFlavor flav, var btnRui, var rewardButton, bool canUseTallButton )
+void function BattlePass_SetRewardButtonIconSettings( ItemFlavor flav, var btnRui, var rewardButton, bool canUseTallButton, bool showWeaponRender = false )
 {
 	asset rewardImage = CustomizeMenu_GetRewardButtonImage( flav )
 
@@ -740,14 +748,15 @@ void function BattlePass_SetRewardButtonIconSettings( ItemFlavor flav, var btnRu
 				Hud_SetHeight( rewardButton, Hud_GetBaseHeight( rewardButton ) * 1.5 )
 		}
 
-		if ( ItemFlavor_GetType( flav ) != eItemType.character_skin )
+		int itemType = ItemFlavor_GetType( flav )
+		if ( itemType != eItemType.character_skin && ( itemType != eItemType.weapon_skin || !showWeaponRender ) )
 		{
 			asset icon = GetCharacterIconToDisplay( flav )
 			RuiSetBool( btnRui, "showCharacterIcon", icon != $"" )
 			RuiSetImage( btnRui, "characterIcon", icon )
 			RuiSetFloat2( btnRui, "characterIconSize", <35, 35, 0> )
 
-			if ( ItemFlavor_GetType( flav ) == eItemType.weapon_skin )
+			if ( itemType == eItemType.weapon_skin )
 			{
 				if ( icon != $"" && icon != rewardImage )
 					BattlePass_ForceFullIconForWeaponSkin( flav, btnRui, canUseTallButton, rewardImage )
@@ -756,6 +765,14 @@ void function BattlePass_SetRewardButtonIconSettings( ItemFlavor flav, var btnRu
 		else
 		{
 			RuiSetBool( btnRui, "forceFullIcon", true )
+
+			if ( itemType == eItemType.weapon_skin )
+			{
+				asset weaponIcon = WeaponItemFlavor_GetHudIcon( WeaponSkin_GetWeaponFlavor( flav ) )
+				RuiSetBool( btnRui, "showCharacterIcon", weaponIcon != $"" )
+				RuiSetImage( btnRui, "characterIcon", weaponIcon )
+				RuiSetFloat2( btnRui, "characterIconSize", <60, 30, 0> )
+			}
 		}
 
 		return
@@ -915,7 +932,7 @@ void function BattlePass_Purchase( var button, int startQuantity )
 	}
 	expect ItemFlavor( activeBattlePass )
 
-	bool hasPremiumPass = DoesPlayerOwnBattlePass( GetLocalClientPlayer(), activeBattlePass )
+	bool hasPremiumPass = DoesPlayerOwnBattlePassTier( player, activeBattlePass, eBattlePassV2OwnershipTier.PREMIUM )
 
 	if ( !hasPremiumPass )
 	{
@@ -1002,8 +1019,8 @@ void function BattlePass_Purchase( var button, int startQuantity )
 		rpdcfg.rewardsCallback = array<BattlePassReward> function( int purchaseQuantity, int startingPurchaseLevelIdx ) : ( activeBattlePass ) {
 			entity localClientPlayer = GetLocalClientPlayer()
 			bool hasPremiumPass    = DoesPlayerOwnBattlePass( localClientPlayer, activeBattlePass )
-			bool hasElitePass      = DoesPlayerOwnEliteBattlePass( localClientPlayer, activeBattlePass )
-			int rewardTier = hasElitePass ? eBattlePassV2RewardTier.ELITE : hasPremiumPass ? eBattlePassV2RewardTier.PREMIUM : eBattlePassV2RewardTier.FREE
+			bool hasUltimatePlusPass      = DoesPlayerOwnUltimatePlusBattlePass( localClientPlayer, activeBattlePass )
+			int rewardTier = hasUltimatePlusPass ? eBattlePassV2RewardTier.ELITE : hasPremiumPass ? eBattlePassV2RewardTier.PREMIUM : eBattlePassV2RewardTier.FREE
 			return GetBattlePassV2Rewards( activeBattlePass, startingPurchaseLevelIdx + purchaseQuantity , rewardTier, localClientPlayer, true, startingPurchaseLevelIdx + 1 ) 
 		}
 
@@ -1012,12 +1029,31 @@ void function BattlePass_Purchase( var button, int startQuantity )
 		}
 
 
-		rpdcfg.getEliteBattlePassPurchaseFlavCallback = void function() : ( ) {
-			PurchaseEntitlement( R5_BATTLEPASS_1_UPGRADE )
-		}
+		rpdcfg.eliteBattlePassDescTextCallback = array<string> function ( int purchaseQuantity ) : ( activeBattlePass ) {
+			array<string> out
+			out.resize(3)
 
-		rpdcfg.eliteBattlePassDescTextCallback = string function ( int purchaseQuantity ) : ( activeBattlePass ) {
-			return GetEntitlementPricesAsStr( [R5_BATTLEPASS_1_UPGRADE] )[0]
+			out[0] = Localize( "#BP_UPGRADE_ULT_PLUS_DESC" )
+			out[1] = " "
+
+			bool playerOwnsUltimate = DoesPlayerOwnBattlePassTier( GetLocalClientPlayer(), activeBattlePass, eBattlePassV2OwnershipTier.ULTIMATE )
+			if ( playerOwnsUltimate )
+			{
+				if( Script_UserHasEAAccess() )
+				{
+					out[1] = GetEntitlementOriginalPricesAsStr( [ BattlepassGetEntitlementUltToUltPlus() ] )[0]
+				}
+				out[2] = GetEntitlementPricesAsStr( [ BattlepassGetEntitlementUltToUltPlus() ] )[0]
+			}
+			else
+			{
+				if( Script_UserHasEAAccess() )
+				{
+					out[1] = GetEntitlementOriginalPricesAsStr( [ BattlepassGetEntitlementUltimatePlus() ] )[0]
+				}
+				out[2] =  GetEntitlementPricesAsStr( [ BattlepassGetEntitlementUltimatePlus() ] )[0]
+			}
+			return out
 		}
 
 
@@ -1044,8 +1080,9 @@ void function BattlePass_Purchase( var button, int startQuantity )
 		rpdcfg.secondaryButtonUnavailableText = "%$" + lockIcon + "% " + Localize( "#BATTLE_PASS_PURCHASE_LEVEL_LEGEND_TOKEN_UNAVAILABLE" )
 		rpdcfg.startQuantity                  = startQuantity
 
-		rpdcfg.eliteBattlePassText            = "#ELITE_BATTLE_PASS"
-		rpdcfg.eliteBatllePassOptionIsEnabled = !DoesPlayerOwnEliteBattlePass( player, activeBattlePass )
+		rpdcfg.eliteBattlePassText            = "#BATTLEPASS_UPGRADE_PASS"
+		bool isRestricted = GRX_IsOfferRestricted( GetLocalClientPlayer() )
+		rpdcfg.eliteBatllePassOptionIsEnabled = !DoesPlayerOwnBattlePassTier( player, activeBattlePass, eBattlePassV2OwnershipTier.ULTIMATE_PLUS ) && !isRestricted
 
 
 		RewardPurchaseDialog( rpdcfg )
@@ -2340,7 +2377,13 @@ void function InitBattlePassRewardButtonRui( var rui, BattlePassReward bpReward 
 
 	int rarity = ItemFlavor_HasQuality( bpReward.flav ) ? ItemFlavor_GetQuality( bpReward.flav ) : 0
 	RuiSetInt( rui, "rarity", rarity )
-	RuiSetImage( rui, "buttonImage", CustomizeMenu_GetRewardButtonImage( bpReward.flav ) )
+
+	asset rewardImage = CustomizeMenu_GetRewardButtonImage( bpReward.flav )
+	RuiSetImage( rui, "buttonImage", rewardImage )
+	if ( RuiHasFloat2Arg( rui, "fullIconSize") )
+	{
+		RuiSetFloat2( rui, "fullIconSize", GetImageSize( rewardImage ) )
+	}
 	RuiSetImage( rui, "buttonImageSecondLayer", $"" )
 	RuiSetFloat2( rui, "buttonImageSecondLayerOffset", <0.0, 0.0, 0.0> )
 
@@ -2926,7 +2969,13 @@ bool function TryDisplayBattlePassAwards( bool playSound = false )
 		return false
 
 	EHI playerEHI                      = ToEHI( GetLocalClientPlayer() )
-	ItemFlavor ornull activeBattlePass = GetPlayerLastActiveBattlePass( ToEHI( GetLocalClientPlayer() ) )
+
+
+		ItemFlavor ornull activeBattlePass = GetActiveBattlePassV2()
+
+
+
+
 	if ( activeBattlePass == null || !GRX_IsInventoryReady() )
 		return false
 
@@ -2934,9 +2983,9 @@ bool function TryDisplayBattlePassAwards( bool playSound = false )
 
 	int currentXP          = GetPlayerBattlePassXPProgress( playerEHI, activeBattlePass )
 	int lastSeenXP         = GetPlayerBattlePassLastSeenXP( playerEHI, activeBattlePass )
-	bool hasPremiumPass    = DoesPlayerOwnBattlePass( GetLocalClientPlayer(), activeBattlePass )
+	bool hasPremiumPass    = DoesPlayerOwnBattlePassTier( GetLocalClientPlayer(), activeBattlePass, eBattlePassV2OwnershipTier.PREMIUM )
 	bool hadPremiumPass    = GetPlayerBattlePassLastSeenPremium( playerEHI, activeBattlePass )
-	bool hasElitePass      = DoesPlayerOwnEliteBattlePass( GetLocalClientPlayer(), activeBattlePass )
+	bool hasElitePass      = DoesPlayerOwnBattlePassTier( GetLocalClientPlayer(), activeBattlePass, eBattlePassV2OwnershipTier.ULTIMATE_PLUS )
 	bool hadElitePass      = GetPlayerBattlePassLastSeenElite( playerEHI, activeBattlePass )
 
 	if ( currentXP == lastSeenXP && hasPremiumPass == hadPremiumPass && hasElitePass == hadElitePass )
@@ -2948,7 +2997,7 @@ bool function TryDisplayBattlePassAwards( bool playSound = false )
 	int lastLevel    = GetBattlePassLevelForXP( activeBattlePass, lastSeenXP ) + 1
 	int currentLevel = GetBattlePassLevelForXP( activeBattlePass, currentXP )
 
-	if ( currentXP == 0 && lastSeenXP == 0 )
+	if ( currentXP == 0 && lastSeenXP == 0 && !hadPremiumPass )
 		lastLevel = 0 
 
 	array<BattlePassReward> allAwards
@@ -3087,7 +3136,6 @@ int function SortByAwardLevel( BattlePassReward a, BattlePassReward b )
 
 	return 0
 }
-
 
 
 

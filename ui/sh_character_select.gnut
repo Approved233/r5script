@@ -55,8 +55,10 @@ global function CharacterSelectSkinSelectionIsEnabled
 
 
 
-
 global const int NUM_CHARACTER_SELECT_BUTTONS = 50
+
+
+
 
 
 
@@ -334,6 +336,9 @@ struct FileLevelStruct
 
 
 
+
+
+
 }
 
 struct CharacterLists {
@@ -347,6 +352,19 @@ struct CharacterLists {
 	array<ItemFlavor> all
 }
 
+global enum SquadPresentationStartTimePhases
+{
+
+
+
+	squadPresentationStartTime,
+	mvpPresentationStartTime,
+	championSquadPresentationStartTime,
+	podiumStartTime,
+	finalEndTime
+}
+
+global function Character_GetSquadPresentationStartTime
 global function Character_IsCharacterUnlockedForCalevent
 global function Character_IsUnlockedForBattlePassV2
 
@@ -459,7 +477,6 @@ void function ClientToUI_UpdateHighlightedCharacter( string charGuid )
 	RTKLegendUpgradeTree_SetTitleVisibility( false )
 	RTKLegendUpgradeTree_SetDescriptionVisibility( false )
 }
-
 
 
 
@@ -1509,6 +1526,59 @@ bool function CharacterSelectSkinSelectionIsEnabled()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function UI_RunCharacterSelect( bool isBrowseMode, bool menuEntsExist )
 {
 	if ( !isBrowseMode )
@@ -1527,6 +1597,20 @@ void function UI_RunCharacterSelect( bool isBrowseMode, bool menuEntsExist )
 	RunClientScript( "_OpenCharacterSelectMenu", fileForever.menu )
 	AdvanceMenu( fileForever.menu )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5246,6 +5330,118 @@ void function UI_CloseCharacterSelect()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 bool function IsCharacterReselectEnabled()
 {
 	return GetCurrentPlaylistVarBool( "character_reselect_enabled", false )
@@ -5391,18 +5587,51 @@ bool function Character_IsUnlockedForBattlePassV2( entity player, ItemFlavor cha
 
 
 		ItemFlavor ornull currentBPV2Flav = GetActiveBattlePassV2()
-		bool ownsEliteBP = false
+		bool ownsUltimatePlusBP = false
 		if ( currentBPV2Flav != null )
 		{
 			expect ItemFlavor( currentBPV2Flav )
-			ownsEliteBP = DoesPlayerOwnEliteBattlePass( player, currentBPV2Flav )
+			ownsUltimatePlusBP = DoesPlayerOwnUltimatePlusBattlePass( player, currentBPV2Flav )
 		}
 
 		
 		
-		return ownsEliteBP
+		return ownsUltimatePlusBP
 
 
 
 
+}
+
+float function Character_GetSquadPresentationStartTime( int phase, float beginingOfSquadPresentation )
+{
+
+
+
+
+
+
+
+	float squadPresentationStartTime = beginingOfSquadPresentation + CharSelect_GetOutroAllSquadsPresentDuration()
+
+	if( phase == SquadPresentationStartTimePhases.squadPresentationStartTime )
+		return squadPresentationStartTime
+
+	float mvpPresentationStartTime = squadPresentationStartTime + CharSelect_GetOutroSquadPresentDuration()
+	if( phase == SquadPresentationStartTimePhases.mvpPresentationStartTime )
+		return mvpPresentationStartTime
+
+	float championSquadPresentationStartTime = mvpPresentationStartTime + CharSelect_GetOutroMVPPresentDuration()
+	if( phase == SquadPresentationStartTimePhases.championSquadPresentationStartTime )
+		return championSquadPresentationStartTime
+
+	float podiumPresentationStartTime = championSquadPresentationStartTime + CharSelect_GetOutroChampionPresentDuration()
+	if( phase == SquadPresentationStartTimePhases.podiumStartTime )
+		return podiumPresentationStartTime
+
+	int introPodiumSequenceCount = GetCurrentPlaylistVarInt( "podium_intro_screen_count", 0 )
+	float introPodiumDuration = GetCurrentPlaylistVarFloat( "podium_intro_screen_duration", DEFAULT_PODIUM_DURATION )
+
+	float finalEndTime = podiumPresentationStartTime + ( introPodiumSequenceCount * introPodiumDuration )
+	return finalEndTime
 }

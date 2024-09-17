@@ -8,10 +8,6 @@ global function TreasureHunt_InstanceObjectivePing
 
 
 
-global function TreasureHunt_GetStarterPingFromTraceBlockerPing
-
-
-
 
 
 
@@ -86,6 +82,12 @@ const int CAPTURE_OBJ_WAYPOINT_INT_IDX_OBJ_OWNER = 5
 
 const float DELAYED_MESSAGE_DELAY = 2.5 
 const float CAPTURE_OBJ_INCOMING_DURATION = 30.0 
+
+
+const int TREASURE_HUNT_OBJECTIVE_WAYPOINT_TYPE = eWaypoint.TREASUREHUNT_OBJECTIVE
+const vector TREASURE_HUNT_TRACEBLOCKER_BOXMINS = < -50, -50, 0>
+const vector TREASURE_HUNT_TRACEBLOCKER_BOXMAXS = < 50, 50, 55 >
+const vector TREASURE_HUNT_PING_OFFSET = ZERO_VECTOR
 
 
 
@@ -237,9 +239,6 @@ void function TreasureHunt_Init()
 	PrecacheParticleSystem( CAPTURE_ZONE_REWARD_WEAPON_TRAIL_VFX )
 	TreasureHunt_RegisterTimedEvents()
 
-	CaptureObjectivePing_AddCallback_SetGetCaptureObjectiveIDFromWaypointFunction( TreasureHunt_GetObjectiveIDFromWaypoint )
-	CaptureObjectivePing_AddCallback_SetIsCaptureObjectivePingObjectiveWaypoint( GetIsWaypointTreasureHuntObjectiveWaypoint )
-
 
 
 
@@ -278,13 +277,34 @@ void function TreasureHunt_Init()
 
 		file.objectiveWaypoints.resize( GetMaxActiveObjectiveCount(), null )
 		file.objectiveWaypointRuis.resize( GetMaxActiveObjectiveCount(), null )
-		CaptureObjectivePing_AddCallback_SetIsCaptureObjectivePingCommsActionFunction( TreasureHunt_IsTreasureHuntObjectiveCommsAction )
-		CaptureObjectivePing_AddCallback_SetGetObjectivesArrayFunction( TreasureHunt_GetObjectiveWaypointsArray )
-		CaptureObjectivePing_AddCallback_OnObjectivePingCoundChanged( TreasureHunt_OnObjectiveWaypointPinged )
 		FreeDM_SetDisplayScoreThread( TreasureHunt_DisplaySquadScore_Thread )
 		FreeDM_SetScoreboardSetupFunc( TreasureHunt_ScoreboardSetup() )
 		TreasureHunt_CreateCaptureZoneStatusRui()
 		AddClientCallback_OnResolutionChanged( TreasureHunt_OnResolutionChanged )
+
+
+	
+
+		ObjectivePing_Interface treasureHuntObjectivePingInterface
+		treasureHuntObjectivePingInterface.waypointType = TREASURE_HUNT_OBJECTIVE_WAYPOINT_TYPE
+
+		
+		treasureHuntObjectivePingInterface.pingSettings.objectiveScriptName = TREASUREHUNT_OBJECTIVE_SCRIPTNAME
+		treasureHuntObjectivePingInterface.pingSettings.traceBlockerBoxMins = TREASURE_HUNT_TRACEBLOCKER_BOXMINS
+		treasureHuntObjectivePingInterface.pingSettings.traceBlockerBoxMaxs = TREASURE_HUNT_TRACEBLOCKER_BOXMAXS
+		treasureHuntObjectivePingInterface.pingSettings.debugDraw = false
+
+
+			treasureHuntObjectivePingInterface.getObjectiveWaypointsArray = TreasureHunt_GetObjectiveWaypointsArray
+			treasureHuntObjectivePingInterface.onUpdatePingCount = TreasureHunt_OnUpdatePingCount
+			treasureHuntObjectivePingInterface.getObjectiveName = TreasureHunt_GetObjectiveName
+
+
+
+
+
+
+		Ping_AddObjectiveWaypointType( treasureHuntObjectivePingInterface )
 
 
 	FreeDM_SetAudioEvent( eFreeDMAudioEvents.Victory_Sound, LOCKDOWN_VICTORY_SOUND )
@@ -1535,12 +1555,6 @@ void function TreasureHunt_RegisterTimedEvents()
 
 
 
-
-
-
-
-
-
 const vector ZONE_NEUTRAL_COLOR = <230, 230, 230> 
 const vector ZONE_CONTESTED_COLOR = <247, 60, 82> 
 const vector ZONE_SUDDENDEATH_COLOR = <247, 60, 82> 
@@ -2205,28 +2219,69 @@ void function TreasureHunt_CreateObjectiveIcon_Thread( entity wp )
 
 
 
-array < entity > function TreasureHunt_GetObjectiveWaypointsArray()
+array< entity > function TreasureHunt_GetObjectiveWaypointsArray()
 {
 	return file.objectiveWaypoints
 }
 
 
 
-
-void function TreasureHunt_OnObjectiveWaypointPinged( entity objectiveWaypoint, int team, int count )
+void function TreasureHunt_OnUpdatePingCount( entity objectiveWaypoint, entity objectivePing, int pingCount, bool doesPlayerHavePingOnObjective, bool isPlayerAction )
 {
+	Ping_CaptureObjective_OnUpdatePingCount( objectiveWaypoint, objectivePing, pingCount, doesPlayerHavePingOnObjective, isPlayerAction )
+
 	if ( !IsValid( objectiveWaypoint ) || !file.objectiveWaypoints.contains( objectiveWaypoint ) )
 		return
 
 	entity localPlayer = GetLocalClientPlayer()
 
-	if ( localPlayer.GetTeam() != team )
+	bool isUsingAlliances = AllianceProximity_IsUsingAlliances()
+	int pingTeamOrAlliance = isUsingAlliances ? AllianceProximity_GetAllianceFromTeam( objectivePing.GetTeam() ) : objectivePing.GetTeam()
+	int playerTeamOrAlliance = isUsingAlliances ? AllianceProximity_GetAllianceFromTeam( localPlayer.GetTeam() ) : localPlayer.GetTeam()
+
+	if ( playerTeamOrAlliance != pingTeamOrAlliance )
 		return
 
 	int objectiveIndex = TreasureHunt_GetObjectiveIDFromWaypoint( objectiveWaypoint )
 	var rui = file.objectiveWaypointRuis[ objectiveIndex ]
-	RuiSetInt( rui, "numTeamPings", count )
+	RuiSetInt( rui, "numTeamPings", pingCount )
 }
+
+
+
+array< string > function TreasureHunt_GetObjectiveName( entity objectiveWaypoint )
+{
+	int objectiveID = TreasureHunt_GetObjectiveIDFromWaypoint( objectiveWaypoint )
+	if ( objectiveID >= 0 )
+	{
+		return [ CaptureObjectivePing_GetObjectiveNameFromObjectiveID_Localized( objectiveID ) ]
+	}
+
+	return ["<objectiveUnkown:[" + objectiveWaypoint + "]>"]
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3259,41 +3314,6 @@ bool function TreasureHunt_IsTreasureHuntObjectiveCommsAction( int commsAction, 
 int function TreasureHunt_GetObjectiveIDFromWaypoint( entity waypoint )
 {
 	return waypoint.GetWaypointInt( CAPTURE_OBJ_WAYPOINT_INT_IDX_OBJ_INDEX )
-}
-
-
-
-
-
-
-entity function TreasureHunt_GetStarterPingFromTraceBlockerPing( entity pingedEnt, int playerTeam )
-{
-	entity starterPing = null
-
-	if ( IsValid( pingedEnt ) && pingedEnt.GetScriptName() == TREASUREHUNT_OBJECTIVE_SCRIPTNAME && IsValid( pingedEnt.GetOwner() ) )
-	{
-		array < entity > objectiveStarterPings = CaptureObjectivePing_GetStarterPingsArray()
-		if ( objectiveStarterPings.len() > 0 )
-		{
-			entity objective = pingedEnt.GetOwner()
-
-			foreach ( ping in objectiveStarterPings )
-			{
-				if ( !IsValid( ping ) )
-					continue
-
-				
-				if ( IsValid( ping ) && IsValid( ping.GetParent() ) && IsValid( ping.GetParent().GetOwner() ) )
-				{
-					entity pingedObjective = ping.GetParent().GetOwner()
-					if ( pingedObjective == objective && playerTeam == ping.GetTeam() )
-						starterPing = ping
-				}
-			}
-		}
-	}
-
-	return starterPing
 }
 
 

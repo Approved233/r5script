@@ -82,8 +82,8 @@ void function Candy_PickupAnnoucement( entity player, int EVO_Reward, int ULT_Re
 	
 	if (player == GetLocalClientPlayer())
 	{
-		string messageText = ( EVO_Reward > 0 ) ? "EVO: +" + EVO_Reward + "\n" : ""
-		messageText += ( ULT_Reward > 0 ) ? "ULT: +" + ULT_Reward + "%" : ""
+		string messageText = ( EVO_Reward > 0 ) ? Localize( "#SURVIVAL_PICKUP_CANDY_EVO", EVO_Reward ) + "\n" : ""
+		messageText += ( ULT_Reward > 0 ) ? Localize( "#SURVIVAL_PICKUP_CANDY_ULT", ULT_Reward ) : ""
 		if ( messageText.len() > 0 )
 			AnnouncementMessageRight( GetLocalClientPlayer(), messageText, "", <0, 1, 0>, $"", 1.0 )
 

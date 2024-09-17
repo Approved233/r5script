@@ -142,21 +142,6 @@ const CONSTRAINEDDIVE_RADIUS_DEFAULT = 984.252
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	global const float SKYDIVE_SLOWDOWN_DIST_FROM_GROUND = 3000.0
 
 	const float SKYDIVE_JETWASH_DIST_FROM_GROUND = 700.0
@@ -365,6 +350,19 @@ SkyDiveTrailPackage function GetSkyDiveTrailPackageForPlayerWithOverrides( entit
 
 	return SkydiveTrail_GetPackageForIndex( index )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2425,6 +2423,13 @@ void function CodeCallback_PlayerSkydiveEnd( entity player )
 		EffectStop( player.p.freefallWindEffectHandle, true, false )
 	}
 	player.p.freefallWindEffectHandle = -1
+
+
+
+
+
+
+
 
 }
 

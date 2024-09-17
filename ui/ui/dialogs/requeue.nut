@@ -76,8 +76,8 @@ void function RequeueDialog_RefreshContent_Thread()
 		bool isPartyLead = AmIPartyLeader()
 		bool isMatchmaking = IsMyPartyMatchmaking()
 		bool fullPartyConnected = UI_IsFullPartyConnectedForRequeue()
-		bool playlistHidden = Playlist_ShouldBeHiddenForScheduleBlocks( GetCurrentPlaylistName() )
-		bool partyRankTierDifferences = Ranked_ShowRankedSummary() && !Ranked_PartyMeetsRankedDifferenceRequirements()
+		bool playlistHidden = Playlist_ShouldBeHiddenForScheduleBlocks( GetMatchRequeuePlaylist() )
+		bool partyRankTierDifferences = GameModeVariant_IsActiveForPlaylist( GetCurrentPlaylistName(), eGameModeVariants.SURVIVAL_RANKED ) && !Ranked_PartyMeetsRankedDifferenceRequirements()
 
 		Hud_SetVisible( file.actionButton1, false )
 		Hud_SetVisible( file.actionButton2, false )
@@ -269,6 +269,7 @@ void function RequeueDialog_Thread_ExitToLobby( var btn )
 	{
 		RuiSetFloat( rui, "holdPercentage", 1.0 )
 		EmitUISound( "UI_Menu_ReadyUp_Cancel_1P" )
+		CloseMenu( GetMenu( "DeathScreenMenu" ) )
 		LeaveMatch()
 		CloseAllDialogs()
 	}

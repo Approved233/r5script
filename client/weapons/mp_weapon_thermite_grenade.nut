@@ -34,7 +34,7 @@ void function MpWeaponThermiteGrenade_Init()
 void function OnWeaponActivate_ThermiteGrenade( entity weapon )
 {
 
-		thread FadeModelIntensityOverTime( weapon, 2, 0, 255 )
+		thread FadeModelIntensityOverTimeThermite( weapon, 2, 0, 255 )
 
 
 	weapon.EmitWeaponSound_1p3p( "", "weapon_thermitegrenade_draw_3p" )
@@ -45,7 +45,7 @@ void function OnWeaponActivate_ThermiteGrenade( entity weapon )
 void function OnWeaponDeactivate_ThermiteGrenade( entity weapon )
 {
 
-		thread FadeModelIntensityOverTime( weapon, 0.25, 255, 0 )
+		thread FadeModelIntensityOverTimeThermite( weapon, 0.25, 255, 0 )
 
 
 	Grenade_OnWeaponDeactivate( weapon )
@@ -191,7 +191,7 @@ void function ExplodeFunc( entity projectile, ProximityExplodeParams ep )
 }
 
 
-void function FadeModelIntensityOverTime( entity model, float duration, int startColor = 255, int endColor = 0 )
+void function FadeModelIntensityOverTimeThermite( entity model, float duration, int startColor = 255, int endColor = 0 )
 {
 	EndSignal( model, "OnDestroy" )
 

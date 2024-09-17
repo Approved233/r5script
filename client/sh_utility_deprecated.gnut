@@ -1,0 +1,2258 @@
+
+
+
+global function IsPilot
+global function IsTitanAvailable
+global function IsHitEffectiveVsNonTitan
+global function RingBufferEntity_Init
+global function RingBufferEntity_IsFull
+global function RingBufferEntity_Dequeue
+global function RingBufferEntity_Enqueue
+global function Freelance_IsHubLevel
+global function PlayerCanSpawnIntoTitan
+global function GetCoreOSConversationName
+global function GetTitanFromPlayer
+global function GetWeaponDamageNear
+global function IsSuddenDeathGameMode
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+global typedef DirURDL int
+global const DirURDL DIR_URDL_UP = 0
+global const DirURDL DIR_URDL_RIGHT = 1
+global const DirURDL DIR_URDL_DOWN = 2
+global const DirURDL DIR_URDL_LEFT = 3
+
+global typedef DirFBLRUD int
+global const DirFBLRUD DIR_FBLRUD_FORWARD = 0
+global const DirFBLRUD DIR_FBLRUD_BACK = 1
+global const DirFBLRUD DIR_FBLRUD_LEFT = 2
+global const DirFBLRUD DIR_FBLRUD_RIGHT = 3
+global const DirFBLRUD DIR_FBLRUD_UP = 4
+global const DirFBLRUD DIR_FBLRUD_DOWN = 5
+
+
+
+
+
+
+
+global enum eTitanVO
+{
+	RODEO_RAKE
+	ENEMY_EJECTED
+	FRIENDLY_EJECTED
+	FRIENDLY_TITAN_DEAD
+	ENEMY_TITAN_DEAD
+	ENEMY_TARGET_ELIMINATED
+	FRIENDLY_TITAN_HELPING
+	PILOT_HELPING
+	FRIENDLY_RODEOING_ENEMY
+}
+
+global struct RingBuffer
+{
+	array<var> 	arr
+	int        	readIdx
+	int 		writeIdx
+	int 		sizeMax
+	int			sizeFilled
+}
+
+global struct RingBufferEntity
+{
+	array<entity>	arr
+	int				readIdx
+	int				writeIdx
+	int				sizeMax
+	int				sizeFilled
+}
+
+
+
+
+
+
+
+
+
+
+vector function HackGetDeltaToRef( vector origin, vector angles, entity ent, string anim )
+{
+	AnimRefPoint animStartPos = ent.Anim_GetStartForRefPoint( anim, origin, angles )
+
+	vector delta = origin - animStartPos.origin
+	return origin + delta
+}
+
+Point function HackGetPointToRef( vector origin, vector angles, entity ent, string anim )
+{
+	AnimRefPoint animStartPos = ent.Anim_GetStartForRefPoint( anim, origin, angles )
+
+	Point point
+	point.angles = ClampAngles( angles + (angles - animStartPos.angles) )
+	point.origin = HackGetDeltaToRef( origin, point.angles, ent, anim )
+
+	return point
+}
+
+#if R2_SCOREBOARD
+
+int function CompareKills( entity a, entity b )
+{
+	int aVal = a.GetPlayerGameStat( PGS_KILLS )
+	int bVal = b.GetPlayerGameStat( PGS_KILLS )
+
+	if ( aVal < bVal )
+		return 1
+	else if ( aVal > bVal )
+		return -1
+
+	aVal = a.GetPlayerGameStat( PGS_DEATHS )
+	bVal = b.GetPlayerGameStat( PGS_DEATHS )
+
+	if ( aVal > bVal )
+		return 1
+	else if ( aVal < bVal )
+		return -1
+
+	aVal = a.GetPlayerGameStat( PGS_TITAN_KILLS )
+	bVal = b.GetPlayerGameStat( PGS_TITAN_KILLS )
+
+	if ( aVal < bVal )
+		return 1
+	else if ( aVal > bVal )
+		return -1
+
+	aVal = a.GetPlayerGameStat( PGS_ASSISTS )
+	bVal = b.GetPlayerGameStat( PGS_ASSISTS )
+
+	if ( aVal < bVal )
+		return 1
+	else if ( aVal > bVal )
+		return -1
+
+	return 0
+}
+
+
+int function CompareAssaultScore( entity a, entity b )
+{
+	int aVal = a.GetPlayerGameStat( PGS_ASSAULT_SCORE )
+	int bVal = b.GetPlayerGameStat( PGS_ASSAULT_SCORE )
+
+	if ( aVal < bVal )
+		return 1
+	else if ( aVal > bVal )
+		return -1
+
+	return 0
+}
+
+
+int function CompareScore( entity a, entity b )
+{
+	int aVal = a.GetPlayerGameStat( PGS_SCORE )
+	int bVal = b.GetPlayerGameStat( PGS_SCORE )
+
+	if ( aVal < bVal )
+		return 1
+	else if ( aVal > bVal )
+		return -1
+
+	return 0
+}
+
+
+int function CompareAssault( entity a, entity b )
+{
+	int aVal = a.GetPlayerGameStat( PGS_ASSAULT_SCORE )
+	int bVal = b.GetPlayerGameStat( PGS_ASSAULT_SCORE )
+
+	if ( aVal < bVal )
+		return 1
+	else if ( aVal > bVal )
+		return -1
+
+	return 0
+}
+
+
+int function CompareDefense( entity a, entity b )
+{
+	int aVal = a.GetPlayerGameStat( PGS_DEFENSE_SCORE )
+	int bVal = b.GetPlayerGameStat( PGS_DEFENSE_SCORE )
+
+	if ( aVal < bVal )
+		return 1
+	else if ( aVal > bVal )
+		return -1
+
+	return 0
+}
+
+
+int function CompareLTS( entity a, entity b )
+{
+	int result = CompareTitanKills( a, b )
+	if ( result != 0 )
+		return result
+
+	int aVal = a.GetPlayerGameStat( PGS_ASSAULT_SCORE )
+	int bVal = b.GetPlayerGameStat( PGS_ASSAULT_SCORE )
+
+	if ( aVal < bVal )
+		return 1
+	else if ( aVal > bVal )
+		return -1
+
+	return 0
+}
+
+
+int function CompareCP( entity a, entity b )
+{
+	
+
+	{
+		int aVal = a.GetPlayerGameStat( PGS_ASSAULT_SCORE )
+		int bVal = b.GetPlayerGameStat( PGS_ASSAULT_SCORE )
+
+		aVal += a.GetPlayerGameStat( PGS_DEFENSE_SCORE )
+		bVal += b.GetPlayerGameStat( PGS_DEFENSE_SCORE )
+
+		if ( aVal < bVal )
+			return 1
+		else if ( aVal > bVal )
+			return -1
+	}
+
+	
+	{
+		int aVal = a.GetPlayerGameStat( PGS_KILLS )
+		int bVal = b.GetPlayerGameStat( PGS_KILLS )
+
+		if ( aVal < bVal )
+			return 1
+		else if ( aVal > bVal )
+			return -1
+	}
+
+	
+	{
+		int aVal = a.GetPlayerGameStat( PGS_TITAN_KILLS )
+		int bVal = b.GetPlayerGameStat( PGS_TITAN_KILLS )
+
+		if ( aVal < bVal )
+			return 1
+		else if ( aVal > bVal )
+			return -1
+	}
+
+	
+	{
+		int aVal = a.GetPlayerGameStat( PGS_DEATHS )
+		int bVal = b.GetPlayerGameStat( PGS_DEATHS )
+
+		if ( aVal < bVal )
+			return -1
+		else if ( aVal > bVal )
+			return 1
+	}
+
+	return 0
+}
+
+
+int function CompareCTF( entity a, entity b )
+{
+	
+
+	
+	int result = CompareAssault( a, b )
+	if ( result != 0 )
+		return result
+
+	
+	result = CompareDefense( a, b )
+	if ( result != 0 )
+		return result
+
+	
+	int aVal = a.GetPlayerGameStat( PGS_KILLS )
+	int bVal = b.GetPlayerGameStat( PGS_KILLS )
+
+	if ( aVal < bVal )
+		return 1
+	else if ( aVal > bVal )
+		return -1
+
+	
+	aVal = a.GetPlayerGameStat( PGS_TITAN_KILLS )
+	bVal = b.GetPlayerGameStat( PGS_TITAN_KILLS )
+
+	if ( aVal < bVal )
+		return 1
+	else if ( aVal > bVal )
+		return -1
+
+	
+	aVal = a.GetPlayerGameStat( PGS_DEATHS )
+	bVal = b.GetPlayerGameStat( PGS_DEATHS )
+
+	if ( aVal < bVal )
+		return -1
+	else if ( aVal > bVal )
+		return 1
+
+	return 0
+}
+
+
+int function CompareSpeedball( entity a, entity b )
+{
+	
+
+	
+	int aVal = a.GetPlayerGameStat( PGS_KILLS )
+	int bVal = b.GetPlayerGameStat( PGS_KILLS )
+
+	if ( aVal < bVal )
+		return 1
+	else if ( aVal > bVal )
+		return -1
+
+	
+	int result = CompareAssault( a, b )
+	if ( result != 0 )
+		return result
+
+	
+	aVal = a.GetPlayerGameStat( PGS_DEATHS )
+	bVal = b.GetPlayerGameStat( PGS_DEATHS )
+
+	if ( aVal < bVal )
+		return -1
+	else if ( aVal > bVal )
+		return 1
+
+	return 0
+}
+
+
+int function CompareMFD( entity a, entity b )
+{
+	
+	int result = CompareAssault( a, b )
+	if ( result != 0 )
+		return result
+
+	
+	result = CompareDefense( a, b )
+	if ( result != 0 )
+		return result
+
+	
+	int aVal = a.GetPlayerGameStat( PGS_KILLS )
+	int bVal = b.GetPlayerGameStat( PGS_KILLS )
+
+	if ( aVal < bVal )
+		return 1
+	else if ( aVal > bVal )
+		return -1
+
+	
+	aVal = a.GetPlayerGameStat( PGS_TITAN_KILLS )
+	bVal = b.GetPlayerGameStat( PGS_TITAN_KILLS )
+
+	if ( aVal < bVal )
+		return 1
+	else if ( aVal > bVal )
+		return -1
+
+	
+	aVal = a.GetPlayerGameStat( PGS_DEATHS )
+	bVal = b.GetPlayerGameStat( PGS_DEATHS )
+
+	if ( aVal < bVal )
+		return -1
+	else if ( aVal > bVal )
+		return 1
+
+	return 0
+}
+
+
+int function CompareScavenger( entity a, entity b )
+{
+	
+	int result = CompareAssault( a, b )
+	if ( result != 0 )
+		return result
+
+	
+	int aVal = a.GetPlayerGameStat( PGS_KILLS )
+	int bVal = b.GetPlayerGameStat( PGS_KILLS )
+
+	if ( aVal < bVal )
+		return 1
+	else if ( aVal > bVal )
+		return -1
+
+	
+	aVal = a.GetPlayerGameStat( PGS_TITAN_KILLS )
+	bVal = b.GetPlayerGameStat( PGS_TITAN_KILLS )
+
+	if ( aVal < bVal )
+		return 1
+	else if ( aVal > bVal )
+		return -1
+
+	
+	aVal = a.GetPlayerGameStat( PGS_DEATHS )
+	bVal = b.GetPlayerGameStat( PGS_DEATHS )
+
+	if ( aVal < bVal )
+		return -1
+	else if ( aVal > bVal )
+		return 1
+
+	return 0
+}
+
+
+int function CompareFW( entity a, entity b )
+{
+	
+
+	{
+		int aVal = a.GetPlayerGameStat( PGS_ASSAULT_SCORE )
+		int bVal = b.GetPlayerGameStat( PGS_ASSAULT_SCORE )
+
+		aVal += a.GetPlayerGameStat( PGS_DEFENSE_SCORE )
+		bVal += b.GetPlayerGameStat( PGS_DEFENSE_SCORE )
+
+		if ( aVal < bVal )
+			return 1
+		else if ( aVal > bVal )
+			return -1
+	}
+
+	
+	{
+		int aVal = a.GetPlayerGameStat( PGS_KILLS )
+		int bVal = b.GetPlayerGameStat( PGS_KILLS )
+
+		if ( aVal < bVal )
+			return 1
+		else if ( aVal > bVal )
+			return -1
+	}
+
+	
+	{
+		int aVal = a.GetPlayerGameStat( PGS_TITAN_KILLS )
+		int bVal = b.GetPlayerGameStat( PGS_TITAN_KILLS )
+
+		if ( aVal < bVal )
+			return 1
+		else if ( aVal > bVal )
+			return -1
+	}
+
+	
+	{
+		int aVal = a.GetPlayerGameStat( PGS_DEATHS )
+		int bVal = b.GetPlayerGameStat( PGS_DEATHS )
+
+		if ( aVal < bVal )
+			return -1
+		else if ( aVal > bVal )
+			return 1
+	}
+
+	return 0
+}
+
+
+int function CompareHunter( entity a, entity b )
+{
+	
+
+	{
+		int aVal = a.GetPlayerGameStat( PGS_ASSAULT_SCORE )
+		int bVal = b.GetPlayerGameStat( PGS_ASSAULT_SCORE )
+
+		aVal += a.GetPlayerGameStat( PGS_DEFENSE_SCORE )
+		bVal += b.GetPlayerGameStat( PGS_DEFENSE_SCORE )
+
+		if ( aVal < bVal )
+			return 1
+		else if ( aVal > bVal )
+			return -1
+	}
+
+	
+	{
+		int aVal = a.GetPlayerGameStat( PGS_KILLS )
+		int bVal = b.GetPlayerGameStat( PGS_KILLS )
+
+		if ( aVal < bVal )
+			return 1
+		else if ( aVal > bVal )
+			return -1
+	}
+
+	
+	{
+		int aVal = a.GetPlayerGameStat( PGS_TITAN_KILLS )
+		int bVal = b.GetPlayerGameStat( PGS_TITAN_KILLS )
+
+		if ( aVal < bVal )
+			return 1
+		else if ( aVal > bVal )
+			return -1
+	}
+
+	
+	{
+		int aVal = a.GetPlayerGameStat( PGS_DEATHS )
+		int bVal = b.GetPlayerGameStat( PGS_DEATHS )
+
+		if ( aVal < bVal )
+			return -1
+		else if ( aVal > bVal )
+			return 1
+	}
+
+	return 0
+}
+
+
+int function ScoreCompare_Freelance( entity a, entity b )
+{
+	int aVal = a.GetPlayerGameStat( PGS_KILLS )
+	int bVal = b.GetPlayerGameStat( PGS_KILLS )
+
+	if ( aVal < bVal )
+		return 1
+	else if ( aVal > bVal )
+		return -1
+
+	aVal = a.GetPlayerGameStat( PGS_DEATHS )
+	bVal = b.GetPlayerGameStat( PGS_DEATHS )
+
+	if ( aVal > bVal )
+		return 1
+	else if ( aVal < bVal )
+		return -1
+
+	aVal = a.GetPlayerGameStat( PGS_SCORE )
+	bVal = b.GetPlayerGameStat( PGS_SCORE )
+
+	if ( aVal < bVal )
+		return 1
+	else if ( aVal > bVal )
+		return -1
+
+	return 0
+}
+
+int function CompareFD( entity a, entity b )
+{
+	int aVal = a.GetPlayerGameStat( PGS_DETONATION_SCORE )
+	int bVal = b.GetPlayerGameStat( PGS_DETONATION_SCORE )
+
+	if ( aVal < bVal )
+		return 1
+	else if ( aVal > bVal )
+		return -1
+
+	return 0
+}
+
+
+int function CompareTitanKills( entity a, entity b )
+{
+	int aVal = a.GetPlayerGameStat( PGS_TITAN_KILLS )
+	int bVal = b.GetPlayerGameStat( PGS_TITAN_KILLS )
+
+	if ( aVal < bVal )
+		return 1
+	else if ( aVal > bVal )
+		return -1
+
+	return 0
+}
+#endif
+
+bool function HasRoundScoreLimitBeenReached() 
+{
+	if ( !IsRoundBased() )
+		return false
+
+	int roundLimit = GetRoundScoreLimit_FromPlaylist()
+
+	if ( roundLimit == 0 )
+		return false
+
+	int militiaScore = GameRules_GetTeamScore2( TEAM_MILITIA )
+	int imcScore = GameRules_GetTeamScore2( TEAM_IMC )
+
+	if ( ( militiaScore >= roundLimit ) || ( imcScore >= roundLimit ) )
+		return true
+
+	return false
+}
+
+bool function IsSuddenDeathGameMode()
+{
+	return false 
+}
+
+bool function TitanShieldDecayEnabled()
+{
+	return (GetCurrentPlaylistVarInt( "titan_shield_decay", 0 ) == 1)
+}
+
+
+bool function TitanShieldRegenEnabled()
+{
+	return (GetCurrentPlaylistVarInt( "titan_shield_regen", 1 ) == 1)
+}
+
+
+bool function DoomStateDisabled()
+{
+	return (GetCurrentPlaylistVarString( "titan_doomstate_variation", "default" ) == "disabled" || GetCurrentPlaylistVarString( "titan_doomstate_variation", "default" ) == "lastsegment")
+}
+
+
+bool function NoWeaponDoomState()
+{
+	return (GetCurrentPlaylistVarString( "titan_doomstate_variation", "default" ) == "noweapon")
+}
+
+
+entity function GetPetTitanOwner( entity titan )
+{
+	array<entity> players = GetPlayerArray()
+	entity foundPlayer
+	foreach ( player in players )
+	{
+		if ( player.GetPetTitan() == titan )
+		{
+			Assert( foundPlayer == null, player + " and " + foundPlayer + " both own " + titan )
+			foundPlayer = player
+		}
+	}
+
+	return foundPlayer
+}
+
+entity function GetSoulFromPlayer( entity player )
+{
+	return null
+}
+
+bool function PROTO_AlternateDoomedState()
+{
+	return (GetCurrentPlaylistVarInt( "infinite_doomed_state", 1 ) == 1)
+}
+
+
+bool function PROTO_VariableRegenDelay()
+{
+	return (GetCurrentPlaylistVarInt( "variable_regen_delay", 1 ) == 1)
+}
+
+
+bool function TitanDamageRewardsTitanCoreTime()
+{
+	if ( GetCurrentPlaylistVarInt( "titan_core_from_titan_damage", 1 ) != 0 )
+		return true
+	return false
+}
+
+
+bool function PilotSpawnOntoTitanIsEnabledInPlaylist( entity player )
+{
+	if ( GetCurrentPlaylistVarInt( "titan_spawn_deploy_enabled", 0 ) != 0 )
+		return true
+	return false
+}
+
+
+bool function PlayerCanSpawnIntoTitan( entity player )
+{
+	if ( !PilotSpawnOntoTitanIsEnabledInPlaylist( player ) )
+		return false
+
+	entity titan = player.GetPetTitan()
+
+	if ( !IsAlive( titan ) )
+		return false
+
+	if ( GetDoomedState( titan ) )
+		return false
+
+	if ( titan.ContextAction_IsActive() )
+		return false
+
+	return false 
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+int function GetWeaponDamageNear( entity weapon, entity victim )
+{
+	entity weaponOwner = weapon.GetWeaponOwner()
+	if ( weaponOwner.IsNPC() )
+	{
+		if ( victim.GetArmorType() == ARMOR_TYPE_HEAVY )
+			return weapon.GetWeaponSettingInt( eWeaponVar.npc_damage_near_value_titanarmor )
+		else
+			return weapon.GetWeaponSettingInt( eWeaponVar.npc_damage_near_value )
+	}
+	else
+	{
+		if ( victim.GetArmorType() == ARMOR_TYPE_HEAVY )
+			return weapon.GetWeaponSettingInt( eWeaponVar.damage_near_value_titanarmor )
+		else
+			return weapon.GetWeaponSettingInt( eWeaponVar.damage_near_value )
+	}
+
+	unreachable
+}
+
+
+bool function GetDoomedState( entity ent )
+{
+	return false
+}
+
+
+bool function CoreAvailableDuringDoomState()
+{
+	return true
+}
+
+
+bool function HasAntiTitanWeapon( entity guy )
+{
+	foreach ( weapon in guy.GetMainWeapons() )
+	{
+		if ( weapon.GetWeaponType() == WT_ANTITITAN )
+			return true
+	}
+	return false
+}
+
+
+float function GetTitanCoreActiveTime( entity player )
+{
+	entity weapon = player.GetOffhandWeapon( OFFHAND_EQUIPMENT )
+
+	if ( !IsValid( weapon ) )
+	{
+		printt( "WARNING: tried to get core active time, but core weapon was invalid." )
+		printt( "titan is alive? " + IsAlive( player ) )
+		return 5.0 
+	}
+
+	return GetTitanCoreDurationFromWeapon( weapon )
+}
+
+
+float function GetTitanCoreChargeTime( entity player )
+{
+	entity weapon = player.GetOffhandWeapon( OFFHAND_EQUIPMENT )
+
+	if ( !IsValid( weapon ) )
+	{
+		printt( "WARNING: tried to get core charge time, but core weapon was invalid." )
+		printt( "titan is alive? " + IsAlive( player ) )
+		return 1.0 
+	}
+
+	return GetTitanCoreChargeTimeFromWeapon( weapon )
+}
+
+
+float function GetTitanCoreChargeTimeFromWeapon( entity weapon )
+{
+	return expect float( weapon.GetWeaponInfoFileKeyField( "chargeup_time" ) )
+}
+
+
+float function GetTitanCoreBuildTimeFromWeapon( entity weapon )
+{
+	return weapon.GetWeaponSettingFloat( eWeaponVar.core_build_time )
+}
+
+
+float function GetTitanCoreDurationFromWeapon( entity weapon )
+{
+	float coreDuration = weapon.GetCoreDuration()
+
+	return coreDuration
+}
+
+
+float function GetCoreBuildTime( entity titan )
+{
+	if ( titan.IsPlayer() )
+		titan = GetTitanFromPlayer( titan )
+
+	Assert( titan != null )
+
+	entity coreWeapon = titan.GetOffhandWeapon( OFFHAND_EQUIPMENT )
+
+	if ( !IsValid( coreWeapon ) )
+	{
+		
+		
+		return 200.0 
+	}
+
+
+	return GetTitanCoreBuildTimeFromWeapon( coreWeapon )
+}
+
+
+string function GetCoreShortName( entity titan )
+{
+	entity coreWeapon = titan.GetOffhandWeapon( OFFHAND_EQUIPMENT )
+
+	if ( !IsValid( coreWeapon ) )
+	{
+		printt( "WARNING: tried to get core name, but core weapon was invalid." )
+		printt( "titan is alive? " + IsAlive( titan ) )
+		return "#HUD_READY"
+	}
+
+	string name = coreWeapon.GetWeaponSettingString( eWeaponVar.shortprintname )
+	return name
+}
+
+
+string ornull function GetCoreOSConversationName( entity titan, string event )
+{
+	entity coreWeapon = titan.GetOffhandWeapon( OFFHAND_EQUIPMENT )
+
+	if ( !IsValid( coreWeapon ) )
+	{
+		printt( "WARNING: tried to get core sound for " + event + ", but core weapon was invalid." )
+		printt( "titan is alive? " + IsAlive( titan ) )
+		return null
+	}
+
+	var alias = coreWeapon.GetWeaponInfoFileKeyField( "dialog_" + event )
+
+	if ( alias == null )
+		return null
+
+	expect string( alias )
+
+	return alias
+}
+
+
+entity function GetTitanFromPlayer( entity player )
+{
+	Assert( player.IsPlayer() )
+	if ( player.IsTitan() )
+		return player
+
+	return player.GetPetTitan()
+}
+
+
+int function GetNuclearPayload( entity player )
+{
+	if ( !GetDoomedState( player ) )
+		return 0
+
+	int payload = 0
+
+	return payload
+}
+
+vector function DirFBLRUD_ToDir( DirFBLRUD dir )
+{
+	switch ( dir )
+	{
+		case DIR_FBLRUD_FORWARD:
+			return <1, 0, 0>
+
+		case DIR_FBLRUD_BACK:
+			return <-1, 0, 0>
+
+		case DIR_FBLRUD_LEFT:
+			return <0, 1, 0>
+
+		case DIR_FBLRUD_RIGHT:
+			return <0, -1, 0>
+
+		case DIR_FBLRUD_UP:
+			return <0, 0, 1>
+
+		case DIR_FBLRUD_DOWN:
+			return <0, 0, -1>
+	}
+	Assert( false, "Bad direction: " + dir )
+	return <0, 0, 0>
+}
+
+
+
+float function DirFBLRUD_ForwardLength( DirFBLRUD dir, vector vec )
+{
+	switch ( dir )
+	{
+		case DIR_FBLRUD_FORWARD:
+			return vec.x
+
+		case DIR_FBLRUD_BACK:
+			return -1.0 * vec.x
+
+		case DIR_FBLRUD_LEFT:
+			return vec.y
+
+		case DIR_FBLRUD_RIGHT:
+			return -1.0 * vec.y
+
+		case DIR_FBLRUD_UP:
+			return vec.z
+
+		case DIR_FBLRUD_DOWN:
+			return -1.0 * vec.z
+	}
+	Assert( false, "Bad direction: " + dir )
+	return 0.0
+}
+
+bool function Freelance_IsHubLevel()
+{
+#if 0
+		string mapName = GetMapName()
+
+		switch( mapName )
+		{
+			case "mp_rr_nobody":
+				return true
+		}
+#endif
+	return false
+}
+
+bool function IsHitEffectiveVsNonTitan( entity victim, int damageType )
+{
+	if ( IsBitFlagSet( damageType, DF_BULLET ) || IsBitFlagSet( damageType, DF_MAX_RANGE ) )
+		return false
+
+	return true
+}
+
+bool function IsPilot( entity ent )
+{
+	if ( !IsValid( ent ) )
+		return false
+
+	if ( !ent.IsPlayer() )
+		return false
+
+	if ( ent.IsTitan() )
+		return false
+
+	return true
+}
+
+bool function IsTitanAvailable( entity player )
+{
+	return false
+}
+
+
+
+RingBuffer function RingBuffer_Init( int maxSize )
+{
+	RingBuffer rb
+	rb.arr     = []
+	rb.arr.resize( maxSize, null )
+	rb.readIdx = 0
+	rb.writeIdx = 0
+	rb.sizeMax = maxSize
+	rb.sizeFilled = 0
+
+	return rb
+}
+
+void function RingBuffer_Clear( RingBuffer buffer )
+{
+	buffer.arr = []
+	buffer.arr.resize( buffer.sizeMax, null )
+	buffer.readIdx = 0
+	buffer.writeIdx = 0
+	buffer.sizeFilled = 0
+}
+
+int function RingBuffer_GetSizeFilled( RingBuffer buffer )
+{
+	return buffer.sizeFilled
+}
+
+int function RingBuffer_GetSizeMax( RingBuffer buffer )
+{
+	return buffer.sizeMax
+}
+
+bool function RingBuffer_IsFull( RingBuffer buffer )
+{
+	return buffer.sizeFilled >= buffer.arr.len()
+}
+
+bool function RingBuffer_IsEmpty( RingBuffer buffer )
+{
+	return buffer.sizeFilled == 0
+}
+
+
+void function RingBuffer_Enqueue( RingBuffer buffer, var item )
+{
+	buffer.arr[ buffer.writeIdx ] = item
+	buffer.writeIdx = (buffer.writeIdx + 1) % buffer.sizeMax
+	buffer.sizeFilled = minint( buffer.sizeFilled + 1, buffer.sizeMax )
+}
+
+
+var function RingBuffer_Dequeue( RingBuffer buffer )
+{
+	var res = buffer.arr[ buffer.readIdx ]
+	buffer.readIdx = (buffer.readIdx + 1) % buffer.sizeMax
+	buffer.sizeFilled = maxint( buffer.sizeFilled - 1, 0 )
+
+	return res
+}
+
+
+
+RingBufferEntity function RingBufferEntity_Init( int maxSize )
+{
+	RingBufferEntity rb
+	rb.arr     = []
+	rb.arr.resize( maxSize, null )
+	rb.readIdx = 0
+	rb.writeIdx = 0
+	rb.sizeMax = maxSize
+	rb.sizeFilled = 0
+
+	return rb
+}
+
+void function RingBufferEntity_Clear( RingBufferEntity buffer )
+{
+	buffer.arr = []
+	buffer.arr.resize( buffer.sizeMax, null )
+	buffer.readIdx = 0
+	buffer.writeIdx = 0
+	buffer.sizeFilled = 0
+}
+
+int function RingBufferEntity_GetSizeFilled( RingBufferEntity buffer )
+{
+	return buffer.sizeFilled
+}
+
+int function RingBufferEntity_GetSizeMax( RingBufferEntity buffer )
+{
+	return buffer.sizeMax
+}
+
+bool function RingBufferEntity_IsFull( RingBufferEntity buffer )
+{
+	return buffer.sizeFilled >= buffer.sizeMax
+}
+
+bool function RingBufferEntity_IsEmpty( RingBufferEntity buffer )
+{
+	return buffer.sizeFilled == 0
+}
+
+
+void function RingBufferEntity_Enqueue( RingBufferEntity buffer, entity item )
+{
+	buffer.arr[ buffer.writeIdx ] = item
+	buffer.writeIdx = (buffer.writeIdx + 1) % buffer.sizeMax
+	buffer.sizeFilled = minint( buffer.sizeFilled + 1, buffer.sizeMax )
+}
+
+
+entity function RingBufferEntity_Dequeue( RingBufferEntity buffer )
+{
+	entity res = buffer.arr[ buffer.readIdx ]
+	buffer.readIdx = (buffer.readIdx + 1) % buffer.sizeMax
+	buffer.sizeFilled = maxint( buffer.sizeFilled - 1, 0 )
+
+	return res
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

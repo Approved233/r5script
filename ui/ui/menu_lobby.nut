@@ -630,9 +630,11 @@ void function Lobby_UpdateSelectedPlaylistUsingUISlot( string previousPlaylist )
 {
 	
 	
-	string uiSlot      = GetPlaylistVarString( previousPlaylist, "ui_slot", "" )
-	string newPlaylist = GetCurrentPlaylistInUiSlot( uiSlot )
-	printf("Found new playlist '%s' for ui_slot %s", newPlaylist, uiSlot)
+	string ornull playlistSchedule      = GetScheduleFromPlaylist( previousPlaylist )
+	string newPlaylist = playlistSchedule != null ? GetCurrentPlaylistForSchedule( expect string( playlistSchedule ) ) : ""
+	if ( playlistSchedule != null )
+		printf("Found new playlist '%s' for ui_slot %s", newPlaylist, playlistSchedule )
+
 	if ( newPlaylist == "" || !Lobby_IsPlaylistAvailable( newPlaylist ) )
 		newPlaylist = GetDefaultPlaylist()
 

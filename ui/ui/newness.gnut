@@ -75,42 +75,42 @@ void function UiNewnessQueries_LevelInit()
 	foreach( ItemFlavor character in GetAllCharacters() )
 	{
 		Newness_ReverseQuery characterSkinsTabRQ
-		Newness_ReverseQuery_Setup( characterSkinsTabRQ, [], GetValidItemFlavorsForLoadoutSlot( EHI_null, Loadout_CharacterSkin( character ) ) )
+		Newness_ReverseQuery_Setup( characterSkinsTabRQ, [], GetValidItemFlavorsForLoadoutSlot( Loadout_CharacterSkin( character ) ) )
 #if NEWNESS_DEBUG
 			NEWNESS_DEBUG_AddPrintCallback( characterSkinsTabRQ, ItemFlavor_GetCharacterRef( character ) + " skins" )
 #endif
 		NEWNESS_QUERIES.CharacterSkinsTab[character] <- characterSkinsTabRQ
 
 		Newness_ReverseQuery characterIntroQuipSectionButtonRQ
-		Newness_ReverseQuery_Setup( characterIntroQuipSectionButtonRQ, [], GetValidItemFlavorsForLoadoutSlot( EHI_null, Loadout_CharacterIntroQuip( character ) ) )
+		Newness_ReverseQuery_Setup( characterIntroQuipSectionButtonRQ, [], GetValidItemFlavorsForLoadoutSlot( Loadout_CharacterIntroQuip( character ) ) )
 #if NEWNESS_DEBUG
 			NEWNESS_DEBUG_AddPrintCallback( characterIntroQuipSectionButtonRQ, ItemFlavor_GetCharacterRef( character ) + " intro quip" )
 #endif
 		NEWNESS_QUERIES.CharacterIntroQuipSectionButton[character] <- characterIntroQuipSectionButtonRQ
 
 		Newness_ReverseQuery characterKillQuipSectionButtonRQ
-		Newness_ReverseQuery_Setup( characterKillQuipSectionButtonRQ, [], GetValidItemFlavorsForLoadoutSlot( EHI_null, Loadout_CharacterKillQuip( character ) ) )
+		Newness_ReverseQuery_Setup( characterKillQuipSectionButtonRQ, [], GetValidItemFlavorsForLoadoutSlot( Loadout_CharacterKillQuip( character ) ) )
 #if NEWNESS_DEBUG
 			NEWNESS_DEBUG_AddPrintCallback( characterKillQuipSectionButtonRQ, ItemFlavor_GetCharacterRef( character ) + " kill quip" )
 #endif
 		NEWNESS_QUERIES.CharacterKillQuipSectionButton[character] <- characterKillQuipSectionButtonRQ
 
 		Newness_ReverseQuery characterHolosprayRQ
-		Newness_ReverseQuery_Setup( characterHolosprayRQ, [], FilterItemFlavorsByType( GetValidItemFlavorsForLoadoutSlot( EHI_null, Loadout_CharacterQuip( character, 0 ) ), eItemType.emote_icon ) )
+		Newness_ReverseQuery_Setup( characterHolosprayRQ, [], FilterItemFlavorsByType( GetValidItemFlavorsForLoadoutSlot( Loadout_CharacterQuip( character, 0 ) ), eItemType.emote_icon ) )
 #if NEWNESS_DEBUG
 			NEWNESS_DEBUG_AddPrintCallback( characterHolosprayRQ, ItemFlavor_GetCharacterRef( character ) + " holospray" )
 #endif
 		NEWNESS_QUERIES.CharacterEmotesHolospraySectionButton[character] <- characterHolosprayRQ
 
 		Newness_ReverseQuery characterSkydiveEmoteRQ
-		Newness_ReverseQuery_Setup( characterSkydiveEmoteRQ, [], FilterItemFlavorsByType( GetValidItemFlavorsForLoadoutSlot( EHI_null, Loadout_SkydiveEmote( character, 0 ) ), eItemType.skydive_emote ) )
+		Newness_ReverseQuery_Setup( characterSkydiveEmoteRQ, [], FilterItemFlavorsByType( GetValidItemFlavorsForLoadoutSlot( Loadout_SkydiveEmote( character, 0 ) ), eItemType.skydive_emote ) )
 #if NEWNESS_DEBUG
 			NEWNESS_DEBUG_AddPrintCallback( characterSkydiveEmoteRQ, ItemFlavor_GetCharacterRef( character ) + " skydive emote" )
 #endif
 		NEWNESS_QUERIES.CharacterEmotesSkydiveEmotesSectionButton[character] <- characterSkydiveEmoteRQ
 
 		Newness_ReverseQuery characterStandingEmoteRQ
-		Newness_ReverseQuery_Setup( characterStandingEmoteRQ, [], FilterItemFlavorsByType( GetValidItemFlavorsForLoadoutSlot( EHI_null, Loadout_CharacterQuip( character, 0 ) ), eItemType.character_emote ) )
+		Newness_ReverseQuery_Setup( characterStandingEmoteRQ, [], FilterItemFlavorsByType( GetValidItemFlavorsForLoadoutSlot( Loadout_CharacterQuip( character, 0 ) ), eItemType.character_emote ) )
 #if NEWNESS_DEBUG
 			NEWNESS_DEBUG_AddPrintCallback( characterStandingEmoteRQ, ItemFlavor_GetCharacterRef( character ) + " standing emote" )
 #endif
@@ -124,28 +124,31 @@ void function UiNewnessQueries_LevelInit()
 		NEWNESS_QUERIES.CharacterQuipsTab[character] <- characterQuipsTabRQ
 
 		Newness_ReverseQuery gcardFramesSectionButtonRQ
-		Newness_ReverseQuery_Setup( gcardFramesSectionButtonRQ, [], GetValidItemFlavorsForLoadoutSlot( EHI_null, Loadout_GladiatorCardFrame( character ) ) )
+		Newness_ReverseQuery_Setup( gcardFramesSectionButtonRQ, [], GetValidItemFlavorsForLoadoutSlot( Loadout_GladiatorCardFrame( character ) ) )
 #if NEWNESS_DEBUG
 			NEWNESS_DEBUG_AddPrintCallback( gcardFramesSectionButtonRQ, ItemFlavor_GetCharacterRef( character ) + " gcard frames" )
 #endif
 		NEWNESS_QUERIES.GCardFramesSectionButton[character] <- gcardFramesSectionButtonRQ
 
 		Newness_ReverseQuery gcardStancesSectionButtonRQ
-		Newness_ReverseQuery_Setup( gcardStancesSectionButtonRQ, [], GetValidItemFlavorsForLoadoutSlot( EHI_null, Loadout_GladiatorCardStance( character ) ) )
+		Newness_ReverseQuery_Setup( gcardStancesSectionButtonRQ, [], GetValidItemFlavorsForLoadoutSlot( Loadout_GladiatorCardStance( character ) ) )
 #if NEWNESS_DEBUG
 			NEWNESS_DEBUG_AddPrintCallback( gcardStancesSectionButtonRQ, ItemFlavor_GetCharacterRef( character ) + " gcard stances" )
 #endif
 		NEWNESS_QUERIES.GCardStancesSectionButton[character] <- gcardStancesSectionButtonRQ
 
 		Newness_ReverseQuery gcardBadgesSectionButtonRQ
-		Newness_ReverseQuery_Setup( gcardBadgesSectionButtonRQ, [], GetValidItemFlavorsForLoadoutSlot( EHI_null, Loadout_GladiatorCardBadge( character, 0 ) ) )
+		Newness_ReverseQuery_Setup( gcardBadgesSectionButtonRQ, [], GetValidItemFlavorsForLoadoutSlot( Loadout_GladiatorCardBadge( character, 0 ) ) )
 #if NEWNESS_DEBUG
 			NEWNESS_DEBUG_AddPrintCallback( gcardBadgesSectionButtonRQ, ItemFlavor_GetCharacterRef( character ) + " gcard badges" )
 #endif
 		NEWNESS_QUERIES.GCardBadgesSectionButton[character] <- gcardBadgesSectionButtonRQ
 
 		Newness_ReverseQuery gcardTrackersSectionButtonRQ
-		Newness_ReverseQuery_Setup( gcardTrackersSectionButtonRQ, [], GetValidItemFlavorsForLoadoutSlot( EHI_null, Loadout_GladiatorCardStatTracker( character, 0 ) ) )
+		array<ItemFlavor> trackerDependencies = []
+		trackerDependencies.extend( GetValidItemFlavorsForLoadoutSlot( Loadout_GladiatorCardStatTracker( character, 0 ) ) )
+		trackerDependencies.extend( GetValidItemFlavorsForLoadoutSlot( Loadout_GladiatorCardStatTrackerArt( character, 0 ) ) )
+		Newness_ReverseQuery_Setup( gcardTrackersSectionButtonRQ, [], trackerDependencies )
 #if NEWNESS_DEBUG
 			NEWNESS_DEBUG_AddPrintCallback( gcardTrackersSectionButtonRQ, ItemFlavor_GetCharacterRef( character ) + " gcard trackers" )
 #endif
@@ -159,7 +162,7 @@ void function UiNewnessQueries_LevelInit()
 		NEWNESS_QUERIES.CharacterCardTab[character] <- characterCardTabRQ
 
 		Newness_ReverseQuery characterFinishersTabRQ
-		Newness_ReverseQuery_Setup( characterFinishersTabRQ, [], GetValidItemFlavorsForLoadoutSlot( EHI_null, Loadout_CharacterExecution( character ) ) )
+		Newness_ReverseQuery_Setup( characterFinishersTabRQ, [], GetValidItemFlavorsForLoadoutSlot( Loadout_CharacterExecution( character ) ) )
 #if NEWNESS_DEBUG
 			NEWNESS_DEBUG_AddPrintCallback( characterFinishersTabRQ, ItemFlavor_GetCharacterRef( character ) + " finishers" )
 #endif
@@ -205,7 +208,7 @@ void function UiNewnessQueries_LevelInit()
 		{
 			Newness_ReverseQuery weaponTabRQ
 			array<ItemFlavor> flavorDependencies = []
-			flavorDependencies.extend( GetValidItemFlavorsForLoadoutSlot( EHI_null, Loadout_WeaponSkin( weapon ) ) )
+			flavorDependencies.extend( GetValidItemFlavorsForLoadoutSlot( Loadout_WeaponSkin( weapon ) ) )
 			flavorDependencies.append( weapon ) 
 			Newness_ReverseQuery_Setup( weaponTabRQ, [ weaponCharmRQ ], flavorDependencies )
 #if ( NEWNESS_DEBUG && DEV )

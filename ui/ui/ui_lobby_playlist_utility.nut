@@ -17,6 +17,9 @@ global enum ePlaylistState
 	RANKED_MATCH_ABANDON_DELAY,
 	RANKED_MATCH_PATCH_REQUIRED,
 	RANKED_MATCH_SEASON_ENDING,
+
+	RANKED_RUMBLE_NOT_REGISTERED,
+
 	ACCOUNT_LEVEL_REQUIRED,
 	ROTATION_GROUP_MISMATCH,
 	DEV_PLAYTEST,
@@ -47,6 +50,9 @@ const table< int, string > playlistStateMap = {
 	[ ePlaylistState.RANKED_MATCH_ABANDON_DELAY ] = "#RANKED_ABANDON_PENALTY_PLAYLIST_STATE",
 	[ ePlaylistState.RANKED_MATCH_PATCH_REQUIRED ] = "#PLAYLIST_STATE_RANKED_PATCH_REQUIRED",
 	[ ePlaylistState.RANKED_MATCH_SEASON_ENDING ] = "#PLAYLIST_STATE_RANKED_SPLIT_ROLLOVER",
+
+		[ ePlaylistState.RANKED_RUMBLE_NOT_REGISTERED ] = "#PLAYLIST_STATE_RANKED_RUMBLE_NOT_REGISTERED",
+
 	[ ePlaylistState.ROTATION_GROUP_MISMATCH ] = "#PLAYLIST_UNAVAILABLE",
 	[ ePlaylistState.ACCOUNT_LEVEL_REQUIRED ] = "#PLAYLIST_STATE_RANKED_LEVEL_REQUIRED",
 	[ ePlaylistState.DEV_PLAYTEST ] = "#PLAYLIST_STATE_PLAYTEST",
@@ -85,7 +91,7 @@ void function LobbyPlaylist_SetPlaylists( array< string > playlists )
 
 	
 	if ( CanRunClientScript() )
-		RunClientScript( "LSS_UpdateLobbyStage", LobbyPlaylist_GetSelectedPlaylist() )
+		RunClientScript( "LobbyStageSwitching_UpdateLobbyStage", LobbyPlaylist_GetSelectedPlaylist() )
 
 	file.playlists = playlists
 }
@@ -124,7 +130,10 @@ void function LobbyPlaylist_ClearPlaylistMods()
 void function LobbyPlaylist_SetSelectedPlaylist( string playlistName )
 {
 	printt( "Lobby_SetSelectedPlaylist " + playlistName )
-	LobbyPlaylist_SetSelectedUISlot( GetPlaylistVarString( playlistName, "ui_slot", "" ) )
+	string ornull scheduleName = GetScheduleFromPlaylist( playlistName )
+	if ( scheduleName != null )
+		LobbyPlaylist_SetSelectedUISlot( expect string(scheduleName ) )
+
 	file.selectedPlaylist = playlistName
 
 	foreach ( void functionref( string ) cb in file.Callbacks_OnSelectedPlaylistUpdated )
@@ -498,8 +507,12 @@ int function LobbyPlaylist_GetPlaylistState( string playlistName )
 			return ePlaylistState.RANKED_NOT_INITIALIZED
 		else if ( Playlist_ShouldLockRankedPlaylistForPatch( playlistName ) )
 			return ePlaylistState.RANKED_MATCH_PATCH_REQUIRED
-		else if ( Playlist_IsPastRankedSeasonEndDate() )
+		else if ( Ranked_IsPastRankedSeasonEndDate() )
 			return ePlaylistState.RANKED_MATCH_SEASON_ENDING
+
+		else if ( RankedRumble_IsRunningRankedRumble() && !RankedRumble_IsRegisteredRankedRumble( GetLocalClientPlayer() ) )
+			return ePlaylistState.RANKED_RUMBLE_NOT_REGISTERED
+
 	}
 
 
@@ -516,6 +529,11 @@ int function LobbyPlaylist_GetPlaylistState( string playlistName )
 
 	if ( !PartyHasPlaylistAccountLevelRequired( playlistName ) )
 		return ePlaylistState.ACCOUNT_LEVEL_REQUIRED
+
+	
+	string ornull schedule = GetScheduleFromPlaylist( playlistName )
+	if ( schedule != null && GetCurrentPlaylistForSchedule( expect string( schedule ) ) != playlistName )
+		return ePlaylistState.ROTATION_GROUP_MISMATCH
 
 	if ( IsPlaylistBeingRotated( playlistName ) && !IsPlaylistInActiveRotation( playlistName ) )
 		return ePlaylistState.ROTATION_GROUP_MISMATCH

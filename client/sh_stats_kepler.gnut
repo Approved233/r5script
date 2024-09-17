@@ -1,0 +1,44 @@
+
+
+
+global function StatsRegister_Kepler
+
+
+
+
+
+void function StatsRegister_Kepler()
+{
+	CAREER_STATS.kepler_play_game_x_legends_any_mode = RegisterBitfieldStat_Int( null, "kepler_play_game_x_legends_any_mode", CHALLENGES_CALC_DEPENDS, SetupPlayGameXLegendsAnyMode, [], eChallengeGameMode.ANY )
+}
+
+StatCalcFuncInfo function SetupPlayGameXLegendsAnyMode( StatEntry calcEntry, array< StatTemplate > sourceTemplate )
+{
+	StatCalcFuncInfo info
+
+	info.calcFunc_Int = ( int function( entity player, array< StatEntry > sourceEntries, int when ) {
+		return Stats_CountSetBitsInCharacterBitfield( GetStat_Int( player, ResolveStatEntry( CAREER_STATS.kepler_play_game_x_legends_any_mode ), eStatGetWhen.CURRENT, eStatFetchMode.BITFIELD_RAW ) )
+	} )
+
+	return info
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

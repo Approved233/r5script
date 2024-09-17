@@ -321,6 +321,7 @@ bool function Ranked_ManageDialogFlow( bool rankedSplitChangeAudioPlayed = false
 	ItemFlavor currentRankedPeriod = expect ItemFlavor( Ranked_GetCurrentActiveRankedPeriod() )
 	if( Ranked_IsRankedV2SecondSplit( currentRankedPeriod ) && !GetPersistentVar( "rankedRewardsAcknowledged" ) )
 	{
+		printt("[RankUIDebug] Ranked_ManageDialogFlow 1")
 		Remote_ServerCallFunction( "ClientCallback_rankedPeriodRewardAcknowledged" )
 		PromoDialog_OpenHijackedUM( Localize("#RANKED_SPLIT_RESET_DIALOG_HEADER"), Localize("#RANKED_SPLIT_RESET_DIALOG_MESSAGE"), "ranked_split" )
 		IncrementNumDialogFlowDialogsDisplayed()
@@ -332,6 +333,7 @@ bool function Ranked_ManageDialogFlow( bool rankedSplitChangeAudioPlayed = false
 	else if ( Ranked_HasRankedPeriodMarkedForRewardAcknowledgement() )
 	{
 		string earliestRankedPeriod = Ranked_GetRankedPeriodToAcknowledgReward()
+		printt("[RankUIDebug] Ranked_ManageDialogFlow 2")
 		Remote_ServerCallFunction( "ClientCallback_rankedPeriodRewardAcknowledged" )
 		Ranked_MarkRankedRewardsGivenNotified( earliestRankedPeriod )
 
@@ -362,6 +364,9 @@ bool function Ranked_HasRankedPeriodMarkedForRewardAcknowledgement()
 
 	string earliestRankedPeriod = Ranked_MostRecentRankedPeriodWithRewardsNotAcknowledged()
 	printt( "[RankUIDebug] earliestRankedPeriod:", earliestRankedPeriod )
+#if DEV
+		printt( "[RankUIDebug] earliestRankedPeriod2:", GetStack() )
+#endif
 	if ( earliestRankedPeriod == "" )
 		return false
 
@@ -571,6 +576,7 @@ void function ServerToUI_Ranked_NotifyRankedPeriodScoreChanged_threaded()
 	EndSignal( uiGlobal.signalDummy, "Ranked_NotifyRankedPeriodScoreChanged" )
 
 	WaitEndFrame()
+	printt("[RankUIDebug] ServerToUI_Ranked_NotifyRankedPeriodScoreChanged_threaded")
 	thread TryRunDialogFlowThread()
 }
 

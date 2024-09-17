@@ -759,7 +759,7 @@ void function SetupAlterLoadout_SlotScreen( LoadoutEntry entry, int qualityFilte
 	
 	
 
-	array<ItemFlavor> flavors = clone DEV_GetValidItemFlavorsForLoadoutSlotForDev( LocalClientEHI(), entry )
+	array<ItemFlavor> flavors = clone DEV_GetValidItemFlavorsForLoadoutSlotForDev( entry )
 	flavors.sort( int function( ItemFlavor a, ItemFlavor b ) {
 		string textA = Localize( ItemFlavor_GetLongName( a ) )
 		string textB = Localize( ItemFlavor_GetLongName( b ) )
@@ -816,7 +816,7 @@ void function SetupAlterLoadout_SlotScreen( LoadoutEntry entry, int qualityFilte
 
 				foreach ( string setKey, int themeIndex in eArtifactSetIndex )
 				{
-					if ( themeIndex == eArtifactSetIndex._EMPTY || themeIndex == eArtifactSetIndex.COUNT )
+					if ( themeIndex <= eArtifactSetIndex._EMPTY || themeIndex == eArtifactSetIndex.COUNT )
 						continue
 
 					SetupDevFunc( "[" + Localize( ItemFlavor_GetTypeName( flav ) ) + "]  Artifact Dagger: " + setKey + " (Complete Set)", void function( var unused ) : ( entry, flav, themeIndex ) {

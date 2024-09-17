@@ -31,14 +31,19 @@ void function StimShared_Init()
 	RegisterSignal( "StopEndlessStim" )
 }
 
+float function Stim_GetSeverity()
+{
+	return GetCurrentPlaylistVarFloat( "stim_severity", STIM_EFFECT_DEFAULT_SEVERITY )
+}
+
 void function StimPlayer( entity player, float duration )
 {
-	StimPlayer_Internal( player, duration, STIM_EFFECT_DEFAULT_SEVERITY, null )
+	StimPlayer_Internal( player, duration, Stim_GetSeverity(), null )
 }
 
 void function StimPlayerWithOffhandWeapon( entity player, float duration, entity offhandWeapon )
 {
-	StimPlayer_Internal( player, duration, STIM_EFFECT_DEFAULT_SEVERITY, offhandWeapon )
+	StimPlayer_Internal( player, duration, Stim_GetSeverity(), offhandWeapon )
 }
 
 const float USE_TIME_INFINITE = -1.0
@@ -59,7 +64,12 @@ void function StimPlayer_Internal( entity player, float duration, float effectSe
 		}
 		thread RemovePlayerClassModAfterDuration( player, "stim_sprint", duration )
 
-		StatusEffect_AddTimed( player, eStatusEffect.anti_slow, 0.5, duration + 0.5, 0.5 ) 
+
+
+
+		{
+			StatusEffect_AddTimed( player, eStatusEffect.anti_slow, 0.5, duration + 0.5, 0.5 ) 
+		}
 		StatusEffect_AddTimed( player, eStatusEffect.speed_boost, effectSeverity, duration + 0.5, 0.5 ) 
 		StatusEffect_AddTimed( player, eStatusEffect.stim_visual_effect, 1.0, duration, duration )
 	}
@@ -92,6 +102,11 @@ void function RemovePlayerClassModAfterDuration( entity player, string mod, floa
 
 	wait duration
 }
+
+
+
+
+
 
 
 

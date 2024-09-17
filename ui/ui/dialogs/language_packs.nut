@@ -6,6 +6,7 @@ enum eLanguagePackMessage
 	OUT_OF_DATE,
 	INSTALLING,
 	NO_DOWNLOAD_AVAILABLE,
+	INVALID_PACK,
 
 	_COUNT
 }
@@ -24,7 +25,8 @@ void function CheckAndShowLanguageDLCDialog()
 {
 	bool packInstalled = IsLanguagePackInstalled()
 	bool packUpToDate = IsLanguagePackUpToDate()
-	if ( packInstalled && packUpToDate )
+	bool packValid = IsLanguagePackValid()
+	if ( packInstalled && packUpToDate && packValid )
 		return;
 
 	int messageToShow = eLanguagePackMessage.NO_DOWNLOAD_AVAILABLE
@@ -48,6 +50,10 @@ void function CheckAndShowLanguageDLCDialog()
 		else if ( !packUpToDate )
 		{
 			messageToShow = eLanguagePackMessage.OUT_OF_DATE
+		}
+		else if ( !packValid )
+		{
+			messageToShow = eLanguagePackMessage.INVALID_PACK
 		}
 	}
 
@@ -92,6 +98,13 @@ void function CheckAndShowLanguageDLCDialog()
 			dlg.header = "#LANGUAGE_PACK_OUT_OF_DATE_HEADER"
 			dlg.message = "#LANGUAGE_PACK_OUT_OF_DATE_MESSAGE"
 			AddDialogButton( dlg, "#LANGUAGE_PACK_UPDATE_NOW", DownloadCurrentLanguagePack )
+			break
+		}
+
+		case eLanguagePackMessage.INVALID_PACK:
+		{
+			dlg.header = "#LANGUAGE_PACK_INVALID_HEADER"
+			dlg.message = "#LANGUAGE_PACK_INVALID_MESSAGE"
 			break
 		}
 	}

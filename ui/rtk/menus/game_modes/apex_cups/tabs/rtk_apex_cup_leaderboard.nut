@@ -15,8 +15,6 @@ global struct RTKApexCupLeaderboardRow
 	array <RTKSummaryBreakdownRowModel> squadStats
 }
 
-const int NUM_LEADERBOARDROWS = 10
-
 global struct RTKApexCupLeaderboardModel
 {
 	int cupCalEvent = ASSET_SETTINGS_UNIQUE_ID_INVALID
@@ -44,7 +42,7 @@ void function RTKApexCupLeaderboard_OnInitialize( rtk_behavior self )
 	if ( Cups_IsValidCupID(cupId ))
 	{
 		Cups_RegisterOnLeaderboardChangedCallback(  RTKApexCupLeaderboard_UpdateLeaderboard )
-		Remote_ServerCallFunction( "ClientCallback_GetLeaderboardData", cupId,  1  , NUM_LEADERBOARDROWS )
+		Remote_ServerCallFunction( "ClientCallback_GetLeaderboardData", cupId,  1  , CUP_NUM_LEADERBOARDROWS )
 		RTKApexCupLeaderboard_OnInitRows( self )
 
 		Cups_RequireUpdateLeaderboard()
@@ -121,11 +119,14 @@ table< string, int > function RTKApexCupLeaderBoard_GetSquadBreakdown( SettingsA
 
 			foreach ( CupsMatchStatInformation stat in player.statInformation )
 			{
-				string statName = ShStats_GenerateStatLocStringFromStatRef( stat.statRef )
-				if ( !( statName in result ) )
-					result[statName] <- stat.pointsGained
-				else
-					result[statName] += stat.pointsGained
+				string statName = Cups_GetCupStatLocFromStatRef( cupBakeryData.statPoints, stat.statRef )
+				if ( statName.len() > 0 )
+				{
+					if ( !( statName in result ) )
+						result[statName] <- stat.pointsGained
+					else
+						result[statName] += stat.pointsGained
+				}
 			}
 		}
 	}
@@ -147,7 +148,7 @@ void function RTKApexCupLeaderboard_UpdateLeaderboard( SettingsAssetGUID cupID, 
 	RTKApexCupLeaderboardModel apexCupLeaderBoardModel
 	RTKStruct_GetValue( apexCupsDataModel, apexCupLeaderBoardModel )
 
-	int count = minint( entries.len(), NUM_LEADERBOARDROWS )
+	int count = minint( entries.len(), CUP_NUM_LEADERBOARDROWS )
 
 	
 	for ( int i = 0 ; i < count ; i++ )
@@ -178,7 +179,7 @@ void function RTKApexCupLeaderboard_UpdateLeaderboard( SettingsAssetGUID cupID, 
 	}
 
 	
-	for ( int i = count; i < NUM_LEADERBOARDROWS; ++i )
+	for ( int i = count; i < CUP_NUM_LEADERBOARDROWS; ++i )
 	{
 		RTKApexCupLeaderboardRow row
 		row.playerUID 	= ""
@@ -244,7 +245,7 @@ void function RTKApexCupLeaderboard_GetPlayerTierData( rtk_behavior self )
 	}
 	else
 	{
-		tierInfo.positionPercentage = Cups_CalculatePositionPercentageDisplay( cupId, cupEntryData )
+		tierInfo.positionPercentage = Cups_CalculatePositionPercentageDisplay( cupId, cupEntryData, tierInfo.tierIndex )
 	}
 
 	rtk_struct tierModel = expect rtk_struct( RTKDataModelType_GetStruct( RTK_MODELTYPE_MENUS, "tierInfo", true, [ "apexCups" ] ) )

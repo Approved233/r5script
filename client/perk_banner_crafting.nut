@@ -21,6 +21,9 @@ global function DoesTeammateHaveBannerCraftingPerk
 global const string EXPIRED_BANNER_RECOVERY_NETVAR 		= "hasExpiredBannerPerk"
 global const string DEATH_BOX_BANNER_EXPIRED_NETVAR 	= "DeathBoxBannerExpired"
 global const string CRAFTED_BANNER_REF = "expired_banners"
+
+
+
 global const string CRAFTED_BANNER_MODEL_NAME = "mdl/props/ultimate_accelerant/ultimate_accelerant_banner_crafting.rmdl"
 
 const bool ALLOW_EXPIRED_BANNERS_ONLY = false
@@ -53,6 +56,9 @@ void function Perk_BannerCrafting_Init()
 
 
 
+
+
+
 }
 
 bool function Perk_ExpiredBannerRecovery_Enabled()
@@ -70,6 +76,13 @@ bool function Perk_SupportCanCraftNonExpiredBanners_Enabled()
 	return GetCurrentPlaylistVarBool( "support_can_craft_non_expired_banners", true )
 }
 
+
+
+
+
+
+
+
 float function Perk_Get_CraftedBannerTimeoutDuration()
 {
 	return GetCurrentPlaylistVarFloat( "perk_crafted_banner_timeout_duration", 90.0 )
@@ -82,6 +95,17 @@ void function OnActivate_ExpiredBannerRecoveryPerk( entity player, string charac
 
 
 }
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -349,10 +373,12 @@ bool function Perk_CanBuyBanners( entity player )
 
 bool function Perk_CanCraftBanners( entity player )
 {
+
+
+
+
 	if( Perk_TeammatesCanCraftSupportBanners_Enabled() )
-	{
 		return player.GetPlayerNetBool( EXPIRED_BANNER_RECOVERY_NETVAR )
-	}
 
 	
 	return Perks_DoesPlayerHavePerk( player, ePerkIndex.BANNER_CRAFTING )
@@ -370,7 +396,11 @@ bool function Perk_CanPickUpExpiredBanners( entity player, entity deathbox )
 	if( !IsValid( deathboxOwner ) )
 		return false
 
+
+
+
 	if( Perks_DoesPlayerHavePerk( player, ePerkIndex.BANNER_CRAFTING ) )
+
 	{
 		if( deathboxOwner == player )
 			return false
@@ -412,6 +442,13 @@ bool function Perk_CanExpiredBannerBeRecovered( entity player )
 
 	return false
 }
+
+
+
+
+
+
+
 
 
 
@@ -660,7 +697,11 @@ bool function DoesTeammateHaveBannerCraftingPerk( entity player )
 	array<entity> teammates = GetPlayerArrayOfTeam( player.GetTeam() )
 	foreach ( teamMember in teammates )
 	{
+
+
+
 		if ( Perks_DoesPlayerHavePerk( teamMember, ePerkIndex.BANNER_CRAFTING ) )
+
 		{
 			hasPerk = true
 			break

@@ -514,8 +514,8 @@ ItemFlavor function GetItemFlavorForCommunityUserInfo( CommunityUserInfo userInf
 		}
 	}
 
-	if ( requestedFlavor == null || !IsItemFlavorValidForLoadoutSlot( EHI_null, entry, expect ItemFlavor(requestedFlavor) ) )
-		requestedFlavor = GetDefaultItemFlavorForLoadoutSlot( EHI_null, entry )
+	if ( requestedFlavor == null || !IsItemFlavorValidForLoadoutSlot( entry, expect ItemFlavor(requestedFlavor) ) )
+		requestedFlavor = GetDefaultItemFlavorForLoadoutSlot( entry )
 
 	expect ItemFlavor(requestedFlavor)
 
@@ -528,12 +528,12 @@ ItemFlavor function GetBadgeItemFlavorForCommunityUserInfo( CommunityUserInfo us
 	ItemFlavor ornull badgeItemFlavor = GetItemFlavorOrNullByGUID( userInfo.charData[ ePlayerStryderCharDataArraySlots.BANNER_BADGE1 + 2 * badgeIndex ], eItemType.gladiator_card_badge ) 
 
 	if ( badgeItemFlavor == null )
-		badgeItemFlavor = GetDefaultItemFlavorForLoadoutSlot( EHI_null, entry )
+		badgeItemFlavor = GetDefaultItemFlavorForLoadoutSlot( entry )
 
 	expect ItemFlavor( badgeItemFlavor )
 
-	if ( !IsItemFlavorValidForLoadoutSlot( EHI_null, entry, badgeItemFlavor ) )
-		badgeItemFlavor = GetDefaultItemFlavorForLoadoutSlot( EHI_null, entry )
+	if ( !IsItemFlavorValidForLoadoutSlot( entry, badgeItemFlavor ) )
+		badgeItemFlavor = GetDefaultItemFlavorForLoadoutSlot( entry )
 
 	return badgeItemFlavor
 }
@@ -549,12 +549,12 @@ ItemFlavor function GetTrackerItemFlavorForCommunityUserInfo( CommunityUserInfo 
 	LoadoutEntry entry                  = Loadout_GladiatorCardStatTracker( character, trackerIndex )
 	ItemFlavor ornull trackerItemFlavor = GetItemFlavorOrNullByGUID( userInfo.charData[ ePlayerStryderCharDataArraySlots.BANNER_TRACKER1_STAT + 2 * trackerIndex], eItemType.gladiator_card_stat_tracker )
 	if ( trackerItemFlavor == null )
-		trackerItemFlavor = GetDefaultItemFlavorForLoadoutSlot( EHI_null, entry )
+		trackerItemFlavor = GetDefaultItemFlavorForLoadoutSlot( entry )
 
 	expect ItemFlavor( trackerItemFlavor )
 
-	if ( !IsItemFlavorValidForLoadoutSlot( EHI_null, entry, trackerItemFlavor ) )
-		trackerItemFlavor = GetDefaultItemFlavorForLoadoutSlot( EHI_null, entry )
+	if ( !IsItemFlavorValidForLoadoutSlot( entry, trackerItemFlavor ) )
+		trackerItemFlavor = GetDefaultItemFlavorForLoadoutSlot( entry )
 
 	return trackerItemFlavor
 }

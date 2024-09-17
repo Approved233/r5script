@@ -26,6 +26,12 @@ const float VALK_JETPACK_REACTIVATION_DELAY = 0.25
 const asset SKYWARD_JUMPJETS_FRIENDLY = $"P_valk_jet_fly_ON"
 const asset SKYWARD_JUMPJETS_ENEMY = $"P_valk_jet_fly_ON"
 
+
+const float VALK_ULT_HUD_HIGHLIGHT_RANGE = 210 
+const float VALK_ULT_HUD_HIGHLIGHT_RANGE_UPGRADE = 40
+
+
+
 const asset VALK_AMB_EXHAUST_FP = $"P_valk_spear_thruster_idle"
 const asset VALK_AMB_EXHAUST_3P = $"P_valk_spear_thruster_idle_3P"
 
@@ -35,9 +41,9 @@ struct
 		int  colorCorrection
 		bool colorCorrectionActive
 
-		int                       valkTrackersActive
-		array<entity>             valkEnemiesTracked
-		table<entity, int>        valkEnemiesTrackedCount
+		int						valkTrackersActive
+		array<entity>			valkEnemiesTracked
+		table<entity, int>		valkEnemiesTrackedCount
 
 		var jetPackRui
 
@@ -118,7 +124,12 @@ void function ValkTeammateStartTracking( entity valk )
 	
 	
 
-	float valkPasRevealDistance = GetCurrentPlaylistVarFloat( "valkpas_enemy_reveal_distance", 69000000 )
+
+		float valkPasRevealDistance = GetValkUltHighlightRange( valk )
+		valkPasRevealDistance = pow( valkPasRevealDistance * METERS_TO_INCHES, 2 )
+
+
+
 	while ( true )
 	{
 		int valkTeam				= valk.GetTeam()
@@ -167,7 +178,11 @@ void function ValkTeammateStartTracking( entity valk )
 						enemyTracePos = enemy.EyePosition()
 
 					TraceResults trace = TraceLine( valk.EyePosition(), enemyTracePos, [ valk ], TRACE_MASK_VISIBLE, TRACE_COLLISION_GROUP_NONE )
-					if ( trace.fraction == 1.0 && ValkThreatVisionShouldRevealEnemy( enemy ) )
+
+					if ( PlayerHasPassive( valk, ePassives.PAS_ULT_UPGRADE_THREE ) || trace.fraction == 1.0 && ValkThreatVisionShouldRevealEnemy( enemy ) )
+
+
+
 					{
 						if ( !(targetsShown.contains( enemy )) )
 						{
@@ -209,6 +224,19 @@ void function ValkTeammateStartTracking( entity valk )
 	}
 }
 
+
+float function GetValkUltHighlightRange( entity player )
+{
+	float result = GetCurrentPlaylistVarFloat( "valk_ult_hud_highlight_range", VALK_ULT_HUD_HIGHLIGHT_RANGE )
+
+	if( PlayerHasPassive( player, ePassives.PAS_ULT_UPGRADE_THREE ) ) 
+	{
+		result += GetCurrentPlaylistVarFloat( "valk_ult_hud_highlight_range_upgraded", VALK_ULT_HUD_HIGHLIGHT_RANGE_UPGRADE )
+	}
+	return result
+}
+
+
 void function Valk_CreateJetPackRui( entity player )
 {
 	if ( PlayerHasPassive( player, ePassives.PAS_VALK ) )
@@ -221,6 +249,9 @@ void function Valk_CreateJetPackRui( entity player )
 		RuiTrackFloat( file.jetPackRui, "chargeFrac", player, RUI_TRACK_GLIDE_METER_FRACTION )
 		RuiTrackFloat( file.jetPackRui, "bleedoutEndTime", player, RUI_TRACK_SCRIPT_NETWORK_VAR, GetNetworkedVariableIndex( "bleedoutEndTime" ) )
 		RuiTrackFloat( file.jetPackRui, "reviveEndTime", player, RUI_TRACK_SCRIPT_NETWORK_VAR, GetNetworkedVariableIndex( "reviveEndTime" ) )
+
+		RuiSetFloat( file.jetPackRui, "glideRechargeDelay", player.GetPlayerSettingFloat( "glideRechargeDelay" ) )
+
 	}
 }
 
@@ -530,6 +561,30 @@ void function Valk_DisableHudColorCorrection()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 bool function OnWeaponAttemptOffhandSwitch_ability_valk_jets( entity weapon )
 {
 	entity weaponOwner = weapon.GetWeaponOwner()
@@ -578,6 +633,16 @@ void function OnWeaponActivate_ability_valk_jets( entity weapon )
 			return
 
 		ClientScreenShake( 5, 12, 0.3, <0, 0, 1> )
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -653,12 +718,21 @@ void function OnPassiveChanged( entity player, int passive, bool didHave, bool n
 
 
 
+
+
+
+
+
+
 	}
 	if ( nowHas )
 	{
 
 			if ( player == GetLocalClientPlayer() )
 				UpdateAbilityToggleOrHoldBasedOnInput()
+
+
+
 
 
 

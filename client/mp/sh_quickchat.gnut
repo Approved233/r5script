@@ -211,14 +211,14 @@ void function ShQuickchat_Init()
 		file.replyMap[ eCommsAction.REPLY_REVIVE_THANKS ] <- eCommsAction.REPLY_REVIVE_WELCOME
 
 
-			file.replyMap[eCommsAction.REPLY_LOVE_YOU] <- eCommsAction.REPLY_LOVE_YOU_MORE
-			file.replyMap[eCommsAction.REPLY_LOVE_YOU_MORE] <- eCommsAction.REPLY_NO_I_LOVE_YOU_MORE
-			file.replyMap[eCommsAction.REPLY_NO_I_LOVE_YOU_MORE] <- eCommsAction.REPLY_NO_I_LOVE_YOU_MORE
 
-			
-			file.altMap[eCommsAction.REPLY_LOVE_YOU] <- eCommsAction.REPLY_LOVE_YOU
-			file.altMap[eCommsAction.REPLY_LOVE_YOU_MORE] <- eCommsAction.REPLY_LOVE_YOU_MORE
-			file.altMap[eCommsAction.REPLY_NO_I_LOVE_YOU_MORE] <- eCommsAction.REPLY_NO_I_LOVE_YOU_MORE
+
+
+
+
+
+
+
 
 
 		file.altMap[ eCommsAction.REPLY_WELCOME ] <- eCommsAction.REPLY_WELCOME_ALT
@@ -399,6 +399,11 @@ array<string> function GetSubjectNamesForCommsAction( int commsAction, entity su
 	}
 
 
+	if( commsAction >= eCommsAction.PING_HAS_UPGRADE_0 && commsAction <= eCommsAction.PING_HAS_UPGRADE_3 && subjectEnt.IsPlayer() )
+	{
+		return [UpgradeCore_GetUpgradeTitleString( subjectEnt, commsAction - eCommsAction.PING_HAS_UPGRADE_0 )]
+	}
+
 	if ( subjectEnt.IsPlayer() )
 		return [subjectEnt.GetPlayerName()]
 
@@ -535,10 +540,9 @@ array<string> function GetSubjectNamesForCommsAction( int commsAction, entity su
 
 
 
-	if ( CaptureObjectivePing_GetIsCaptureObjectivePingCommsAction( commsAction, subjectEnt ) )
+	if( Ping_IsObjectiveWaypoint( subjectEnt.GetOwner() ) )
 	{
-		int objectiveID = CaptureObjectivePing_GetObjectiveIndexFromWaypoint( subjectEnt.GetOwner() )
-		return [ CaptureObjectivePing_GetObjectiveNameFromObjectiveID_Localized( objectiveID ) ]
+		return Ping_GetObjectiveName( subjectEnt.GetOwner() )
 	}
 
 	return ["<subjectUnk:[" + subjectEnt + "]>"]
@@ -937,8 +941,8 @@ float function GetCooldownTimeForCommsAction( int commsAction )
 bool function ShouldMuteCommsActionForCooldown( entity player, int commsAction, entity subjectEnt )
 {
 
-		if ( commsAction == eCommsAction.REPLY_NO_I_LOVE_YOU_MORE )
-			return false
+
+
 
 
 	if ( IsValid( subjectEnt ) && (subjectEnt.GetNetworkedClassName() == "prop_survival") && commsAction != eCommsAction.REPLY_LOOT_DIBS )
@@ -951,6 +955,19 @@ bool function ShouldMuteCommsActionForCooldown( entity player, int commsAction, 
 
 	float cooldownTime = GetCooldownTimeForCommsAction( commsAction )
 	float delta        = GetPlayerLastSaid( player, commsAction )
+
+
+	if( commsAction >= eCommsAction.PING_HAS_UPGRADE_0 && commsAction <= eCommsAction.PING_HAS_UPGRADE_3 )
+	{
+		for( int i=eCommsAction.PING_HAS_UPGRADE_0; i <= eCommsAction.PING_HAS_UPGRADE_3; i++ )
+		{
+			if( i == commsAction )
+				continue
+			delta = min( delta, GetPlayerLastSaid( player, i ) )
+		}
+	}
+
+
 	if ( delta < cooldownTime )
 		return true
 
@@ -1049,19 +1066,62 @@ void function HandleBroadcastCommsAction( entity player, int commsAction, entity
 						shouldUseAllianceCommsBehaviour = true
 						isControlObjectivePing = true
 					}
-
-					
-					if ( GetCommsWaypointSoundsEnabled() && shouldUseTeamCommsBehaviour || shouldUseAllianceCommsBehaviour )
-					{
-						int pingType = commsAction == eCommsAction.PING_CONTROL_OBJECTIVE_ATTACK ? ePingType.PING_CAPTURE_OBJECTIVE_ATTACK : ePingType.PING_CAPTURE_OBJECTIVE_DEFEND
-						string pingSound = Ping_GetSoundForLocationPing( subjectEnt.GetOwner(), pingType, ( player == GetLocalViewPlayer() ), true )
-						if ( pingSound != "" )
-							EmitSoundOnEntity( subjectEnt.GetOwner(), pingSound )
-					}
 				}
 			}
 		}
 
+
+	
+	if ( GetCommsWaypointSoundsEnabled() && IsValid( subjectEnt ) && IsValid( subjectEnt.GetOwner() ) && shouldUseTeamCommsBehaviour || shouldUseAllianceCommsBehaviour )
+	{
+		int pingType
+		bool shouldPlayLocationPingSFX = false
+		switch( commsAction )
+		{
+
+			case eCommsAction.PING_CONTROL_OBJECTIVE_ATTACK:
+				pingType = ePingType.PING_CAPTURE_OBJECTIVE_ATTACK
+				shouldPlayLocationPingSFX = true
+				break
+			case eCommsAction.PING_CONTROL_OBJECTIVE_DEFEND:
+				pingType = ePingType.PING_CAPTURE_OBJECTIVE_DEFEND
+				shouldPlayLocationPingSFX = true
+				break
+
+
+			case eCommsAction.PING_TREASUREHUNT_OBJ_ATTACK:
+				pingType = ePingType.PING_CAPTURE_OBJECTIVE_ATTACK
+				shouldPlayLocationPingSFX = true
+				break
+
+
+			case eCommsAction.PING_OBJECTIVE_CAPTURE:
+				pingType = ePingType.PING_CAPTURE_OBJECTIVE_ATTACK
+				shouldPlayLocationPingSFX = true
+				break
+
+
+
+
+
+
+
+
+
+
+
+			default:
+				
+				break
+		}
+
+		if ( shouldPlayLocationPingSFX )
+		{
+			string pingSound = Ping_GetSoundForLocationPing( subjectEnt.GetOwner(), pingType, ( player == GetLocalViewPlayer() ), true )
+			if ( pingSound != "" )
+				EmitSoundOnEntity( subjectEnt.GetOwner(), pingSound )
+		}
+	}
 
 	
 	if ( AllianceProximity_IsUsingAllianceProximity() )
@@ -1131,18 +1191,18 @@ void function HandleBroadcastCommsAction( entity player, int commsAction, entity
 	if ( chatText != "" && !IsBitFlagSet( commsFlags, eCommsFlags.NO_TEXT ) )
 	{
 
-			switch( commsAction )
-			{
-				case eCommsAction.REPLY_LOVE_YOU:
-				case eCommsAction.REPLY_LOVE_YOU_MORE:
-				case eCommsAction.REPLY_NO_I_LOVE_YOU_MORE:
-					if ( opt.isFirstPerson )
-						chatText += "_1P"
-					break
 
-				default:
-					break
-			}
+
+
+
+
+
+
+
+
+
+
+
 
 
 		string playerName          = opt.isFirstPerson ? Localize( "#OBITUARY_YOU" ) : player.GetPlayerName()
@@ -1197,6 +1257,24 @@ void function HandleBroadcastCommsAction( entity player, int commsAction, entity
 			}
 
 
+
+			
+			if ( ObjectiveCaptureZone_IsObjectiveEnabled() )
+			{
+				
+				if ( commsAction == eCommsAction.PING_OBJECTIVE_CAPTURE && IsValid( subjectEnt ) && IsValid( subjectEnt.GetOwner() ) )
+				{
+					subjectColor = GetSubjectColorForCommsAction( subjectEnt.GetOwner(), itemRef, player )
+					secondarySubjectColor = GetSecondarySubjectColorForCommsAction( subjectEnt.GetOwner(), player )
+
+					int pingCount = CaptureObjectivePing_GetPingCountForObjectiveForTeamOrAlliance( subjectEnt.GetOwner(), subjectEnt.GetTeam() )
+					pingCount-- 
+					if ( pingCount > 0 )
+						subjectTier = "+" + pingCount
+					else
+						subjectTier = ""
+				}
+			}
 
 
 
@@ -1530,13 +1608,13 @@ void function PromptReplyWhenPrimaryFinishes( entity playerSpeakingPrimary, int 
 			break
 
 
-		case eCommsAction.REPLY_LOVE_YOU_MORE:
-			locString = Localize( "#PING_SAY_LOVE_YOU_MORE" )
-			break
 
-		case eCommsAction.REPLY_NO_I_LOVE_YOU_MORE:
-			locString = Localize( "#PING_SAY_NO_I_LOVE_YOU_MORE" )
-			break
+
+
+
+
+
+
 
 
 		default:
@@ -1597,6 +1675,14 @@ asset function GetPingAssetForCommsAction( int commsAction )
 
 
 	CommsAction data = file.actions[commsAction]
+
+
+
+
+
+
+
+
 	return data.pingAsset
 }
 

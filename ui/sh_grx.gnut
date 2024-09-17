@@ -22,6 +22,7 @@ global function ItemFlavor_GetGRXOwnershipTarget
 global function ItemFlavor_GetGRXOwnershipTargettedBy
 global function ItemFlavor_GetGRXMultipleOwnershipRequirementsList
 global function ItemFlavor_GetGRXMultipleOwnershipTarget
+global function ItemFlavorIsStackable
 global function GRXCurrency_RegisterNewCurrencyAssetInEventSlot
 global function GRXCurrency_GetCurrencyIndex
 global function GRXCurrency_GetPurchaseSound
@@ -56,6 +57,7 @@ global function DEV_IsValidGRXRef
 
 
 
+global function GRXOffer_HasValidPrice
 global function GRXOffer_IsFullyClaimed
 
 global function GRXOffer_IsPurchaseLimitReached
@@ -130,10 +132,9 @@ global function GRX_GetScriptOfferFromOfferAlias
 global function GRXCurrency_GetPlayerBalance
 global function QueueGRXOperation
 global function IsGRXOperationDone
-global function ItemFlavorIsStackable
 global function GRX_IsOfferRestrictedByOfferAttributes
 global function GRX_GetPackFlavOfType
-global function Escrow_IsPlayerTrusted_Internal
+
 
 
 
@@ -233,6 +234,7 @@ global function GRX_GetGiftingLimitCounter
 global function GRX_GetMostRecentPackOpeningResults
 global function GRXPack_GetCustomColor
 global function GRXPack_GetCustomCountTextCol
+global function GRX_GetRarityOverrideFromQuantity
 
 
 #if DEV
@@ -253,7 +255,6 @@ global function DEV_GRX_PreviewStoreItem
 global function DEV_GRX_PrintContainers
 
 #endif
-
 
 
 
@@ -389,6 +390,9 @@ const table< string, array<string> > EventSectionNameToDateMap = {
 	
 	[ "#S22CE01_INFO_TITLE" ] = ["2024-08-13 10:00:00 -07:00", "2024-08-27 10:00:00 -07:00"],
 	[ "#BLOOD_MOON_PACK_SALE" ] = ["2024-09-03 10:00:00 -07:00", "2024-09-17 10:00:00 -07:00"],
+	
+	[ "#SPACE_HUNT_EVENT" ] = ["2024-09-17 10:00:00 -07:00", "2024-10-08 10:00:00 -07:00"],
+	[ "#TECHNO_TERROR_EVENT" ] = ["2024-10-15 10:00:00 -07:00", "2024-11-05 10:00:00 -08:00"],
 }
 
 const table< string, array<string> > Flex1SectionNameToDateMap = {
@@ -404,6 +408,11 @@ const table< string, array<string> > Flex1SectionNameToDateMap = {
 	
 	[ "#NEON_OMEN_STORE" ] = ["2024-08-06 10:00:00 -07:00", "2024-08-20 10:00:00 -07:00"],
 	[ "#BLOOD_MOON_SALE" ] = ["2024-09-03 10:00:00 -07:00", "2024-09-17 10:00:00 -07:00"],
+	
+	[ "#DEATH_DYNASTY_STORE" ] = ["2024-10-08 10:00:00 -07:00", "2024-10-15 10:00:00 -07:00"],
+	[ "#THREAT_LEVEL_STORE" ] = ["2024-10-15 10:00:00 -07:00", "2024-10-22 10:00:00 -07:00"],
+	[ "#DOPPELGANGERS_STORE" ] = ["2024-10-22 10:00:00 -07:00", "2024-10-29 10:00:00 -07:00"],
+	[ "#MONSTERS_WITHIN_STORE" ] = ["2024-10-29 10:00:00 -07:00", "2024-11-05 10:00:00 -08:00"],
 }
 
 const table<string, array<string> > Flex2SectionNameToDateMap = {
@@ -417,6 +426,8 @@ const table<string, array<string> > Flex2SectionNameToDateMap = {
 	[ "#OFF_DUTY_STORE" ] = ["2024-05-28 10:00:00 -07:00", "2024-06-11 10:00:00 -07:00"],
 	
 	[ "#BATTLE_ACADEMY_PACK_SALE" ] = ["2024-08-20 10:00:00 -07:00", "2024-09-17 10:00:00 -07:00"],
+	
+	[ "#FIGHT_OR_FRIGHT_SALE" ] = ["2024-10-01 10:00:00 -07:00", "2024-11-05 10:00:00 -08:00"],
 }
 
 const table<string, array<string> > Flex3SectionNameToDateMap = {
@@ -430,6 +441,8 @@ const table<string, array<string> > Flex3SectionNameToDateMap = {
 	[ "#CORRUPTED_SUMMER_STORE" ] = ["2024-07-09 10:00:00 -07:00", "2024-07-23 10:00:00 -07:00"],
 	
 	[ "#BATTLE_ACADEMY_SALE" ] = ["2024-08-20 10:00:00 -07:00", "2024-09-17 10:00:00 -07:00"],
+	
+	[ "#FIGHT_OR_FRIGHT_STORE" ] = ["2024-10-01 10:00:00 -07:00", "2024-11-05 10:00:00 -08:00"],
 }
 
 
@@ -848,6 +861,21 @@ global enum eIneligibilityCode
 	PURCHASE_LIMIT = 101,
 	BUNDLE_ITEMS_OWNED = 102,
 	CONTENTS_NOT_GRANTABLE = 103
+}
+
+
+const table<int, int> CRAFTING_MATERIAL_MAX_QUANTITY_TO_RARITY_MAP = {
+	[24] = eRarityTier.COMMON,
+	[199] = eRarityTier.RARE,
+	[599] = eRarityTier.EPIC,
+	[INT_MAX] = eRarityTier.LEGENDARY,
+}
+
+const table<int, int> LEGEND_TOKENS_MAX_QUANTITY_TO_RARITY_MAP = {
+	[11999] = eRarityTier.COMMON,
+	
+	
+	[INT_MAX] = eRarityTier.LEGENDARY,
 }
 
 
@@ -1632,14 +1660,14 @@ GRX_PackCollectionInfo function GRXOffer_GetEventThematicPackCollectionInfo( Ite
 	return data
 }
 
-bool function GRXOffer_IsValid( GRXScriptOffer offer )
+bool function GRXOffer_HasValidPrice( GRXScriptOffer offer )
 {
 	return offer.prices.len() > 0
 }
 
 bool function GRXOffer_IsActiveForStoreLocation( GRXScriptOffer offer )
 {
-	return GRXOffer_IsValid( offer ) && offer.expireTime > GetUnixTimestamp()
+	return GRXOffer_HasValidPrice( offer ) && offer.expireTime > GetUnixTimestamp()
 }
 
 
@@ -2481,7 +2509,7 @@ array<GRXScriptOffer> function GRX_GetValidLocationOffers( string location )
 
 	for ( int i = 0; i < validOffers.len();  )
 	{
-		if ( !GRXOffer_IsValid( validOffers[i] ) )
+		if ( !GRXOffer_HasValidPrice( validOffers[i] ) )
 		{
 			validOffers.fastremove( i )
 		}
@@ -2758,6 +2786,26 @@ bool function GRX_IsBadLuckProtectionActive()
 		return false
 
 	return false
+}
+
+
+
+int function GRX_GetRarityOverrideFromQuantity( ItemFlavor item, int currentRarity, int quantity )
+{
+	bool isCrafting = ( item == GRX_CURRENCIES[GRX_CURRENCY_CRAFTING] )
+	if ( !isCrafting && item != GRX_CURRENCIES[GRX_CURRENCY_CREDITS] )
+		return currentRarity
+
+	int rarity = eRarityTier.COMMON
+	table<int, int> tableToIterate = isCrafting ? CRAFTING_MATERIAL_MAX_QUANTITY_TO_RARITY_MAP : LEGEND_TOKENS_MAX_QUANTITY_TO_RARITY_MAP
+	foreach ( int maxQuantity, int associatedRarity in tableToIterate )
+	{
+		rarity = associatedRarity
+		if ( maxQuantity >= quantity )
+			break
+	}
+
+	return rarity
 }
 
 
@@ -3144,6 +3192,9 @@ void function RemoveCallback_OnGRXInventoryStateChanged( void functionref() cb )
 
 void function AddCallbackAndCallNow_OnGRXOffersRefreshed( void functionref() cb, bool HACK_dontErrorOnDuplicate = false )
 {
+	if( !IsConnected() )
+		return
+
 	if ( fileLevel.onGRXOffersRefreshedCallbacks.contains( cb ) )
 	{
 		Assert( HACK_dontErrorOnDuplicate, "Tried to add a callback that was already added" )
@@ -4119,7 +4170,8 @@ void function UpdatePlayerGRXContainers( entity player, GRXUserInfo codeUserInfo
 	scriptState.containers = codeUserInfo.containers
 
 	EadpPeopleList eadFriendlist = EADP_GetFriendsListWithOffline()
-	array< GRXContainerInfo > giftingContainers
+	array<GRXContainerInfo> giftingContainers
+	array<GRXContainerInfo> entitlementContainers
 
 	foreach ( GRXContainerInfo container in codeUserInfo.containers )
 	{
@@ -4127,6 +4179,10 @@ void function UpdatePlayerGRXContainers( entity player, GRXUserInfo codeUserInfo
 		{
 			container.senderName = GetFriendNameFromNucleusPId( container.senderNucleusPid, eadFriendlist.people )
 			giftingContainers.append( container )
+		}
+		else if ( container.type == GRX_CONTAINERTYPE_NOTIFICATION )
+		{
+			entitlementContainers.append( container )
 		}
 
 		if ( container.isNew )
@@ -4144,6 +4200,7 @@ void function UpdatePlayerGRXContainers( entity player, GRXUserInfo codeUserInfo
 	}
 
 	AddGiftCacheMessages( giftingContainers )
+	UpdateEntitlementMessages( entitlementContainers )
 }
 
 
@@ -4422,6 +4479,14 @@ bool function DisplayQueuedRewardsGiven()
 
 
 
+
+
+
+
+
+
+
+
 void function RunGRXOperations( entity player, PlayerGRXScriptState scriptState )
 {
 	if ( !scriptState.isInventoryReady )
@@ -4524,9 +4589,14 @@ void function WORKAROUND_CallOperationDoFuncOnFrameEnd( ScriptGRXOperationInfo o
 
 
 
-
 	operationInfo.doOperationFunc( operationInfo.id )
 }
+
+
+
+
+
+
 
 
 
@@ -4781,6 +4851,13 @@ void function HandleGRXQueryCompleted( entity player, int queryScriptId, int que
 
 
 		PlayerGRXScriptState scriptState = GetPlayerGRXScriptState( player )
+
+
+
+
+
+
+
 
 
 	if ( queryScriptId == -1 || queryScriptId == 0 )
@@ -5060,7 +5137,7 @@ void function UICodeCallback_GRXOffersRefreshedIncremental( array< GRXStoreOffer
 
 		GRXScriptOffer existingOffer = fileLevel.offerAliasToOfferMap[codeOffer.offerAlias]
 
-		bool hadValidPrices = GRXOffer_IsValid( existingOffer )
+		bool hadValidPrices = GRXOffer_HasValidPrice( existingOffer )
 
 		existingOffer.prices.clear()
 		existingOffer.priceAliases.clear()
@@ -5075,7 +5152,7 @@ void function UICodeCallback_GRXOffersRefreshedIncremental( array< GRXStoreOffer
 			return
 		}
 
-		bool hasValidPrices = GRXOffer_IsValid( existingOffer )
+		bool hasValidPrices = GRXOffer_HasValidPrice( existingOffer )
 
 		if ( hasValidPrices )
 		{
@@ -5928,7 +6005,7 @@ void function PopulateStoreSectionNames( table<int, StoreSectionInfo > storeSect
 			}
 			case eStoreSections.Monthly:
 			{
-				sectionInfo.sectionName = "#STORE_V2_SECTION_MONTHLY"
+				sectionInfo.sectionName = "#STORE_V2_SECTION_STARTER"
 				break
 			}
 			case eStoreSections.Recolor:
@@ -6179,7 +6256,7 @@ const table<int, int> ITEM_TYPE_PRIORITY_MAP = {
 	[eItemType.character_skin] = 81,
 	[eItemType.character_execution] = 80,
 
-
+	[eItemType.melee_addon] = 79,
 
 	[eItemType.weapon_skin] = 71,
 	[eItemType.weapon_charm] = 70,
@@ -6878,54 +6955,6 @@ array<ItemFlavor> function GRX_GetStickerPacksWithRewards()
 
 
 
-bool function Escrow_IsPlayerTrusted_Internal( entity player )
-{
-#if DEV
-		if ( GetConVarInt( "escrow_is_player_trusted" ) == 1 ) 
-		{
-			return true
-		}
-		else if ( GetConVarInt( "escrow_is_player_trusted" ) == -1 ) 
-		{
-			return false
-		}
-#endif
-
-	if ( !IsValid( player ) )
-		return false
-
-
-	int trustOverrideValue = GRX_GetAccountIntAttribute( TRUSTED_OVERRIDE_ACCOUNT_ATTRIBUTE_NAME )
-
-	switch ( trustOverrideValue )
-	{
-		case GRX_TRUSTED_OVERRIDE_STATE_UNTRUSTED:
-			
-			return false
-		case GRX_TRUSTED_OVERRIDE_STATE_UNKNOWN:
-			
-			break
-		case GRX_TRUSTED_OVERRIDE_STATE_TRUSTED:
-			
-			return true
-		default:
-			GRX_Warning("Trust override account attribute value of " + trustOverrideValue + " is unhandled")
-			break
-	}
-
-
-	int currentXP = GetPlayerAccountXPProgress( ToEHI( player ) )
-	int currentLevel = GetAccountLevelForXP( currentXP )
-
-	
-	if ( currentLevel < ( GetConVarInt( "mtx_escrow_trusted_level" ) - 1 ) )
-		return false
-
-	return true
-}
-
-
-
 bool function HasEscrowBalance()
 {
 	int escrowBalance = GRXCurrency_GetPlayerBalance( GetLocalClientPlayer(), GRX_CURRENCIES[GRX_CURRENCY_ESCROW] )
@@ -6936,20 +6965,40 @@ bool function HasEscrowBalance()
 
 bool function Escrow_IsPlayerTrusted()
 {
-	return Escrow_IsPlayerTrusted_Internal( GetLocalClientPlayer() )
+#if DEV
+	if ( GetConVarInt( "escrow_is_player_trusted" ) == 1 ) 
+	{
+		return true
+	}
+	else if ( GetConVarInt( "escrow_is_player_trusted" ) == -1 ) 
+	{
+		return false
+	}
+#endif
+
+	if ( !IsValid( GetLocalClientPlayer() ) )
+		return false
+
+	int trustOverrideValue = GRX_GetAccountIntAttribute( TRUSTED_OVERRIDE_ACCOUNT_ATTRIBUTE_NAME )
+
+	switch ( trustOverrideValue )
+	{
+		case GRX_TRUSTED_OVERRIDE_STATE_UNTRUSTED:
+			
+			return false
+		case GRX_TRUSTED_OVERRIDE_STATE_UNKNOWN:
+			
+			return GRX_IsTrustedFromUserSegment()
+		case GRX_TRUSTED_OVERRIDE_STATE_TRUSTED:
+			
+			return true
+		default:
+			GRX_Warning("Trust override account attribute value of " + trustOverrideValue + " is unhandled")
+			break
+	}
+
+	return false
 }
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -7462,6 +7511,9 @@ void function UICodeCallback_GRXSmartMerchandisingDataUpdated( array<int> smartM
 const int NUM_MAIN_MILESTONE_PACKS_PER_BUNDLE = 3
 ItemFlavor ornull function GetNextMilestoneRewardPack()
 {
+	if( !IsConnected() )
+		return null
+
 	ItemFlavor ornull activeEvent = GetActiveMilestoneEvent( GetUnixTimestamp() )
 	if ( activeEvent == null )
 	{

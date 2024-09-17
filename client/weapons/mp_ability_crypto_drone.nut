@@ -60,6 +60,7 @@ global function CryptoDrone_GetPlayerDrone
 
 const asset CAMERA_MODEL = $"mdl/props/crypto_drone/crypto_drone.rmdl"
 
+const asset CRYPTO_CLOAK_FX = $"P_crypto_cloak"
 const asset CAMERA_FX = $"P_drone_camera"
 const asset VISOR_FX_3P = $"P_crypto_visor_ui"
 const asset DRONE_RECALL_START_FX_3P = $"P_drone_recall_start"
@@ -185,6 +186,7 @@ struct
 void function MpAbilityCryptoDrone_Init()
 {
 	PrecacheModel( CAMERA_MODEL )
+	PrecacheParticleSystem( CRYPTO_CLOAK_FX )
 	PrecacheParticleSystem( CAMERA_FX )
 	PrecacheParticleSystem( CAMERA_EXPLOSION_FX )
 	PrecacheParticleSystem( CAMERA_MAX_RANGE_SCREEN_FX )
@@ -1073,6 +1075,11 @@ void function CryptoDrone_WeaponInputThink( entity player, entity weapon )
 			weapon.RemoveMod( "crypto_drone_access" )
 	}
 }
+
+
+
+
+
 
 
 

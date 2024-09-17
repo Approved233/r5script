@@ -594,7 +594,7 @@ void function CleanupNestedGladiatorCard( NestedGladiatorCardHandle handle, bool
 
 	ChangeNestedGladiatorCardOwner( handle, EHI_null )
 
-	if ( !isParentAlreadyDead )
+	if ( !isParentAlreadyDead && RuiIsAlive( handle.parentRui ) )
 		RuiDestroyNested( handle.parentRui, handle.argName )
 	handle.parentRui = null
 	handle.cardRui = null
@@ -2065,7 +2065,7 @@ void function ActualUpdateNestedGladiatorCard( NestedGladiatorCardHandle handle 
 		}
 	}
 
-	if ( handle.cardRui != null )
+	if ( handle.cardRui != null && RuiIsAlive( handle.cardRui ) )
 	{
 		RuiSetString( handle.cardRui, "playerName", playerName )
 		RuiSetInt( handle.cardRui, "teamMemberIndex", teamMemberIndex )

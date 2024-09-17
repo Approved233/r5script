@@ -12,6 +12,9 @@ global function GamemodeUtility_ParseVectorString
 global function GamemodeUtility_ParseStringOfVectors 
 global function GamemodeUtility_GetKillReplayActive 
 global function GamemodeUtility_GetIsTeamIndexValidPlayerTeam 
+global function GameModeUtility_GetAllowThirdPerson
+
+
 
 
 
@@ -85,6 +88,34 @@ global function GamemodeUtility_GetIsTeamIndexValidPlayerTeam
 
 
 global function GamemodeUtility_GetPlaylist	
+
+
+
+
+
+
+
+
+
+
+global function IsFFAGame
+global function IsMultiTeamMission
+global function GetExpectedSquadSize
+global function IsMultiTeamPvPGame
+global function Is2TeamPvPGame
+global function IsSingleTeamMode
+global function IsLastPlaylistSolo
+global function IsDuoMode
+global function IsPVEMode
+
+
+
+
+
+
+
+
+
 
 
 
@@ -171,10 +202,18 @@ struct {
 
 
 
+
 } file
 
 void function GamemodeUtility_Init()
 {
+
+
+
+
+
+
+
 
 
 
@@ -273,6 +312,90 @@ void function GamemodeUtility_RegisterNetworking()
 
 	if ( GamemodeUtility_ShouldPingVictimSquadLocationOnDown() || GamemodeUtility_ShouldPingVictimSquadLocationOnKill() )
 		Remote_RegisterClientFunction( "GamemodeUtility_ServerCallback_TriggerScanOfVictimTeam", "int", 0, TEAM_MULTITEAM_FIRST + MAX_TEAMS + 1 )
+}
+
+void function RegisterDocs()
+{
+	#document( "GamemodeUtility_IsJIPEnabledInPlaylist", "Check if Join In Progress is enabled through playlist vars" )
+	
+	
+	
+	#document( "GamemodeUtility_GetKillReplayActive", "Check kill replay in playlist" )
+	#document( "GamemodeUtility_GetIsTeamIndexValidPlayerTeam", "Return whether the passed in team index is within the valid player team range for the mode" )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		#document( "GamemodeUtility_GetPlaylist", "Return the current playlist name, adjusted for modes to take into account being in the mode or in the lobby ( usually used to get values for the About screen )" )
+
 }
 
 
@@ -510,6 +633,151 @@ bool function GamemodeUtility_GetKillReplayActive()
 {
 	return GetCurrentPlaylistVarBool( "killreplay_enabled", false )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2952,10 +3220,17 @@ bool function GamemodeUtility_GetMixtapeAbandonPenaltyActive()
 
 
 
+
+
+
+
+
+
 int function GamemodeUtility_GetMaxDroppedGrenadesOnDeath()
 {
 	return GetCurrentPlaylistVarInt( "grenade_ondeath_max_spawncount", 1 )
 }
+
 
 
 
@@ -3226,7 +3501,7 @@ string function GamemodeUtility_GetPlaylist()
 
 
 
-bool function GetPlaylistVar_AllowThirdPerson()
+bool function GameModeUtility_GetAllowThirdPerson()
 {
 	return GetCurrentPlaylistVarBool( "allow_third_person", false )
 }
@@ -3381,6 +3656,209 @@ string function GamemodeUtility_GetParsedStringForCircleValues( array< string > 
 
 	return parsedPlaylistString
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+bool function IsFFAGame()
+{
+	return (MAX_TEAMS == MAX_PLAYERS)
+}
+
+bool function IsMultiTeamMission()
+{
+	if ( IsSingleTeamMode() )
+		return false
+	return true
+}
+
+
+int function GetExpectedSquadSize( entity player = null )
+{
+	
+	return int ( GetCurrentPlaylistVarFloat( "max_players", 60 ) / GetCurrentPlaylistVarFloat( "max_teams", 20 ) )
+}
+
+bool function IsMultiTeamPvPGame()
+{
+	return (MAX_TEAMS > 2)
+}
+
+bool function Is2TeamPvPGame()
+
+{
+	return (MAX_TEAMS == 2)
+}
+
+bool function IsSingleTeamMode()
+{
+	return (1 == GetCurrentPlaylistVarInt( "max_teams", 2 ))
+}
+
+bool function IsLastPlaylistSolo( entity player )
+{
+	return GetPersistentLastGameTypeFlag( player, eGameType.SOLO )
+}
+
+bool function IsDuoMode()
+{
+	return (GetCurrentPlaylistVarFloat( "max_players", 60 ) / GetCurrentPlaylistVarFloat( "max_teams", 20 ) == 2.0)
+}
+
+bool function IsPVEMode()
+{
+
+		{
+			string playlistName = GetCurrentPlaylistName()
+			if ( playlistName.find( "freelance" ) == 0 )
+				return true
+
+			return false
+		}
+
+
+
+
+
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

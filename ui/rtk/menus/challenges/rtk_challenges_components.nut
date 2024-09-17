@@ -65,6 +65,7 @@ global struct RTKChallengeItemModel
 	int challengeItemType = 0
 	string description
 	string title 
+	string progressText
 	bool isTracked = false
 
 	int currentProgress = 4
@@ -129,7 +130,7 @@ global struct RTKChallengeBlockModel
 	bool isNewTag = true
 	bool isLocked
 	bool isCompleted
-	bool isWeekly
+	bool isShortBlock
 	string title
 	string rewards
 
@@ -141,6 +142,7 @@ global struct RTKChallengeBlockModel
 	bool isBRMode = true
 	bool isNBRMode = true
 	bool hasNarratives
+	bool isMetaBlock
 
 	string pathToPanelModel
 	array<string> lockReason
@@ -164,7 +166,6 @@ void function RTKChallengeBlock_OnInitialize( rtk_behavior self )
 		return
 
 	self.AutoSubscribe( button, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( self ) {
-		EmitUISound( "ui_menu_accept" )
 		RTKChallengeBlock_OnClick( self )
 	} )
 
@@ -271,7 +272,6 @@ void function RTKChallengeListItem_OnInitialize( rtk_behavior self )
 		return
 
 	self.AutoSubscribe( button, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( self ) {
-		EmitUISound( "ui_menu_accept" )
 		self.InvokeEvent( "onClick" )
 		if ( keycode == MOUSE_LEFT || keycode == BUTTON_A )
 		{
@@ -308,6 +308,8 @@ void function RTKChallengeListItem_OnClick( rtk_behavior self )
 			if ( RTKChallenges_IsItemFlavForPreview( item ) )
 			{
 				self.InvokeEvent( "onRewardInspected" )
+				if ( CanRunClientScript() )
+					RunClientScript( "ClearBattlePassItem" )
 				SetChallengeRewardPresentationModeActive( GetItemFlavorByGUID( rewardGUID ), 1, -1, "#CHALLENGE_REWARD", "", true )
 			}
 		}
@@ -325,7 +327,7 @@ void function RTKChallengeListItem_OnYPressed( rtk_behavior self )
 		if ( IsValidItemFlavorGUID( challengeGUID ) )
 		{
 			ItemFlavor flavor = GetItemFlavorByGUID( challengeGUID )
-			if ( Challenge_CanRerollChallenge( flavor ) )
+			if ( Challenge_PlayerCanRerollChallenge( GetLocalClientPlayer(), flavor ) )
 			{
 				RTKChallengeRerollButton_ReRollPressed( self )
 			}
@@ -490,8 +492,7 @@ bool function RTKMutator_CanRerollChallenge( int input )
 	{
 		entity localPlayer = GetLocalClientPlayer()
 		ItemFlavor challenge = GetItemFlavorByGUID( input )
-		if ( Challenge_IsAssigned( localPlayer, challenge ) )
-			return Challenge_CanRerollChallenge( challenge ) && !Challenge_IsComplete( localPlayer, challenge )
+		return Challenge_PlayerCanRerollChallenge( localPlayer, challenge )
 	}
 	return false
 }

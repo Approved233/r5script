@@ -28,25 +28,17 @@ global const asset SKYDIVE_TRAIL_DEFAULT = $"settings/itemflav/skydive_trail/def
 global const asset SKYDIVE_TRAIL_SHADOW = $"settings/itemflav/skydive_trail/shadow_default.rpak"
 global const asset SKYDIVE_TRAIL_S03_APEX_PREDATOR = $"settings/itemflav/skydive_trail/s03_apex_predator.rpak"
 global const asset SKYDIVE_TRAIL_S03_DIAMOND = $"settings/itemflav/skydive_trail/s03_diamond.rpak"
-
 global const asset SKYDIVE_TRAIL_S04_APEX_PREDATOR = $"settings/itemflav/skydive_trail/s04_apex_predator.rpak"
 global const asset SKYDIVE_TRAIL_S04_MASTER = $"settings/itemflav/skydive_trail/s04_master.rpak"
-
-
 
 global const asset SKYDIVE_TRAIL_S05_APEX_PREDATOR = $"settings/itemflav/skydive_trail/s05_apex_predator.rpak"
 global const asset SKYDIVE_TRAIL_S05_MASTER = $"settings/itemflav/skydive_trail/s05_master.rpak"
 
-
-
 global const asset SKYDIVE_TRAIL_S06_APEX_PREDATOR = $"settings/itemflav/skydive_trail/s06_apex_predator.rpak"
 global const asset SKYDIVE_TRAIL_S06_MASTER = $"settings/itemflav/skydive_trail/s06_master.rpak"
 
-
-
 global const asset SKYDIVE_TRAIL_S07_APEX_PREDATOR = $"settings/itemflav/skydive_trail/s07_apex_predator.rpak"
 global const asset SKYDIVE_TRAIL_S07_MASTER = $"settings/itemflav/skydive_trail/s07_master.rpak"
-
 
 global const asset SKYDIVE_TRAIL_S04_DIAMOND = $"settings/itemflav/skydive_trail/s04_diamond.rpak"
 global const asset SKYDIVE_TRAIL_S05_DIAMOND = $"settings/itemflav/skydive_trail/s05_diamond.rpak"
@@ -402,7 +394,7 @@ ItemFlavor function GetSkyDiveTrailItemFlavorForPlayer( entity player )
 	LoadoutEntry entry = Loadout_SkydiveTrail()
 	if ( !LoadoutSlot_IsReady( ToEHI( player ), entry ) )
 	{
-		return GetDefaultItemFlavorForLoadoutSlot( EHI_null, entry )
+		return GetDefaultItemFlavorForLoadoutSlot( entry )
 	}
 
 	return LoadoutSlot_GetItemFlavor( ToEHI( player ), entry )
@@ -499,6 +491,9 @@ void function UpdatePlayerSkydiveTrailFriendlyEnemyFX( entity player )
 void function StartFriendlyEnemySkydiveTrailFXForPlayer( entity skyDivingPlayer, string parameter )
 {
 	Assert( parameter == "", "allows only empty parameter" )
+
+	if( !skyDivingPlayer.IsPlayer() )
+		return
 
 	if ( !skyDivingPlayer.Player_IsSkydiving()  )
 		return

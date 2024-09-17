@@ -207,17 +207,16 @@ int function RTKGameModeSelectApexCups_GetLockState( ItemFlavor cupEvent )
 					return CUP_LOCK_TRAINING
 			}
 
-
-				if( !GetConVarBool( "orientation_matches_disabled" ) && !GetConVarBool( "ranked_rumble_skip_orientation" ) )
-				{
-					
-					if ( ( !IsLocalPlayerExemptFromNewPlayerOrientation() && !HasLocalPlayerCompletedNewPlayerOrientation() ) || GetPersistentVarAsInt( "botGraduationState" ) == 0 )
-						return CUP_LOCK_ORIENTATION
-				}
-
-
 			if ( ( !GetCurrentPlaylistVarBool( RANKED_DEV_PLAYTEST_PLAYLIST_VAR, false ) ) && GetAccountLevelForXP( GetPersistentVarAsInt( "xp" ) ) < Ranked_GetRankedLevelRequirement() )
 				return CUP_LOCK_LEVELS
+
+			if ( CalEvent_IsActive( cupEvent, GetUnixTimestamp() ) && !Cups_IsCupEventRegistered( cupEvent ) )
+			{
+				if ( !RankedRumble_IsRankedScorePositionValid() )
+					return CUP_LOCK_NO_POSITION
+				else
+					return CUP_LOCK_NOT_REGISTERED
+			}
 		}
 
 	return CUP_LOCK_NONE

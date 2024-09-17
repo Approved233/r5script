@@ -1,0 +1,213 @@
+globalize_all_functions
+
+
+bool function IsBotPlaygroundMatch()
+{
+	return GetCurrentUndecoratedPlaylistName() == BOTPLAYGROUND
+}
+
+
+bool function IsShotgunsAndSnipersMode()
+{
+	return GetCurrentPlaylistVarBool( "shotguns_and_snipers_mode", false )
+}
+
+bool function IsArmedAndDangerousEvolvedMode()
+{
+	return GetCurrentPlaylistName() == "armed_and_dangerous_evolved"
+}
+
+bool function IsS03E03Mode()
+{
+	return GetCurrentPlaylistVarBool( "s03e03_mode", false )
+}
+
+bool function IsThirdPersonMode()
+{
+	return GetCurrentPlaylistVarBool( "thirdperson_mode", false )
+}
+
+bool function IsSpawnOnSquadMode()
+{
+	return GetCurrentPlaylistVarBool( "spawn_on_squad_mode", false )
+}
+
+bool function UseNightAnnouncer()
+{
+	return GetCurrentPlaylistVarBool( "UseNocAnnouncerAtNight", false )
+}
+
+bool function UseNightRingAnnouncer()
+{
+	return GetCurrentPlaylistVarBool( "UseNocRingAnnouncerAtNight", false )
+}
+
+bool function IsNightMapMode()
+{
+	return GetCurrentPlaylistVarBool( "night_map_mode", false )
+}
+
+bool function IsAlwaysBeClosingMode()
+{
+	return GetCurrentPlaylistVarBool( "always_be_closing_mode", false )
+}
+
+bool function IsGoldRushMode()
+{
+	return GetCurrentPlaylistVarBool( "gold_rush_mode", false )
+}
+
+bool function IsDummieMode()
+{
+	return GetCurrentPlaylistVarBool( "dummie_mode", false )
+}
+
+bool function HasBoundaryWall()
+{
+	return GetCurrentPlaylistVarBool( "has_boundary_wall", false )
+}
+
+
+bool function ObjectiveCaptureZone_IsObjectiveEnabled()
+{
+	return GetCurrentPlaylistVarBool( "gamemode_objective_capture_zone_active", false)
+}
+
+
+
+
+
+
+
+
+
+
+bool function BigTDM_IsModeEnabled()
+{
+	return GetCurrentPlaylistVarBool( "freedm_big_tdm_active", false )
+}
+
+
+bool function UseLTMPodiumBanner()
+{
+	return ( GetCurrentPlaylistVarString( "gamemode_logo", "BATTLE_ROYALE" ) == "LTM" )
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+bool function IsVDUDialogueEnabled()
+{
+	return GetCurrentPlaylistVarBool( "enable_vdu_dialogue", false )
+}
+
+bool function IsEventFinale()
+{
+	return GetCurrentPlaylistVarBool( "is_event_finale", false )
+}
+
+bool function FiringRangeHasFriendlyFire()
+{
+	return GetCurrentPlaylistVarBool( "firingrange_has_friendlyfire", true )
+}
+
+
+bool function FiringRangeHasInfiniteClips()
+{
+	return GetCurrentPlaylistVarBool( "has_infinite_clips", false )
+}
+
+bool function FiringRangeHasHitIndictators()
+{
+	return GetCurrentPlaylistVarBool ( "hud_training_hit_dots", true )
+}
+
+
+
+bool function FiringRangeHasDynamicStats()
+{
+	return GetCurrentPlaylistVarBool ("has_fr_dynamic_stats", true )
+}
+
+
+bool function FreelanceSystemsAreEnabled()
+{
+	const bool ENABLED_BY_DEFAULT = false
+	return GetCurrentPlaylistVarBool( "freelance_systems_enabled", ENABLED_BY_DEFAULT )
+}
+
+bool function SpectreShacksAreEnabled()
+{
+	return GetCurrentPlaylistVarBool( "spectre_shacks_enabled", false )
+}
+
+
+
+
+
+
+
+
+
+
+bool function NewPlayerBotQueueAreEnabled()
+{
+	return GetCurrentPlaylistVarBool( "is_bot_royale_match", false )
+}
+
+bool function IsBotModeMatch()
+{
+	return GetCurrentPlaylistVarBool( "is_bot_royale_match", false )
+}
+
+
+bool function IsEliminationBased()
+{
+	return GetCurrentPlaylistVarBool( "is_elimination_based", true )
+}
+
+
+
+
+
+
+
+
+
+
+
+

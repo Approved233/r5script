@@ -6,6 +6,52 @@ global function GetEyeForQualityRadius
 global function GetEyeForQualityCanSee
 
 
+global function GetEyeForQualityLoot
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+struct{
+
+	array<entity> highlightLoot
+
+} file
+
+
+
+struct{
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+} tuning
+
+
 
 
 void function ShLobaPassiveEyeForQuality_LevelInit()
@@ -14,6 +60,11 @@ void function ShLobaPassiveEyeForQuality_LevelInit()
 
 
 
+
+
+
+
+		SetupTuning()
 
 		RegisterSignal( "LobaPassiveEyeForQuality_StopThink" )
 		AddCallback_OnPassiveChanged( ePassives.PAS_LOBA_EYE_FOR_QUALITY, OnPassiveChanged )
@@ -27,6 +78,25 @@ void function ShLobaPassiveEyeForQuality_LevelInit()
 
 
 		AddCallback_EditLootDesc( Loba_EditUALootDesc )
+
+}
+
+
+
+void function SetupTuning()
+{
+
+
+
+
+
+
+
+
+
+
+
+
 
 }
 
@@ -49,6 +119,31 @@ void function OnPassiveChanged( entity player, int passive, bool didHave, bool n
 
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -124,6 +219,8 @@ void function ClientThinkThread( entity player )
 			loot.e.eyeForQuality_isScanned = false
 			SURVIVAL_Loot_UpdateHighlightForLoot( loot )
 		}
+
+		file.highlightLoot.clear()
 	} )
 
 	while ( true )
@@ -140,18 +237,30 @@ void function ClientThinkThread( entity player )
 			if ( loot in noLongerExistingLootSet )
 				delete noLongerExistingLootSet[loot]
 
-			currLootSet[loot] <- IN_SET
+			if ( !SURVIVAL_Loot_IsLootIndexValid( loot.GetSurvivalInt() ) )
+				continue;
 
-			if ( !loot.e.eyeForQuality_isScanned )
+			LootData data = SURVIVAL_Loot_GetLootDataByIndex( loot.GetSurvivalInt() )
+
+			if ( GetEyeForQualityCanSee( data ) )
 			{
-				loot.e.eyeForQuality_isScanned = true
-				SURVIVAL_Loot_UpdateHighlightForLoot( loot )
-				loot.SetFadeDistance( range )
+				currLootSet[loot] <- IN_SET
+
+				if ( !loot.e.eyeForQuality_isScanned )
+				{
+					file.highlightLoot.append( loot )
+
+					loot.e.eyeForQuality_isScanned = true
+					SURVIVAL_Loot_UpdateHighlightForLoot( loot, data )
+					loot.SetFadeDistance( range )
+				}
 			}
 		}
 
 		foreach ( entity noLongerExistingLoot, void _ in noLongerExistingLootSet )
 		{
+			file.highlightLoot.fastremovebyvalue( noLongerExistingLoot )
+
 			if ( !IsValid( noLongerExistingLoot ) )
 				continue
 
@@ -244,6 +353,83 @@ bool function GetEyeForQualityCanSee( LootData data )
 
 	return false
 }
+
+
+
+array<entity> function GetEyeForQualityLoot()
+{
+	ArrayRemoveInvalid( file.highlightLoot )
+
+	return file.highlightLoot
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

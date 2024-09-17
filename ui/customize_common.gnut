@@ -234,7 +234,11 @@ const array<string> thematicTeamNames = [
 	"#TEAM_23",
 	"#TEAM_24",
 	"#TEAM_25",
-	"#TEAM_26"
+	"#TEAM_26",
+	"#TEAM_27",
+	"#TEAM_28",
+	"#TEAM_29",
+	"#TEAM_30"
 ]
 global function UseThematicTeamNames
 
@@ -629,7 +633,18 @@ bool function CustomizeMenus_IsFocusedItemLocked()
 	foreach ( var button, CustomizeButtonContext cbc in fileLevel.activeCustomizeButtons )
 	{
 		if ( Hud_IsFocused( button ) )
-			return !GRX_IsItemOwnedByPlayer( cbc.itemFlavor )
+		{
+
+				ItemFlavor parentFlav = GetTopLevelCustomizeContext()
+				if ( ItemFlavor_GetType( parentFlav ) == eItemType.character  )
+					return !Character_IsUnlockableInNewPlayerPass( parentFlav ) && !GRX_IsItemOwnedByPlayer( cbc.itemFlavor )
+				else
+					return !GRX_IsItemOwnedByPlayer( cbc.itemFlavor )
+
+
+
+
+		}
 	}
 
 	return false
@@ -643,7 +658,17 @@ bool function CustomizeMenus_IsFocusedItemParentItemLocked()
 	foreach ( var button, CustomizeButtonContext cbc in fileLevel.activeCustomizeButtons )
 	{
 		if ( Hud_IsFocused( button ) )
-			return !IsParentItemOwned( cbc )
+		{
+
+				ItemFlavor parentFlav = GetTopLevelCustomizeContext()
+				if ( ItemFlavor_GetType( parentFlav ) == eItemType.character  )
+					return !Character_IsUnlockableInNewPlayerPass( parentFlav ) && !IsParentItemOwned( cbc )
+				else
+					return !IsParentItemOwned( cbc )
+
+
+
+		}
 	}
 
 	return false
@@ -758,7 +783,7 @@ void function CustomizeButton_OnRightClick( var button )
 			{
 				wasEquipped = true
 				ItemFlavor emptyItem
-				foreach ( flavor in GetValidItemFlavorsForLoadoutSlot( LocalClientEHI(), loadoutEntry ) )
+				foreach ( flavor in GetValidItemFlavorsForLoadoutSlot( loadoutEntry ) )
 				{
 					if ( GetGlobalSettingsBool( ItemFlavor_GetAsset( flavor ), "isTheEmpty" ) )
 					{
@@ -800,15 +825,16 @@ void function CustomizeButton_OnRightOrDoubleClick( var button )
 
 	ItemFlavor character = GetTopLevelCustomizeContext()
 
-		if ( NPP_ShouldDisableGRXForNPPLegend( GetLocalClientPlayer(), character ) )
-		{
-			EmitUISound( "menu_deny" )
-			return
-		}
-
-
 	if ( cbc.getItemCanEquipCanBuyStatusFunc != null && cbc.getItemCanEquipCanBuyStatusFunc( cbc.itemFlavor ) == eItemCanEquipCanBuyStatus.CANNOT_EQUIP_CANNOT_BUY )
 	{
+
+			if ( NPP_ShouldDisableGRXForNPPLegend( GetLocalClientPlayer(), character ) )
+			{
+				EmitUISound( "menu_deny" )
+				return
+			}
+
+
 		PurchaseDialogConfig pdc
 		pdc.flav = character
 		pdc.quantity = 1
@@ -1666,9 +1692,7 @@ asset function CustomizeMenu_GetRewardButtonImage( ItemFlavor flavor )
 		case eItemType.character_execution:
 		case eItemType.voucher:
 		case eItemType.quest_mission:
-
 		case eItemType.quest_comic:
-
 		case eItemType.melee_skin:
 			buttonImage = ItemFlavor_GetIcon( flavor )
 			break
@@ -1797,9 +1821,7 @@ asset function CustomizeMenu_GetGenericRewardButtonImage( ItemFlavor flavor )
 		case eItemType.character_execution:
 		case eItemType.voucher:
 		case eItemType.quest_mission:
-
 		case eItemType.quest_comic:
-
 		case eItemType.melee_skin:
 			buttonImage = ItemFlavor_GetIcon( flavor )
 			break

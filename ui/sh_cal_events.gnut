@@ -137,7 +137,29 @@ FileStruct_LifetimeLevel& fileLevel
 global const array<int> ITEM_TYPES_WITH_DATETIME_ATTRIBUTES = [
 	eItemType.challenge_collection,
 	eItemType.challenge_tile,
+	eItemType.battlepass,
 ]
+
+global enum eDateTimeFieldType {
+	START,
+	FINISH,
+}
+
+global typedef MetaDataFieldMapping table< int, string >
+
+global const MetaDataFieldMapping DEFAULT_METADATA_FIELD_MAPPING = {
+	[ eDateTimeFieldType.START ] = "defaultStartTime",
+	[ eDateTimeFieldType.FINISH ] = "defaultFinishTime",
+}
+
+global const table< int, MetaDataFieldMapping > ITEMTYPE_TO_DATETIME_METADATA_FIELD_MAPPINGS = {
+	[ eItemType.challenge_collection ] = DEFAULT_METADATA_FIELD_MAPPING,
+	[ eItemType.challenge_tile ] = DEFAULT_METADATA_FIELD_MAPPING,
+	[ eItemType.battlepass ] = {
+		[ eDateTimeFieldType.START ] = "bpv2StartUnixTime",
+		[ eDateTimeFieldType.FINISH ] = "bpv2FinishUnixTime"
+	}
+}
 
 
 
@@ -179,6 +201,15 @@ void function ShCalEvent_LevelInit()
 			if ( eventOrNull != null )
 				fileLevel.allCalEvents.append( expect ItemFlavor( eventOrNull ) )
 		}
+
+
+			
+			if ( GetConVarBool( IS_NEW_CUP_REGISTRATION_CONVAR ) )
+			{
+				printt( "Early Cups_OnParseAllContainersComplete" )
+				Cups_OnParseAllContainersComplete()
+			}
+
 
 		int now = GetUnixTimestamp()
 		foreach ( ItemFlavor event in fileLevel.allCalEvents )
@@ -231,22 +262,46 @@ void function ShCalEvent_LevelInit()
 									
 									
 									
-
-									
-									
 									
 
 									foreach ( ItemFlavor seasonFlav, array< BattlePassV2ConfigStruct > seasonConfigArray in fileLevel.seasonBattlePassV2Map )
 									{
 										foreach ( iterConfig in seasonConfigArray )
 										{
-											Assert( ( config.finishTime < iterConfig.startTime || config.startTime > iterConfig.finishTime ),
-												format(
-													"BattlePassV2 assets cannot overlap in a season -- please check season (%s) and bpv2 asset (%s)",
-													ItemFlavor_GetAssetName ( event ),
-													ItemFlavor_GetAssetName ( iterConfig.flav )
-												)
-											)
+											string assertMessage = format( "BattlePassV2 assets cannot overlap in a season -- please check season (%s) and bpv2 asset (%s)", ItemFlavor_GetAssetName ( event ), ItemFlavor_GetAssetName ( iterConfig.flav ) )
+
+											
+											
+											bool newConfigStartsBeforeOldStarts = config.startTime < iterConfig.startTime
+											bool newConfigStartsAfterOldStarts = config.startTime > iterConfig.startTime
+											bool newConfigEndsAfterOldStarts = config.finishTime > iterConfig.startTime
+											bool newConfigEndsBeforeOldEnds = config.finishTime < iterConfig.finishTime
+											bool newConfigEndsAfterOldEnds = config.finishTime > iterConfig.finishTime
+											bool newConfigStartsBeforeOldEnds = config.startTime < iterConfig.finishTime
+
+											
+											if ( newConfigStartsBeforeOldStarts && newConfigEndsAfterOldStarts )
+											{
+												Assert( false, assertMessage )
+											}
+
+											
+											if ( newConfigStartsAfterOldStarts && newConfigEndsBeforeOldEnds )
+											{
+												Assert( false, assertMessage )
+											}
+
+											
+											if ( newConfigStartsBeforeOldEnds && newConfigEndsAfterOldEnds )
+											{
+												Assert( false, assertMessage )
+											}
+
+											
+											if ( newConfigStartsBeforeOldStarts && newConfigEndsAfterOldEnds )
+											{
+												Assert( false, assertMessage )
+											}
 										}
 									}
 #endif
@@ -263,15 +318,17 @@ void function ShCalEvent_LevelInit()
 					}
 
 
-				
-				asset seasonQuestAsset = GetGlobalSettingsAsset( ItemFlavor_GetAsset( event ), "seasonquestFlav" )
-				if ( seasonQuestAsset != $"" )
-				{
-					ItemFlavor ornull questOrNull = RegisterItemFlavorFromSettingsAsset( seasonQuestAsset )
-					expect ItemFlavor( questOrNull )
-					fileLevel.seasonToQuestMap[event] <- questOrNull
-					fileLevel.questToSeasonMap[questOrNull] <- event
-				}
+			
+
+
+
+
+
+
+
+
+
+
 
 
 					asset seasonNarrativeAsset = GetGlobalSettingsAsset( ItemFlavor_GetAsset( event ), "narrativeFlav")
@@ -748,6 +805,7 @@ ItemFlavor ornull function Season_GetBattlePassV2( ItemFlavor flav )
 
 
 
+
 ItemFlavor function Season_GetBattlePass( ItemFlavor flav )
 {
 	Assert( ItemFlavor_GetType( flav ) > eItemType._CALEVENT_RANGE_START && ItemFlavor_GetType( flav ) < eItemType._CALEVENT_RANGE_END )
@@ -768,6 +826,14 @@ string function Season_GetSeasonText( ItemFlavor flav )
 ItemFlavor function BattlePass_GetSeason( ItemFlavor flav )
 {
 	Assert( ItemFlavor_GetType( flav ) == eItemType.battlepass )
+
+
+	
+	if ( BattlePassV2_IsV2BattlePass( flav ) )
+	{
+		return fileLevel.battlePassV2SeasonMap[ flav ]
+	}
+
 
 	return fileLevel.battlePassSeasonMap[flav]
 }

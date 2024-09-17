@@ -149,6 +149,9 @@ void function RTKNewPlayerPassInfoPanel_OnInitialize( rtk_behavior self )
 
 void function OnMenuClose()
 {
+	if ( !IsFullyConnected() )
+		return
+
 	if ( file.displayType == ePanelDisplayType.NEW_PLAYER_PASS )
 	{
 

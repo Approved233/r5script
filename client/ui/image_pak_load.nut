@@ -194,6 +194,8 @@ asset function GetDownloadedImageAsset( string rpakName, string imageName, int d
 
 
 
+
+
 	return image
 }
 
@@ -294,11 +296,11 @@ void function ClientCodeCallback_OnRpakDownloadComplete()
 void function ClientCodeCallback_OnRpakDownloadFailed( string rpakName )
 {
 	bool wasPakLoadAttempted = rpakName in file.pakLoadStatuses
+	sImagePakLoadRequest req
 
 	if( wasPakLoadAttempted )
 	{
 		int status = file.pakLoadStatuses[rpakName]
-		sImagePakLoadRequest req
 
 		if ( status == eImagePakLoadStatus.LOAD_REQUESTED )
 		{
@@ -325,7 +327,13 @@ void function ClientCodeCallback_OnRpakDownloadFailed( string rpakName )
 		
 		SetLoadingStateOnImage( rpakName, req.pakType, req.imageElem, false )
 	}
+
 	SetRpakLoadStatus( rpakName, eImagePakLoadStatus.LOAD_FAILED )
+
+	if ( req.pakType == ePakType.DL_PROMO )
+	{
+		RunUIScript( "OnDLPromoPakLoaded", false )
+	}
 }
 
 
@@ -446,12 +454,12 @@ void function RequestDownloadedImagePakLoad_Internal( string rpakName, int pakTy
 
 		if( req.pakType == ePakType.DL_PROMO )
 		{
-			RunUIScript( "OnDLPromoPakLoaded" )
+			RunUIScript( "OnDLPromoPakLoaded", true )
 		}
 
 		else if( req.pakType == ePakType.DL_BATTLEPASS_UM )
 		{
-			RunUIScript( "OnBattlepassCarouselPakLoaded", rpakName )
+			RunUIScript( "OnBattlepassCarouselPakLoaded", req.rpakName )
 		}
 
 

@@ -34,7 +34,7 @@ void function RTKEventShopTierDialogPanel_OnInitialize( rtk_behavior self )
 		if ( button != null )
 		{
 			self.AutoSubscribe( button, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( self ) {
-				JumpToChallenges( "challengeseventshop" )
+				JumpToChallenges( "event" )
 			} )
 		}
 	}

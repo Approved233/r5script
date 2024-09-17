@@ -372,7 +372,7 @@ void function RTKMeleeCustomizationScreen_AddEvents( rtk_behavior self )
 					}
 					else
 					{
-						OpenStoreInspectForArtifactItem( RTKStruct_GetInt( componentModel, "setTheme" ), type )
+						OpenStoreInspectForArtifactItem( RTKStruct_GetInt( componentModel, "setTheme" ), type, newSetIndex )
 
 						EmitUISound( "UI_Menu_Deny" )
 					}
@@ -711,7 +711,7 @@ array<ItemFlavor> function GetSelectableDeathboxSkins()
 	}
 
 	EHI playerEHI = LocalClientEHI()
-	array<ItemFlavor> allDeathboxSkins = clone GetValidItemFlavorsForLoadoutSlot( playerEHI, entry )
+	array<ItemFlavor> allDeathboxSkins = clone GetValidItemFlavorsForLoadoutSlot( entry )
 
 	array<ItemFlavor> selectableDeathboxSkins
 	foreach ( ItemFlavor deathboxSkin in allDeathboxSkins )
@@ -1130,7 +1130,7 @@ array<ItemFlavor> function GetSelectableArtifactComponentsOfType( int type )
 	LoadoutEntry entry = Artifacts_Loadouts_GetEntryForConfigIndexAndType( configIndex, type )
 
 	EHI playerEHI = LocalClientEHI()
-	array<ItemFlavor> allComponents = clone GetValidItemFlavorsForLoadoutSlot( playerEHI, entry )
+	array<ItemFlavor> allComponents = clone GetValidItemFlavorsForLoadoutSlot( entry )
 
 	array<ItemFlavor> selectableComponents
 	foreach ( ItemFlavor component in allComponents )
@@ -1190,21 +1190,43 @@ string function CelestialSetDescription( int type )
 	return ""
 }
 
-void function OpenStoreInspectForArtifactItem( int theme, int type )
+void function OpenStoreInspectForArtifactItem( int theme, int type, int index )
 {
-	ItemFlavor component = Artifacts_GetComponentOfTypeFromTheme( theme, type )
-
-	array<GRXScriptOffer> offers = GRX_GetItemDedicatedStoreOffers( component, "artifact_set_shop" )
-	foreach ( offerIndex, offer in offers )
+	if ( theme >= eArtifactSetIndex._EMPTY )
 	{
-		foreach( flav in offer.output.flavors )
+		ItemFlavor component = Artifacts_GetComponentOfTypeFromTheme( theme, type )
+
+		array<GRXScriptOffer> offers = GRX_GetItemDedicatedStoreOffers( component, "artifact_set_shop" )
+		foreach ( offerIndex, offer in offers )
 		{
-			if ( Artifacts_GetComponentType( flav ) == type )
+			foreach( flav in offer.output.flavors )
 			{
-				ArtifactsInspectMenu_AttemptOpenWithOffer( offer )
+				if ( Artifacts_GetComponentType( flav ) == type )
+				{
+					ArtifactsInspectMenu_AttemptOpenWithOffer( offer )
+					break
+				}
 			}
 		}
 	}
+
+	else
+	{
+		int componentGUID = RTKStruct_GetInt( GetComponentSetDataModelStruct( index, type ), "guid" )
+
+		if ( !IsValidItemFlavorGUID( componentGUID ) )
+			return
+
+		array<GRXScriptOffer> offers = GRX_GetItemDedicatedStoreOffers( GetItemFlavorByGUID( componentGUID ), "universal_set_shop" )
+
+		foreach ( offerIndex, offer in offers )
+		{
+			UniversalMeleeInspectMenu_AttemptOpenWithOffer( offer )
+			break
+		}
+	}
+
+
 }
 
 
@@ -1224,7 +1246,7 @@ bool function RTKMutator_ShowOnlyArtifactSet( int currentTab, int theme )
 	if ( currentTab == eMeleeCustomizationTab.BLADE && theme == eArtifactSetIndex._EMPTY )
 		return false
 
-	return ( theme != eArtifactSetIndex.RAGOLD )
+	return ( theme >= eArtifactSetIndex._EMPTY ) 
 }
 
 bool function RTKMutator_HideEmptyActivationEmote( bool isVisible, bool isEmpty, int type )

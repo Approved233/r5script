@@ -9,7 +9,7 @@ const string SENTINEL_SHOW_CROSSHAIR_ENERGIZE_PLAYLIST_VAR = "sentinel_show_cros
 
 const string SENTINEL_CLASS_NAME = "mp_weapon_sentinel"
 
-const string SENTINEL_DEACTIVATE_SIGNAL = "SentinelDeactivate"
+global const string SENTINEL_DEACTIVATE_SIGNAL = "SentinelDeactivate"
 
 const float SENTINEL_RECHAMBER_READY_TO_FIRE_FRAC = 50.0 / 63.0	
 
@@ -43,8 +43,6 @@ void function MpWeaponSentinel_Init()
 
 	RegisterSignal( RECHAMBER_RUI_ABORT_SIGNAL )
 
-	RegisterSignal( ENERGIZE_STATUS_RUI_ABORT_SIGNAL )	
-
 
 
 
@@ -74,6 +72,25 @@ void function OnWeaponActivate_weapon_sentinel( entity weapon )
 	if ( !GetCurrentPlaylistVarBool( SENTINEL_USE_ENERGIZE_PLAYLIST_VAR, true ) )
 		return
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	entity player = weapon.GetWeaponOwner()
 
 
@@ -89,7 +106,7 @@ void function OnWeaponActivate_weapon_sentinel( entity weapon )
 			else
 				weapon.w.activeOptic = ""
 
-			thread UpdateWeaponEnergizeRui( player, weapon, ENERGIZED_CROSSHAIR_RUI, ENERGIZE_UI_CONSUMABLE_ICON, AMMO_ENERGIZED_ICON )
+			thread UpdateWeaponEnergizeRui( player, weapon,ENERGIZE_UI_CONSUMABLE_ICON, ENERGIZED_CROSSHAIR_RUI,  AMMO_ENERGIZED_ICON )
 		}
 
 }

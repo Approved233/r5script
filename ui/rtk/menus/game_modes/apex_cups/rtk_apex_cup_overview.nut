@@ -369,7 +369,8 @@ void function RTKRewardTiersInit()
 
 		rewardTier.iconPath = CustomizeMenu_GetRewardButtonImage( flav )
 
-		rewardTier.showQuantity = tData.rewardData[0].quantity > 1
+		bool isRewardCurrency = ItemFlavor_GetType( flav ) == eItemType.account_currency
+		rewardTier.showQuantity = isRewardCurrency ? false : tData.rewardData[0].quantity > 1 
 		rewardTier.quantity 	= tData.rewardData[0].quantity
 		rewardTier.level 	= i
 		rewardTier.isOwned 	= hasParticipated && currentRewardTier <= i
@@ -424,6 +425,14 @@ void function RTKApexCupsOverview_ButtonState( bool showButton, bool buttonActiv
 			case CUP_LOCK_TRAINING:
 				buttonActive = false
 				buttonText = Localize( "#PLAYLIST_STATE_COMPLETED_TRAINING_REQUIRED" )
+				break
+			case CUP_LOCK_NO_POSITION:
+				buttonActive = false
+				buttonText = Localize( "#PLAYLIST_STATE_NO_POSITION" )
+				break
+			case CUP_LOCK_NOT_REGISTERED:
+				buttonActive = false
+				buttonText = Localize( "#PLAYLIST_STATE_RANKED_RUMBLE_NOT_REGISTERED" )
 				break
 		}
 	}

@@ -124,7 +124,7 @@ void function ShWeaponCosmetics_LevelInit()
 	
 
 
-	Remote_RegisterServerFunction( "ClientCallback_WeaponCosmeticsApply", "int", INT_MIN, INT_MAX )
+	Remote_RegisterServerFunction( "ClientCallback_WeaponCosmeticsApply", "int", WEAPON_INVENTORY_SLOT_PRIMARY_0, WEAPON_INVENTORY_SLOT_PRIMARY_1 )
 	Remote_RegisterClientFunction( "ServerCallback_UpdatePlayerWeaponEffects", "entity" )
 
 }
@@ -884,9 +884,6 @@ void function DestroyCharmForWeaponEntity( entity weapEnt )
 
 
 
-
-
-
 void function AddCallback_UpdatePlayerWeaponEffects( void functionref( entity player ) callbackFunc )
 {
 	Assert( !file.callback_UpdatePlayerWeaponEffects.contains( callbackFunc ), "Already added " + string( callbackFunc ) + " with AddCallback_UpdatePlayerWeaponEffects" )
@@ -900,7 +897,7 @@ void function DEV_TestWeaponSkinData()
 
 	foreach ( weapon in GetAllWeaponItemFlavors() )
 	{
-		array<ItemFlavor> weaponSkins = GetValidItemFlavorsForLoadoutSlot( LocalClientEHI(), Loadout_WeaponSkin( weapon ) )
+		array<ItemFlavor> weaponSkins = GetValidItemFlavorsForLoadoutSlot( Loadout_WeaponSkin( weapon ) )
 
 		foreach ( skin in weaponSkins )
 		{

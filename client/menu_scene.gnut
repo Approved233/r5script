@@ -796,7 +796,7 @@ TypeConfig function InitTypeConfig_GladiatorCardFrameOrStance()
 			ChangeNestedGladiatorCardPresentation( gladCardHandle, eGladCardPresentation.FRONT_STANCE_ONLY )
 			SetNestedGladiatorCardOverrideStance( gladCardHandle, cfg.subjectFlav )
 
-			ItemFlavor characterDefaultFrame = GetDefaultItemFlavorForLoadoutSlot( EHI_null, Loadout_GladiatorCardFrame( expect ItemFlavor(cfg.associatedFlav) ) )
+			ItemFlavor characterDefaultFrame = GetDefaultItemFlavorForLoadoutSlot( Loadout_GladiatorCardFrame( expect ItemFlavor(cfg.associatedFlav) ) )
 			SetNestedGladiatorCardOverrideFrame( gladCardHandle, characterDefaultFrame ) 
 		}
 

@@ -15,10 +15,19 @@ global function StatsRegister_S22
 
 
 
+
+
+
+
+
+
 void function StatsRegister_S22()
 {
 	CAREER_STATS.s22ce01_buffet_points = RegisterAccumulatedStat_Int( null, "s22ce01_buffet_points", eChallengeGameMode.NON_MODE, CHALLENGES_CALC_DEPENDS )
 	CAREER_STATS.s22_complete_all_badge_challenges = RegisterExpensiveCalculatedStat_Int( null, "s22_complete_all_badge_challenges", CHALLENGES_CALC_DEPENDS, SetupS22BadgeCompleteAllChallenges, [], eChallengeGameMode.NON_MODE )
+
+	CAREER_STATS.s22me01_event_currency_total = RegisterAccumulatedStat_Int( null, "s22me01_event_currency_total", eChallengeGameMode.NON_MODE, CHALLENGES_CALC_DEPENDS )
+	CAREER_STATS.s22ce02_buffet_points = RegisterAccumulatedStat_Int( null, "s22ce02_buffet_points", eChallengeGameMode.NON_MODE, CHALLENGES_CALC_DEPENDS )
 
 
 		CAREER_STATS.gamemode_turbo_knockdowns = RegisterAccumulatedStat_Int( null, "gamemode_turbo_knockdowns", eChallengeGameMode.TURBO, CHALLENGES_CALC_DEPENDS )
@@ -26,6 +35,13 @@ void function StatsRegister_S22()
 
 
 	CAREER_STATS.s22rc01_games_played_trios_edistrict = RegisterAccumulatedStat_Int( null, "s22rc01_games_played_trios_edistrict", eChallengeGameMode.BATTLE_ROYALE, CHALLENGES_CALC_DEPENDS )
+
+
+		CAREER_STATS.gamemode_halloween_22_1_damage_done = RegisterAccumulatedStat_Int( null, "gamemode_halloween_22_1_damage_done", eChallengeGameMode.BATTLE_ROYALE, CHALLENGES_CALC_DEPENDS )
+		CAREER_STATS.gamemode_halloween_22_1_placement_top_5 = RegisterAccumulatedStat_Int( null, "gamemode_halloween_22_1_placement_top_5", eChallengeGameMode.BATTLE_ROYALE, CHALLENGES_CALC_DEPENDS )
+		CAREER_STATS.gamemode_halloween_22_1_candies_picked_up = RegisterAccumulatedStat_Int( null, "gamemode_halloween_22_1_candies_picked_up", eChallengeGameMode.BATTLE_ROYALE, CHALLENGES_CALC_DEPENDS )
+		
+
 }
 
 
@@ -47,6 +63,69 @@ StatCalcFuncInfo function SetupS22BadgeCompleteAllChallenges( StatEntry calcEntr
 
 	return info
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

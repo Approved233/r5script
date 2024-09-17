@@ -387,7 +387,7 @@ void function ClGlobalAnimEvent_mirage_holo_fx_start( entity model, array<string
 {
 	Assert( tokens.len() == 2 )
 
-	thread PROTO_FadeModelAlphaOverTime( model, 0.5, 0, 255 )
+	thread FadeModelAlphaOverTime( model, 0.5, 0, 255 )
 
 	string AttachmentString = tokens[1]
 	int attachIndex = model.LookupAttachment( AttachmentString )
@@ -400,7 +400,7 @@ void function ClGlobalAnimEvent_mirage_holo_fx_end( entity model, array<string> 
 {
 	Assert( tokens.len() == 2 )
 
-	thread PROTO_FadeModelAlphaOverTime( model, 0.5, 255, 0 )
+	thread FadeModelAlphaOverTime( model, 0.5, 255, 0 )
 
 	string AttachmentString = tokens[1]
 

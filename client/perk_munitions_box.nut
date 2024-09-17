@@ -152,6 +152,11 @@ void function Perk_MunitionsBox_Init()
 
 
 
+
+
+
+
+
 bool function Perk_SwapMunitionsBoxAndSkirmisherPerks()
 {
 	return GetCurrentPlaylistVarBool( "swap_munitions_box_and_skirmisher_perks", false )
@@ -243,33 +248,6 @@ void function OnMunitionsBoxSpawned( entity ent )
 
 	Perks_AddMinimapEntityForPerk( ePerkIndex.MUNITIONS_BOX, ent )
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

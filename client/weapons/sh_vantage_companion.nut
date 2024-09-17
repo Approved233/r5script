@@ -141,9 +141,8 @@ global function DEV_VantageCompanion_SetOrderDebugDraw
 
 bool VANTAGE_COMPANION_DEBUG_DRAW = false
 bool VANTAGE_COMPANION_ORDER_DEBUG_DRAW = false
-bool VANTAGE_COMPANION_FOLLOW_DEBUG_DRAW = false
-bool VANTAGE_COMPANION_VORTEX_DEBUG_DRAW = false
-bool VANTAGE_COMPANION_LAUNCH_DEBUG_DRAW = false
+const bool VANTAGE_COMPANION_FOLLOW_DEBUG_DRAW = false
+const bool VANTAGE_COMPANION_VORTEX_DEBUG_DRAW = false
 #endif
 
 global enum eCompanionState
@@ -186,12 +185,28 @@ array<string> sPlayerLaunchStateStrings =
 	"Prelaunching",
 	"Launching"
 ]
+
+struct EchoDevMoveData
+{
+	float time
+	vector pos
+	float speed
+	vector direction
+	float distToDest
+	bool wasPathfinding
+}
 #endif
 
 
 struct EchoCompanionData
 {
 	int    playerLaunchState
+
+
+
+
+
+
 
 
 
@@ -338,8 +353,6 @@ float function VantageCompanion_GetSpeed( entity owner )
 
 	return result
 }
-
-const float UPDATE_RATE = 0.1
 
 
 OrderPosData function FindEchoOrderPos( entity player )
@@ -987,8 +1000,8 @@ void function DebugDrawCompanion( entity echoEnt )
 {
 	if ( IsValid( echoEnt ) )
 	{
-		DebugDrawBox( echoEnt.GetOrigin(), VANTAGE_COMPANION_BOUND_MINS, VANTAGE_COMPANION_BOUND_MAXS, <255,150,0>, 50, 2*UPDATE_RATE )
-		DebugDrawSphere( echoEnt.GetOrigin(), 4, <0, 100, 255>, false, 2*UPDATE_RATE )
+		DebugDrawBox( echoEnt.GetOrigin(), VANTAGE_COMPANION_BOUND_MINS, VANTAGE_COMPANION_BOUND_MAXS, <255,150,0>, 50, 0.2 )
+		DebugDrawSphere( echoEnt.GetOrigin(), 4, <0, 100, 255>, false, 0.2 )
 	}
 }
 
@@ -1042,6 +1055,45 @@ vector function Launch_CalcLaunchToPos( entity player, entity echoEnt )
 
 	return finalLaunchToPos
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

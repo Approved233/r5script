@@ -1,0 +1,211 @@
+globalize_all_functions
+
+
+global struct UpdraftTriggerSettings
+{
+	float minShakeActivationHeight = 500.0               
+	float maxShakeActivationHeight = 400.0               
+	float liftSpeed                = 300.0                   	
+	float liftAcceleration         = 100.0                 		
+	float liftExitDuration         = 2.5                   		
+}
+
+struct
+{
+	UpdraftTriggerSettings&      updraftSettings = { ... }
+} file
+
+
+global enum eWildLifeCampType
+{
+	SPIDER_NEST,
+	PROWLER_DENS,
+	UNKNOWN,
+	Count
+}
+global const string[ eWildLifeCampType.Count ] WILDLIFE_REWARD_STRINGS = [ "#WILDLIFE_SPIDER_CAMP_REWARD", "#WILDLIFE_PROWLER_CAMP_REWARD", "" ]
+
+
+bool function IsLobbyMapName( string levelname )
+{
+	if ( levelname == "mp_lobby" )
+		return true
+
+	return false
+}
+
+bool function IsStormPoint()
+{
+	string mapName
+
+
+
+		mapName = GetMapName()
+
+	return mapName == "mp_rr_tropic_island"
+}
+
+bool function IsNightMap()
+{
+	string mapName
+
+
+
+		mapName = GetMapName()
+
+
+	switch ( mapName )
+	{
+		case "mp_rr_olympus_mu1_night":
+		case "mp_rr_canyonlands_mu1_night":
+		case "mp_rr_desertlands_night":
+			return true
+			break
+		default:
+			break
+	}
+
+	return false
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+string function GetMapDisplayNameAllCaps( string mapname )
+{
+	return "#" + mapname + "_ALLCAPS"
+}
+
+
+string function GetMapDisplayName( string mapname )
+{
+	return "#" + mapname
+}
+
+
+string function GetMapDisplayDesc( string mapname )
+{
+	return "#" + mapname + "_CLASSIC_DESC"
+}
+
+
+
+
+bool function IsMenuLevel()
+{
+	return IsLobby()
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+void function OverrideUpdraftTriggerSettings (  UpdraftTriggerSettings customSettings )
+{
+	file.updraftSettings = customSettings
+}
+
+void function OnEnterUpdraftTrigger( entity trigger, entity ent, float activationHeight )
+{
+	Assert( IsValid( trigger ) )
+	Assert( IsValid( ent ) )
+
+	if ( !ent.IsPlayer() )
+		return
+
+	float entZ = ent.GetOrigin().z
+
+	ent.Player_EnterUpdraft( file.updraftSettings.minShakeActivationHeight + entZ, entZ - file.updraftSettings.maxShakeActivationHeight, activationHeight, file.updraftSettings.liftSpeed, file.updraftSettings.liftAcceleration, file.updraftSettings.liftExitDuration );
+}
+
+void function OnLeaveUpdraftTrigger( entity trigger, entity ent )
+{
+	if ( !IsValid( trigger ) )
+		return
+
+	if ( !IsValid( ent ) )
+		return
+
+	if ( !ent.IsPlayer() )
+		return
+
+	ent.Player_LeaveUpdraft()
+}
+
+void function ManageJitterVFX_Thread()
+{
+	float intervalA = 10.0
+	float intervalB = 0.2
+	int cycles = 0
+	int seedInt = 3910
+	var seed = CreateRandomSeed( seedInt )
+
+	string playlistName = GetCurrentPlaylistName()
+	float phaseOneFast_Lower = GetPlaylistVarFloat( playlistName, "phaseEngine_one_fast_lower",  0.05 )
+	float phaseOneFast_Upper = GetPlaylistVarFloat( playlistName, "phaseEngine_one_fast_upper",  0.2 )
+	float phaseOneSlow_Lower = GetPlaylistVarFloat( playlistName, "phaseEngine_one_slow_lower",  10.0 )
+	float phaseOneSlow_Upper = GetPlaylistVarFloat( playlistName, "phaseEngine_one_slow_upper",  20.0 )
+	float phaseTwo_Lower = GetPlaylistVarFloat( playlistName, "phaseEngine_two_lower",  0.1 )
+	float phaseTwo_Upper = GetPlaylistVarFloat( playlistName, "phaseEngine_two_upper",  0.4 )
+
+	while( true )
+	{
+		++cycles
+		SetConVarInt( "glitch_aberrationScale", 10 )
+		wait intervalA
+		if( cycles % 5 == 0 )
+		{
+			intervalA = RandomFloatRangeSeeded( seed, phaseOneFast_Lower, phaseOneFast_Upper )
+		}
+		else
+		{
+			intervalA = RandomFloatRangeSeeded( seed, phaseOneSlow_Lower, phaseOneSlow_Upper )
+		}
+#if DEV
+			
+#endif
+		SetConVarInt( "glitch_aberrationScale", 80 )
+		wait intervalB
+#if DEV
+			
+#endif
+		intervalB = RandomFloatRangeSeeded( seed, phaseTwo_Lower, phaseTwo_Upper )
+	}
+}
+
+

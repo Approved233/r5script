@@ -16,6 +16,9 @@ global function CodeCallback_TeslaTrapCrossed
 
 
 
+
+
+
 global function OnObjectPlacementCanPlace_weapon_tesla_trap
 
 
@@ -302,6 +305,9 @@ struct
 	float balance_teslaTrapRange
 	float balance_teslaTrapDamage
 	bool balance_teslaTrapSelfRepair
+	float balance_teslaTrapDamageInterval
+	float balance_teslaTrapEMPDuration
+	float balance_teslaTrapReactivateDelay
 } file
 
 
@@ -384,6 +390,9 @@ void function MpWeaponTeslaTrap_Init()
 	file.balance_teslaTrapRange	= GetCurrentPlaylistVarFloat( "tesla_trap_range_override", TESLA_TRAP_PLACEMENT_RANGE_MAX_UPDATE )
 	file.balance_teslaTrapSelfRepair = GetCurrentPlaylistVarBool( "tesla_trap_self_repair_override", false )
 	file.balance_teslaTrapDamage = GetCurrentPlaylistVarFloat("tesla_trap_damage_override", TESLA_TRAP_LINK_DAMAGE_AMOUNT_UPDATE)
+	file.balance_teslaTrapDamageInterval = GetCurrentPlaylistVarFloat( "tesla_trap_damage_interval", TESLA_TRAP_LINK_DAMAGE_INTERVAL_UPDATE )
+	file.balance_teslaTrapEMPDuration = GetCurrentPlaylistVarFloat( "tesla_trap_emp_duration", TESTLA_TRAP_EMP_DURATION_UPDATE )
+	file.balance_teslaTrapReactivateDelay = GetCurrentPlaylistVarFloat( "tesla_trap_reactivate_delay", TESLA_TRAP_REACTIVATE_DELAY )
 }
 
 
@@ -1206,6 +1215,37 @@ entity function TeslaTrap_CreateTrapPlacementProxy( asset modelName )
 
 	return file.proxyEnt
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3374,6 +3414,16 @@ void function OnFocusTrapChanged( entity player, entity newEnt )
 
 
 
+
+
+
+
+
+
+
+
+
+
 int function TeslaTrap_LinkTrapSort( entity trapA, entity trapB )
 {
 	TeslaTrapSortingData trapASort = file.trapSortingData[ trapA ]
@@ -3554,6 +3604,9 @@ void function TeslaTrap_OntriggerCreated( entity trigger )
 
 	entity startTrap = trigger.GetTeslaTrapStart()
 	entity endTrap = trigger.GetTeslaTrapEnd()
+
+	if( !IsValid( startTrap ) || !( IsValid( endTrap ) ) )
+		return
 
 	CreateTrapMinimapData( startTrap )
 	CreateTrapMinimapData( endTrap )
@@ -3878,6 +3931,9 @@ void function TeslaTrap_CreateClientEffects( entity trigger, entity start, entit
 	{
 		float heightOffset = TESLA_TRAP_LINK_HEIGHT * i
 
+
+
+
 		
 
 		int fxIdxTeam = StartParticleEffectOnEntityWithPos( start, fxIDTeam, FX_PATTACH_ABSORIGIN_FOLLOW, ATTACHMENTID_INVALID, (startUp * (heightOffset + file.proxyBaseOffset)), <0, 0, 0> )
@@ -4160,6 +4216,22 @@ bool function TrippedEntIsFriendlyObstructionType( entity crossingEnt )
 
 void function CodeCallback_TeslaTrapCrossed( entity trigger, entity start, entity end, entity crossingEnt )
 {
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

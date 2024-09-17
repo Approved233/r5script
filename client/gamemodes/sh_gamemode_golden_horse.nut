@@ -124,6 +124,10 @@ void function GoldenHorse_Init()
 
 
 
+
+
+
+
 		AddCallback_OnPlayerMatchStateChanged( GoldenHorse_Client_OnPlayerMatchStateChanged )
 		AddCallback_GameStateEnter( eGameState.Playing, GoldenHorse_OnGamestateEnterPlaying_Client )
 		AddCallback_OnFindFullMapAimEntity( GetLootTickUnderAim, PingLootTickUnderAim )
@@ -139,7 +143,6 @@ void function GoldenHorse_Init()
 
 void function OnEntitiesDidLoad()
 {
-
 
 
 

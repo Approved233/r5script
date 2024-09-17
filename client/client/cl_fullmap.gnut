@@ -59,6 +59,7 @@ global function SetCurrentZoom
 
 
 global const FULLMAP_OBJECT_RUI = $"ui/in_world_minimap_object.rpak"
+global const FULLMAP_OBJECT_PROXIMITY_RUI = $"ui/in_world_minimap_object_proximity.rpak"
 global const FULLMAP_OBJECTIVE_AREA_RUI = $"ui/in_world_minimap_objective_area.rpak"
 
 const FULLMAP_ZOOM_SPEED_MOUSE = 0.5
@@ -74,6 +75,8 @@ const float FULLMAP_ENTITY_SELECT_RANGE_NORMALIZED = 0.02
 const float OVERVIEW_MAP_SIZE = 4096 
 
 const vector OBSERVER_TELEPORT_OFFSET = <0.0, 0.0, 250.0>
+
+const string NAMETAG_RANGE_AFFECTS_MAP = "nametag_range_affects_map"
 
 struct MinimapLabelStruct
 {
@@ -178,6 +181,11 @@ void function Fullmap_SetupScoreboard()
 		Teams_AddCallback_Header( Survival_ScoreboardUpdateHeader )
 	}
 
+	if ( !Teams_HasCallback_GetTeamSortOrder() )
+	{
+		Teams_AddCallback_GetTeamSortOrder( Survival_ScoreboardGetTeamSortOrder )
+	}
+
 	if ( !Teams_HasCallback_GetTeamColor() )
 	{
 		Teams_AddCallback_GetTeamColor( Survival_GetTeamColor )
@@ -202,6 +210,16 @@ void function Fullmap_SetupScoreboard()
 	{
 		Teams_AddCallback_SortScoreboardPlayers( Survival_SortPlayersByScore )
 	}
+
+	if( !Teams_HasCallback_IsEnabled() )
+	{
+		Teams_AddCallback_IsEnabled( Survival_SetScoreboardEnabled )
+	}
+}
+
+bool function Survival_ScoreboardShowRankedRank()
+{
+	return GetCurrentPlaylistVarBool( "scoreboard_show_ranked_rank", false )
 }
 
 
@@ -212,11 +230,15 @@ void function FullMap_HideMapRui()
 	Fullmap_ToggleChallengeRuis(false)
 }
 
+
+
 void function FullMap_ShowMapRui()
 {
 	ShowMapRui()
 	Fullmap_ToggleChallengeRuis(true)
 }
+
+
 
 ScoreboardData function Survival_GetScoreboardData()
 {
@@ -227,14 +249,28 @@ ScoreboardData function Survival_GetScoreboardData()
 
 	ScoreboardData data
 
-	data.numScoreColumns = 1
-	data.columnDisplayIcons.append( $"rui/hud/gamestate/player_kills_icon" )
-	data.columnDisplayIconsScale.append( 1.0 )
-	data.columnNumDigits.append( 2 )
-
-	if( isWinterExpress )
+	if( GameModeVariant_IsActiveForPlaylist( GetCurrentPlaylistName(), eGameModeVariants.SURVIVAL_RANKED ) && Survival_ScoreboardShowRankedRank() )
+	{
+		data.numScoreColumns = 1
+		data.columnDisplayIcons.append( $"" )
+		data.columnDisplayIconsScale.append( 1.0 )
+		data.columnNumDigits.append( 2 )
+	}
+	else if( GetGameState() > eGameState.Prematch && IsObserverInPrivateGame() )
+	{
+		data.numScoreColumns = 1
+		data.columnDisplayIcons.append( $"rui/hud/gamestate/player_kills_icon" )
+		data.columnDisplayIconsScale.append( 1.0 )
+		data.columnNumDigits.append( 2 )
+	}
+	else if( isWinterExpress )
 	{
 		data.numScoreColumns = 3
+
+		data.columnDisplayIcons.append( $"rui/hud/gamestate/player_kills_icon" )
+		data.columnDisplayIconsScale.append( 1.0 )
+		data.columnNumDigits.append( 2 )
+
 		data.columnDisplayIcons.append( $"rui/hud/gamestate/assist_count_icon2" )
 		data.columnDisplayIconsScale.append( 0.8 )
 		data.columnNumDigits.append( 2 )
@@ -258,11 +294,28 @@ array< string > function Survival_GetPlayerScores( entity player )
 
 	array< string > scores
 
-	string eliminations = string( player.GetPlayerNetInt( "kills" ) )
-	scores.append( eliminations )
-
-	if( isWinterExpress )
+	if( GameModeVariant_IsActiveForPlaylist( GetCurrentPlaylistName(), eGameModeVariants.SURVIVAL_RANKED ) && Survival_ScoreboardShowRankedRank() )
 	{
+		int currentScore                     = GetPlayerRankScore( player )
+		int ladderPosition                   = Ranked_GetLadderPosition( player )
+		SharedRankedDivisionData currentRank = GetCurrentRankedDivisionFromScoreAndLadderPosition( currentScore, ladderPosition )
+
+		if(  currentRank.tier.isLadderOnlyTier )
+			scores.append( Localize( "`1%@RANKED_TIER_PRED%" ))
+		else
+			scores.append( Localize( "`1%@" + currentRank.tier.name.slice( 1 ) + "%" ))
+
+	}
+	else if( GetGameState() > eGameState.Prematch && IsObserverInPrivateGame() )
+	{
+		string eliminations = string( player.GetPlayerNetInt( "kills" ) )
+		scores.append( eliminations )
+	}
+	else if( isWinterExpress )
+	{
+		string eliminations = string( player.GetPlayerNetInt( "kills" ) )
+		scores.append( eliminations )
+
 		string assists = string( player.GetPlayerNetInt( "assists" ) )
 		scores.append( assists )
 
@@ -286,19 +339,39 @@ array< TeamsScoreboardPlayer > function Survival_SortPlayersByScore( array< Team
 		if( !IsValid( playerA ) || !IsValid( playerB ) )
 			return 0
 
-		
-		int aScore
-		int bScore
-		aScore = playerA.GetPlayerNetInt( "kills" )
-		bScore = playerB.GetPlayerNetInt( "kills" )
+		if( GameModeVariant_IsActiveForPlaylist( GetCurrentPlaylistName(), eGameModeVariants.SURVIVAL_RANKED ) )
+		{
+			int currentScore                     = GetPlayerRankScore( playerA )
+			int ladderPosition                   = Ranked_GetLadderPosition( playerA )
+			SharedRankedDivisionData currentRank = GetCurrentRankedDivisionFromScoreAndLadderPosition( currentScore, ladderPosition )
 
-		if ( aScore > bScore ) return -1
-		else if ( aScore < bScore ) return 1
+			int aScore = GetPlayerRankScore( playerA )
+			int bScore = GetPlayerRankScore( playerB )
+
+			if ( aScore > bScore ) return -1
+			else if ( aScore < bScore ) return 1
+		}
+		else if( GetGameState() > eGameState.Prematch && IsObserverInPrivateGame() )
+		{
+			int aScore = playerA.GetPlayerNetInt( "kills" )
+			int bScore = playerB.GetPlayerNetInt( "kills" )
+
+			if ( aScore > bScore ) return -1
+			else if ( aScore < bScore ) return 1
+		}
+
 		return 0
 	}
 	)
 
 	return players
+}
+
+
+
+bool function Survival_SetScoreboardEnabled()
+{
+	return GetGameState() > eGameState.WaitingForPlayers
 }
 
 
@@ -312,6 +385,26 @@ void function Survival_ScoreboardUpdateHeader( var headerRui, var frameRui, int 
 
 	if( headerRui != null )
 	{
+		if( Stats_CurrentModeIsSurvival() )
+		{
+			int placement = GameRules_GetTeamScore( team )
+
+			if( placement > 0 )
+			{
+				string stringToUse = "#REST_FORMATTING"
+				if( placement == 1 )
+					stringToUse = "#FIRST_FORMATTING"
+				else if( placement == 2 )
+					stringToUse = "#SECOND_FORMATTING"
+				else if( placement == 3 )
+					stringToUse = "#THIRD_FORMATTING"
+
+				RuiSetString( headerRui, "headerText",  Localize( stringToUse, placement )  )
+			}
+			else if( !IsPrivateMatch() )
+				RuiSetString( headerRui, "headerText",  "" )
+		}
+
 
 		if( isWinterExpress )
 		{
@@ -324,6 +417,8 @@ void function Survival_ScoreboardUpdateHeader( var headerRui, var frameRui, int 
 			RuiSetInt( headerRui, "score", score )
 			RuiSetBool( headerRui, "isWinning", WinterExpress_IsTeamWinning(uiTeam ) )
 		}
+
+
 
 	}
 }
@@ -381,6 +476,40 @@ bool function Survival_ShouldChangeTeamUI()
 
 	 unreachable
  }
+
+
+
+array< int > function Survival_ScoreboardGetTeamSortOrder()
+{
+	array< int > teams = GetAllTeams()
+	entity localplayer = GetLocalClientPlayer()
+	int localPlayerTeam = localplayer.GetTeam()
+
+	teams.sort( int function( int a, int b ) : ( localPlayerTeam )
+	{
+		int aRank = GameRules_GetTeamScore( a )
+		int bRank = GameRules_GetTeamScore( b )
+
+		if( a == localPlayerTeam )
+			return -1
+		else if ( b == localPlayerTeam )
+			return 1
+
+		if ( aRank < bRank )
+			return -1
+		else if( aRank > bRank )
+			return 1
+
+		if( a < b )
+			return -1
+		else if( a > b )
+			return 1
+
+		return 0
+	} )
+
+	return teams
+}
 
 
 
@@ -745,6 +874,8 @@ var function FullMap_AddCryptoRingPulse( vector pulseOrg )
 	RuiSetFloat( rui, "objectSize", 20.0 )
 	RuiSetBool( rui, "scaleWithZoom", true )
 	RuiSetImage( rui, "iconImage", $"rui/events/s05_CryptoTT/crypto_tt_map_ring_main" )
+	RuiSetFloat( rui, "mapScale", max( Minimap_GetFloatForKey( "scale" ), 1.0 ) )
+	RuiTrackFloat( rui, "zoomFactor", null, RUI_TRACK_BIG_MAP_ZOOM_SCALE )
 
 	Fullmap_AddRui( rui )
 
@@ -775,8 +906,18 @@ void function Fullmap_PlayCryptoPulseSequence_Thread( vector pulseOrigin, bool t
 {
 	if ( tintMap )
 	{
-		Fullmap_SetTintParams( Time(), tintDuration, GetKeyColor( COLORID_MINMAP_CRYPTO_PULSE_TINT ) )
-		Minimap_SetTintParams( Time(), tintDuration, GetKeyColor( COLORID_MINMAP_CRYPTO_PULSE_TINT ) )
+		
+
+		if( rangeOverride > 0 )
+		{
+			Minimap_SetTintParams( Time(), 3, GetKeyColor( COLORID_MINMAP_CRYPTO_PULSE_TINT ) )
+		}
+		else
+
+		{
+			Fullmap_SetTintParams( Time(), tintDuration, GetKeyColor( COLORID_MINMAP_CRYPTO_PULSE_TINT ) )
+			Minimap_SetTintParams( Time(), tintDuration, GetKeyColor( COLORID_MINMAP_CRYPTO_PULSE_TINT ) )
+		}
 	}
 
 	wait 0.5
@@ -785,8 +926,8 @@ void function Fullmap_PlayCryptoPulseSequence_Thread( vector pulseOrigin, bool t
 
 	if( rangeOverride > 0 )
 	{
-		RuiSetFloat( pulseRui, "staticPulseSize", rangeOverride / 2500 )
-		RuiSetFloat( minimapPulseRui, "staticPulseSize", rangeOverride / 2500 )
+		RuiSetFloat( pulseRui, "staticPulseSize", rangeOverride )
+		RuiSetFloat( minimapPulseRui, "staticPulseSize", rangeOverride )
 	}
 
 
@@ -1188,6 +1329,7 @@ void function FullMap_UpdateTopologies()
 void function HideMapRui()
 {
 	Fullmap_SetVisible( false )
+	GetLocalClientPlayer().SpectatorForceUIVisible( false )
 	UpdateMainHudVisibility( GetLocalViewPlayer() )
 }
 
@@ -1195,6 +1337,7 @@ void function HideMapRui()
 void function ShowMapRui()
 {
 	Fullmap_SetVisible( true )
+	GetLocalClientPlayer().SpectatorForceUIVisible( true )
 	UpdateMainHudVisibility( GetLocalViewPlayer() )
 	file.updatePlayerTags = true
 }
@@ -1250,7 +1393,7 @@ void function UpdateMap_THREAD()
 		if ( InputIsButtonDown( BUTTON_TRIGGER_LEFT ) )
 			ChangeFullMapZoomFactor( -FULLMAP_ZOOM_SPEED_CONTROLLER )
 
-		if ( IsSpectator( GetLocalClientPlayer() ) && file.updatePlayerTags == true)
+		if ( IsSpectator( GetLocalClientPlayer() ) && file.updatePlayerTags )
 		{
 			array< entity > sortedPlayers = GetPlayerArray()
 			sortedPlayers.sort( int function(entity playerA, entity playerB)
@@ -1290,26 +1433,30 @@ void function UpdateMap_THREAD()
 				entity player = GetLocalViewPlayer()
 
 				bool showNameTag = true
-				vector distanceToPlayerDelta = ent.GetOrigin() - player.GetOrigin()
-				distanceToPlayerDelta.z = 0
-				float sqrDistanceToPlayer = distanceToPlayerDelta.LengthSqr()
 
-				switch( file.playerTagMode )
+				if ( GetCurrentPlaylistVarBool( NAMETAG_RANGE_AFFECTS_MAP, false ) )
 				{
-					case OBS_PLAYERTAG_RANGE_NONE:
-					case OBS_PLAYERTAG_RANGE_TEAM:
-						showNameTag = false
-						break;
+					vector distanceToPlayerDelta = ent.GetOrigin() - player.GetOrigin()
+					distanceToPlayerDelta.z = 0
+					float sqrDistanceToPlayer = distanceToPlayerDelta.LengthSqr()
 
-					case OBS_PLAYERTAG_RANGE_SMALL:
-						showNameTag = sqrDistanceToPlayer < ( GetConVarInt( "spectator_playerTagRange_small" ) ^ 2 )
-						break;
-					case OBS_PLAYERTAG_RANGE_MEDIUM:
-						showNameTag = sqrDistanceToPlayer < ( GetConVarInt( "spectator_playerTagRange_medium" ) ^ 2 )
-						break;
-					case OBS_PLAYERTAG_RANGE_LARGE:
-						showNameTag = sqrDistanceToPlayer < ( GetConVarInt( "spectator_playerTagRange_large" ) ^ 2 )
-						break;
+					switch( file.playerTagMode )
+					{
+						case OBS_PLAYERTAG_RANGE_NONE:
+						case OBS_PLAYERTAG_RANGE_TEAM:
+							showNameTag = false
+							break;
+
+						case OBS_PLAYERTAG_RANGE_SMALL:
+							showNameTag = sqrDistanceToPlayer < ( GetConVarInt( "spectator_playerTagRange_small" )  * GetConVarInt( "spectator_playerTagRange_small" ) )
+							break;
+						case OBS_PLAYERTAG_RANGE_MEDIUM:
+							showNameTag = sqrDistanceToPlayer < ( GetConVarInt( "spectator_playerTagRange_medium" ) * GetConVarInt( "spectator_playerTagRange_medium" ) )
+							break;
+						case OBS_PLAYERTAG_RANGE_LARGE:
+							showNameTag = sqrDistanceToPlayer < ( GetConVarInt( "spectator_playerTagRange_large" ) * GetConVarInt( "spectator_playerTagRange_large" ) )
+							break;
+					}
 				}
 
 				if ( showNameTag )
@@ -1322,8 +1469,7 @@ void function UpdateMap_THREAD()
 
 					if ( IsPrivateMatch() )
 					{
-						bool showTeamNames = GetConVarBool( "hud_setting_showTeamNamesOnMap" ) == true
-						if ( showTeamNames )
+						if ( GetConVarBool( "hud_setting_showTeamNamesOnMap" ) )
 							name = PrivateMatch_GetTeamName( ent.GetTeam() )
 					}
 

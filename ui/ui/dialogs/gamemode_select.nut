@@ -1,6 +1,5 @@
 global function InitGamemodeSelectDialog
 global function GamemodeSelect_IsEnabled
-global function GamemodeSelect_PlaylistIsDefaultSlot
 global function GamemodeSelect_JumpToCups
 
 struct {
@@ -227,13 +226,6 @@ bool function GamemodeSelect_IsEnabled()
 		return false
 	
 	return GetCurrentPlaylistVarBool( "gamemode_select_v3_enable", true )
-}
-
-const string DEFAULT_PLAYLIST_UI_SLOT_NAME = "regular_1"
-bool function GamemodeSelect_PlaylistIsDefaultSlot( string playlist )
-{
-	string uiSlot = GetPlaylistVarString( playlist, "ui_slot", "" )
-	return (uiSlot == DEFAULT_PLAYLIST_UI_SLOT_NAME)
 }
 
 void function GamemodeSelect_JumpToCups( var button )

@@ -117,7 +117,7 @@ void function OnProjectileCollision_weapon_grenade_gas( entity projectile, vecto
 	cp.deployableFlags = eDeployableFlags.VEHICLES_NO_STICK
 
 
-	bool result = PlantStickyEntityOnWorldThatBouncesOffWalls( projectile, cp, 0.7, <0, 0, 0>, true )
+	bool result = PlantStickyEntityOnWorldThatBouncesOffWalls( projectile, cp, DOT_45DEGREE, ZERO_VECTOR, true )
 
 
 

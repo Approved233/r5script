@@ -147,4 +147,8 @@ void function OnProjectileCollision_weapon_doubletake( entity projectile, vector
 void function OnWeaponReload_weapon_doubletake ( entity weapon, int milestoneIndex )
 {
 	OnWeaponReload_Smart_Reload ( weapon, milestoneIndex )
+
+
+
+
 }

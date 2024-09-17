@@ -2,6 +2,7 @@
 global function HopupGoldenHorse_Init
 global function HopupGoldenHorse_Switcheroo
 global function HopupGoldenHorse_Switcheroo_LockedSets
+global function HopupGoldenHorse_GetEnabledList
 
 global function GoldenHorseGreen_OnWeaponActivate
 global function GoldenHorseGreen_OnWeaponDeactivate
@@ -14,7 +15,9 @@ global function GoldenHorsePurple_HasMod
 
 global function GoldenHorseBlue_HasMod
 
-global function HopupGoldenHorse_GetEnabledList
+
+
+
 
 
 global function HopupGoldenHorse_SwapLootTier
@@ -67,13 +70,13 @@ const string PVAR_GOLDEN_HORSE_RED_TELEPORT_DIST = "golden_horse_red_teleport_di
 const string PVAR_GOLDEN_HORSE_RED_TELEPORT_COMBAT_DIST = "golden_horse_red_teleport_combat_dist"
 
 
-const string GOLDEN_HORSE_MOD = "hopup_golden_horse_"
+global const string GOLDEN_HORSE_MOD = "hopup_golden_horse_"
 
-const string GOLDEN_HORSE_MOD_BLUE = GOLDEN_HORSE_MOD + GH_BLUE
-const string GOLDEN_HORSE_MOD_GREEN = GOLDEN_HORSE_MOD + GH_GREEN
-const string GOLDEN_HORSE_MOD_YELLOW = GOLDEN_HORSE_MOD + GH_YELLOW
-const string GOLDEN_HORSE_MOD_PURPLE = GOLDEN_HORSE_MOD + GH_PURPLE
-const string GOLDEN_HORSE_MOD_RED = GOLDEN_HORSE_MOD + GH_RED
+global const string GOLDEN_HORSE_MOD_BLUE = GOLDEN_HORSE_MOD + GH_BLUE
+global const string GOLDEN_HORSE_MOD_GREEN = GOLDEN_HORSE_MOD + GH_GREEN
+global const string GOLDEN_HORSE_MOD_YELLOW = GOLDEN_HORSE_MOD + GH_YELLOW
+global const string GOLDEN_HORSE_MOD_PURPLE = GOLDEN_HORSE_MOD + GH_PURPLE
+global const string GOLDEN_HORSE_MOD_RED = GOLDEN_HORSE_MOD + GH_RED
 
 const string GOLDEN_HORSE_ACTIVE_MOD = "hopup_golden_horse_active_"
 
@@ -1189,19 +1192,10 @@ bool function GoldenHorsePurple_HasMod( entity weapon )
 
 void function GoldenHorseRed_Init()
 {
-	PrecacheParticleSystem( VFX_GOLDEN_HORSE_RED_SUMMON )
-	PrecacheParticleSystem( VFX_GOLDEN_HORSE_RED_TELEPORT_START )
-	PrecacheParticleSystem( VFX_GOLDEN_HORSE_RED_TELEPORT_END )
-	PrecacheParticleSystem( VFX_GOLDEN_HORSE_RED_USE )
-
-	PrecacheModel( MDL_GOLDEN_HORSE_NESSIE )
+	GoldenHorseRed_InitSummon()
 
 	Remote_RegisterClientFunction( "GoldenHorseRed_ShowRui", "entity" )
 	Remote_RegisterClientFunction( "GoldenHorseRed_HideRui", "entity" )
-
-
-
-
 
 
 
@@ -1220,11 +1214,28 @@ void function GoldenHorseRed_Init()
 
 }
 
+void function GoldenHorseRed_InitSummon()
+{
+	PrecacheParticleSystem( VFX_GOLDEN_HORSE_RED_SUMMON )
+	PrecacheParticleSystem( VFX_GOLDEN_HORSE_RED_TELEPORT_START )
+	PrecacheParticleSystem( VFX_GOLDEN_HORSE_RED_TELEPORT_END )
+	PrecacheParticleSystem( VFX_GOLDEN_HORSE_RED_USE )
+
+	PrecacheModel( MDL_GOLDEN_HORSE_NESSIE )
+
+
+
+
+
+
+
+}
+
+
 float function GoldenHorseRed_GetCooldown()
 {
 	return GetCurrentPlaylistVarFloat( PVAR_GOLDEN_HORSE_RED_COOLDOWN, GOLDEN_HORSE_RED_SUMMON_COOLDOWN_TIME_SEC )
 }
-
 
 bool function GoldenHorseRed_HasMod( entity weapon )
 {
@@ -1334,10 +1345,28 @@ bool function GoldenHorseRed_HasMod( entity weapon )
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 bool function HasSummonCooldown( entity player )
 {
 	return StatusEffect_HasSeverity( player, eStatusEffect.golden_horse_red )
 }
+
+
+
 
 
 

@@ -19,6 +19,7 @@ global function Entitlement_GetMenuTitleText
 
 
 
+
 global function Entitlement_GetSKUStoreApexCoinAmount
 global function Entitlement_GetSKUStoreApexCoinTierImage
 global function Entitlement_GetSKUStoreApexCoinCardBaseImage
@@ -81,6 +82,8 @@ global enum eFirstPartyRewardType
 
 struct FileStruct_LifetimeLevel
 {
+
+
 
 
 
@@ -895,6 +898,31 @@ int function GetEntitlementForString( string entitlementString )
 	Assert( entitlementString in getconsttable() )
 	return expect int( getconsttable()[ entitlementString ] )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

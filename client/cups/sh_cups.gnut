@@ -4,6 +4,8 @@ global function ShCups_LevelInit
 global function ShCups_LevelInit_PostStats
 
 
+global function Cups_OnParseAllContainersComplete
+global function Cups_IsInitialized
 global function Cups_IsValidCupID
 global function Cups_IsCupActive
 global function Cups_IsCupVisible
@@ -15,6 +17,7 @@ global function Cups_IsCupContainerUseBestTen
 global function Cups_GetActiveCupContainerIDsFromBakery
 global function Cups_GetActiveCupForPlaylist
 global function Cups_GetPointsForPlacement
+global function Cups_GetCupStatLocFromStatRef
 
 
 global function Cups_GetAllCupBakeryAssetData
@@ -57,10 +60,15 @@ global function DEV_Cups_DumpMyCupMatchSummaryData
 global function DEV_GenerateDummyMatchHistory
 #endif
 
+
+
+
+
 global struct CupStatPoints
 {
 	string statRef
-	string statDescription
+	string statLoc
+	string statLocLong
 	float pointsRate
 	bool hasStatLimit
 	int statLimit
@@ -188,12 +196,16 @@ global const MAX_REGISTERED_CUPS = 16
 global const MAX_CUP_SQUAD_SIZE = 3
 
 
+global const IS_NEW_CUP_REGISTRATION_CONVAR = "cups_useNewRegistration"
+global const RANKED_PERIOD_FIELD_NAME = "rankedPeriod"
 const SQUAD_SIZE_FIELD_NAME = "squadSize"
 const NUM_MATCHES_FIELD_NAME = "numMatches"
 const GAMEMODE_FIELD_NAME = "gameMode"
 const MAX_REROLL_COUNT_FIELD_NAME = "maxReRollCount"
 const REROLL_TOKEN_FIELD_NAME = "reRollToken"
 const GRACE_PERIOD_FIELD_NAME = "gracePeriodTime"
+
+global const int CUP_NUM_LEADERBOARDROWS = 10
 
 
 global const int CUP_STATE_STARTING = 0
@@ -206,6 +218,8 @@ global const int CUP_LOCK_NONE = 0
 global const int CUP_LOCK_LEVELS = 1
 global const int CUP_LOCK_ORIENTATION = 2
 global const int CUP_LOCK_TRAINING = 3
+global const int CUP_LOCK_NO_POSITION = 4
+global const int CUP_LOCK_NOT_REGISTERED = 5
 
 
 global const string CUP_USE_BEST_TEN_FIELD_NAME = "use_best_ten"
@@ -235,6 +249,9 @@ const CUP_STAT_POINTS_STAT_REF_FIELD_NAME = "statRef"
 const CUP_STAT_POINTS_POINTS_RATE_FIELD_NAME = "pointsRate"
 const CUP_STAT_POINTS_HAS_STAT_LIMIT_FIELD_NAME = "hasStatLimit"
 const CUP_STAT_POINTS_STAT_LIMIT_FIELD_NAME = "statLimit"
+const CUP_STAT_POINTS_IS_LOC_OVERRIDE = "isOverrideLocString"
+const CUP_STAT_POINTS_STAT_LOC = "statLoc"
+const CUP_STAT_POINTS_STAT_LOC_LONG = "statLocLong"
 
 
 const CONTAINER_CUP_FIELD_NAME = "cups"
@@ -315,60 +332,7 @@ void function ShCups_LevelInit()
 	FileStruct_LifetimeLevel newFileLevel
 	fileLevel = newFileLevel
 
-	AddCallback_OnPreAllItemFlavorsRegistered( void function( ) {
-
-		
-		foreach ( SettingsAssetGUID cupContainerID, CupContainerBakeryAssetData cupContainer in fileLevel.cupContainers )
-		{
-			foreach ( asset cupAsset in cupContainer.cups )
-			{
-				Assert( IsValidItemFlavorSettingsAsset( cupAsset ), "Cup Container "+cupContainerID+": Cannot use invalid asset for cup!" )
-				ItemFlavor cupItemFlavor = GetItemFlavorByAsset( cupAsset )
-				Assert( ItemFlavor_GetType( cupItemFlavor ) == eItemType.apex_cup )
-
-				Cups_ParseCupBakeryParams( cupContainer, cupItemFlavor )
-			}
-		}
-
-		ItemFlavor ornull currentRankedPeriod = Ranked_GetCurrentActiveRankedPeriod()
-		if ( currentRankedPeriod == null )
-			return
-
-		expect ItemFlavor( currentRankedPeriod )
-		if ( ItemFlavor_GetType( currentRankedPeriod ) != eItemType.ranked_2pt0_period )
-			return
-
-		Cups_SetupCupTiers( currentRankedPeriod, "tiers" )
-		Cups_SetupCupTiers( currentRankedPeriod, "ladderOnlyTier" )
-
-		foreach ( SettingsAssetGUID cupID, CupBakeryAssetData cup in fileLevel.cups )
-		{
-			
-			if( cup.entryRestrictions.hasMinRankLimit )
-				Assert( cup.entryRestrictions.minRankScore != -1, "Invalid minimum rank score specified in cup ItemFlavor " + cup.name )
-			if( cup.entryRestrictions.hasMaxRankLimit )
-				Assert( cup.entryRestrictions.maxRankScore != -1, "Invalid maximum rank score specified in cup ItemFlavor " + cup.name )
-			if( cup.entryRestrictions.hasMinRankLimit && cup.entryRestrictions.hasMaxRankLimit )
-				Assert( cup.entryRestrictions.minRankScore < cup.entryRestrictions.maxRankScore, "Specified minimum rank score must be lower than the maximum rank score in cup ItemFlavor " + cup.name )
-
-			
-			foreach ( CupTierData cupTier in cup.tiers )
-			{
-				foreach ( CupTierRewardData cupTierReward in cupTier.rewardData )
-				{
-					Assert( IsValidItemFlavorSettingsAsset( cupTierReward.reward ), "Invalid reward ( asset is not a valid item flavor ) for cup " + cupID )
-				}
-			}
-		}
-
-		Cups_ValidateBakeryGamemodeParams()
-
-		fileLevel.cupsInitialised = true
-
-
-			RankedRumble_FillCupsToContainer()
-
-	})
+	AddCallback_OnPreAllItemFlavorsRegistered( Cups_OnPreAllItemFlavorsRegistered )
 
 	AddCallback_OnItemFlavorRegistered( eItemType.calevent_apex_cup_container, void function(ItemFlavor cupItemFlavor) {
 
@@ -377,10 +341,103 @@ void function ShCups_LevelInit()
 		Assert( cupItemFlavor.metaData != null )
 
 		Cups_ParseContainerBakeryParams( cupItemFlavor )
+
+
+			RankedRumble_ParseContainerBakeryParams( cupItemFlavor )
+
 	} )
 }
 
-void function Cups_SetupCupTiers( ItemFlavor currentRankedPeriod, string tierClass )
+void function Cups_OnPreAllItemFlavorsRegistered()
+{
+	printt("Late Cups_OnParseComplete")
+	if ( !GetConVarBool( IS_NEW_CUP_REGISTRATION_CONVAR ) )
+	{
+		Cups_OnParseAllContainersComplete()
+		printt("Late Cups_OnParseAllContainersComplete finished.")
+	}
+
+	foreach ( SettingsAssetGUID cupID, CupBakeryAssetData cup in fileLevel.cups )
+	{
+		
+		if( cup.entryRestrictions.hasMinRankLimit )
+			Assert( cup.entryRestrictions.minRankScore != -1, "Invalid minimum rank score specified in cup ItemFlavor " + cup.name )
+		if( cup.entryRestrictions.hasMaxRankLimit )
+			Assert( cup.entryRestrictions.maxRankScore != -1, "Invalid maximum rank score specified in cup ItemFlavor " + cup.name )
+		if( cup.entryRestrictions.hasMinRankLimit && cup.entryRestrictions.hasMaxRankLimit )
+			Assert( cup.entryRestrictions.minRankScore < cup.entryRestrictions.maxRankScore, "Specified minimum rank score must be lower than the maximum rank score in cup ItemFlavor " + cup.name )
+
+		
+		foreach ( CupTierData cupTier in cup.tiers )
+		{
+			foreach ( CupTierRewardData cupTierReward in cupTier.rewardData )
+			{
+				Assert( IsValidItemFlavorSettingsAsset( cupTierReward.reward ), "Invalid reward ( asset is not a valid item flavor ) for cup " + cupID )
+			}
+		}
+	}
+}
+
+void function Cups_FillRankedInfoForContainerCups( CupContainerBakeryAssetData cupContainer )
+{
+	asset rankedPeriodAsset = GetGlobalSettingsAsset( ItemFlavor_GetAsset( cupContainer.itemFlavor ), RANKED_PERIOD_FIELD_NAME )
+	if ( rankedPeriodAsset == $"" )
+	{
+
+
+
+
+		return
+	}
+	ItemFlavor ornull rankedPeriod = RegisterItemFlavorFromSettingsAsset( rankedPeriodAsset )
+	expect ItemFlavor( rankedPeriod )
+	if ( ItemFlavor_GetType( rankedPeriod ) != eItemType.ranked_2pt0_period )
+	{
+
+
+
+		return
+	}
+	array<CupBakeryAssetData> cups
+	foreach ( asset cupAsset in cupContainer.cups )
+	{
+		cups.append( Cups_GetCupBakeryAssetDataFromGUID( GetItemFlavorByAsset( cupAsset ).guid ) )
+	}
+	Cups_SetupCupTiers( cups, rankedPeriod, "tiers" )
+	Cups_SetupCupTiers( cups, rankedPeriod, "ladderOnlyTier" )
+}
+
+void function Cups_OnParseAllContainersComplete()
+{
+	
+	foreach ( SettingsAssetGUID cupContainerID, CupContainerBakeryAssetData cupContainer in fileLevel.cupContainers )
+	{
+		foreach ( asset cupAsset in cupContainer.cups )
+		{
+			Assert( IsValidItemFlavorSettingsAsset( cupAsset ), "Cup Container "+cupContainerID+": Cannot use invalid asset for cup!" )
+			ItemFlavor cupItemFlavor = GetItemFlavorByAsset( cupAsset )
+			Assert( ItemFlavor_GetType( cupItemFlavor ) == eItemType.apex_cup )
+
+			Cups_ParseCupBakeryParams( cupContainer, cupItemFlavor )
+		}
+		Cups_FillRankedInfoForContainerCups( cupContainer )
+	}
+
+	Cups_ValidateBakeryGamemodeParams()
+
+	fileLevel.cupsInitialised = true
+
+
+		RankedRumble_FillCupsToContainer()
+
+}
+
+bool function Cups_IsInitialized()
+{
+	return fileLevel.cupsInitialised
+}
+
+void function Cups_SetupCupTiers( array<CupBakeryAssetData> cups, ItemFlavor currentRankedPeriod, string tierClass )
 {
 	foreach ( var tierBlock in IterateSettingsAssetArray( ItemFlavor_GetAsset( currentRankedPeriod ), tierClass ) )
 	{
@@ -396,11 +453,11 @@ void function Cups_SetupCupTiers( ItemFlavor currentRankedPeriod, string tierCla
 			if( tierDivisionScoreMax == -1 || tierDivisionScore > tierDivisionScoreMax )
 				tierDivisionScoreMax = tierDivisionScore
 		}
-		foreach ( SettingsAssetGUID cupID, CupBakeryAssetData cup in fileLevel.cups )
+		foreach( cup in cups )
 		{
-			if( cup.entryRestrictions.minRankString == tierName )
+			if ( cup.entryRestrictions.minRankString == tierName )
 				cup.entryRestrictions.minRankScore = tierDivisionScoreMin
-			else if( cup.entryRestrictions.maxRankString == tierName )
+			else if ( cup.entryRestrictions.maxRankString == tierName )
 				cup.entryRestrictions.maxRankScore = tierDivisionScoreMax
 		}
 	}
@@ -499,8 +556,14 @@ void function Cups_ParseContainerBakeryParams( ItemFlavor cupItemFlavor )
 		currStatPoint.statRef = GetSettingsBlockString( statPointSetting, CUP_STAT_POINTS_STAT_REF_FIELD_NAME )
 		Assert( currStatPoint.statRef != "",  "Empty statRef found in statPoints array for cup container " + cupContainerID )
 
-		currStatPoint.statDescription = ShStats_GenerateStatLocStringFromStatRef_Long( currStatPoint.statRef )
-		Assert( currStatPoint.statDescription != "", "Unable to generate statDescription for stat " + currStatPoint.statRef + " in statPoints array for cup container " + cupContainerID )
+		bool isLocOverride = GetSettingsBlockBool( statPointSetting, CUP_STAT_POINTS_IS_LOC_OVERRIDE )
+		string statLocOverride = GetSettingsBlockString( statPointSetting, CUP_STAT_POINTS_STAT_LOC )
+		currStatPoint.statLoc = isLocOverride && statLocOverride.len() > 0 ? statLocOverride : ShStats_GenerateStatLocStringFromStatRef( currStatPoint.statRef )
+		Assert( currStatPoint.statLoc != "", "Unable to generate statLoc for stat " + currStatPoint.statRef + " in statPoints array for cup container " + cupContainerID )
+
+		string statLocLongOverride = GetSettingsBlockString( statPointSetting, CUP_STAT_POINTS_STAT_LOC_LONG )
+		currStatPoint.statLocLong = isLocOverride && statLocLongOverride.len() > 0 ? statLocLongOverride : ShStats_GenerateStatLocStringFromStatRef_Long( currStatPoint.statRef )
+		Assert( currStatPoint.statLocLong != "", "Unable to generate statLocLong for stat " + currStatPoint.statRef + " in statPoints array for cup container " + cupContainerID )
 
 		currStatPoint.pointsRate = GetSettingsBlockFloat( statPointSetting, CUP_STAT_POINTS_POINTS_RATE_FIELD_NAME )
 		Assert( currStatPoint.pointsRate != 0.0, "'pointsRate' for stat " + currStatPoint.statRef + " in cup container " + cupContainerID + " cannot be 0.0" )
@@ -667,9 +730,19 @@ void function Cups_ValidateBakeryGamemodeParams()
 	}
 }
 
+string function Cups_GetCupStatLocFromStatRef( array<CupStatPoints> cupStatPointsArr, string statRef )
+{
+	for ( int i = 0; i < cupStatPointsArr.len(); i++ )
+	{
+		if ( cupStatPointsArr[i].statRef == statRef )
+			return cupStatPointsArr[i].statLoc
+	}
+	return ""
+}
+
 int function Cups_GetNextAvailablePersistentDataSlot( entity player )
 {
-	if( !GetConVarBool( "cups_enabled" ) )
+	if( !GetConVarBool( "cups_enabled" ) || !Cups_IsInitialized() )
 		return -1
 
 	int oldestHide = INT_MAX
@@ -733,25 +806,23 @@ bool function Cups_HasGracePeriodEndedForCup ( SettingsAssetGUID cupID )
 
 table< SettingsAssetGUID, CupBakeryAssetData > function Cups_GetAllCupBakeryAssetData()
 {
-	if( !GetConVarBool( "cups_enabled" ) )
+	if( !GetConVarBool( "cups_enabled" ) || !Cups_IsInitialized() )
 	{
 		table< SettingsAssetGUID, CupBakeryAssetData > emptyTable
 		return emptyTable
 	}
 
-	Assert( fileLevel.cupsInitialised )
 	return fileLevel.cups
 }
 
 table< SettingsAssetGUID, CupContainerBakeryAssetData > function Cups_GetAllCupContainerBakeryAssetData()
 {
-	if( !GetConVarBool( "cups_enabled" ) )
+	if( !GetConVarBool( "cups_enabled" ) || !Cups_IsInitialized() )
 	{
 		table< SettingsAssetGUID, CupContainerBakeryAssetData > emptyTable
 		return emptyTable
 	}
 
-	Assert( fileLevel.cupsInitialised )
 	return fileLevel.cupContainers
 }
 
@@ -841,7 +912,7 @@ SettingsAssetGUID function Cups_GetActiveCupContainerIDsFromBakery()
 
 ItemFlavor ornull function Cups_GetActiveCupForPlaylist( string playlist, entity player )
 {
-	if ( !GetConVarBool( "cups_enabled" ) )
+	if ( !GetConVarBool( "cups_enabled" ) || !Cups_IsInitialized() )
 		return null
 
 
@@ -905,7 +976,7 @@ ItemFlavor ornull function Cups_GetActiveCupForPlaylist( string playlist, entity
 array<UserCupEntryData> function Cups_GetPlayersFullPCupData ( entity player )
 {
 	array<UserCupEntryData> fullUserCupData = []
-	if( !GetConVarBool( "cups_enabled" ) ) return fullUserCupData
+	if( !GetConVarBool( "cups_enabled" ) || !Cups_IsInitialized() ) return fullUserCupData
 #if DEV
 		if ( DEV_ShouldIgnorePersistence() )
 			return fullUserCupData
@@ -922,9 +993,11 @@ array<UserCupEntryData> function Cups_GetPlayersFullPCupData ( entity player )
 		bool cupIsActive = expect bool( player.GetPersistentVar( persistentDataKey+".active" ) )
 		if( cupIsActive )
 		{
+			userCupData.cupID = player.GetPersistentVarAsInt( persistentDataKey+".cupID" )
+			if ( !Cups_IsValidCupID( userCupData.cupID ) )
+				continue
 			userCupData.registered = true
 			userCupData.cupIndex = i
-			userCupData.cupID = player.GetPersistentVarAsInt( persistentDataKey+".cupID" )
 			userCupData.numMatches = player.GetPersistentVarAsInt( persistentDataKey+".numMatches" )
 			userCupData.score = player.GetPersistentVarAsInt( persistentDataKey+".score" )
 			userCupData.squadID = expect string( player.GetPersistentVar( persistentDataKey+".squadID" ) )
@@ -985,6 +1058,8 @@ LastCupMatchPlayedData ornull function Cups_GetLatestMatchSummaryData( entity pl
 
 bool function Cups_IsCupForLatestMatchActive( entity player )
 {
+	if( !GetConVarBool( "cups_enabled" ) ) return false
+
 	LastCupMatchPlayedData ornull cupsLastMatchData = Cups_GetLatestMatchSummaryData( player )
 
 	if ( cupsLastMatchData == null )
@@ -1218,7 +1293,7 @@ void function DEV_Cups_DumpAllCupBakeryAssetData( int Timezone_Offset_Hours = -7
 				pointsMessage += format( " and is limited to %d units", cupStatPoints.statLimit )
 			}
 
-			pointsMessage += format( " with description %s", cupStatPoints.statDescription )
+			pointsMessage += format( " with description %s", cupStatPoints.statLocLong )
 
 			printt( pointsMessage )
 		}
@@ -1364,3 +1439,33 @@ CupMatchSummary function DEV_GenerateDummyMatchHistory( SettingsAssetGUID cupID,
 }
 
 #endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -164,6 +164,7 @@ global function Control_IsSpawnWaypointHomebaseForAlliance
 
 
 
+
 #if DEV
 	const bool CONTROL_SPAWN_DEBUGGING = false
 	const bool CONTROL_DISPLAY_DEBUG_DRAWS = false 
@@ -252,6 +253,12 @@ global const int CONTROL_MAX_EXP_TIER = 4
 global const int CONTROL_MAX_LOOT_TIER = 3
 
 global const int CONTROL_TEAMSCORE_LOCKOUTBROKEN = 50
+
+
+
+
+
+
 
 
 
@@ -737,6 +744,8 @@ struct {
 
 
 
+
+
 } file
 
 
@@ -747,8 +756,6 @@ global enum eControlStat {
 	RATING = 4,
 	OBJECTIVES_CAPTURED = 5,
 }
-
-
 
 
 
@@ -794,6 +801,25 @@ void function Control_Init()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
 
 
 
@@ -1394,7 +1420,7 @@ bool function Control_IsSpawningOnObjectiveBAllowed()
 array< featureTutorialTab > function Control_PopulateAboutText()
 {
 	array< featureTutorialTab > tabs
-	string playlistUiRules = GetPlaylist_UIRules()
+	string playlistUiRules = GetCurrentPlaylist_UIRules()
 
 	if ( playlistUiRules != GAMEMODE_CONTROL )
 		return tabs
@@ -1445,18 +1471,28 @@ array< featureTutorialTab > function Control_PopulateAboutText()
 	tabs.append( tab3 )
 
 
-
-
-
-
-
-		tabs.append( tab4 )
+		Halloween_22_Mixtape_PopulateAboutText( tabs )
 
 
 	GameMode_AboutDialog_AppendRequeueTab(tabs)
 
 	return tabs
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6950,6 +6986,20 @@ bool function Control_IsSpawnWaypointIndexAnObjective( int waypointIndex )
 {
 	return waypointIndex == eControlWaypointTypeIndex.OBJECTIVE_A || waypointIndex == eControlWaypointTypeIndex.OBJECTIVE_B || waypointIndex == eControlWaypointTypeIndex.OBJECTIVE_C
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -53,6 +53,8 @@ void function BleedoutClient_Init()
 void function OnPlayerCreated( entity player )
 {
 	AddEntityCallback_GetUseEntOverrideText( player, PlayerBleedoutUseTextOverride )
+	
+	BleedoutEndTimeUI( player, player.GetPlayerNetTime( "bleedoutEndTime" ) )
 }
 
 string function PlayerBleedoutUseTextOverride( entity player )
@@ -260,7 +262,11 @@ void function Bleedout_DisplayFirstAidProgressBar( entity playerToRes, float end
 void function BleedoutEndTimeChanged( entity player, float newVal )
 {
 	player.Signal( SIGNAL_BLEEDOUT_STATE_CHANGED )
+	BleedoutEndTimeUI( player, newVal )
+}
 
+void function BleedoutEndTimeUI( entity player, float newVal )
+{
 	if ( newVal <= 0.0 )
 		thread HideWoundedMarker( player )
 	else

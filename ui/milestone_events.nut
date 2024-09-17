@@ -19,6 +19,7 @@ global function MilestoneEvent_GetMainPackImage
 global function MilestoneEvent_GetFrontPageGRXOfferLocation
 global function MilestoneEvent_GetAboutText
 global function MilestoneEvent_GetMainIcon
+global function MilestoneEvent_GetRewardSequenceString
 global function MilestoneEvent_GetMilestoneGrantRewards
 global function MilestoneEvent_GetStoreEventSectionMainImage
 global function MilestoneEvent_GetStoreEventSectionMainText
@@ -113,6 +114,8 @@ global struct MilestoneEventGrantReward
 	ItemFlavor& rewardFlav
 	asset 		customImage
 	string		customName
+	int			quantity
+	bool		isStackable
 }
 
 
@@ -474,6 +477,10 @@ array<GRXScriptOffer> function MilestoneEvent_GetSinglePackOffers( ItemFlavor ev
 	array<GRXScriptOffer> guaranteedPackOffers = GRX_GetItemDedicatedStoreOffers( MilestoneEvent_GetGuaranteedPackFlav( event ), MilestoneEvent_GetFrontPageGRXOfferLocation( event, GRX_IsOfferRestricted() ) )
 	foreach( offer in guaranteedPackOffers )
 	{
+		
+		if ( singlePackOffers.contains( offer ) )
+			continue
+
 		int count = 0
 		foreach ( quantity in offer.output.quantities )
 			count += quantity
@@ -508,6 +515,10 @@ array<GRXScriptOffer> function MilestoneEvent_GetMultiPackOffers( ItemFlavor eve
 	array<GRXScriptOffer> guaranteedPackOffers = GRX_GetItemDedicatedStoreOffers( MilestoneEvent_GetGuaranteedPackFlav( event ), MilestoneEvent_GetFrontPageGRXOfferLocation( event, GRX_IsOfferRestricted() ) )
 	foreach( offer in guaranteedPackOffers )
 	{
+		
+		if ( multiPackOffers.contains( offer ) )
+			continue
+
 		int count = 0
 		foreach ( quantity in offer.output.quantities )
 			count += quantity
@@ -548,8 +559,15 @@ string function MilestoneEvent_GetCarouselItemDescriptionText( ItemFlavor item )
 {
 	string descText = ""
 	descText = GetLocalizedItemFlavorDescriptionForOfferButton( item, false )
-	descText += " - "
-	descText += Localize( GRX_IsInventoryReady() ? (GRX_IsItemOwnedByPlayer( item ) ? "#OWNED" : "#LOCKED") : "" )
+	if ( GRX_IsInventoryReady() )
+	{
+		if ( !ItemFlavorIsStackable( item ) )
+		{
+			descText += " - "
+			descText += Localize( GRX_IsItemOwnedByPlayer( item ) ? "#OWNED" : "#LOCKED" )
+		}
+	}
+
 	return descText
 }
 
@@ -728,6 +746,14 @@ void function MilestoneEvent_GetMainIcon( ItemFlavor event )
 
 
 
+string function MilestoneEvent_GetRewardSequenceString( ItemFlavor event )
+{
+	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_milestone )
+	return GetGlobalSettingsString( ItemFlavor_GetAsset( event ), "milestoneRewardSequence" )
+}
+
+
+
 array<MilestoneEventGrantReward> function MilestoneEvent_GetMilestoneGrantRewards( ItemFlavor event, bool isRestricted )
 {
 	Assert( ItemFlavor_GetType( event ) == eItemType.calevent_milestone )
@@ -741,6 +767,20 @@ array<MilestoneEventGrantReward> function MilestoneEvent_GetMilestoneGrantReward
 		group.rewardFlav    = GetItemFlavorByAsset( GetSettingsBlockAsset( groupBlock, "reward" ) )
 		group.customName 	= GetSettingsBlockString( groupBlock, "milestoneRewardCustomName" )
 		group.customImage 	= GetSettingsBlockAsset( groupBlock, "milestoneRewardCustomImage" )
+		group.quantity 		= GetSettingsBlockInt( groupBlock, "rewardQuantity" )
+
+		Assert( group.quantity >= 1, "Cannot grant a negative or zero reward quantity: " + ItemFlavor_GetAssetName( event ) )
+		if ( ItemFlavorIsStackable( group.rewardFlav ) )
+		{
+			group.isStackable = true
+		}
+		else
+		{
+			Assert( group.quantity == 1, format( "Reward quantity >1 can only be used with CURRENCY, CONSUMABLES, and PACKS (error in asset %s) : %s", ItemFlavor_GetAssetName( event), ItemFlavor_GetAssetString( group.rewardFlav ) ) )
+			group.isStackable = false
+			group.quantity = 1
+		}
+
 		groups.append( group )
 	}
 	return groups
@@ -1268,6 +1308,9 @@ void function MilestoneEvent_TryMoveToMilestonePostRewardCeremony( array<BattleP
 	if ( !IsConnected() )
 		return
 
+	if ( !MilestoneEvent_IsMilestoneRewardCeremonyDue() )
+		return
+
 	ItemFlavor ornull milestoneEvent = GetActiveMilestoneEvent( GetUnixTimestamp() )
 	if ( milestoneEvent != null )
 	{
@@ -1533,6 +1576,98 @@ RTKPackProbabilitiesStrings function MilestoneEvent_GetPackProbabilitiesStrings(
 	packProbabilitiesStrings.standardItemRatesLine1 = GetGlobalSettingsString( ItemFlavor_GetAsset( event ), "standardItemRatesLine1" )
 	return packProbabilitiesStrings
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

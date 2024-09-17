@@ -8,6 +8,9 @@ global function EventsPanel_CanStartCarouselThreads
 global function GetEventGiftButtonState
 global function GetEventPurchaseButtonState
 global function EventsPanel_SaveDeepLink
+global function IsEventPanelCurrentlyTopLevel
+global function OnGRXEventUpdate
+global function JumpToEventTab
 
 global function RTKEventsPanelController_SendPageViewEventOffer
 global function RTKEventsPanelController_SendPageViewInfoPage
@@ -71,6 +74,34 @@ global enum eEventsPanelPage
 
 }
 
+global table< int, string > eventPageNavigationNames =
+{
+	[eEventsPanelPage.LANDING] = "#S19ME01_LANDING_PAGE_BUTTON_LANDING_NAME",
+
+	[eEventsPanelPage.COLLECTION_EVENT] = "#S19ME01_LANDING_PAGE_BUTTON_COLLECTION_NAME",
+
+	[eEventsPanelPage.MILESTONES] = "#S19ME01_LANDING_PAGE_BUTTON_COLLECTION_NAME",
+	[eEventsPanelPage.COLLECTION] = "#S19ME01_LANDING_PAGE_BUTTON_PACKS_NAME",
+	[eEventsPanelPage.EVENT_SHOP] = "#S19ME01_LANDING_PAGE_BUTTON_SHOP_NAME",
+
+	[eEventsPanelPage.PRIZE_TRACKER] = "#S19ME01_LANDING_PAGE_BUTTON_PRIZE_TRACKER_NAME"
+
+}
+
+global table< int, string > eventPageNavigationNamesRestricted =
+{
+	[eEventsPanelPage.LANDING] = "#S19ME01_LANDING_PAGE_BUTTON_LANDING_NAME",
+
+	[eEventsPanelPage.COLLECTION_EVENT] = "#S19ME01_LANDING_PAGE_BUTTON_COLLECTION_NAME",
+
+	[eEventsPanelPage.MILESTONES] = "#S19ME01_LANDING_PAGE_BUTTON_COLLECTION_NAME",
+	[eEventsPanelPage.COLLECTION] = "#S19ME01_LANDING_PAGE_BUTTON_PACKS_NAME",
+	[eEventsPanelPage.EVENT_SHOP] = "#S19ME01_LANDING_PAGE_BUTTON_SHOP_NAME",
+
+	[eEventsPanelPage.PRIZE_TRACKER] = "#S19ME01_LANDING_PAGE_BUTTON_PRIZE_TRACKER_NAME"
+
+}
+
 global enum eEventGiftingButtonState
 {
 	AVAILABLE,
@@ -93,6 +124,7 @@ global const string NAV_TYPE_DEEPLINK = "deeplink"
 struct PrivateData
 {
 	string rootCommonPath = ""
+	void functionref() OnGRXStateChanged
 }
 
 struct
@@ -118,6 +150,8 @@ struct
 
 	table<int,int> enumToInstantiatedPage
 	table<int,int> indexToInstantiatedPage
+
+	bool callbacksAdded
 
 } file
 
@@ -209,6 +243,33 @@ void function RTKEventsPanel_OnInitialize( rtk_behavior self )
 	RTKEventsPanelController_SendPageViewEvent( self )
 	fileTelemetry.linkName = ""
 
+	PrivateData p
+	self.Private( p )
+	p.OnGRXStateChanged = (void function() : (self )
+	{
+		if ( !GRX_IsInventoryReady() )
+			return
+
+		if ( !GRX_AreOffersReady() )
+			return
+
+		if ( file.activeEventShop == null )
+		{
+			return
+		}
+
+		rtk_struct activeEvents = RTKDataModelType_GetOrCreateStruct( RTK_MODELTYPE_COMMON, "activeEvents" )
+		rtk_array eventsArray   = RTKStruct_GetOrCreateScriptArrayOfStructs(activeEvents, "events", "RTKEventShopInfoModel")
+		rtk_struct ornull eventStruct = RTKArray_GetCount( eventsArray ) > 0 ? RTKArray_GetStruct( eventsArray, 0 ) : null
+
+		if ( eventStruct != null )
+		{
+			expect rtk_struct( eventStruct )
+			RTKStruct_SetInt( eventStruct, "currencyInWallet",  GRXCurrency_GetPlayerBalance( GetLocalClientPlayer(), EventShop_GetEventShopGRXCurrency() ) )
+		}
+	})
+
+	AddCallback_OnGRXInventoryStateChanged( p.OnGRXStateChanged )
 }
 
 void function RTKEventsPanel_OnDestroy( rtk_behavior self )
@@ -218,6 +279,10 @@ void function RTKEventsPanel_OnDestroy( rtk_behavior self )
 		
 		return
 	}
+
+	PrivateData p
+	self.Private( p )
+	RemoveCallback_OnGRXInventoryStateChanged( p.OnGRXStateChanged )
 
 	file.didInitialize = false
 
@@ -240,6 +305,10 @@ void function RTKEventsPanel_OnDestroy( rtk_behavior self )
 
 void function InitRTKEventsPanel( var panel )
 {
+	SetPanelTabTitle( panel, "#TAB_EVENT" )
+	AddPanelEventHandler( panel, eUIEvent.PANEL_SHOW, EventPanel_OnShow )
+	AddPanelEventHandler( panel, eUIEvent.PANEL_HIDE, EventPanel_OnHide )
+
 	AddCallback_UI_FeatureTutorialDialog_PopulateTabsForMode( EventShop_PopulateAboutText, FEATURE_EVENT_SHOP_TUTORIAL )
 	AddCallback_UI_FeatureTutorialDialog_SetTitle( EventShop_PopulateAboutTitle, FEATURE_EVENT_SHOP_TUTORIAL )
 	AddPanelFooterOption( panel, LEFT, BUTTON_B, true, "#B_BUTTON_BACK", "#B_BUTTON_BACK" )
@@ -255,6 +324,41 @@ void function InitRTKEventsPanel( var panel )
 
 		InitRTKMilestoneEventMainPanel( panel )
 
+}
+
+void function EventPanel_OnShow( var panel )
+{
+	SetCurrentHubForPIN( Hud_GetHudName( panel ) )
+
+	if ( !file.callbacksAdded )
+	{
+		AddCallbackAndCallNow_OnGRXInventoryStateChanged( OnGRXEventUpdate )
+		AddCallbackAndCallNow_OnGRXOffersRefreshed( OnGRXEventUpdate )
+		file.callbacksAdded = true
+	}
+
+	var parentPanel = Hud_GetParent( file.panel )
+	var mmStatus    = Hud_GetChild( parentPanel, "MatchmakingStatus" )
+	HudElem_SetRuiArg( mmStatus, "verticalScrollPosition", true )
+}
+
+void function EventPanel_OnHide( var panel )
+{
+	if ( file.callbacksAdded )
+	{
+		RemoveCallback_OnGRXInventoryStateChanged( OnGRXEventUpdate )
+		RemoveCallback_OnGRXOffersRefreshed( OnGRXEventUpdate )
+		file.callbacksAdded = false
+	}
+	var parentPanel = Hud_GetParent( file.panel )
+	var mmStatus = Hud_GetChild( parentPanel, "MatchmakingStatus" )
+	HudElem_SetRuiArg( mmStatus, "verticalScrollPosition", false )
+}
+
+void function OnGRXEventUpdate()
+{
+	bool hasEvent = GetActiveBaseEvent( GetUnixTimestamp() ) != null
+	UpdateEventTabVisibility( hasEvent )
 }
 
 void function BuildBaseModel( rtk_behavior self, rtk_struct activeEvents )
@@ -676,8 +780,13 @@ void function UpdateVGUIFooterButtons()
 			file.secondFooter.mouseLabel = "#MILESTONE_BUTTON_EVENT_INFO"
 			file.secondFooter.gamepadLabel = "#MILESTONE_BUTTON_EVENT_INFO"
 			file.secondFooter.activateFunc = OpenCollectionEventAboutPageWithEventTabTelemetry
-			file.thirdFooter.gamepadLabel = "#GIFT_INFO_TITLE"
+#if PC_PROG_NX_UI
+			file.thirdFooter.gamepadLabel = "#X_GIFT_INFO_TITLE"
 			file.thirdFooter.mouseLabel = "#GIFT_INFO_TITLE"
+#else
+			file.thirdFooter.gamepadLabel = "#Y_GIFT_INFO_TITLE"
+			file.thirdFooter.mouseLabel = "#GIFT_INFO_TITLE"
+#endif
 			file.thirdFooter.activateFunc = OpenGiftInfoPopUpWithEventTabTelemetry
 			break
 		}
@@ -732,83 +841,22 @@ void function OpenCurrentPanelAdditionalInfo( var button )
 
 string function GetPaginationButtonText( bool isPrev )
 {
-	switch ( file.currentPage )
-	{
-		case eEventsPanelPage.LANDING: 
-		{
+	if ( !(file.currentPage in file.enumToInstantiatedPage) )
+		return "#PLAYER_SEARCH_NOT_FOUND"
 
-			if ( file.collectionEvent )
-			{
-				return isPrev ? "" : "#S19ME01_LANDING_PAGE_BUTTON_COLLECTION_NAME"
-			}
+	
+	int currentPageIndex = file.enumToInstantiatedPage[ file.currentPage ]
 
-			if ( GRX_IsOfferRestricted() )
-			{
-				return isPrev ? "" : "#S19ME01_LANDING_PAGE_BUTTON_PACKS_NAME_RESTRICTED"
-			}
-			else
-			{
-				return isPrev ? "" : "#S19ME01_LANDING_PAGE_BUTTON_PACKS_NAME"
-			}
-			break
-		}
-		case eEventsPanelPage.MILESTONES: 
-		{
+	
+	int targetPageIndex = isPrev ? currentPageIndex - 1 : currentPageIndex + 1
 
-			if ( file.collectionEvent )
-			{
-				return isPrev ? "#S19ME01_LANDING_PAGE_BUTTON_COLLECTION_NAME" : "#S19ME01_LANDING_PAGE_BUTTON_COLLECTION_NAME"
-			}
+	if ( targetPageIndex < 0 || targetPageIndex >= file.indexToInstantiatedPage.len() )
+		return ""
 
-			return isPrev ? "#S19ME01_LANDING_PAGE_BUTTON_LANDING_NAME" : "#S19ME01_LANDING_PAGE_BUTTON_COLLECTION_NAME"
-			break
-		}
-		case eEventsPanelPage.COLLECTION: 
-		{
-			if ( GRX_IsOfferRestricted() )
-			{
-				return isPrev ? "#S19ME01_LANDING_PAGE_BUTTON_PACKS_NAME_RESTRICTED" : "#S19ME01_LANDING_PAGE_BUTTON_SHOP_NAME"
-			}
-			else
-			{
-				return isPrev ? "#S19ME01_LANDING_PAGE_BUTTON_PACKS_NAME" : "#S19ME01_LANDING_PAGE_BUTTON_SHOP_NAME"
-			}
-			break
-		}
+	
+	int pageToReturn = file.indexToInstantiatedPage[ targetPageIndex ]
 
-		case eEventsPanelPage.COLLECTION_EVENT: 
-		{
-			if ( file.milestoneEvent )
-			{
-				return isPrev ? "#S19ME01_LANDING_PAGE_BUTTON_LANDING_NAME" : "#S19ME01_LANDING_PAGE_BUTTON_PACKS_NAME"
-			}
-
-			else if ( file.buffetEvent.len() > 0 )
-			{
-				return isPrev ? "#S19ME01_LANDING_PAGE_BUTTON_LANDING_NAME" : "#S19ME01_LANDING_PAGE_BUTTON_PRIZE_TRACKER_NAME"
-			}
-
-			return isPrev ? "#S19ME01_LANDING_PAGE_BUTTON_LANDING_NAME" : ""
-		}
-
-		case eEventsPanelPage.EVENT_SHOP: 
-		{
-			return isPrev ? "#S19ME01_LANDING_PAGE_BUTTON_COLLECTION_NAME" : ""
-			break
-		}
-
-		case eEventsPanelPage.PRIZE_TRACKER:
-		{
-			if ( file.collectionEvent )
-			{
-				return isPrev ? "#S19ME01_LANDING_PAGE_BUTTON_COLLECTION_NAME" : "#S19ME01_LANDING_PAGE_BUTTON_COLLECTION_NAME"
-			}
-			return isPrev ? "#S19ME01_LANDING_PAGE_BUTTON_LANDING_NAME" : "#S19ME01_LANDING_PAGE_BUTTON_COLLECTION_NAME"
-			break
-		}
-
-	}
-	return "#PLAYER_SEARCH_NOT_FOUND"
+	return GRX_IsOfferRestricted() ? eventPageNavigationNamesRestricted[ pageToReturn ] : eventPageNavigationNames[ pageToReturn ]
 }
 
 void function UpdatePaginationButtonText( rtk_behavior self )
@@ -935,4 +983,20 @@ int function GetEventGiftButtonState( array<GRXScriptOffer> offers )
 		return eEventGiftingButtonState.GIFTING_EXCEEDED
 	}
 	return eEventGiftingButtonState.AVAILABLE
+}
+
+bool function IsEventPanelCurrentlyTopLevel()
+{
+	return GetActiveMenu() == GetMenu( "LobbyMenu" ) && IsPanelActive( file.panel )
+}
+
+void function JumpToEventTab( string activateSubPanel = "" )
+{
+	EventsPanel_SaveDeepLink( activateSubPanel )
+
+	while ( GetActiveMenu() != GetMenu( "LobbyMenu" ) )
+		CloseActiveMenu()
+
+	TabData lobbyTabData = GetTabDataForPanel( GetMenu( "LobbyMenu" ) )
+	ActivateTab( lobbyTabData, Tab_GetTabIndexByBodyName( lobbyTabData, "EventPanel" ) )
 }

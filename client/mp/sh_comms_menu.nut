@@ -160,7 +160,7 @@ const string CHAT_MENU_BIND_COMMAND = "+scriptCommand1"
 
 void function ShCommsMenu_Init()
 {
-	Remote_RegisterServerFunction( "ClientCallback_SetSelectedHealthPickupType", "int", INT_MIN, INT_MAX )
+	Remote_RegisterServerFunction( "ClientCallback_SetSelectedHealthPickupType", "int", WHEEL_HEAL_AUTO, eHealthPickupType._count )
 
 
 		AddOnDeathCallback( "player", OnDeathCallback )
@@ -987,6 +987,16 @@ array<CommsMenuOptionData> function BuildMenuOptions( int chatPage )
 
 
 
+
+					if ( data.category == "mode_objectivebr" )
+					{
+						if( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_OBJECTIVE_BR ) )
+						{
+							results.append( MakeOption_CraftItem( counter ) )
+						}
+					}
+					else
+
 					results.append( MakeOption_CraftItem( counter ) )
 					counter++
 				}
@@ -1418,21 +1428,9 @@ vector function GetIconColorForMenuOption( int index )
 
 asset function GetIconForHealthItem( int itemType )
 {
-	if ( WeaponDrivenConsumablesEnabled() )
-	{
-		ConsumableInfo info = Consumable_GetConsumableInfo( itemType )
-		return info.lootData.hudIcon
-	}
-	else
-	{
-		if ( itemType ==  WHEEL_HEAL_AUTO )
-			return $"rui/hud/gametype_icons/survival/health_pack_auto"
+	ConsumableInfo info = Consumable_GetConsumableInfo( itemType )
 
-		HealthPickup kit = SURVIVAL_Loot_GetHealthKitDataFromStruct( itemType )
-		return kit.lootData.hudIcon
-	}
-
-	unreachable
+	return info.lootData.hudIcon
 }
 
 
@@ -1469,15 +1467,8 @@ int function GetCountForHealthItem( entity player, int itemType )
 	}
 
 	string itemRef = ""
+	itemRef = Consumable_GetConsumableInfo( itemType ).lootData.ref
 
-	if ( WeaponDrivenConsumablesEnabled() )
-	{
-		itemRef = Consumable_GetConsumableInfo( itemType ).lootData.ref
-	}
-	else
-	{
-		itemRef = SURVIVAL_Loot_GetHealthKitDataFromStruct( itemType ).lootData.ref
-	}
 
 
 
@@ -1495,17 +1486,9 @@ string function GetNameForHealthItem( int itemType )
 	if ( itemType ==  WHEEL_HEAL_AUTO )
 		return "Automatic"
 
-	if ( WeaponDrivenConsumablesEnabled() )
-	{
-		ConsumableInfo info = Consumable_GetConsumableInfo( itemType )
-		return Localize( info.lootData.pickupString )
-	}
-	else
-	{
-		HealthPickup kit = SURVIVAL_Loot_GetHealthKitDataFromStruct( itemType )
-		return Localize( kit.lootData.pickupString )
-	}
-	unreachable
+	ConsumableInfo info = Consumable_GetConsumableInfo( itemType )
+
+	return Localize( info.lootData.pickupString )
 }
 
 
@@ -1515,16 +1498,8 @@ string function GetDescForHealthItem( int itemType )
 		return ""
 
 	string desc = ""
-	if ( WeaponDrivenConsumablesEnabled() )
-	{
-		ConsumableInfo info = Consumable_GetConsumableInfo( itemType )
-		desc = SURVIVAL_Loot_GetDesc( info.lootData, GetLocalViewPlayer() )
-	}
-	else
-	{
-		HealthPickup kit = SURVIVAL_Loot_GetHealthKitDataFromStruct( itemType )
-		desc = SURVIVAL_Loot_GetDesc( kit.lootData, GetLocalViewPlayer() )
-	}
+	ConsumableInfo info = Consumable_GetConsumableInfo( itemType )
+	desc = SURVIVAL_Loot_GetDesc( info.lootData, GetLocalViewPlayer() )
 
 	return desc
 }
@@ -2265,21 +2240,10 @@ void function SetCurrentChoice( int choice )
 		{
 			CommsMenuOptionData op = s_currentMenuOptions[s_currentChoice]
 
-			string lootRef
-			if ( WeaponDrivenConsumablesEnabled() )
-			{
-				ConsumableInfo kitInfo                   = Consumable_GetConsumableInfo( op.healType )
-				TargetKitHealthAmounts targetHealAmounts = Consumable_PredictConsumableUse( GetLocalClientPlayer(), kitInfo )
-				OverrideHUDHealthFractions( GetLocalClientPlayer(), targetHealAmounts.targetHealth, targetHealAmounts.targetShields )
-				lootRef = kitInfo.lootData.ref
-			}
-			else
-			{
-				HealthPickup healthKit                   = SURVIVAL_Loot_GetHealthKitDataFromStruct( op.healType )
-				TargetKitHealthAmounts targetHealAmounts = PredictHealthPackUse( GetLocalClientPlayer(), healthKit )
-				OverrideHUDHealthFractions( GetLocalClientPlayer(), targetHealAmounts.targetHealth, targetHealAmounts.targetShields )
-				lootRef = healthKit.lootData.ref
-			}
+			ConsumableInfo kitInfo                   = Consumable_GetConsumableInfo( op.healType )
+			TargetKitHealthAmounts targetHealAmounts = Consumable_PredictConsumableUse( GetLocalClientPlayer(), kitInfo )
+			OverrideHUDHealthFractions( GetLocalClientPlayer(), targetHealAmounts.targetHealth, targetHealAmounts.targetShields )
+			string lootRef = kitInfo.lootData.ref
 
 			int count = SURVIVAL_CountItemsInInventory( GetLocalViewPlayer(), lootRef )
 			if ( count == 0 )
@@ -2574,11 +2538,8 @@ bool function MakeCommMenuSelection( int choice, int wheelInputType )
 				int kitCat            = SURVIVAL_Loot_GetHealthPickupCategoryFromData( pickup )
 				bool useShieldRequest = (kitCat == eHealthPickupCategory.SHIELD)
 
-				if ( WeaponDrivenConsumablesEnabled() )
-				{
-					ConsumableInfo info = Consumable_GetConsumableInfo( op.healType )
-					useShieldRequest = (info.healAmount == 0 && info.shieldAmount > 0)
-				}
+				ConsumableInfo info = Consumable_GetConsumableInfo( op.healType )
+				useShieldRequest = (info.healAmount == 0 && info.shieldAmount > 0)
 
 				if ( useShieldRequest )
 					Quickchat( eCommsAction.INVENTORY_NEED_SHIELDS, null )
@@ -2754,11 +2715,6 @@ void function HandleHealthItemSelection( int healthPickupType )
 
 
 
-
-
-
-
-
 	if ( healthPickupType != -1 )
 	{
 		string kitRef = SURVIVAL_Loot_GetHealthPickupRefFromType( healthPickupType )
@@ -2768,31 +2724,13 @@ void function HandleHealthItemSelection( int healthPickupType )
 
 	EmitSoundOnEntity( GetLocalViewPlayer(), WHEEL_SOUND_ON_EXECUTE )
 
-	if ( WeaponDrivenConsumablesEnabled() )
-		Consumable_SetSelectedConsumableType( healthPickupType )
-	else
-		Survival_Health_SetSelectedHealthPickupType( healthPickupType )
+	Consumable_SetSelectedConsumableType( healthPickupType )
 }
 
-bool function HandleHealthItemUse( int healthPickupType )
+void function HandleHealthItemUse( int healthPickupType )
 {
 	entity player = GetLocalViewPlayer()
-
-	if ( WeaponDrivenConsumablesEnabled() )
-	{
-		Consumable_UseItemByType( player, healthPickupType )
-		return true
-	}
-	else
-	{
-		if ( !Survival_CanUseHealthPack( player, healthPickupType, true, true ) )
-			return false
-
-		Survival_UseHealthPack( player, SURVIVAL_Loot_GetHealthPickupRefFromType( healthPickupType ) )
-		return true
-	}
-
-	unreachable
+	Consumable_UseItemByType( player, healthPickupType )
 }
 
 void function HandleOrdnanceSelection( int ordnanceIndex )

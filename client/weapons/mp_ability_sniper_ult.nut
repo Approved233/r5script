@@ -16,6 +16,10 @@ global function SniperUlt_GetMarkedDuration
 
 
 
+
+
+
+
 global function OnClientAnimEvent_ability_sniper_ult
 
 
@@ -74,9 +78,6 @@ const string SNIPERULT_ZOOM_OUT = "weapon_vantageUlt_ads_out"
 
 
 
-
-
-
 struct
 {
 
@@ -127,6 +128,10 @@ void function SniperUlt_Init()
 		StatusEffect_RegisterEnabledCallback( eStatusEffect.sonar_round_embedded, SniperUlt_Mark_Client_Start )
 		StatusEffect_RegisterDisabledCallback( eStatusEffect.sonar_round_embedded, SniperUlt_Mark_Client_Stop )
 
+
+
+
+
 }
 
 
@@ -150,7 +155,11 @@ void function OnWeaponActivate_ability_sniper_ult( entity weapon )
 
 	if ( IsValid( weaponOwner ) )
 	{
+
+
+
 		thread UltAccelHintThread( weaponOwner, weapon )
+
 	}
 
 
@@ -168,7 +177,12 @@ void function OnWeaponDeactivate_ability_sniper_ult( entity weapon )
 
 
 	if ( IsValid(weapon) )
+	{
 		weapon.Signal( "End_UltAccelHintThread" )
+		entity weaponOwner = weapon.GetOwner()
+		if ( IsValid(weaponOwner) )
+			weaponOwner.Signal( WEAPON_CHARGED_RUI_ABORT_SIGNAL )
+	}
 
 
 
@@ -266,6 +280,19 @@ void function OnWeaponZoomFOVToggle_ability_sniper_ult( entity weapon, float tar
 }
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
 bool function OnWeaponChargeLevelIncreased_sniper_ult( entity weapon )
 {
 	if ( weapon.GetWeaponChargeLevel() == weapon.GetWeaponChargeLevelMax() )
@@ -293,10 +320,7 @@ var function OnWeaponPrimaryAttack_ability_sniper_ult( entity weapon, WeaponPrim
 {
 	int ammoUsed = weapon.GetAmmoPerShot()
 
-	if ( weapon.GetWeaponPrimaryClipCount() == weapon.GetWeaponPrimaryClipCountMax() )
-	{
-		PlayerUsedOffhand( weapon.GetOwner(), weapon )
-	}
+	PlayerUsedOffhand( weapon.GetOwner(), weapon )
 
 	bool shouldCreateProjectile = false
 	if ( IsServer() || weapon.ShouldPredictProjectiles() )
@@ -387,6 +411,10 @@ float function SniperUlt_GetMarkedDuration()
 	float duration = GetCurrentPlaylistVarFloat( "sniperult_marked_duration", SNIPERULT_PLAYER_MARKED_DURATION )
 	return duration
 }
+
+
+
+
 
 
 
@@ -910,7 +938,6 @@ void function UltAccelHintThread( entity player, entity weapon )
 	if ( !IsValid( weapon ) )
 		return
 
-	weapon.Signal( "End_UltAccelHintThread" )
 	weapon.EndSignal( "End_UltAccelHintThread" )
 
 	OnThreadEnd(
@@ -938,3 +965,35 @@ void function UltAccelHintThread( entity player, entity weapon )
 }
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      

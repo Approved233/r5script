@@ -155,8 +155,6 @@ const string PHASE_GATE_EXIT_1P = "Olympus_Phaserunner_Exit_1p"
 
 
 
-
-
 void function ShWarpGates_Init()
 {
 
@@ -174,18 +172,12 @@ void function ShWarpGates_Init()
 
 
 
-
-
 	Remote_RegisterClientFunction( "ServerCallback_StartWarpGateExitSequence", "float", 0.0, 100.0, 8 )
 	Remote_RegisterClientFunction( "ServerCallback_FlashScreenForPlayer" )
 	Remote_RegisterClientFunction( "ServerCallback_PlayPhaseGateSoundSuite" )
 
 	RegisterSignal( "WarpGates_PlayerExitPortal" )
 }
-
-
-
-
 
 
 

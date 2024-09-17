@@ -218,14 +218,18 @@ void function CardTrackersPanel_Update( var panel )
 				}
 			}
 
+			Assert( buttonIdx < file.cardTrackerList.len() )
+			if ( buttonIdx >= file.cardTrackerList.len() )
+				break 
+
+			var button = Hud_GetChild( scrollPanel, "GridButton" + buttonIdx )
+			CustomizeButton_UpdateAndMarkForUpdating( button, entries, flav, PreviewCardTracker, CanEquipCanBuyCharacterItemCheck, true )
+
 			prevButtonIdx = buttonIdx
 			if ( buttonIdx % 2 == 0 )
 				lastUsedEvenIndex = buttonIdx
 			else
 				lastUsedOddIndex = buttonIdx
-
-			var button = Hud_GetChild( scrollPanel, "GridButton" + buttonIdx )
-			CustomizeButton_UpdateAndMarkForUpdating( button, entries, flav, PreviewCardTracker, CanEquipCanBuyCharacterItemCheck, true )
 
 			
 			ToolTipData toolTipData

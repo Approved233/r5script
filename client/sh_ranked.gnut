@@ -102,9 +102,14 @@ global function Ranked_ShowRankedSummary
 
 
 
+
+global function Ranked_GetCurrentRankedPeriodEndTimeWithRumble
+
 global function Ranked_IsRankedV2FirstSplit
 global function Ranked_IsRankedV2SecondSplit
 global function Ranked_IsDisablePointGain
+global function Ranked_IsPastRankedSeasonEndDate
+global function Ranked_GetCurrentRankedPeriodEndTime
 
 
 
@@ -119,6 +124,7 @@ global const int RANKED_RESET_DIVISION_FLOOR = 4
 global const int SHARED_RANKED_ROOKIE_FLOOR_VALUE = 1
 global const int SHARED_RANKED_INVALID_RANK_SCORE = -1
 global const int SHARED_RANKED_INVALID_LADDER_POSITION = -1
+global const int SHARED_RANKED_NOT_INITIALIZED_LADDER_POSITION = -2
 global const string SHARED_RANKED_SPLIT_1_STRYDER_SUFFIX = "_split_1"
 global const string SHARED_RANKED_SPLIT_2_STRYDER_SUFFIX = "_split_2"
 
@@ -208,6 +214,14 @@ global enum emblemDisplayMode
 	DISPLAY_LADDER_POSITION,
 	NONE,
 }
+
+
+
+
+
+
+
+
 
 
 
@@ -408,15 +422,15 @@ struct
 
 
 	array<ItemFlavor> allRanked2Pt0Periods
+
+
+
+
 } file
 
 void function Sh_Ranked_Init()
 {
 	
-
-
-
-
 
 	if ( !file.initialized ) 
 	{
@@ -452,6 +466,23 @@ void function Sh_Ranked_Init()
 		Remote_RegisterClientFunction ( "ServerToClient_Ranked_UpdatePlayerPrevRankedScore" , "entity", "int", -1, INT_MAX )
 		Remote_RegisterClientFunction ( "ServerToClient_Ranked_UpdatePlayerPrevLadderPos" , "entity", "int", -1, INT_MAX )
 
+
+		Remote_RegisterClientFunction ( "ServerToClient_RankedRumble_UpdateScorePosition" , "entity", "int", INT_MIN, INT_MAX, "int", INT_MIN, INT_MAX )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		
 		if ( !GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_RANKED ) )
 			return
 
@@ -3126,6 +3157,52 @@ bool function Ranked_IsDisablePointGain( entity player )
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 bool function Ranked_ShouldShowRankedBadge ()
 {
 	return GetCurrentPlaylistVarBool ( "Ranked_ShowRank" , true )
@@ -3139,43 +3216,27 @@ bool function Ranked_ShouldShowPreRankedBadge ()
 	return false
 }
 
+int ornull function Ranked_GetCurrentRankedPeriodEndTimeWithRumble()
+{
 
+		if ( GetConVarBool( RANKED_RUMBLE_CONVAR ) )
+		{
+			TimestampRange ornull rankedRumbleTimeRange = RankedRumble_CurrentRankedRumbleTimestampRange()
+			if ( rankedRumbleTimeRange != null )
+			{
+				return expect TimestampRange( rankedRumbleTimeRange ).endUnixTime
+			}
+			else
+			{
+				ItemFlavor currentRankedPeriod = GetItemFlavorByGUID( ConvertItemFlavorGUIDStringToGUID( GetConVarString( "ranked_current_period_guidstring" ) ) )
+				int ornull rankedRumbleStartTime = RankedRumble_GetRankedRumbleStartTimeForRankedPeriod( currentRankedPeriod )
+				if ( rankedRumbleStartTime != null )
+					return expect int( rankedRumbleStartTime )
+			}
+		}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	return Playlist_GetRankedSeasonEndDate()
+}
 
 
 int function Ranked_GetRankedV2Split2StartTime( ItemFlavor rankedPeriod )
@@ -3193,5 +3254,53 @@ int function Ranked_GetRankedV2Split2StartTime( ItemFlavor rankedPeriod )
 
 	var settingsBlock = ItemFlavor_GetSettingsBlock( rankedPeriod )
 	return expect int( DateTimeStringToUnixTimestamp( GetSettingsBlockString( settingsBlock, RANKED_V2_SPLIT2_START_TIME_FIELD_NAME ) ) )
+}
+
+bool function Ranked_IsPastRankedSeasonEndDate()
+{
+	int ornull seasonEndTime = Ranked_GetCurrentRankedPeriodEndTime()
+	if ( seasonEndTime != null )
+	{
+		expect int( seasonEndTime )
+		int current = GetUnixTimestamp()
+		return GetUnixTimestamp() >= seasonEndTime
+	}
+
+	return false
+}
+
+int ornull function Ranked_GetCurrentRankedPeriodEndTime()
+{
+	int ornull endTime = Ranked_GetRankedPeriodEndTime( GetItemFlavorByGUID( ConvertItemFlavorGUIDStringToGUID( GetConVarString( "ranked_current_period_guidstring" ) ) ) )
+	
+	return endTime
+}
+
+int ornull function Ranked_GetRankedPeriodEndTime( ItemFlavor rankedPeriod )
+{
+	
+	int ornull playlistEndTime = Playlist_GetRankedSeasonEndDate()
+	if ( playlistEndTime != null )
+		return expect int( playlistEndTime )
+
+	if ( ItemFlavor_GetType( rankedPeriod ) == eItemType.ranked_2pt0_period )
+	{
+		if ( Ranked_IsRankedV2FirstSplit( rankedPeriod ) )
+		{
+			ItemFlavor ornull nextRankedPeriod = GetFollowingRankedPeriod( rankedPeriod )
+			Assert( nextRankedPeriod != null, format( "Ranked period: %s is first split but have no corresponding second split.", ItemFlavor_GetGUIDString( rankedPeriod ) ) )
+			return Ranked_GetRankedV2Split2StartTime( expect ItemFlavor( nextRankedPeriod ) )
+		}
+		else
+		{
+			return CalEvent_GetFinishUnixTime( Ranked_GetSeasonForRanked2Pt0Period( rankedPeriod ) )
+		}
+	}
+	else
+	{
+		return CalEvent_GetFinishUnixTime( rankedPeriod )
+	}
+
+	return null
 }
 

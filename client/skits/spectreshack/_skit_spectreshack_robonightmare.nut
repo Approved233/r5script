@@ -3928,10 +3928,6 @@ table<entity, MyVars> sh_cpToVars
 
 
 
-
-
-
-
 void function SpectreShackControl_V4_ClientInit( entity cp )
 {
 	if( !IsValid( cp ) )

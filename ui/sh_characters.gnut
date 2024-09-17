@@ -26,8 +26,11 @@ global function CharacterClass_GetThematicPreviewOffset
 global function CharacterClass_GetGalleryModelOffset
 global function CharacterClass_GetGalleryPortrait
 global function CharacterClass_GetGalleryPortraitBackground
+global function CharacterClass_OverrideGalleryPortrait
 global function CharacterClass_GetCharacterSelectPortrait
+global function CharacterClass_OverrideCharacterSelectPortrait
 global function CharacterClass_GetCharacterLockedPortrait
+global function CharacterClass_OverrideCharacterLockedPortrait
 global function CharacterClass_GetCharacterUnlockedStoreIcon
 global function CharacterClass_GetCharacterRoleImage
 
@@ -268,6 +271,10 @@ struct FileStruct_LifetimeLevel
 	table<string, ItemFlavor> characterRefMap
 	table<ItemFlavor, int> characterFlavorSortOrdinalMap
 	array< ItemFlavor > nonGRXCharacters
+
+	table< ItemFlavor, asset > characterGalleryPortraitOverrides
+	table< ItemFlavor, asset > characterSelectPortraitOverrides
+	table< ItemFlavor, asset > characterLockedPortraitOverrides
 }
 FileStruct_LifetimeLevel& fileLevel
 
@@ -285,7 +292,7 @@ struct
 
 
 const string BOT_PLAYGROUND_ALL_LEGENDS_PLAYABLE_PVAR = "hasNPPAllLegendsPlayableInBotPlayground" 
-const string BOT_PLAYGROUND_PLAYLIST_NAME = "survival_bot_playground"
+global const string BOT_PLAYGROUND_PLAYLIST_NAME = "survival_bot_playground"
 const int BOT_PLAYGROUND_ALL_LEGENDS_PLAYABLE_ACCOUNT_FLAG_GUID = 611351187
 
 
@@ -722,10 +729,19 @@ vector function CharacterClass_GetThematicPreviewOffset( ItemFlavor flavor )
 	return GetGlobalSettingsVector( ItemFlavor_GetAsset( flavor ), "thematicPreviewOffset" )
 }
 
+void function CharacterClass_OverrideGalleryPortrait( ItemFlavor flavor, asset image )
+{
+	fileLevel.characterGalleryPortraitOverrides[ flavor ] <- image
+}
 
 asset function CharacterClass_GetGalleryPortrait( ItemFlavor flavor )
 {
 	Assert( ItemFlavor_GetType( flavor ) == eItemType.character )
+
+	if ( flavor in fileLevel.characterGalleryPortraitOverrides )
+	{
+		return fileLevel.characterGalleryPortraitOverrides[ flavor ]
+	}
 
 	return GetGlobalSettingsAsset( ItemFlavor_GetAsset( flavor ), "galleryPortrait" )
 }
@@ -783,17 +799,36 @@ asset function CharacterClass_GetGalleryRoleBackground ( ItemFlavor flavor )
 }
 
 
+void function CharacterClass_OverrideCharacterSelectPortrait( ItemFlavor flavor, asset image )
+{
+	fileLevel.characterSelectPortraitOverrides[ flavor ] <- image
+}
+
 asset function CharacterClass_GetCharacterSelectPortrait( ItemFlavor flavor )
 {
 	Assert( ItemFlavor_GetType( flavor ) == eItemType.character )
 
+	if ( flavor in fileLevel.characterSelectPortraitOverrides )
+	{
+		return fileLevel.characterSelectPortraitOverrides[ flavor ]
+	}
+
 	return GetGlobalSettingsAsset( ItemFlavor_GetAsset( flavor ), "characterSelectIcon" )
 }
 
+void function CharacterClass_OverrideCharacterLockedPortrait( ItemFlavor flavor, asset image )
+{
+	fileLevel.characterLockedPortraitOverrides[ flavor ] <- image
+}
 
 asset function CharacterClass_GetCharacterLockedPortrait( ItemFlavor flavor )
 {
 	Assert( ItemFlavor_GetType( flavor ) == eItemType.character )
+
+	if ( flavor in fileLevel.characterLockedPortraitOverrides )
+	{
+		return fileLevel.characterLockedPortraitOverrides[ flavor ]
+	}
 
 	return GetGlobalSettingsAsset( ItemFlavor_GetAsset( flavor ), "characterLockIcon" )
 }
@@ -1173,7 +1208,7 @@ bool function Character_IsUnlockableInNewPlayerPass( ItemFlavor characterFlav )
 
 		ItemFlavor ornull pass
 
-			pass = NPP_GetPlayerActiveNPP( GetLocalClientPlayer() )
+			pass = NPP_GetAssignedNPP( GetLocalClientPlayer() )
 
 
 		if ( pass == null )

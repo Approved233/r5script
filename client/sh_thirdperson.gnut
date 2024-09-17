@@ -18,6 +18,11 @@ void function Thirdperson_Init()
 
 
 
+void function SetConVarFloatFromPlaylist( string varName, float floatVal )
+{
+	SetConVarFloat( varName, GetCurrentPlaylistVarFloat( varName, floatVal ) )
+}
+
 int s_cameraMode = -1
 void function SetCameraMode( int mode )
 {

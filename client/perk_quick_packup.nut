@@ -14,9 +14,10 @@ global function Perk_QuickPackup_GetRemotePickupBlockRange
 
 
 
+
+
 global function Perk_QuickPackup_NagThread
 global function ServerToClient_Perk_QuickPackup_Register
-global function ServerToClient_Perk_QuickPackup_RegisterUsable
 global function Perk_QuickPackup_Cancel
 
 
@@ -32,9 +33,7 @@ struct
 
 
 
-
 	array< int > placableHandles
-	array< int > usableHandles
 	float lastNagTime = 0.0
 	bool abandonedThreadStarted
 	float lastAbandonedStartTime
@@ -61,10 +60,12 @@ const string QUICK_PACKUP_CLIENT_TO_SERVER_START = "ClientToServer_Perk_QuickPac
 const string QUICK_PACKUP_CLIENT_TO_SERVER_CANCEL = "ClientToServer_Perk_QuickPackup_Cancel"
 const string QUICK_PACKUP_CLIENT_TO_SERVER_SINGLE_TRAP = "ClientToServer_Perk_QuickPackup_SingleTrap"
 const string QUICK_PACKUP_CLIENT_TO_SERVER_SINGLE_TRAP_CATALYST = "ClientToServer_Perk_QuickPackup_SingleTrap_Catalyst"
+
+
+
 const string QUICK_PACKUP_CLIENT_TO_SERVER_FURTHEST_PICKUP = "ClientToServer_Perk_QuickPackup_FurthestPlacable"
 const string QUICK_PACKUP_CLIENT_TO_SERVER_ABANDONED_PICKUP = "ClientToServer_Perk_QuickPackup_AbandonedPickup"
 const string QUICK_PACKUP_SERVER_TO_CLIENT_REGISTER = "ServerToClient_Perk_QuickPackup_Register"
-const string QUICK_PACKUP_SERVER_TO_CLIENT_REGISTER_USABLE = "ServerToClient_Perk_QuickPackup_RegisterUsable"
 const string QUICK_PACKUP_ENDED_SIGNAL = "quick_packup_ended"
 const float AR_EFFECT_SIZE = 768.0 
 const vector AR_COLOR = <60, 110, 300>
@@ -78,10 +79,12 @@ void function Perk_QuickPackup_Init()
 		Remote_RegisterServerFunction( QUICK_PACKUP_CLIENT_TO_SERVER_CANCEL )
 		Remote_RegisterServerFunction( QUICK_PACKUP_CLIENT_TO_SERVER_SINGLE_TRAP, "typed_entity", "prop_script" )
 		Remote_RegisterServerFunction( QUICK_PACKUP_CLIENT_TO_SERVER_SINGLE_TRAP_CATALYST, "typed_entity", "prop_ferro_prop" )
+
+
+
 		Remote_RegisterServerFunction( QUICK_PACKUP_CLIENT_TO_SERVER_FURTHEST_PICKUP )
 		Remote_RegisterServerFunction( QUICK_PACKUP_CLIENT_TO_SERVER_ABANDONED_PICKUP )
 		Remote_RegisterClientFunction( QUICK_PACKUP_SERVER_TO_CLIENT_REGISTER, "int",INT_MIN, INT_MAX )
-		Remote_RegisterClientFunction( QUICK_PACKUP_SERVER_TO_CLIENT_REGISTER_USABLE, "int",INT_MIN, INT_MAX )
 		RegisterSignal( QUICK_PACKUP_ENDED_SIGNAL )
 
 
@@ -138,15 +141,8 @@ void function Perk_QuickPackup_OnWeaponDryFire( entity player, entity weapon )
 		return
 
 
-
-
-
-
-
-
-		if( file.usableHandles.len() == 0 )
+		if( file.placableHandles.len() == 0 )
 			return
-		
 		file.lastAbandonedStartTime = Time()
 
 }
@@ -167,7 +163,12 @@ void function GetExtendedRangeUseEntityCallbackForPlayer_QuickPickup( entity pla
 {
 	if ( !Perks_DoesPlayerHavePerk( player, ePerkIndex.RING_EXPERT ) )
 	{
-		return
+
+
+
+		{
+			return
+		}
 	}
 
 	array<entity> playerPlacables
@@ -179,7 +180,7 @@ void function GetExtendedRangeUseEntityCallbackForPlayer_QuickPickup( entity pla
 
 
 
-	playerPlacables = Perk_QuickPackup_GetEntArrFromHandles( file.usableHandles )
+	playerPlacables = Perk_QuickPackup_GetEntArrFromHandles( file.placableHandles )
 
 
 	if( playerPlacables.len() > 0 )
@@ -412,6 +413,9 @@ void function FilterOutNonReclaimableTraps( entity player, array<entity> traps )
 
 
 
+
+
+
 void function ServerToClient_Perk_QuickPackup_Register( int encodedHandle )
 {
 	file.placableHandles.append( encodedHandle )
@@ -472,11 +476,6 @@ void function QuickPackup_TryStartAbandonedThread()
 	}
 }
 
-void function ServerToClient_Perk_QuickPackup_RegisterUsable( int encodedHandle )
-{
-	file.usableHandles.append( encodedHandle )
-}
-
 bool function Perk_QuickPackup_Client_RemoteInteract( entity player )
 {
 	entity useEnt = player.GetUsePromptEntity()
@@ -484,13 +483,19 @@ bool function Perk_QuickPackup_Client_RemoteInteract( entity player )
 		return false
 
 	int handle = useEnt.GetEncodedEHandle()
-	if( !file.usableHandles.contains( handle ) )
+	if( !file.placableHandles.contains( handle ) )
 		return false
 
 	if( PlayerHasPassive( player, ePassives.PAS_LOCKDOWN ) )
 	{
 		Remote_ServerCallFunction( QUICK_PACKUP_CLIENT_TO_SERVER_SINGLE_TRAP_CATALYST, useEnt )
 	}
+
+
+
+
+
+
 	else
 	{
 		Remote_ServerCallFunction( QUICK_PACKUP_CLIENT_TO_SERVER_SINGLE_TRAP, useEnt )
@@ -528,44 +533,6 @@ void function Perk_QuickPackup_Client( entity player )
 			Remote_ServerCallFunction( QUICK_PACKUP_CLIENT_TO_SERVER_ABANDONED_PICKUP )
 		}
 	}
-}
-
-void function Perk_QuickPackup_StartChannel( entity player )
-{
-	if( player.ContextAction_IsActive() )
-		return
-	if( Bleedout_IsBleedingOut( player ) )
-		return
-
-	if( !Perks_DoesPlayerHavePerk( player, ePerkIndex.RING_EXPERT ) )
-		return
-
-	if( !file.isChanneling )
-	{
-		thread Perk_QuickPackup_ConfirmationThread( player )
-	}
-}
-
-void function Perk_QuickPackup_ConfirmationThread( entity player )
-{
-	player.EndSignal( "OnDeath", "OnDestroy", "BleedOut_OnStartDying", QUICK_PACKUP_ENDED_SIGNAL )
-	file.isChanneling = true
-	file.lastNagTime = Time()
-
-	OnThreadEnd(
-		function() : ()
-		{
-			file.isChanneling = false
-		}
-	)
-
-
-	while( true )
-	{
-		AddPlayerHint( .1, 0, $"", "%attack% to pick up furthest placable" )
-		WaitFrame()
-	}
-
 }
 
 void function Perk_QuickPackup_Cancel( entity player )

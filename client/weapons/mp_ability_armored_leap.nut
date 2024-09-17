@@ -49,9 +49,7 @@ global function ServerToClient_RemoveClient_BleedoutWaypoint
 
 const bool VISOR_THREAT_DETECTION							= true
 
-
 const bool CASTLE_WALL_STOPS_GRENADES						= true
-
 
 #if DEV
 const bool DEBUG_ARMORED_LEAP_TARGETING_DRAW 				= false
@@ -189,7 +187,11 @@ const float CASTLE_WALL_OVERLAP_CLEANUP_RADIUS_ANCHOR			= 180
 const int CASTLE_WALL_BARRIER_DAMAGE 							= 20
 const float CASTLE_WALL_BARRIER_DAMAGE_INTERVAL 				= 2.5	
 const float CASTLE_WALL_BARRIER_DELAY_TIME 						= 3.0	
+
+
+
 const float CASTLE_WALL_BARRIER_DURATION 						= 60.0
+
 const float CASTLE_WALL_BARRIER_WARNING_DURATION 				= 2.0
 
 const float CASTLE_WALL_WARNING_RADIUS 							= 150
@@ -200,7 +202,7 @@ const float CASTLE_WALL_PROTECTION_AREA_RANGE 					= 250
 const float CASTLE_SNAKE_WALL_HIGHCOVER_HEIGHT_OFFSET 			= 15	
 const float CASTLE_SNAKE_WALL_HIGHCOVER_CORE_OFFSET 			= 115	
 const float CASTLE_SNAKE_MIN_SEGMENT_DISTANCE 					= 27    
-
+const float CASTLE_SNAKE_MAX_NUM_SEGMENTS						= 4
 
 const float CASTLE_SNAKE_GRADUAL_ANGLE_SHIFT 					= 8	
 
@@ -294,7 +296,6 @@ const asset CASTLE_WALL_ELEC_PANEL_SM_FX_RIGHT					= $"P_armored_leap_elec_panel
 const asset CASTLE_WALL_ELEC_PANEL_SM_FX_RIGHT_02				= $"P_armored_leap_elec_panel_sm_r_02"
 const asset CASTLE_WALL_ELEC_PANEL_SM_FX_RIGHT_03				= $"P_armored_leap_elec_panel_sm_r_03"
 
-
 const asset CASTLE_WALL_INTERCEPT_PROJECTILE_SMALL_FX 			= $"P_armored_wall_zap"
 const asset CASTLE_WALL_INTERCEPT_PROJECTILE_SMALL_ENEMY_FX 	= $"P_armored_wall_zap_enemy"
 const asset CASTLE_WALL_INTERCEPT_PROJECTILE_CLOSE_FX 			= $"P_armored_wall_zap"
@@ -302,6 +303,8 @@ const asset CASTLE_WALL_INTERCEPT_PROJECTILE_CLOSE_ENEMY_FX 	= $"P_armored_wall_
 
 const string CASTLE_WALL_INTERCEPT_BEAM_SOUND 					= "Newcastle_Tactical_InterceptBeam"
 const string CASTLE_WALL_INTERCEPT_SMALL 						= "Newcastle_Tactical_InterceptZap"
+
+
 
 
 
@@ -340,6 +343,14 @@ const string ARMORED_LEAP_TARGET_FAIL_DEFAULT					= "#HINT_NEWCASTLE_LEAP_TARGET
 const string ARMORED_LEAP_TARGET_FAIL_BLOCKED_LAND				= "#HINT_NEWCASTLE_LEAP_TARGET_FAIL_BLOCKED_LAND"
 const string ARMORED_LEAP_TARGET_FAIL_BLOCKED_LEAP				= "#HINT_NEWCASTLE_LEAP_TARGET_FAIL_BLOCKED_LEAP"
 const string ARMORED_LEAP_TARGET_FAIL_BLOCKED_ALLY				= "#HINT_NEWCASTLE_LEAP_TARGET_FAIL_BLOCKED_ALLY"
+
+
+
+
+
+
+
+
 
 
 
@@ -494,11 +505,10 @@ struct
 
 	bool hasVisorThreatDetection	= VISOR_THREAT_DETECTION
 
-
 	bool hasWallStopsGrenades		= CASTLE_WALL_STOPS_GRENADES
 
-
 	table< entity, bool > canDoWallRemoveChatter = {}
+
 
 
 
@@ -572,15 +582,16 @@ void function MpAbilityArmoredLeap_Init()
 
 	PrecacheParticleSystem( ARMORED_LEAP_IMPACT_FX )
 
+
+
+
 	PrecacheImpactEffectTable( ARMORED_LEAP_IMPACT_FX_TABLE )
 	PrecacheImpactEffectTable( CASTLE_WALL_SNAKE_IMPACT_FX_TABLE )
-
 
 	PrecacheParticleSystem( CASTLE_WALL_INTERCEPT_PROJECTILE_SMALL_FX )
 	PrecacheParticleSystem( CASTLE_WALL_INTERCEPT_PROJECTILE_SMALL_ENEMY_FX )
 	PrecacheParticleSystem( CASTLE_WALL_INTERCEPT_PROJECTILE_CLOSE_FX )
 	PrecacheParticleSystem( CASTLE_WALL_INTERCEPT_PROJECTILE_CLOSE_ENEMY_FX )
-
 
 	PrecacheModel( CASTLE_WALL_SHIELD_ANCHOR_COL_FX )
 	PrecacheModel( CASTLE_WALL_SHIELD_WALL_CENTRE_MDL )
@@ -691,9 +702,7 @@ void function MpAbilityArmoredLeap_Init()
 
 	file.hasVisorThreatDetection	= GetCurrentPlaylistVarBool( "newcastle_hasVisorThreat", VISOR_THREAT_DETECTION )
 
-
 	file.hasWallStopsGrenades		= GetCurrentPlaylistVarBool( "newcastle_hasWallStopsGrenades", CASTLE_WALL_STOPS_GRENADES )
-
 }
 
 void function OnNewcastlePassiveChanged( entity player, int passive, bool didHave, bool nowHas )
@@ -3917,6 +3926,108 @@ void function ServerToClient_SetClient_AllyInDanger( entity player, entity ally,
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 array<entity> function ArmoredLeapIgnoreArray( entity castle = null, bool ignoreAllCastles = false, bool ignorePropDoors = false )
 {
 	array<entity> ignoreArray = GetPlayerArray_Alive()
@@ -5838,6 +5949,8 @@ array<entity> function GetAllyPlayerArray( entity owner )
 
 
 
+float function CastleWall_GetMaxSnakeRotation( entity owner )
+{
 
 
 
@@ -5846,7 +5959,11 @@ array<entity> function GetAllyPlayerArray( entity owner )
 
 
 
+	return CASTLE_SNAKE_GRADUAL_ANGLE_SHIFT
+}
 
+float function CastleWall_GetMaxSnakeRotation_Final( entity owner )
+{
 
 
 
@@ -5855,6 +5972,8 @@ array<entity> function GetAllyPlayerArray( entity owner )
 
 
 
+	return CASTLE_SNAKE_HIGH_COVER_FINAL_ANGLE_SHIFT
+}
 
 
 
@@ -6044,10 +6163,8 @@ array<entity> function GetAllyPlayerArray( entity owner )
 
 
 
-
-
-
-
+const float CASTLE_SNAKE_NUM_ANGLE_CHECKS = 5
+const float CASTLE_SNAKE_MAX_EDGE_ANGLE = 45.0
 
 
 
@@ -6158,41 +6275,9 @@ vector function SnakeWall_GetBestDownTracePosition( vector nextValidPos, vector 
 		}
 		else 
 		{
-			const float CASTLE_SNAKE_NUM_ANGLE_CHECKS = 5
-			const float CASTLE_SNAKE_MAX_EDGE_ANGLE = 45.0
-
-			float anglePerCheck = CASTLE_SNAKE_MAX_EDGE_ANGLE/CASTLE_SNAKE_NUM_ANGLE_CHECKS
-
-			if( !snakeInfo.isLeft ) 
-				anglePerCheck = -(anglePerCheck)
-
-			for( int i = 0; i < CASTLE_SNAKE_NUM_ANGLE_CHECKS; i++ )
-			{
-				float adjustedAngle = anglePerCheck*i
-				vector bendTestPos = traceStart + ( RotateVector(dir, <0, adjustedAngle, 0> ) * CASTLE_SNAKE_TEST_STEP ) 
-				TraceResults ledgeBendTrace = TraceLine( traceStart, bendTestPos, ignoreArray, TRACE_MASK_SOLID_BRUSHONLY, TRACE_COLLISION_GROUP_PLAYER_MOVEMENT )
-
-				if( ledgeBendTrace.fraction == 1 ) 
-				{
-					TraceResults ledgeBendDownTrace = TraceLine( ledgeBendTrace.endPos, ledgeBendTrace.endPos + < 0.0, 0.0, -CASTLE_SNAKE_DROP_TEST_HEIGHT >, ignoreArray, TRACE_MASK_SOLID_BRUSHONLY, TRACE_COLLISION_GROUP_PLAYER_MOVEMENT )
-					hitEnt = ledgeBendDownTrace.hitEnt
-					canMountEnt = SnakeWall_IsValidMountHitEnt( hitEnt )
-					if ( ledgeBendDownTrace.fraction != 1.0 && canMountEnt ) 
-					{
-						snakeInfo.moverDir = RotateVector(dir, <0, adjustedAngle, 0> )
-						nextValidPos = ledgeBendDownTrace.endPos
-						return nextValidPos
-					}
-
-#if DEV
-					if( DEBUG_SNAKE_DRAW )
-					{
-						DebugDrawSphere( ledgeBendTrace.endPos, 6.0, COLOR_RED, true, 15.0 )
-					}
-#endif
-
-				}
-			}
+			vector bestCurvePos = SnakeWall_GetBestNextSnakeRotationPosition( traceStart, dir, CASTLE_SNAKE_NUM_ANGLE_CHECKS, CASTLE_SNAKE_MAX_EDGE_ANGLE, ignoreArray, snakeInfo )
+			if( bestCurvePos != nextValidPos )
+				return bestCurvePos
 			
 			snakeInfo.stopped = true
 
@@ -6207,6 +6292,44 @@ vector function SnakeWall_GetBestDownTracePosition( vector nextValidPos, vector 
 
 	return nextValidPos
 
+}
+
+vector function SnakeWall_GetBestNextSnakeRotationPosition( vector pos, vector dir, float numAngleChecks, float maxAngle, array<entity> ignoreArray, ArmoredLeapSnakeInfo snakeInfo )
+{
+	float anglePerCheck = maxAngle/numAngleChecks
+
+	if( !snakeInfo.isLeft ) 
+		anglePerCheck = -(anglePerCheck)
+
+	for( int i = 0; i < numAngleChecks; i++ )
+	{
+		float adjustedAngle = anglePerCheck*i
+		vector bendTestPos = pos + ( RotateVector(dir, <0, adjustedAngle, 0> ) * CASTLE_SNAKE_TEST_STEP ) 
+		TraceResults ledgeBendTrace = TraceLine( pos, bendTestPos, ignoreArray, TRACE_MASK_SOLID_BRUSHONLY, TRACE_COLLISION_GROUP_PLAYER_MOVEMENT )
+
+		if( ledgeBendTrace.fraction == 1 ) 
+		{
+			TraceResults ledgeBendDownTrace = TraceLine( ledgeBendTrace.endPos, ledgeBendTrace.endPos + < 0.0, 0.0, -CASTLE_SNAKE_DROP_TEST_HEIGHT >, ignoreArray, TRACE_MASK_SOLID_BRUSHONLY, TRACE_COLLISION_GROUP_PLAYER_MOVEMENT )
+			entity hitEnt = ledgeBendDownTrace.hitEnt
+			bool canMountEnt = SnakeWall_IsValidMountHitEnt( hitEnt )
+			if ( ledgeBendDownTrace.fraction != 1.0 && canMountEnt ) 
+			{
+				snakeInfo.moverDir = RotateVector(dir, <0, adjustedAngle, 0> )
+				vector nextValidPos = ledgeBendDownTrace.endPos
+				return nextValidPos
+			}
+
+#if DEV
+				if( DEBUG_SNAKE_DRAW )
+				{
+					DebugDrawSphere( ledgeBendTrace.endPos, 6.0, COLOR_RED, true, 15.0 )
+				}
+#endif
+
+		}
+	}
+
+	return pos
 }
 
 
@@ -6529,7 +6652,7 @@ vector function SnakeWall_GetBestDownTracePosition( vector nextValidPos, vector 
 
 int function GetUpgradedCastleWallExtraHealth()
 {
-	return GetCurrentPlaylistVarInt( "ultimate_armored_leap_upgrade_extra_health", 200 )
+	return GetCurrentPlaylistVarInt( "ultimate_armored_leap_upgrade_extra_health", 500 )
 }
 
 float function GetUpgradedCastleWallBarrierExtraDuration()
@@ -6541,6 +6664,33 @@ float function GetUpgradedArmoredLeapDistance()
 {
 	return GetCurrentPlaylistVarFloat( "ultimate_armored_leap_upgrade_range_multiplier", 1.2 )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6861,6 +7011,17 @@ vector function CastleWall_OffsetDamageNumbers( entity shieldEnt, vector damageF
 
 	return flyoutPosition
 }
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7471,8 +7632,6 @@ float function CastleWall_GetWallBarrierDuration( entity owner )
 
 
 
-
-
 const float INTERCEPT_RANGE_MAX 							= 200 
 const float INTERCEPT_RANGE_MIN 							= 64 
 const float INTERCEPT_HEIGHT_MAX 							= 800 
@@ -7485,8 +7644,6 @@ const float CASTLE_WALL_INTERCEPT_OVERHEAD_MIN_HEIGHT 		= 120
 const float CASTLE_WALL_INTERCEPT_OVERHEAD_MAX_BACK_DIST 	= 150
 const float CASTLE_WALL_LOW_CENTER_OFFSET					= 15
 const float CASTLE_WALL_MAIN_INTERCEPT_RANGE_EXTENTION		= 50
-
-
 
 
 
@@ -8493,12 +8650,6 @@ array<CastleWallThreatIndicatorLine> function BuildThreatLines( entity startingA
 	return results
 }
 
-
-
-bool function GetArmoredLeapUseReducedEntCount()
-{
-	return GetCurrentPlaylistVarBool( "newcastle_ult_reduce_ents", true )
-}
 
 
 bool function GetArmoredLeapUseCode()

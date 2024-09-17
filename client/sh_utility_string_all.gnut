@@ -1,0 +1,232 @@
+untyped
+globalize_all_functions
+
+string function BackslashToSlash( string originalString )
+{
+	array<string> tokens = split( originalString, "\\" )
+	if ( tokens.len() == 0 )
+		return ""
+
+	string resultString = tokens[0]
+	for ( int index = 1; index < tokens.len(); index++ )
+	{
+		resultString += "/"
+		resultString += tokens[index]
+	}
+
+	return resultString
+}
+
+
+array<string> function GetTrimmedSplitString( string originalString, string splitChars )
+{
+	array<string> stringList = split( originalString, splitChars )
+	for ( int i = 0 ; i < stringList.len() ; i++ )
+		stringList[i] = strip( stringList[i] )
+	return stringList
+}
+
+
+array<string> function GetTrimmedSplitLoweredString( string originalString, string splitChars )
+{
+	array<string> stringList = split( originalString, splitChars )
+	for ( int i = 0 ; i < stringList.len() ; i++ )
+		stringList[i] = strip( stringList[i] ).tolower()
+	return stringList
+}
+
+array<string> function GetTrimmedSplitUpperedString( string originalString, string splitChars )
+{
+	array<string> stringList = split( originalString, splitChars )
+	for ( int i = 0 ; i < stringList.len() ; i++ )
+		stringList[i] = strip( stringList[i] ).toupper()
+	return stringList
+}
+
+int function ConvertStringToInt( string str )
+{
+	Assert( str.isnumeric() )
+	return int( str )
+}
+
+array function StringToColorArray( string colorString, string delimiter = " " )
+{
+	table Table = StringToColors( colorString, delimiter )
+	array arr
+	arr.append( Table.r )
+	arr.append( Table.g )
+	arr.append( Table.b )
+
+	if ( "a" in Table )
+		arr.append( Table.a )
+	else
+		arr.append( 255 )
+
+	return arr
+}
+
+
+table function StringToColors( string colorString, string delimiter = WHITESPACE_CHARACTERS )
+{
+	PerfStart( PerfIndexShared.StringToColors + SharedPerfIndexStart )
+	array<string> tokens = split( colorString, delimiter )
+
+	Assert( tokens.len() >= 3 )
+
+	table Table = {}
+	Table.r <- int( tokens[0] )
+	Table.g <- int( tokens[1] )
+	Table.b <- int( tokens[2] )
+
+	if ( tokens.len() == 4 )
+		Table.a <- int( tokens[3] )
+	else
+		Table.a <- 255
+
+	PerfEnd( PerfIndexShared.StringToColors + SharedPerfIndexStart )
+	return Table
+}
+
+array<int> function ColorStringToArray( string colorString )
+{
+	array<string> tokens = split( colorString, WHITESPACE_CHARACTERS )
+
+	Assert( tokens.len() >= 3 && tokens.len() <= 4 )
+
+	array<int> colorArray
+	foreach ( token in tokens )
+		colorArray.append( int( token ) )
+
+	return colorArray
+}
+
+string function StringArrayToString( array<string> arr )
+{
+	string res = "["
+	for ( int i=0; i<arr.len(); i++ )
+	{
+		res += arr[i]
+		if ( i < arr.len() - 1 )
+			res += ", "
+	}
+	res += "]"
+
+	return res
+}
+
+
+table< string, int > function Count_Strings_IntoTable( array< string > itemsToCount )
+{
+	table< string, int > results
+	foreach( item in itemsToCount )
+	{
+		if( !( item in results ) )
+		{
+			results[ item ] <- 0
+		}
+		results[ item ]++
+	}
+	return results
+}
+
+vector function StringToVector( string vecString, string delimiter = WHITESPACE_CHARACTERS )
+{
+	array<string> tokens = split( vecString, delimiter )
+
+	Assert( tokens.len() >= 3 )
+
+	return <float( tokens[0] ), float( tokens[1] ), float( tokens[2] )>
+}
+
+string function RepeatString( string str, int times )
+{
+	string out = ""
+	for ( int i = 0; i < times; i++ )
+	{
+		out += str
+	}
+	return out
+}
+
+string function VectorToString( vector vec )
+{
+	return "< " + vec.x + "," + vec.y + "," + vec.z + " >"
+}
+
+string function VectorToColorString( vector color, float alpha )
+{
+	return color.x + " " + color.y + " " + color.z + " " + alpha
+}
+
+string function PadString( string str, int len )
+{
+	for ( int i = str.len(); i < len; i++ )
+		str += " "
+
+	return str
+}
+
+void function RemoveDupesFromSorted_String( array<string> data )
+{
+	for ( int i = 0; i < data.len() - 1; i++ )
+	{
+		if ( data[i] == data[i + 1] )
+		{
+			data.remove( i )
+			i--
+		}
+	}
+}
+
+function SortAlphabetize( a, b )
+{
+	if ( a > b )
+		return 1
+
+	if ( a < b )
+		return -1
+
+	return 0
+}
+
+int function SortStringAlphabetize( string a, string b )
+{
+	if ( a > b )
+		return 1
+
+	if ( a < b )
+		return -1
+
+	return 0
+}
+
+
+string function StripRuiStringFormatting( string text )
+{
+	string newText = text
+	while ( newText.find( "`" ) != -1 )
+	{
+		int idx = newText.find( "`" )
+
+		if ( newText.len() < 2 )
+			return ""
+
+		string a = ""
+
+		if ( idx > 0 )
+		{
+			a = newText.slice( 0, idx )
+		}
+
+		string b = ""
+
+		if ( idx + 2 < newText.len() )
+		{
+			b = newText.slice( idx + 2, newText.len() )
+		}
+
+		newText = a + b
+	}
+
+	return newText
+}

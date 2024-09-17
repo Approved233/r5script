@@ -33,6 +33,12 @@ const asset TRANSLOCATION_DROP_TO_GROUND_MARKER_FX = $"P_wrp_trl_grnd"
 const asset TRANSLOCATION_DROP_TO_GROUND_ACTIVATE_FX = $"P_warp_proj_drop"
 const asset TRANSLOCATION_DROP_TO_GROUND_DESTINATION_FX = $"P_warp_proj_drop_grnd"
 
+
+
+
+
+
+
 const bool TRANSLOCATION_DEBUG = false
 const float TRANSLOCATION_DEBUG_TIMEOUT = 40
 const int MAX_BACKUP_CANDIDATE_SPOTS = 2 
@@ -63,16 +69,55 @@ enum eLobaCrosshairStage
 
 
 
+
+
+
+
+
+
+
+
 struct
 {
+
 	array<entity> canceledTeleports
+
+
+
+
+
+
+
+
 }file
+
+
+
+struct{
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+}tuning
 
 
 
 
 void function LobaTacticalTranslocation_LevelInit()
 {
+
+		SetupTuning()
 
 		PrecacheParticleSystem( TRANSLOCATION_WARP_BEAM_FX )
 		PrecacheParticleSystem( TRANSLOCATION_WARP_WORLD_FX )
@@ -81,13 +126,18 @@ void function LobaTacticalTranslocation_LevelInit()
 		PrecacheParticleSystem( TRANSLOCATION_DROP_TO_GROUND_ACTIVATE_FX )
 		PrecacheParticleSystem( TRANSLOCATION_DROP_TO_GROUND_DESTINATION_FX )
 
+
+
+
+
+
 		RegisterNetworkedVariable( "Translocation_ActiveProjectile", SNDC_PLAYER_EXCLUSIVE, SNVT_ENTITY )
 
 		Remote_RegisterClientFunction( "ServerToClient_Translocation_ClientProjectilePlantedHandler", "entity", "entity" )
 		Remote_RegisterClientFunction( "ServerToClient_Translocation_TeleportFailed", "entity" )
 
 
-			Remote_RegisterServerFunction( "ClientToServer_Translocation_Cancel" )
+
 
 
 		RegisterSignal( "Translocation_Deactivate" )
@@ -107,11 +157,31 @@ void function LobaTacticalTranslocation_LevelInit()
 		StatusEffect_RegisterDisabledCallback( eStatusEffect.translocation_visual_effect, StopVisualEffect )
 
 
-			RegisterConCommandTriggeredCallback( "+scriptCommand5", CancelTeleport )
+
 
 
 }
 
+
+
+void function SetupTuning()
+{
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+}
 
 
 
@@ -200,10 +270,10 @@ void function TranslocationLifetimeThread( entity owner, entity weapon )
 		RuiSetFloat( rui, "estimatedMaxDist", GetLobaTacticalEstimatedMaxDistance( owner ) )
 
 
-			if( owner.HasPassive( ePassives.PAS_TAC_UPGRADE_TWO ) ) 
-			{
-				RuiSetString( rui, "locString", "%&attack% Drop %scriptCommand5% Cancel" )
-			}
+
+
+
+
 
 
 
@@ -318,6 +388,7 @@ void function TranslocationLifetimeThread( entity owner, entity weapon )
 		WaitFrame()
 	}
 }
+
 
 
 
@@ -1257,6 +1328,232 @@ void function ServerToClient_Translocation_TeleportFailed( entity weapon )
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 bool function IsPlayerTranslocationPermitted( entity player )
 {
 	if ( IsValid( player.GetParent() ) && !player.IsPlayerInAnyVehicle() )
@@ -1448,22 +1745,22 @@ entity function GetCurrentTranslocationProjectile( entity owner, entity weapon )
 
 
 
-void function CancelTeleport( entity player )
-{
-	entity offhandWeapon = player.GetOffhandWeapon( OFFHAND_TACTICAL )
-	if( !IsValid( offhandWeapon ) )
-		return
-	if( !IsValid( GetCurrentTranslocationProjectile( player, offhandWeapon ) ) )
-		return
 
-	if( !file.canceledTeleports.contains( player ) )
-		file.canceledTeleports.append( player )
 
-	if( !PlayerHasPassive( player, ePassives.PAS_TAC_UPGRADE_TWO ) ) 
-		return
 
-	Remote_ServerCallFunction( "ClientToServer_Translocation_Cancel" )
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 void function StopVisualEffect( entity player, int statusEffect, bool actuallyChanged )

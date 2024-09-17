@@ -1,5 +1,7 @@
 global function PassiveMedic_Init
 
+global function PassiveMedic_ShouldDoCombatRevive
+global function PassiveMedic_ShouldDoHandsFreeCombatRevive
 
 
 
@@ -14,10 +16,6 @@ global function ServerToClient_RemoveCancelReviveHintForPlayer
 global function ServerToClient_NumSelfRevivesUsed
 global function ServerToClient_DisplaySelfResRuiForPlayer
 global function ServerToClient_RemoveDisplaySelfResRuiForlayer
-
-
-
-
 
 
 
@@ -42,13 +40,13 @@ const FX_DRONE_MEDIC_JET_LOOP			= $"P_LL_med_drone_jet_loop"
 
 const asset DRONE_BEAM_EFFECT_DUD = $"P_drone_medic_shield_beam"
 
+
+
+
+
 const asset DRONE_MODEL = $"mdl/props/lifeline_drone/lifeline_drone.rmdl"
 const vector DRONE_MINS = <-9, -9, -10>
 const vector DRONE_MAXS = <9, 9, 10>
-
-
-
-
 
 const string PASSIV_MEDIC_SHIELD_MOVER_SCRIPTNAME = "passive_medic_shield_mover"
 
@@ -107,6 +105,9 @@ void function PassiveMedic_Init()
 
 
 
+
+
+
 		RegisterConCommandTriggeredCallback( "+scriptCommand5", AttemptCancelRevive )
 
 		RegisterSignal( "PassiveMedic_DestroySelfResRUI" )
@@ -114,43 +115,25 @@ void function PassiveMedic_Init()
 
 }
 
+bool function PassiveMedic_ShouldDoCombatRevive( entity player )
+{
+	if ( !PlayerHasPassive( player, ePassives.PAS_MEDIC ) )
+		return false
+
+	if ( AreAbilitiesSilenced( player ) )
+		return false
+
+	return true
+}
+
+bool function PassiveMedic_ShouldDoHandsFreeCombatRevive()
+{
 
 
 
+		return true
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+}
 
 
 
@@ -867,14 +850,4 @@ void function _DisplayCancelReviveHintForPlayer()
 
 	WaitForever()
 }
-
-
-
-
-
-
-
-
-
-
 

@@ -2255,7 +2255,12 @@ void function TrackingVision_CreateGenericTrackerMarker( entity waypoint )
 	RuiSetInt( rui, "drawSize", drawInfo.drawSize )
 
 	int waypointID = waypoint.WaypointGetID()
-	Assert ( !( waypointID in file.trackedPOIRui ), "Rui already exists for POI with id " + waypointID )
+	
+	if ( waypointID in file.trackedPOIRui )
+	{
+		RuiDestroyIfAlive( file.trackedPOIRui[waypointID] )
+		file.trackedPOIRui[ waypointID ] <- null
+	}
 	file.trackedPOIRui[ waypointID ] <- rui
 
 	if ( IsRoundBased() )

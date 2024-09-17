@@ -16,6 +16,7 @@ global function UICodeCallback_GRXFirstPartyBundlePurchased
 global function UICodeCallback_ActivateRootPanel
 global function ServerToUI_EntitlementInitialized
 global function Entitlement_IsSKUBundleOwned
+global function UpdateEntitlementMessages
 
 
 
@@ -84,6 +85,8 @@ struct FileStruct_LifetimeLevel
 
 	bool hasRunMenuEntitlementsFirstTime = false
 	bool hasEntitlementsInitialized = false
+
+	array<GRXContainerInfo> entitlementMessages
 
 }
 FileStruct_LifetimeLevel& fileLevel
@@ -908,6 +911,22 @@ bool function TryEntitlementMenus()
 	if ( fileLevel.hasEntitlementsInitialized == false )
 		return false
 
+	if ( GetConVarBool( "mtx_useClientContainersForEntitlementNotification" ) )
+	{
+		foreach ( GRXContainerInfo message in fileLevel.entitlementMessages )
+		{
+			GRX_MarkContainerAsSeen( message )
+			fileLevel.entitlementMessages.fastremovebyvalue( message )
+
+			
+			OpenEntitlementMenu( ItemFlavor_GetAsset( GetItemFlavorByGUID( 591466871 ) ) )
+			IncrementNumDialogFlowDialogsDisplayed()
+
+			return true
+		}
+	}
+
+	
 	foreach ( ItemFlavor entitlementFlav in GetAllItemFlavorsOfType( eItemType.entitlement ) )
 	{
 		asset entitlementAsset = ItemFlavor_GetAsset( entitlementFlav )
@@ -942,6 +961,7 @@ bool function TryEntitlementMenus()
 		}
 	}
 
+	
 	if ( dialogQueue.len() > 0 )
 	{
 		DialogQueueEntry dqe = dialogQueue.pop()
@@ -980,6 +1000,17 @@ bool function Entitlement_IsSKUBundleOwned( int bundleEnum, ItemFlavor bundleFla
 
 
 
+void function UpdateEntitlementMessages( array<GRXContainerInfo> messages )
+{
+	fileLevel.entitlementMessages.clear()
+
+	foreach ( GRXContainerInfo message in messages )
+	{
+		fileLevel.entitlementMessages.append( message )
+	}
+}
+
+
 
 void function OpenEntitlementMenu( asset entitlementAsset )
 {
@@ -1004,9 +1035,6 @@ void function QueueEntitlementMenu( asset entitlementAsset, string persistenceVa
 	dqe.entitlementGUID = guid
 	dialogQueue.append( dqe )
 }
-
-
-
 
 
 

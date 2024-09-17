@@ -104,6 +104,9 @@ void function MiniPromo_Stop()
 
 void function OnGRXStateChanged()
 {
+	if ( !IsConnected() )
+		return
+
 	if ( !GRX_IsInventoryReady() || !GRX_AreOffersReady() )
 		return
 
@@ -179,7 +182,6 @@ void function UpdateValidityOfPages( array<MiniPromoPageData> pages )
 			case "themedstoreskin":
 			case "collectionevent":
 			case "storeoffer":
-			case "whatsnew":
 			case "storespecials":
 			case "playapex":
 			case "challenges":

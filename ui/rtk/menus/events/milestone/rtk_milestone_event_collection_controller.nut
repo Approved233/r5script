@@ -48,8 +48,10 @@ global struct RTKMilestoneCollectedItemInfo
 	bool isOwned
 	bool isPurchasable
 	bool isChaseItem
+	bool isStackable
 	int gridRowSpan
 	int gridColSpan
+	int quantity
 	asset icon
 	int price
 	RTKMilestoneCollectedItemInfoTooltip& tooltipInfo

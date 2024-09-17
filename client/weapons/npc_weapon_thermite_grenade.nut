@@ -144,32 +144,6 @@ void function OnProjectileCollision_npcweapon_thermite_grenade( entity projectil
 }
 
 
-void function FadeModelIntensityOverTime( entity model, float duration, int startColor = 255, int endColor = 0 )
-{
-	EndSignal( model, "OnDestroy" )
-
-	float startTime = Time()
-	float endTime = startTime + duration
-
-	
-
-	while ( Time() <= endTime )
-	{
-		float alphaResult = GraphCapped( Time(), startTime, endTime, startColor, endColor )
-		string colorString = alphaResult + " " + alphaResult + " " + alphaResult
-		model.kv.rendercolor = colorString
-		model.kv.renderamt = 255
-		
-		WaitFrame()
-	}
-
-	model.kv.rendercolor = endColor + " " + endColor + " " + endColor
-	model.kv.renderamt = 255
-
-}
-
-
-
 
 
 

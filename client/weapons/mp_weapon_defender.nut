@@ -5,6 +5,10 @@ global function OnWeaponPrimaryAttack_weapon_defender_railgun
 global function OnWeaponChargeBegin_weapon_defender_railgun
 
 
+global function OnWeaponActivate_weapon_defender
+global function OnWeaponSustainedDischargeBegin_Defender
+
+
 const asset DEFENDER_FX_RELOAD_1P = $"P_wpn_defender_reload_FP"
 const asset DEFENDER_FX_RELOAD_3P = $"P_wpn_defender_reload"
 
@@ -63,5 +67,21 @@ int function FireDefender( entity weapon, WeaponPrimaryAttackParams attackParams
 
 	weapon.FireWeapon_Default( attackParams.pos, attackParams.dir, 1.0, 1.0, false )
 
+	return weapon.GetWeaponSettingInt( eWeaponVar.ammo_per_shot )
+}
+
+
+void function OnWeaponActivate_weapon_defender( entity weapon )
+{
+
+		
+		weapon.w.useRapidHitbeep = true
+
+}
+
+int function OnWeaponSustainedDischargeBegin_Defender( entity weapon )
+{
+	if ( !IsValid( weapon ) )
+		return 3
 	return weapon.GetWeaponSettingInt( eWeaponVar.ammo_per_shot )
 }

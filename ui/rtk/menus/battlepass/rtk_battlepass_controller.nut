@@ -141,11 +141,13 @@ global struct RTKBattlepassTrackItemStruct
     int itemDisplayType = 0
     SettingsAssetGUID itemGUID
     bool levelReached = false
+	int level = -1
     bool locked = false
     int quantity = 0
     int quality = 0
     int reverseIndex = 0
-    asset secondaryIconAsset = $"" 
+    int spacing = 0
+    asset secondaryIconAsset = $""
     int itemType = -1
 }
 
@@ -159,8 +161,10 @@ global struct RTKBattlepassTrackLevelStruct
     bool isNextLevel
     bool isOwned
 	bool pagesToRight
-    array< RTKBattlepassTrackItemStruct > items
-    int level
+	array< RTKBattlepassTrackItemStruct > items
+	int itemCount = 0
+    int level = 0
+    int width = 0
     string levelText
     float progress = 0.0
 }
@@ -182,7 +186,14 @@ global struct RTKBattlepassControllerPanel_ModelStruct
 	int trackVisibleLevels = 9
 	int viewingTrack = -1
 	RTKBattlepassCarouselInfo& carouselInfo
-	array< RTKBattlepassTrackLevelStruct > visibleLevels
+	asset prefabItemTrack = $""
+	asset prefabItemChase = $""
+	array< RTKBattlepassTrackLevelStruct > trackLevels
+	array< RTKBattlepassTrackItemStruct > trackItems
+	array< RTKBattlepassTrackLevelStruct > chaseLevels
+	array< RTKBattlepassTrackItemStruct > chaseItems
+	array< RTKBattlepassTrackItemStruct > trackItemsBadge
+	array< RTKBattlepassTrackItemStruct > chaseItemsBadge
 	vector bpv2bgsliceColor1
 	vector bpv2bgsliceColor2
 	
@@ -218,6 +229,7 @@ struct PrivateData
 	table <int, array<BattlePassReward> > passLevelRewardsCache
 	SettingsAssetGUID focusedItemGUID
 	int focusedLevel = -1
+	int focusedIndex = -1
 	bool focusedTrackSelector = false
 	bool focusedTrack = false
 	int openedAtTime = -1
@@ -226,6 +238,7 @@ struct PrivateData
 	int paginationStartPage = -1
 	int paginationCurrentPage = -1
 	bool paginationAutoScroll = false
+	rtk_behavior ornull lastActiveCursorInteract = null
 	
 	int TRACK_PAGE_SIZE = 10
 	int MAX_TRACKS = 6
@@ -284,7 +297,7 @@ ItemFlavor ornull function GetPass( int passType = -1 )
 	else if ( passType == ePassType.NEWPLAYER )
 	{
 
-			activePass = NPP_GetPlayerActiveNPP( GetLocalClientPlayer() )
+			activePass = NPP_GetAssignedNPP( GetLocalClientPlayer() )
 
 	}
 	return activePass
@@ -420,7 +433,7 @@ bool function IsPassComplete(  ItemFlavor pass, int passType )
 {
 	if ( passType == ePassType.BATTLEPASS )
 	{
-		int battlePassLevel = GetPassLevel( GetLocalClientPlayer(), pass, passType, false ) + 1
+		int battlePassLevel = GetPassLevel( GetLocalClientPlayer(), pass, passType, false )
 		int battlePassMaxLevel = GetPassMaxLevelIndex( pass, passType )
 		bool battlePassCompleted = battlePassLevel >= battlePassMaxLevel
 		return battlePassCompleted
@@ -502,7 +515,7 @@ bool function PassCanBuyUpToLevel( int passType )
 
 	expect ItemFlavor( activePass )
 
-	if ( !DoesPlayerOwnBattlePass( GetLocalClientPlayer(), activePass ) )
+	if ( !DoesPlayerOwnBattlePassTier( GetLocalClientPlayer(), activePass, eBattlePassV2OwnershipTier.PREMIUM ) )
 		return false
 
 	int level = GetPassLevel( GetLocalClientPlayer(), activePass, passType, false ) + 1 
@@ -523,7 +536,7 @@ void function PassBuyUpToLevel( int passType )
 
 	expect ItemFlavor( activePass )
 
-	if ( !DoesPlayerOwnBattlePass( GetLocalClientPlayer(), activePass ) )
+	if ( !DoesPlayerOwnBattlePassTier( GetLocalClientPlayer(), activePass, eBattlePassV2OwnershipTier.PREMIUM ) )
 		return
 
 	BattlePass_Purchase( null, 1 )
@@ -648,7 +661,7 @@ void function RTKBattlepass_InitializeMenuPanel( var panel, int passType = -1 )
 			{
 				CloseActiveMenu()
 				SetCurrentTabForPIN( "PassPanel" )
-				OpenBattlepassPurchaseMenu( ePassPurchaseTab.PREMIUMPLUS )
+				OpenBattlepassPurchaseMenu( ePassPurchaseTab.ULTIMATE_PLUS )
 			},
 			bool function( ) : ( panel, passType )
 			{
@@ -668,7 +681,7 @@ void function RTKBattlepass_InitializeMenuPanel( var panel, int passType = -1 )
 
 				expect ItemFlavor( activePass )
 
-				return !DoesPlayerOwnBattlePass( GetLocalClientPlayer(), activePass )
+				return !DoesPlayerOwnBattlePassTier( GetLocalClientPlayer(), activePass, eBattlePassV2OwnershipTier.PREMIUM )
 			}
 		)
 	}
@@ -817,7 +830,7 @@ void function RTKBattlepassControllerPanel_OnInitializedAndConnected( rtk_behavi
 			p.passLevelRewardsCache.clear()
 
 			entity player = GetLocalClientPlayer()
-			bool hasPremiumPass = passType == ePassType.BATTLEPASS && DoesPlayerOwnBattlePass( player, activePass )
+			bool hasPremiumPass = passType == ePassType.BATTLEPASS && DoesPlayerOwnBattlePassTier( player, activePass, eBattlePassV2OwnershipTier.PREMIUM )
 
 			bool expanded = !((self.PropGetBool( "expandingEnabledController" ) && IsControllerModeActive() && (!self.PropGetBool( "expandingEnabledDnavOnly" ) || GetDpadNavigationActive()) ) || (self.PropGetBool( "expandingEnabledKeyboard" ) && !IsControllerModeActive() ))
 
@@ -828,10 +841,6 @@ void function RTKBattlepassControllerPanel_OnInitializedAndConnected( rtk_behavi
 				if ( passType in file.passTypeToViewingMode)
 				{
 					int viewMode = file.passTypeToViewingMode[passType]
-					if ( viewMode == eBattlepassViewMode.ELITE )
-					{
-						viewMode = eBattlepassViewMode.PREMIUM
-					}
 					RTKBattlepassControllerPanel_SetViewMode( self, battlepassModelStruct, viewMode, expanded, false )
 				}
 				else
@@ -840,7 +849,9 @@ void function RTKBattlepassControllerPanel_OnInitializedAndConnected( rtk_behavi
 						passType == ePassType.RETURNING_PLAYER ? eBattlepassViewMode.RETURNING_PLAYER
 						: passType == ePassType.EVENT ? eBattlepassViewMode.EVENT
 						: passType == ePassType.NEWPLAYER ? eBattlepassViewMode.NEWPLAYER
-						: eBattlepassViewMode.PREMIUM, expanded, false )
+						: DoesPlayerOwnBattlePassTier( GetLocalClientPlayer(), activePass, eBattlePassV2OwnershipTier.ULTIMATE_PLUS ) ? eBattlepassViewMode.ELITE : eBattlepassViewMode.PREMIUM,
+						expanded, false
+					)
 				}
 				RTKBattlepassControllerPanel_SetViewTrack( self, battlepassModelStruct, activePass, -1 )
 			}
@@ -869,11 +880,6 @@ void function RTKBattlepassControllerPanel_OnInitializedAndConnected( rtk_behavi
 
 				thread RTKBattlepassControllerPanel_WaitShowPass( self )
 
-				if ( passType == ePassType.BATTLEPASS )
-				{
-					thread TryDisplayBattlePassAwards( true )
-				}
-
 				p.openedAtTime = int( UITime() )
 			}
 
@@ -900,8 +906,13 @@ void function RTKBattlepassControllerPanel_OnInitializedAndConnected( rtk_behavi
 					Remote_ServerCallFunction( "ClientCallback_SetSeasonalHubButtonClickedSeason" )
 					if ( !hasPremiumPass )
 					{
-						OpenBattlepassPurchaseMenu( ePassPurchaseTab.PREMIUMPLUS )
+						OpenBattlepassPurchaseMenu( ePassPurchaseTab.ULTIMATE_PLUS )
 					}
+				}
+
+				if ( !Battlepass_TryShowInstantGrants( void function ( int result ) { thread TryDisplayBattlePassAwards( true ) } ) )
+				{
+					thread TryDisplayBattlePassAwards( true )
 				}
 			}
 		})
@@ -956,6 +967,10 @@ void function RTKBattlepassControllerPanel_WaitShowPass( rtk_behavior self )
 
 void function RTKBattlepassControllerPanel_OnDestroy( rtk_behavior self )
 {
+	int passType = self.PropGetInt( "passType" )
+
+	RTKDataModelType_DestroyStruct( RTK_MODELTYPE_MENUS, GetPassModelName( passType ) )
+
 	RTKBattlepassControllerPanel_DeregisterInput( self )
 
 	PrivateData p
@@ -968,7 +983,6 @@ void function RTKBattlepassControllerPanel_OnDestroy( rtk_behavior self )
 		p.callbacksInitialised = false
 	}
 
-	int passType = self.PropGetInt( "passType" )
 	if ( passType in file.passTypeToPass )
 		delete file.passTypeToPass[passType]
 
@@ -1180,12 +1194,11 @@ void function RTKBattlepassControllerPanel_SetNavigationRoot(rtk_behavior self, 
 
 void function RTKBattlepassControllerPanel_UpdateTrackModel(rtk_behavior self, rtk_struct battlepassModelStruct )
 {
+	
+
 	RTKBattlepassControllerPanel_OnInputModeUpdated( self, false ) 
 
 	int passType = self.PropGetInt( "passType" )
-
-	rtk_array visibleLevels = RTKDataModel_GetArray( "&menus." + GetPassModelName( passType ) + ".visibleLevels" )
-	RTKArray_Clear( visibleLevels )
 
 	PrivateData p
 	self.Private( p )
@@ -1199,13 +1212,28 @@ void function RTKBattlepassControllerPanel_UpdateTrackModel(rtk_behavior self, r
 	{
 		levelsSource = p.badgeLevels
 		itemPrefab = $"ui_rtk/menus/battlepass/battlepass_track_badge.rpak"
-
 	} else if ( isBattlepassPrizeTrack )
 	{
 		levelsSource = p.trackLevels
 	}
 
-	RTKArray_SetValue( visibleLevels, levelsSource )
+	RTKStruct_SetAssetPath(battlepassModelStruct, "prefabItemTrack", itemPrefab )
+	RTKStruct_SetAssetPath(battlepassModelStruct, "prefabItemChase", itemPrefab )
+
+	rtk_array trackLevels = RTKDataModel_GetArray( "&menus." + GetPassModelName( passType ) + ".trackLevels")
+	rtk_array trackItems = RTKDataModel_GetArray( "&menus." + GetPassModelName( passType ) + ".trackItems" )
+	rtk_array chaseLevels = RTKDataModel_GetArray( "&menus." + GetPassModelName( passType ) + ".chaseLevels" )
+	rtk_array chaseItems = RTKDataModel_GetArray( "&menus." + GetPassModelName( passType ) + ".chaseItems" )
+
+	RTKArray_Clear( trackLevels )
+	RTKArray_Clear( trackItems )
+	RTKArray_Clear( chaseLevels )
+	RTKArray_Clear( chaseItems )
+
+	array< RTKBattlepassTrackLevelStruct > trackLevelsArr
+	array< RTKBattlepassTrackItemStruct > trackItemsArr
+	array< RTKBattlepassTrackLevelStruct > chaseLevelsArr
+	array< RTKBattlepassTrackItemStruct > chaseItemsArr
 
 	if ( levelsSource.len() > 0 )
 	{
@@ -1216,6 +1244,35 @@ void function RTKBattlepassControllerPanel_UpdateTrackModel(rtk_behavior self, r
 		}
 		RTKStruct_SetInt(battlepassModelStruct, "trackVisibleLevels", levelsSource.len() - 1)
 		RTKStruct_SetInt(battlepassModelStruct, "trackVisibleChaseItems", chaseItemCount )
+
+		for ( int i = 0; i < levelsSource.len(); i++ )
+		{
+			RTKBattlepassTrackLevelStruct level = levelsSource[i]
+			if ( i == levelsSource.len() - 1 )
+			{
+				level.width = ( level.itemCount * ( level.isBadge ? ( 202 + 14 ) : ( 202 + 14 ) ) ) - 12 
+				chaseLevelsArr.push( level )
+				for ( int j = 0; j < level.items.len(); j++ )
+				{
+					RTKBattlepassTrackItemStruct item = level.items[j]
+					chaseItemsArr.push( item )
+				}
+			}
+			else
+			{
+				level.width = ( level.itemCount * ( level.isBadge ? ( 134 + 6 ) : ( 104 + 6 ) ) ) 
+				trackLevelsArr.push( level )
+				for ( int j = 0; j < level.items.len(); j++ )
+				{
+					RTKBattlepassTrackItemStruct item = level.items[j]
+					if ( j == level.items.len() - 1 )
+					{
+						item.spacing = 20
+					}
+					trackItemsArr.push( item )
+				}
+			}
+		}
 	}
 	else
 	{
@@ -1223,21 +1280,10 @@ void function RTKBattlepassControllerPanel_UpdateTrackModel(rtk_behavior self, r
 		RTKStruct_SetInt(battlepassModelStruct, "trackVisibleChaseItems", 0 )
 	}
 
-	
-	rtk_panel trackItemsGrid = self.PropGetPanel( "trackItemsGrid" )
-	rtk_panel trackItemsGrid2 = self.PropGetPanel( "trackItemsGrid2" )
-
-	array< rtk_panel > childPanels = trackItemsGrid.GetChildren()
-	foreach ( childPanel in childPanels )
-	{
-		RTKPanel_Destroy( childPanel )
-	}
-
-	childPanels = trackItemsGrid2.GetChildren()
-	foreach ( childPanel in childPanels )
-	{
-		RTKPanel_Destroy( childPanel )
-	}
+	RTKArray_SetValue( trackLevels, trackLevelsArr )
+	RTKArray_SetValue( trackItems, trackItemsArr )
+	RTKArray_SetValue( chaseLevels, chaseLevelsArr )
+	RTKArray_SetValue( chaseItems, chaseItemsArr )
 
 	Signal( uiGlobal.signalDummy, "RTKBattlepassOnUpdate" )
 	thread RTKBattlepassControllerPanel_InstantiateTrackItems(self, levelsSource, chaseItemCount, itemPrefab, true)
@@ -1251,24 +1297,6 @@ void function RTKBattlepassControllerPanel_InstantiateTrackItems(rtk_behavior se
 	if ( waitFrame )
 	{
 		WaitFrame()  
-	}
-
-	int passType = self.PropGetInt( "passType" )
-	rtk_panel trackItemsGrid = self.PropGetPanel( "trackItemsGrid" )
-	rtk_panel trackItemsGrid2 = self.PropGetPanel( "trackItemsGrid2" )
-
-	for ( int i = 0; i < levelsSource.len(); i++ )
-	{
-		rtk_panel newTrackLevel = RTKPanel_Instantiate( $"ui_rtk/menus/battlepass/battlepass_track_level.rpak", chaseItemCount > 0 && i == levelsSource.len() - 1 ? trackItemsGrid2 : trackItemsGrid, "BattlepassTrackLevel_" + i )
-		newTrackLevel.SetBindingRootPath(  "&menus." + GetPassModelName( passType ) + ".visibleLevels[" + i + "]" )
-
-		rtk_panel itemsContainer = newTrackLevel.FindDescendantByName( "BattlepassTrackLevelItems" )
-
-		for ( int j = 0; j < levelsSource[i].items.len(); j++ )
-		{
-			rtk_panel newItem = RTKPanel_Instantiate( itemPrefab, itemsContainer, "BattlepassTrackItem_" + j )
-			newItem.SetBindingRootPath(  "&menus." + GetPassModelName( passType ) + ".visibleLevels[" + i + "].items[" + j + "]" )
-		}
 	}
 
 	Signal( uiGlobal.signalDummy, "RTKBattlepassOnPrizesInstantiated" )
@@ -1445,7 +1473,7 @@ void function RTKBattlepassControllerPanel_BuildBadgeModelInfo( rtk_behavior sel
 		int badgeBPLevel = badgeNumber * p.TRACK_PAGE_SIZE
 		RTKBattlepassTrackLevelStruct badgeLevel
 		badgeLevel.level = badgeNumber
-		badgeLevel.isOwned = badgeBPLevel <= playerBattlepassLevel
+		badgeLevel.isOwned = badgeBPLevel <= playerBattlepassLevel + 1
 		badgeLevel.isCurrentLevel = badgeLevel.isOwned && ( badgeBPLevel ) + p.TRACK_PAGE_SIZE <= playerBattlepassLevel
 		badgeLevel.progress = badgeLevel.isOwned ? 1.0 : playerBattlepassLevel + 10 >= ( badgeBPLevel ) ? ( ( (playerBattlepassLevel + 1) % p.TRACK_PAGE_SIZE ) / float(p.TRACK_PAGE_SIZE) ) : 0.0
 		badgeLevel.expanded = false
@@ -1454,6 +1482,7 @@ void function RTKBattlepassControllerPanel_BuildBadgeModelInfo( rtk_behavior sel
 		badgeLevel.isNextLevel = !badgeLevel.isOwned && playerBattlepassLevel + 10 >= ( badgeBPLevel )
 		badgeLevel.levelText = Localize("#BATTLEPASS_TRACK_LEVEL", badgeNumber * p.TRACK_PAGE_SIZE)
 		badgeLevel.chaseItemCount = 1
+		badgeLevel.itemCount = 1
 
 		RTKBattlepassTrackItemStruct itemStruct
 		itemStruct.description = ""
@@ -1477,6 +1506,7 @@ void function RTKBattlepassControllerPanel_BuildBadgeModelInfo( rtk_behavior sel
 		itemStruct.frameColor = <1.0, 1.0, 1.0>
 		itemStruct.frameLightness = !itemStruct.levelReached ? blurredTrackPrizeLightness : ownedTrackPrizeLightness
 		itemStruct.frameSaturation = 1.0
+		itemStruct.spacing = 20
 
 		badgeLevel.items.push(itemStruct)
 
@@ -1494,8 +1524,9 @@ void function RTKBattlepassControllerPanel_BuildSummaryModelInfo( rtk_behavior s
 	asset passAsset = ItemFlavor_GetAsset( activePass )
 	int passType = self.PropGetInt( "passType" )
 
-	bool hasPremiumPass = DoesPlayerOwnBattlePass( GetLocalClientPlayer(), activePass )
-	bool hasElitePass = passType == ePassType.BATTLEPASS ? DoesPlayerOwnEliteBattlePass( GetLocalClientPlayer(), activePass ) : false
+	bool hasPremiumPass = passType == ePassType.BATTLEPASS ? DoesPlayerOwnBattlePassTier( GetLocalClientPlayer(), activePass, eBattlePassV2OwnershipTier.PREMIUM ) : false
+	bool hasUltimatePass = passType == ePassType.BATTLEPASS ? DoesPlayerOwnBattlePassTier( GetLocalClientPlayer(), activePass, eBattlePassV2OwnershipTier.ULTIMATE ) : false
+	bool hasUltimatePlusPass = passType == ePassType.BATTLEPASS ? DoesPlayerOwnBattlePassTier( GetLocalClientPlayer(), activePass, eBattlePassV2OwnershipTier.ULTIMATE_PLUS ) : false
 	int battlePassLevel = GetPassLevel( GetLocalClientPlayer(), activePass, passType, false )
 	int currentXP = GetPassXPProgress( playerEHI, activePass, passType, false, true )
 	int battlePassMaxLevel = GetPassMaxLevelIndex( activePass, passType ) + 1
@@ -1537,7 +1568,11 @@ void function RTKBattlepassControllerPanel_BuildSummaryModelInfo( rtk_behavior s
 	}
 
 	summaryData.progress = battlePassCompleted ? 1.0 : (currentXP % p.XP_PER_LEVEL) / float( p.XP_PER_LEVEL )
-	summaryData.statusLabel = passType == ePassType.NEWPLAYER ? "" : hasElitePass ?  Localize("#BATTLEPASS_ELITE") : hasPremiumPass ? Localize("#BATTLEPASS_PREMIUM") : Localize("#BATTLEPASS_FREE")
+	summaryData.statusLabel = passType == ePassType.NEWPLAYER ? ""
+		: hasUltimatePlusPass ?  Localize("#BATTLEPASS_ULTIMATE_PLUS")
+		: hasUltimatePass ? Localize("#BATTLEPASS_ULTIMATE")
+		: hasPremiumPass ? Localize("#BATTLEPASS_PREMIUM")
+		: Localize("#BATTLEPASS_FREE")
 	summaryData.levelStarAsset = passType == ePassType.NEWPLAYER ?
 		$"ui_image/rui/menu/battlepass/newplayerpass/npp_points_icon.rpak" :
 		$"ui_image/rui/menu/buttons/favorite_star.rpak"
@@ -1633,14 +1668,8 @@ table<int, array<BattlePassReward> > function RTKBattlepassControllerPanel_GetPa
 				BattlePassReward reward
 
 				reward.flav = GetItemFlavorByAsset( rewardAsset )
-				string overrideRefGUIDString = GetCurrentPlaylistVarString( format( "%s_level_%d_override_ref", ItemFlavor_GetGUIDString( pass ), currentLevel ), "" )
-				if ( overrideRefGUIDString != "" )
-					reward.flav = GetItemFlavorByGUID( ConvertItemFlavorGUIDStringToGUID( overrideRefGUIDString ) )
-
 				reward.quantity = rewardQty
-				int overrideQty = GetCurrentPlaylistVarInt( format( "%s_level_%d_override_qty", ItemFlavor_GetGUIDString( pass ), currentLevel ), -1 )
-				if ( overrideQty != -1 )
-					reward.quantity = overrideQty
+				reward = CheckForBattlePassRewardPlaylistOverrides( reward, pass, currentLevel )
 
 				reward.level = currentLevel
 				reward.rewardTier = rewardTier
@@ -1649,12 +1678,10 @@ table<int, array<BattlePassReward> > function RTKBattlepassControllerPanel_GetPa
 				int originalGUID = ItemFlavor_GetGUID( reward.flav )
 				SubstituteBattlePassRewardsForUserRestrictions( GetLocalClientPlayer(), reward )
 
-
-				
 				int itemType = ItemFlavor_GetType( reward.flav )
 				if ( ItemFlavor_GetGUID( reward.flav ) == originalGUID )
 				{
-					reward.iconOverride = ( ( itemType == eItemType.apex_coins || itemType == eItemType.account_currency || itemType == eItemType.account_currency_bundle ) ) ? $"" : GetGlobalSettingsAsset( rewardAsset, "challengeIcon" )
+					reward.iconOverride = ItemFlavor_GetBattlepassIcon( reward.flav )
 					if ( reward.iconOverride == $"" )
 					{
 						reward.iconOverride = GetGlobalSettingsAsset( rewardAsset, "icon" )
@@ -1663,7 +1690,6 @@ table<int, array<BattlePassReward> > function RTKBattlepassControllerPanel_GetPa
 				else if ( itemType == eItemType.account_currency || itemType == eItemType.account_currency_bundle ) 
 				{
 					reward.iconOverride = $"rui/menu/common/currency_crafting"
-
 				}
 
 				
@@ -1707,8 +1733,9 @@ void function RTKBattlepassControllerPanel_BuildTrackSelectorModelInfo( rtk_beha
 
 	RTKArray_Clear( trackSelectors )
 
-	bool hasPremiumPass = DoesPlayerOwnBattlePass( GetLocalClientPlayer(), activePass )
-	bool hasElitePass = passType == ePassType.BATTLEPASS ? DoesPlayerOwnEliteBattlePass( GetLocalClientPlayer(), activePass ) : false
+	bool hasPremiumPass = passType == ePassType.BATTLEPASS ? DoesPlayerOwnBattlePassTier( GetLocalClientPlayer(), activePass, eBattlePassV2OwnershipTier.PREMIUM ) : false
+	bool hasUltimatePass = passType == ePassType.BATTLEPASS ? DoesPlayerOwnBattlePassTier( GetLocalClientPlayer(), activePass, eBattlePassV2OwnershipTier.ULTIMATE ) : false
+	bool hasUltimatePlusPass = passType == ePassType.BATTLEPASS ? DoesPlayerOwnBattlePassTier( GetLocalClientPlayer(), activePass, eBattlePassV2OwnershipTier.ULTIMATE_PLUS ) : false
 	int playerBattlePassLevel = GetPassLevel( GetLocalClientPlayer(), activePass, passType, false )
 
 	int trackSelectorCount = 0
@@ -1763,7 +1790,7 @@ void function RTKBattlepassControllerPanel_BuildTrackSelectorModelInfo( rtk_beha
 
 			bool canOwn = (
 							(( bpReward.rewardTier == eBattlePassV2RewardTier.PREMIUM ) && hasPremiumPass) ||
-							(( bpReward.rewardTier == eBattlePassV2RewardTier.ELITE ) && hasElitePass) ||
+							(( bpReward.rewardTier == eBattlePassV2RewardTier.ELITE ) && hasUltimatePlusPass) ||
 							( bpReward.rewardTier == eBattlePassV2RewardTier.FREE )
 					)
 			bool isOwned = ( bpReward.level <= playerBattlePassLevel && canOwn )
@@ -1788,8 +1815,17 @@ void function RTKBattlepassControllerPanel_BuildTrackSelectorModelInfo( rtk_beha
 			prize.isPremiumItem = bpReward.rewardTier == eBattlePassV2RewardTier.PREMIUM
 			prize.isFreeItem = bpReward.rewardTier == eBattlePassV2RewardTier.FREE
 			prize.showFreeIndicator = false
-			prize.quality =  maxint( 0, ItemFlavor_GetQuality( bpReward.flav ) )
+			prize.quality =  GRX_GetRarityOverrideFromQuantity( bpReward.flav, maxint( 0, ItemFlavor_GetQuality( bpReward.flav ) ), bpReward.quantity ) 
 			prize.quantity = bpReward.quantity
+
+			if ( itemType == eItemType.voucher && prize.quantity <= 1)
+			{
+				if ( Voucher_GetEffectBattlepassStars( bpReward.flav ) > 0 )
+				{
+					prize.quantity = Voucher_GetEffectBattlepassStars( bpReward.flav )
+				}
+			}
+
 			prize.itemGUID = bpReward.flav.guid
 			prize.exists = prize.itemGUID > 0
 			prize.description = string( bpReward.level + 1 )
@@ -1846,6 +1882,8 @@ void function RTKBattlepassControllerPanel_BuildTrackSelectorModelInfo( rtk_beha
 					itemType == eItemType.gladiator_card_stat_tracker ||
 					itemType == eItemType.gladiator_card_frame ||
 					itemType == eItemType.gladiator_card_stance ||
+					itemType == eItemType.skydive_emote ||
+					itemType == eItemType.emote_icon ||
 					itemType == eItemType.gladiator_card_intro_quip)
 			{
 				prize.secondaryIconAssetPath = GetCharacterIconToDisplay( bpReward.flav )
@@ -1855,30 +1893,22 @@ void function RTKBattlepassControllerPanel_BuildTrackSelectorModelInfo( rtk_beha
 				prize.secondaryIconAssetPath = GetGlobalSettingsAsset( ItemFlavor_GetAsset( activePass ), "smallLogo" )
 			}
 
-			
-			if ( p.viewMode != eBattlepassViewMode.ELITE && ( bpReward.rewardTier == eBattlePassV2RewardTier.PREMIUM ) && prize.exists )
-			{
-				trackSelector.frontPrize = prize
-			}
-			else if ( p.viewMode != eBattlepassViewMode.ELITE && ( bpReward.rewardTier == eBattlePassV2RewardTier.ELITE ) && prize.exists )
-			{
-				trackSelector.backPrize = prize
-			}
-			else if ( ( bpReward.rewardTier == eBattlePassV2RewardTier.PREMIUM ) && prize.exists )
-			{
-				trackSelector.backPrize = prize
-			}
-			else if ( ( bpReward.rewardTier == eBattlePassV2RewardTier.ELITE ) && prize.exists )
-			{
-				trackSelector.frontPrize = prize
-			}
-			else if ( !trackSelector.frontPrize.exists && prize.exists )
+			if ( !trackSelector.frontPrize.exists && prize.exists )
 			{
 				trackSelector.frontPrize = prize
 			}
 			else if ( !trackSelector.backPrize.exists && prize.exists )
 			{
 				trackSelector.backPrize = prize
+			}
+
+			if ( p.viewMode == eBattlepassViewMode.ELITE && bpReward.rewardTier == eBattlePassV2RewardTier.ELITE )
+			{
+				if ( trackSelector.frontPrize.exists && trackSelector.frontPrize.isPremiumItem )
+				{
+					trackSelector.backPrize = trackSelector.frontPrize
+				}
+				trackSelector.frontPrize = prize
 			}
 		}
 
@@ -1895,6 +1925,15 @@ void function RTKBattlepassControllerPanel_BuildTrackSelectorModelInfo( rtk_beha
 		trackSelectorCount++
 	}
 
+	
+	if ( canInspect && trackSelectorCount > 0 )
+	{
+		rtk_struct trackSelector = RTKArray_GetStruct(trackSelectors, trackSelectorCount - 1)
+		rtk_struct frontPrize = RTKStruct_GetStruct(trackSelector, "frontPrize")
+		int itemGUID = RTKStruct_GetInt(frontPrize, "itemGUID")
+		RTKBattlepassControllerPanel_InspectItem( self, itemGUID, -1 )
+		canInspect = false
+	}
 
 	while ( trackSelectorCount < p.MAX_TRACKS )
 	{
@@ -1918,16 +1957,19 @@ void function RTKBattlepassControllerPanel_BuildTrackLevelModelInfo( rtk_behavio
 	int passType = self.PropGetInt( "passType" )
 	EHI playerEHI = ToEHI( GetLocalClientPlayer() )
 	int currentXP = GetPassXPProgress( playerEHI, activePass, passType, false, true )
-	bool hasPremiumPass = DoesPlayerOwnBattlePass( GetLocalClientPlayer(), activePass )
-	bool hasElitePass =  passType == ePassType.BATTLEPASS ? DoesPlayerOwnEliteBattlePass( GetLocalClientPlayer(), activePass ) : false
+	bool hasPremiumPass = passType == ePassType.BATTLEPASS ? DoesPlayerOwnBattlePassTier( GetLocalClientPlayer(), activePass, eBattlePassV2OwnershipTier.PREMIUM ) : false
+	bool hasUltimatePass = passType == ePassType.BATTLEPASS ? DoesPlayerOwnBattlePassTier( GetLocalClientPlayer(), activePass, eBattlePassV2OwnershipTier.ULTIMATE ) : false
+	bool hasUltimatePlusPass = passType == ePassType.BATTLEPASS ? DoesPlayerOwnBattlePassTier( GetLocalClientPlayer(), activePass, eBattlePassV2OwnershipTier.ULTIMATE_PLUS ) : false
 	int playerBattlePassLevel = GetPassLevel( GetLocalClientPlayer(), activePass, passType, false )
 
 	table<int, array<BattlePassReward> > passRewards = RTKBattlepassControllerPanel_GetPassRewards( self, activePass )
 
 	int totalTrackRewardCount = 0
 
-	foreach( int level, array<BattlePassReward> rewards in passRewards )
+	for ( int level = 0; level < passRewards.len(); level++ )
 	{
+		array<BattlePassReward> rewards = passRewards[level]
+
 		bool isVisible = ( level / p.TRACK_PAGE_SIZE ) == p.viewingTrack
 
 		if ( isVisible )
@@ -1945,8 +1987,10 @@ void function RTKBattlepassControllerPanel_BuildTrackLevelModelInfo( rtk_behavio
 			trackLevel.chaseItemCount = 0
 
 			int chaseRewardCount = 0
-			foreach ( int rewardIndex, BattlePassReward bpReward in rewards )
+			for ( int rewardIndex = 0; rewardIndex < rewards.len(); rewardIndex++ )
 			{
+				BattlePassReward bpReward = rewards[rewardIndex]
+
 				if ( bpReward.isChaseReward != trackLevel.isChaseItem)
 				{
 					Warning("BuildTrackLevelModelInfo - chase level has non-chase reward or vice versa. level: " + level)
@@ -1968,7 +2012,7 @@ void function RTKBattlepassControllerPanel_BuildTrackLevelModelInfo( rtk_behavio
 
 				bool canOwn = (
 								(( bpReward.rewardTier == eBattlePassV2RewardTier.PREMIUM ) && hasPremiumPass) ||
-								(( bpReward.rewardTier == eBattlePassV2RewardTier.ELITE ) && hasElitePass) ||
+								(( bpReward.rewardTier == eBattlePassV2RewardTier.ELITE ) && hasUltimatePlusPass) ||
 								( bpReward.rewardTier == eBattlePassV2RewardTier.FREE )
 						)
 				bool isOwned = ( trackLevel.isOwned && canOwn )
@@ -1995,14 +2039,24 @@ void function RTKBattlepassControllerPanel_BuildTrackLevelModelInfo( rtk_behavio
 				itemStruct.isFreeItem = bpReward.rewardTier == eBattlePassV2RewardTier.FREE
 				itemStruct.showFreeIndicator = bpReward.rewardTier == eBattlePassV2RewardTier.FREE && passType != ePassType.NEWPLAYER && !itemStruct.isChaseItem
 				itemStruct.image = prizeImage
-				itemStruct.quality = maxint( 0, ItemFlavor_GetQuality( bpReward.flav ) )
+				itemStruct.quality = GRX_GetRarityOverrideFromQuantity( bpReward.flav, maxint( 0, ItemFlavor_GetQuality( bpReward.flav ) ), bpReward.quantity ) 
 				itemStruct.index = rewardIndex
 				itemStruct.reverseIndex = (rewards.len() - rewardIndex) - 1
 				itemStruct.badgeRuiAsset = $""
 				itemStruct.badgeTier = 1
 				itemStruct.expanded = p.expanded
 				itemStruct.itemGUID = bpReward.flav.guid
+				itemStruct.level = level
 				itemStruct.quantity = bpReward.quantity
+
+				if ( itemType == eItemType.voucher && itemStruct.quantity <= 1)
+				{
+					if ( Voucher_GetEffectBattlepassStars( bpReward.flav ) > 0 )
+					{
+						itemStruct.quantity = Voucher_GetEffectBattlepassStars( bpReward.flav )
+					}
+				}
+
 				itemStruct.frameAssetPath = itemStruct.isChaseItem ? $"ui_image/rui/menu/battlepass/battlepass_new/bp_reward_chase_bg_extended.rpak"
 					: ( itemType == eItemType.apex_coins || itemType == eItemType.account_currency || itemType == eItemType.account_currency_bundle ) ? $"ui_image/rui/menu/battlepass/battlepass_new/bp_reward_frame_label.rpak"
 					: $"ui_image/rui/menu/battlepass/battlepass_new/bp_reward_frame_standard.rpak"
@@ -2020,6 +2074,8 @@ void function RTKBattlepassControllerPanel_BuildTrackLevelModelInfo( rtk_behavio
 						itemType == eItemType.gladiator_card_stat_tracker ||
 						itemType == eItemType.gladiator_card_frame ||
 						itemType == eItemType.gladiator_card_stance ||
+						itemType == eItemType.skydive_emote ||
+						itemType == eItemType.emote_icon ||
 						itemType == eItemType.gladiator_card_intro_quip)
 				{
 					itemStruct.secondaryIconAsset = GetCharacterIconToDisplay( bpReward.flav )
@@ -2074,6 +2130,8 @@ void function RTKBattlepassControllerPanel_BuildTrackLevelModelInfo( rtk_behavio
 				{
 					trackLevel.chaseItemCount++
 				}
+
+				trackLevel.itemCount++
 
 				trackLevel.items.push( itemStruct )
 			}
@@ -2210,67 +2268,55 @@ void function RTKBattlepassControllerPanel_SetUpTrackItemButtons( rtk_behavior s
 		{
 			expect rtk_panel( trackItemsGrid )
 
-			self.AutoSubscribe( trackItemsGrid, "onChildAdded", function ( rtk_panel newLevelChild, int newLevelChildIndex ) : ( self, battlepassModelStruct, activePass, gridIndex) {
+			self.AutoSubscribe( trackItemsGrid, "onChildAdded", function ( rtk_panel newItemChild, int newItemChildIndex ) : ( self, battlepassModelStruct, activePass, gridIndex) {
 
-				rtk_panel tracklevelItemContainer = newLevelChild.FindDescendantByName( "BattlepassTrackLevelItems" )
-				if ( tracklevelItemContainer )
+				array< rtk_behavior > gridItems = newItemChild.FindBehaviorsByTypeName( "Button" )
+				foreach( button in gridItems )
 				{
-					self.AutoSubscribe( tracklevelItemContainer, "onChildAdded", function ( rtk_panel newItemChild, int newItemChildIndex ) : ( self, newLevelChildIndex, battlepassModelStruct, activePass, gridIndex) {
-						array< rtk_behavior > gridItems = newItemChild.FindBehaviorsByTypeName( "Button" )
-						foreach( button in gridItems )
+					self.AutoSubscribe( button, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( self, newItemChildIndex, battlepassModelStruct, activePass, gridIndex ) {
+						PrivateData p
+						self.Private( p )
+						if ( !p.expanded )
 						{
-							int offset = gridIndex == 0 ? 0 : RTKStruct_GetInt(battlepassModelStruct, "trackVisibleLevels")
-
-							self.AutoSubscribe( button, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( self, newLevelChildIndex, newItemChildIndex, battlepassModelStruct, activePass, offset ) {
-								PrivateData p
-								self.Private( p )
-								if ( !p.expanded )
-								{
-									RTKBattlepassControllerPanel_SetViewMode( self, battlepassModelStruct, p.viewMode, true )
-									RTKBattlepassControllerPanel_BuildTrackLevelModelInfo( self, battlepassModelStruct, activePass )
-									p.paginationAutoScroll = true
-									RTKPagination_GoToPage( self.PropGetBehavior( "pagination" ), 0, "pagination_tracker" )
-								}
-								else
-								{
-									if ( keycode == MOUSE_RIGHT )
-									{
-										if ( IsValidItemFlavorGUID( p.focusedItemGUID  ) && PassCanEquipReward( GetItemFlavorByGUID( p.focusedItemGUID ) ) )
-										{
-											PassEquipReward( p.focusedItemGUID )
-										}
-									}
-									else
-									{
-										rtk_array visibleLevels = RTKStruct_GetOrCreateScriptArrayOfStructs( battlepassModelStruct, "visibleLevels", "RTKBattlepassTrackLevelStruct" )
-										RTKBattlepassControllerPanel_FindAndInspectItem( self, visibleLevels, newLevelChildIndex + offset, newItemChildIndex, true )
-									}
-								}
-							} )
-
-							self.AutoSubscribe( button, "onHighlightedOrFocused", function( rtk_behavior button, int prevState ) : ( self, newLevelChildIndex, newItemChildIndex, battlepassModelStruct, offset ) {
-								PrivateData p
-								self.Private( p )
-								p.focusedTrack = true
-								p.focusedLevel = (p.TRACK_PAGE_SIZE * p.viewingTrack) + (newLevelChildIndex + offset)
-								rtk_array visibleLevels = RTKStruct_GetOrCreateScriptArrayOfStructs( battlepassModelStruct, "visibleLevels", "RTKBattlepassTrackLevelStruct" )
-								RTKBattlepassControllerPanel_FindAndInspectItem( self, visibleLevels, newLevelChildIndex + offset, newItemChildIndex, false )
-								RTKBattlepassControllerPanel_SetFocusedTrackItem( self, visibleLevels, newLevelChildIndex + offset, newItemChildIndex, true )
-
-								RTKBattlepassControllerPanel_OnInputModeUpdated( self, false ) 
-							} )
-
-							self.AutoSubscribe( button, "onIdle", function( rtk_behavior button, int prevState ) : ( self, newLevelChildIndex, newItemChildIndex, battlepassModelStruct, offset ) {
-								PrivateData p
-								self.Private( p )
-								p.focusedTrack = false
-								rtk_array visibleLevels = RTKStruct_GetOrCreateScriptArrayOfStructs( battlepassModelStruct, "visibleLevels", "RTKBattlepassTrackLevelStruct" )
-								RTKBattlepassControllerPanel_SetFocusedTrackItem( self, visibleLevels, newLevelChildIndex + offset, newItemChildIndex, false )
-							} )
+							RTKBattlepassControllerPanel_SetViewMode( self, battlepassModelStruct, p.viewMode, true )
+							RTKBattlepassControllerPanel_BuildTrackLevelModelInfo( self, battlepassModelStruct, activePass )
+							p.paginationAutoScroll = true
+							RTKPagination_GoToPage( self.PropGetBehavior( "pagination" ), 0, "pagination_tracker" )
 						}
-					})
+						else
+						{
+							if ( keycode == MOUSE_RIGHT )
+							{
+								if ( IsValidItemFlavorGUID( p.focusedItemGUID  ) && PassCanEquipReward( GetItemFlavorByGUID( p.focusedItemGUID ) ) )
+								{
+									PassEquipReward( p.focusedItemGUID )
+								}
+							}
+							else
+							{
+								RTKBattlepassControllerPanel_FindAndInspectItem( self, newItemChildIndex, gridIndex == 1, true )
+							}
+						}
+					} )
+
+					self.AutoSubscribe( button, "onHighlightedOrFocused", function( rtk_behavior button, int prevState ) : ( self, newItemChildIndex, battlepassModelStruct, gridIndex ) {
+						PrivateData p
+						self.Private( p )
+						p.focusedTrack = true
+						RTKBattlepassControllerPanel_FindAndInspectItem( self, newItemChildIndex, gridIndex == 1, false )
+						RTKBattlepassControllerPanel_SetFocusedTrackItem( self, newItemChildIndex, gridIndex == 1, true )
+
+						RTKBattlepassControllerPanel_OnInputModeUpdated( self, false ) 
+					} )
+
+					self.AutoSubscribe( button, "onIdle", function( rtk_behavior button, int prevState ) : ( self, newItemChildIndex, battlepassModelStruct, gridIndex ) {
+						PrivateData p
+						self.Private( p )
+						p.focusedTrack = false
+						RTKBattlepassControllerPanel_SetFocusedTrackItem( self, newItemChildIndex, gridIndex == 1, false )
+					} )
 				}
-			} )
+			})
 		}
 		else
 		{
@@ -2282,30 +2328,41 @@ void function RTKBattlepassControllerPanel_SetUpTrackItemButtons( rtk_behavior s
 void function RTKBattlepassControllerPanel_SetUpPurchaseButton( rtk_behavior self, rtk_struct battlepassModelStruct, ItemFlavor activePass )
 {
 	int passType = self.PropGetInt( "passType" )
-	bool hasPremiumPass = DoesPlayerOwnBattlePass( GetLocalClientPlayer(), activePass )
-	bool hasElitePass = passType == ePassType.BATTLEPASS ? DoesPlayerOwnEliteBattlePass( GetLocalClientPlayer(), activePass ) : false
+	entity player = GetLocalClientPlayer()
+	bool hasPremiumPass = passType == ePassType.BATTLEPASS ? DoesPlayerOwnBattlePassTier( player, activePass, eBattlePassV2OwnershipTier.PREMIUM ) : false
+	bool hasUltimatePass = passType == ePassType.BATTLEPASS ? DoesPlayerOwnBattlePassTier( player, activePass, eBattlePassV2OwnershipTier.ULTIMATE ) : false
+	bool hasUltimatePlusPass = passType == ePassType.BATTLEPASS ? DoesPlayerOwnBattlePassTier( player, activePass, eBattlePassV2OwnershipTier.ULTIMATE_PLUS ) : false
 	bool battlePassCompleted = IsPassComplete( activePass, passType )
 	bool canPurchaseLevels = !battlePassCompleted && PassCanBuyUpToLevel( passType )
+	bool isRestricted = GRX_IsOfferRestricted( player )
 
 	rtk_behavior ornull purchaseButton = self.PropGetBehavior( "purchaseButton" )
 	if ( purchaseButton != null )
 	{
 		expect rtk_behavior( purchaseButton )
 
-		RTKStruct_SetBool(battlepassModelStruct, "enablePurchaseButton", passType == ePassType.BATTLEPASS && (!hasPremiumPass || !hasElitePass || canPurchaseLevels) )
+		bool canUpgradePass = !isRestricted ? !hasUltimatePlusPass : !hasPremiumPass
+		RTKStruct_SetBool(battlepassModelStruct, "enablePurchaseButton", passType == ePassType.BATTLEPASS && (canUpgradePass || canPurchaseLevels) )
 		RTKStruct_SetString(battlepassModelStruct, "purchaseButtonText",
 			Localize( !hasPremiumPass ? "#BATTLEPASS_BUY_PASS" :
-			!hasElitePass ? "#BATTLEPASS_UPGRADE_PASS" :
+			canUpgradePass ? "#BATTLEPASS_UPGRADE_PASS" :
 			"#BATTLEPASS_BUY_LEVELS")
 		)
 
-		self.AutoSubscribe( purchaseButton, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( self, hasPremiumPass, hasElitePass, battlePassCompleted ) {
+		self.AutoSubscribe( purchaseButton, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( self, isRestricted, canUpgradePass, battlePassCompleted ) {
 			Menus_SetNavigateBackDisabled( false )
-			if ( !hasPremiumPass || !hasElitePass )
+			if ( canUpgradePass )
 			{
 				CloseActiveMenu()
 				SetCurrentTabForPIN( "PassPanel" )
-				OpenBattlepassPurchaseMenu( ePassPurchaseTab.PREMIUMPLUS )
+				if ( isRestricted )
+				{
+					OpenBattlepassPurchaseMenu( ePassPurchaseTab.PREMIUM )
+				}
+				else
+				{
+					OpenBattlepassPurchaseMenu( ePassPurchaseTab.ULTIMATE_PLUS )
+				}
 			}
 			else if ( !battlePassCompleted )
 			{
@@ -2331,12 +2388,13 @@ void function RTKBattlepassControllerPanel_SetUpPaginationPINCallbacks( rtk_beha
 			p.paginationStartPage =  RTKPagination_GetCurrentPage( pagination )
 
 			bool pagesToRight = RTKPagination_GetTargetPage( pagination ) < RTKPagination_GetTotalPages( pagination ) - 1
-			rtk_array visibleLevels = RTKStruct_GetOrCreateScriptArrayOfStructs( GetPassModel( passType ), "visibleLevels", "RTKBattlepassTrackLevelStruct" )
-			int visibleLevelsCount = RTKArray_GetCount( visibleLevels )
-			for ( int i = 0; i < visibleLevelsCount; i++ )
+
+			rtk_array chaseLevels = RTKStruct_GetOrCreateScriptArrayOfStructs( GetPassModel( passType ), "chaseLevels", "RTKBattlepassTrackLevelStruct" )
+			int chaseLevelsCount = RTKArray_GetCount( chaseLevels )
+			for ( int i = 0; i < chaseLevelsCount; i++ )
 			{
-				rtk_struct visibleLevel = RTKArray_GetStruct(visibleLevels, i)
-				RTKStruct_SetBool(visibleLevel, "pagesToRight", pagesToRight )
+				rtk_struct chaseLevel = RTKArray_GetStruct(chaseLevels, i)
+				RTKStruct_SetBool(chaseLevel, "pagesToRight", pagesToRight )
 			}
 		} )
 
@@ -2360,16 +2418,23 @@ void function RTKBattlepassControllerPanel_SetUpModeChangeInput( rtk_behavior se
 
 		
 		RTKCursorInteract_AutoSubscribeOnHoverEnterListener( self, trackSelectorCursorInteract,
-			void function() : ( self )
+			void function() : ( self, trackSelectorCursorInteract )
 			{
+				PrivateData p
+				self.Private( p )
+				p.lastActiveCursorInteract = trackSelectorCursorInteract
 				RTKPagination_DeregisterGlobalInput( self.PropGetBehavior("pagination") )
 				RTKPagination_FadeOutHint( self.PropGetBehavior("pagination") )
 			}
 		)
 
 		RTKCursorInteract_AutoSubscribeOnHoverLeaveListener( self, trackSelectorCursorInteract,
-			void function() : ( self )
+			void function() : ( self, trackSelectorCursorInteract )
 			{
+				PrivateData p
+				self.Private( p )
+				if ( p.lastActiveCursorInteract != trackSelectorCursorInteract)
+					return
 				RTKPagination_RegisterGlobalInput( self.PropGetBehavior("pagination") )
 				RTKPagination_FadeInHint( self.PropGetBehavior("pagination") )
 			}
@@ -2405,16 +2470,23 @@ void function RTKBattlepassControllerPanel_SetUpMOTDInput( rtk_behavior self )
 
 		
 		RTKCursorInteract_AutoSubscribeOnHoverEnterListener( self, motdCursorInteract,
-			void function() : ( self )
+			void function() : ( self, motdCursorInteract )
 			{
+				PrivateData p
+				self.Private( p )
+				p.lastActiveCursorInteract = motdCursorInteract
 				RTKPagination_DeregisterGlobalInput( self.PropGetBehavior("pagination") )
 				RTKPagination_FadeOutHint( self.PropGetBehavior("pagination") )
 			}
 		)
 
 		RTKCursorInteract_AutoSubscribeOnHoverLeaveListener( self, motdCursorInteract,
-			void function() : ( self )
+			void function() : ( self, motdCursorInteract )
 			{
+				PrivateData p
+				self.Private( p )
+				if ( p.lastActiveCursorInteract != motdCursorInteract)
+					return
 				RTKPagination_RegisterGlobalInput( self.PropGetBehavior("pagination") )
 				RTKPagination_FadeInHint( self.PropGetBehavior("pagination") )
 			}
@@ -2524,22 +2596,25 @@ void function RTKBattlepassControllerPanel_ToggleElite( rtk_behavior self )
 	}
 }
 
-void function RTKBattlepassControllerPanel_FindAndInspectItem( rtk_behavior self, rtk_array trackLevels, int newLevelChildIndex, int newItemChildIndex, bool fullscreen = false )
+void function RTKBattlepassControllerPanel_FindAndInspectItem( rtk_behavior self, int newItemChildIndex, bool isChase = false, bool fullscreen = false )
 {
-	if ( RTKArray_GetCount(trackLevels) > newLevelChildIndex )
-	{
-		rtk_struct trackLevel = RTKArray_GetStruct(trackLevels, newLevelChildIndex)
-		rtk_array items = RTKStruct_GetArray(trackLevel, "items")
+	PrivateData p
+	self.Private( p )
+	int passType = self.PropGetInt( "passType" )
 
-		if ( RTKArray_GetCount(items) > newItemChildIndex )
-		{
-			PrivateData p
-			self.Private( p )
-			rtk_struct item = RTKArray_GetStruct(items, newItemChildIndex)
-			SettingsAssetGUID itemGUID = RTKStruct_GetInt( item, "itemGUID" )
-			p.focusedItemGUID = itemGUID
-			RTKBattlepassControllerPanel_InspectItem( self, itemGUID, RTKStruct_GetInt( item, "badgeTier" ), fullscreen, p.focusedLevel, newItemChildIndex )
-		}
+	rtk_struct battlepassModelStruct = GetPassModel( passType )
+	rtk_array trackItems = !isChase
+		? RTKStruct_GetOrCreateScriptArrayOfStructs( battlepassModelStruct, "trackItems", "RTKBattlepassTrackLevelStruct" )
+		: RTKStruct_GetOrCreateScriptArrayOfStructs( battlepassModelStruct, "chaseItems", "RTKBattlepassTrackLevelStruct" )
+
+	if ( RTKArray_GetCount(trackItems) > newItemChildIndex )
+	{
+		rtk_struct item = RTKArray_GetStruct(trackItems, newItemChildIndex )
+		SettingsAssetGUID itemGUID = RTKStruct_GetInt( item, "itemGUID" )
+		p.focusedItemGUID = itemGUID
+		p.focusedLevel = RTKStruct_GetInt(item, "level" )
+		p.focusedIndex = RTKStruct_GetInt(item, "index" )
+		RTKBattlepassControllerPanel_InspectItem( self, itemGUID, RTKStruct_GetInt( item, "badgeTier" ), fullscreen, p.focusedLevel, p.focusedIndex )
 	}
 }
 
@@ -2590,21 +2665,21 @@ void function RTKBattlepassControllerPanel_SetTrackItemColors( rtk_struct item, 
 	RTKStruct_SetFloat( item, "frameSaturation", 1.0 )
 }
 
-void function RTKBattlepassControllerPanel_SetFocusedTrackItem( rtk_behavior self, rtk_array trackLevels, int newLevelChildIndex, int newItemChildIndex, bool isFocused = true )
+void function RTKBattlepassControllerPanel_SetFocusedTrackItem( rtk_behavior self, int newItemChildIndex, bool isChase = false, bool isFocused = true )
 {
 	PrivateData p
 	self.Private( p )
+	int passType = self.PropGetInt( "passType" )
 
-	if ( RTKArray_GetCount(trackLevels) > newLevelChildIndex && newLevelChildIndex >= 0 )
+	rtk_struct battlepassModelStruct = GetPassModel( passType )
+	rtk_array trackItems = !isChase
+		? RTKStruct_GetOrCreateScriptArrayOfStructs( battlepassModelStruct, "trackItems", "RTKBattlepassTrackLevelStruct" )
+		: RTKStruct_GetOrCreateScriptArrayOfStructs( battlepassModelStruct, "chaseItems", "RTKBattlepassTrackLevelStruct" )
+
+	if ( RTKArray_GetCount(trackItems) > newItemChildIndex && newItemChildIndex >= 0 )
 	{
-		rtk_struct trackLevel = RTKArray_GetStruct(trackLevels, newLevelChildIndex)
-		rtk_array items = RTKStruct_GetArray(trackLevel, "items")
-
-		if ( RTKArray_GetCount(items) > newItemChildIndex && newItemChildIndex >= 0 )
-		{
-			rtk_struct item = RTKArray_GetStruct(items, newItemChildIndex)
-			RTKBattlepassControllerPanel_SetTrackItemColors( item, isFocused, p.viewMode == eBattlepassViewMode.BATTLEPASS_BADGE )
-		}
+		rtk_struct item = RTKArray_GetStruct(trackItems, newItemChildIndex)
+		RTKBattlepassControllerPanel_SetTrackItemColors( item, isFocused, p.viewMode == eBattlepassViewMode.BATTLEPASS_BADGE )
 	}
 }
 
@@ -2615,13 +2690,17 @@ void function RTKBattlepassControllerPanel_InspectItem(rtk_behavior self, int it
 		PrivateData p
 		self.Private( p )
 		int passType = self.PropGetInt( "passType" )
+		BattlePassReward inspectedItemReward = RTKBattlepassControllerPanel_GetPassRewardByGUID( self, itemGUID, levelIndex, prizeIndex, badgeTier )
+		if ( !IsItemFlavorStructValid( inspectedItemReward.flav.guid, eValidation.DONT_ASSERT ) )
+		{
+			inspectedItemReward.flav = GetItemFlavorByGUID( itemGUID )
+		}
 
 		if ( fullscreen )
 		{
 			Menus_SetNavigateBackDisabled( false )
 
 			ItemFlavor inspectedItem = GetItemFlavorByGUID( itemGUID )
-			BattlePassReward inspectedItemReward = RTKBattlepassControllerPanel_GetPassRewardByGUID( self, itemGUID, levelIndex, prizeIndex, badgeTier )
 			inspectedItemReward.flav = inspectedItem
 			inspectedItemReward.tier = badgeTier
 			if ( ItemFlavor_GetType( inspectedItem ) == eItemType.loadscreen )
@@ -2639,13 +2718,14 @@ void function RTKBattlepassControllerPanel_InspectItem(rtk_behavior self, int it
 			string offerName = ItemFlavor_GetAssetShortName( inspectedItem )
 			PIN_UIInteraction_OnBattlepassV2ItemSelected( GetPassPanelName( passType ).tolower(), passModelName, int( UITime() ) - p.openedAtTime, offerName )
 		}
-		else {
+		else
+		{
 			bool isNxHH = false
 #if PC_PROG_NX_UI
 				isNxHH = IsNxHandheldMode()
 #endif
 			RunClientScript( "UIToClient_ItemPresentation", itemGUID , badgeTier, 1.19, Battlepass_ShouldShowLow( GetItemFlavorByGUID( itemGUID ) ), GetLoadscreenPreviewBox(), true, "battlepass_center_ref", isNxHH, false, false, true, <20, 0, 0.0> )
-			RTKItemDetailsControllerPanel_SetItem( expect rtk_behavior( p.itemDetailsControllerBehavior ), itemGUID, "menus", "itemDetails", passType == ePassType.BATTLEPASS )
+			RTKItemDetailsControllerPanel_SetItem( expect rtk_behavior( p.itemDetailsControllerBehavior ), inspectedItemReward, "menus", "itemDetails", passType == ePassType.BATTLEPASS )
 		}
 	}
 }

@@ -9,6 +9,7 @@ global function RTKMutator_AlphaFromUpgradeState
 global function RTKMutator_HideIfNotSelected
 global function RTKMutator_UpgradesToolTipIsActive
 global function RTKMutator_ToolTipActionTextVisible
+global function RTKMutator_PickTooltipAction
 
 global enum eTreeUpgradeState
 {
@@ -246,16 +247,16 @@ void function RTKLegendUpgradeTree_PopulateLegendUpgradeTree( rtk_behavior self,
 				{
 					expect rtk_behavior( button )
 					self.AutoSubscribe( button, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( self, i, newChildIndex, player ) {
+						int position = ( ( newChildIndex - 1 ) * 2 ) + i
 						if ( keycode == BUTTON_SHOULDER_RIGHT || keycode == MOUSE_MIDDLE )
 						{
 							if ( IsFullyConnected() && !IsLobby() && Remote_ServerCallFunctionAllowed() )
 							{
-								RunClientScript("UIToClient_PingUpgrade")
+								RunClientScript("UIToClient_PingUpgrade", position)
 							}
 						}
 						else
 						{
-							int position = ( ( newChildIndex - 1 ) * 2 ) + i
 
 							if( position < 0 )
 								return
@@ -396,5 +397,21 @@ bool function RTKMutator_UpgradesToolTipIsActive( int input )
 
 bool function RTKMutator_ToolTipActionTextVisible( int input )
 {
-	return input == eTreeUpgradeState.LOCKED || input == eTreeUpgradeState.SELECTABLE
+	return file.isInteractable && ( input == eTreeUpgradeState.LOCKED || input == eTreeUpgradeState.SELECTABLE || input == eTreeUpgradeState.SELECTED )
 }
+
+string function RTKMutator_PickTooltipAction( int input )
+{
+	switch( input )
+	{
+		case eTreeUpgradeState.LOCKED:
+			return "#CORE_UPGRADE_REQUEST_TOOLTIP"
+		case eTreeUpgradeState.SELECTABLE:
+			return "#CORE_UPGRADE_HOLD_TO_SELECT_TOOLTIP"
+		case eTreeUpgradeState.SELECTED:
+			return "#CORE_UPGRADE_PING_TOOLTIP"
+	}
+	return ""
+}
+
+

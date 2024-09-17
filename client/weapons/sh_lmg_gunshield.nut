@@ -1,4 +1,3 @@
-
 global function HopupGunshield_Init
 global function HopupGunshield_OnWeaponActivate
 global function HopupGunshield_OnWeaponDeactivate
@@ -17,6 +16,10 @@ global function HopupGunshield_ShieldHealth
 #if DEV
 global function DEV_LMG_Gunshields_ShouldDisable
 #endif
+
+
+
+
 
 global const string HOPUP_GUN_SHIELD_NAME = "hopup_gunshield_scriptname"
 
@@ -805,6 +808,86 @@ void function DEV_LMG_Gunshields_ShouldDisable( bool toggle )
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+bool function HopupGunshield_ShouldShowGunshield( entity player )
+{
+	if ( !IsValid( player ) )
+		return false
+
+	if ( player.IsPlayer() == false )
+		return false
+
+	if ( IsPlayerGibraltar( player ) )
+		return false
+
+	entity weapon = player.GetActiveWeapon( eActiveInventorySlot.mainHand )
+	if ( !IsValid( weapon ) )
+		return false
+
+	if ( weapon.HasMod( GUNSHIELD_WEAPON_MOD ) == false )
+		return false
+
+	if ( PlayerIsInADS( player ) == false )
+		return false
+
+	entity shieldEnt = weapon.GetWeaponUtilityEntity()
+
+	if ( !IsValid( shieldEnt ) )
+		return false
+
+	if ( shieldEnt.GetHealth() <= 0 )
+		return false
+
+	return true
+}
+
+
 void function HopupGunshield_FirstPersonShield( entity player, entity weapon, asset shieldEffect, string attachment )
 {
 #if DEV
@@ -851,16 +934,17 @@ void function HopupGunshield_CockpitFirstPersonShield( entity player, entity wea
 	if ( !IsValid( player ) || !IsValid( weapon ) )
 		return
 
+	Signal( weapon, "GunShieldDeactivate" )
+
 	EndSignal( player, "OnDeath", "OnDestroy", "BleedOut_OnStartDying", "GunShieldBroken" )
 	EndSignal( weapon, "OnDestroy", "GunShieldDeactivate" )
-
-	entity shieldEnt = weapon.GetWeaponUtilityEntity()
-	if ( !IsValid( shieldEnt ) )
-		return
 
 	entity cockpit = player.GetCockpit()
 	if ( !IsValid( cockpit ) )
 		return
+
+	if ( EffectDoesExist( file.gunShieldFx ) )
+		EffectStop( file.gunShieldFx, true, true )
 
 	int fxID   = GetParticleSystemIndex( GUN_SHIELD_FX_1P )
 	file.gunShieldFx = StartParticleEffectOnEntity( cockpit, fxID, FX_PATTACH_ABSORIGIN_FOLLOW, ATTACHMENTID_INVALID )
@@ -930,38 +1014,6 @@ void function HopupGunshield_CockpitFirstPersonShield_Break( entity player )
 	return
 }
 
-bool function HopupGunshield_ShouldShowGunshield( entity player )
-{
-	if ( !IsValid( player ) )
-		return false
-
-	if ( player.IsPlayer() == false )
-		return false
-
-	if ( IsPlayerGibraltar( player ) )
-		return false
-
-	entity weapon = player.GetActiveWeapon( eActiveInventorySlot.mainHand )
-	if ( !IsValid( weapon ) )
-		return false
-
-	if ( weapon.HasMod( GUNSHIELD_WEAPON_MOD ) == false )
-		return false
-
-	if ( PlayerIsInADS( player ) == false )
-		return false
-
-	entity shieldEnt = weapon.GetWeaponUtilityEntity()
-
-	if ( !IsValid( shieldEnt ) )
-		return false
-
-	if ( shieldEnt.GetHealth() <= 0 )
-		return false
-
-	return true
-}
-
 void function OnPlayerClassChanged_ClearGunshield( entity player )
 {
 	
@@ -988,4 +1040,18 @@ void function HopupGunShield_OnSpectatorTargetChanged( entity observer, entity p
 	}	
 }
 
-      
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

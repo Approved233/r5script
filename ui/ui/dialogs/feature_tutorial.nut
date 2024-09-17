@@ -4,6 +4,8 @@ global function OpenFeatureTutorialDialog
 global function FeatureHasTutorialTabs
 global function FeatureTutorial_GetGameModeName
 global function GetPlaylist_UIRules
+global function GetCurrentPlaylist_UIRules
+global function OpenPlaylistTutorialDialog
 
 global function UI_OpenFeatureTutorialDialog
 global function UI_CloseFeatureTutorialDialog
@@ -82,7 +84,9 @@ struct {
 	array< featureTutorialTab > tabs
 	var                         contentElm
 	string                      feature = ""
-	int 						activeTabIndex
+
+	
+	string						playlist = ""
 
 	table < string, array< featureTutorialTab > functionref() > featureTutorialPopulateTabsFunction
 	table < string, string functionref() > featureTutorialSetTitleFunction
@@ -228,7 +232,6 @@ void function FeatureTutorialDialog_OnTabChanged( rtk_behavior self )
 		return
 
 	TabData tabData = GetTabDataForPanel( file.menu )
-	file.activeTabIndex = tabData.activeTabIdx
 	SetRTKDataModel( tabData.activeTabIdx )
 }
 
@@ -268,10 +271,10 @@ void function SetFooterOption( rtk_behavior self )
 		rtk_behavior button = newChild.FindBehaviorByTypeName( "Button" )
 		self.AutoSubscribe( button, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( self, newChildIndex )
 		{
-			int index = file.activeTabIndex
-			if ( index <= file.tabs.len() - 1 )
+			TabData tabData = GetTabDataForPanel( file.menu )
+			if ( tabData.activeTabIdx <= file.tabs.len() - 1 )
 			{
-				featureTutorialTab tab = file.tabs[index]
+				featureTutorialTab tab = file.tabs[tabData.activeTabIdx]
 
 				if ( tab.footerData.len() == 0 )
 				{
@@ -291,8 +294,7 @@ void function SetFooterOption( rtk_behavior self )
 
 string function FeatureTutorial_GetGameModeName()
 {
-	string playlist = GamemodeUtility_GetPlaylist()
-	return GetPlaylistVarString( playlist, "name", "" )
+	return GetPlaylistVarString( file.playlist, "name", "" )
 }
 
 
@@ -321,11 +323,27 @@ void function OpenFeatureTutorialDialog( var button, string feature = "" )
 	UI_OpenFeatureTutorialDialog( feature )
 }
 
+void function OpenPlaylistTutorialDialog( string playlist = "" )
+{
+	if ( !IsFullyConnected() )
+		return
+
+	file.playlist = playlist
+	file.feature = GetPlaylist_UIRules( playlist )
+
+	if( !FeatureHasTutorialTabs( file.feature ) )
+		return
+
+	AdvanceMenu( GetMenu( "FeatureTutorialDialog" ) )
+
+}
+
 void function UI_OpenFeatureTutorialDialog( string feature = "" )
 {
 	if ( !IsFullyConnected() )
 		return
 
+	file.playlist = GamemodeUtility_GetPlaylist()
 	file.feature = feature
 
 	if( !FeatureHasTutorialTabs( file.feature ) )
@@ -363,12 +381,19 @@ void function FeatureTutorialDialog_Cancel( var button )
 	CloseActiveMenu()
 }
 
-string function GetPlaylist_UIRules()
+string function GetPlaylist_UIRules( string playlist )
+{
+	if( !IsFullyConnected() )
+		return ""
+	return GetPlaylistVarString( playlist, "ui_rules", "" )
+}
+
+string function GetCurrentPlaylist_UIRules()
 {
 	if( !IsFullyConnected() )
 		return ""
 
-	return GetPlaylistVarString( GamemodeUtility_GetPlaylist(), "ui_rules", "" )
+	return GetPlaylistVarString( file.playlist, "ui_rules", "" )
 }
 
 bool function FeatureHasTutorialTabs( string feature )

@@ -157,9 +157,9 @@ void function InitHudOptionsPanel( var panel )
 #endif
 
 
-	SetupSettingsSlider( Hud_GetChild( contentPanel, "ObserverSlowSpeed" ), "Observer Slow Speed", "Sets the slowest speed of the observer camera.", $"rui/menu/settings/settings_hud")
-	SetupSettingsSlider( Hud_GetChild( contentPanel, "ObserverBaseSpeed" ), "Observer Base Speed", "Sets the base movement speed of the observer camera.", $"rui/menu/settings/settings_hud")
-	SetupSettingsSlider( Hud_GetChild( contentPanel, "ObserverFastSpeed" ), "Observer Fast Speed", "Sets the fastest speed of the observer camera.", $"rui/menu/settings/settings_hud")
+	SetupSettingsSlider( Hud_GetChild( contentPanel, "ObserverSlowSpeed" ), "#OPTIONS_MENU_OBSERVER_SLOW_SPEED", "#OPTIONS_MENU_OBSERVER_SLOW_SPEED_DESC", $"rui/menu/settings/settings_hud")
+	SetupSettingsSlider( Hud_GetChild( contentPanel, "ObserverBaseSpeed" ), "#OPTIONS_MENU_OBSERVER_BASE_SPEED", "#OPTIONS_MENU_OBSERVER_BASE_SPEED_DESC", $"rui/menu/settings/settings_hud")
+	SetupSettingsSlider( Hud_GetChild( contentPanel, "ObserverFastSpeed" ), "#OPTIONS_MENU_OBSERVER_FAST_SPEED", "#OPTIONS_MENU_OBSERVER_FAST_SPEED_DESC", $"rui/menu/settings/settings_hud")
 
 
 	AddPanelFooterOption( panel, LEFT, BUTTON_B, true, "#B_BUTTON_BACK", "#B_BUTTON_BACK" )

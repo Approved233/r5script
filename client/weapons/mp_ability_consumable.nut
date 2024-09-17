@@ -1,5 +1,3 @@
-global function WeaponDrivenConsumablesEnabled
-
 global function OnWeaponAttemptOffhandSwitch_Consumable
 global function OnWeaponActivate_Consumable
 global function OnWeaponDeactivate_Consumable
@@ -42,6 +40,7 @@ global function Consumable_DoHealScreenFx
 global function ServerCallback_TryUseConsumable
 global function ServerToClient_DoUltAccelScreenFx
 global function ServerToClient_SetClientChargeTime
+
 
 
 
@@ -445,10 +444,7 @@ void function Consumable_Init()
 
 
 
-		AddCallback_OnPassiveChanged( ePassives.PAS_ULT_UPGRADE_ONE, UpgradedUltAccel_PassiveToggle )  
-
 		AddCallback_OnPassiveChanged( ePassives.PAS_ULT_ACCEL_CHARGE, UpgradedUltAccel_PassiveToggle ) 
-
 
 }
 
@@ -465,7 +461,7 @@ void function Consumable_Init()
 
 bool function ShouldHaveFastUltAccel( entity player )
 {
-	bool shouldHaveFastUltAccel = PlayerHasPassive( player, ePassives.PAS_ULT_UPGRADE_ONE) && PlayerHasPassive( player, ePassives.PAS_BATTERY_POWERED )
+	bool shouldHaveFastUltAccel = false
 
 	shouldHaveFastUltAccel = shouldHaveFastUltAccel || PlayerHasPassive( player, ePassives.PAS_ULT_ACCEL_CHARGE)
 
@@ -480,7 +476,7 @@ void function UpgradedUltAccel_PassiveToggle( entity player, int pas, bool didHa
 			return
 
 
-	bool shouldToggleFastUltAccel = ( pas == ePassives.PAS_ULT_UPGRADE_ONE && PlayerHasPassive( player, ePassives.PAS_BATTERY_POWERED ) )
+	bool shouldToggleFastUltAccel = false
 
 	shouldToggleFastUltAccel = shouldToggleFastUltAccel || pas == ePassives.PAS_ULT_ACCEL_CHARGE
 
@@ -787,6 +783,12 @@ void function OnWeaponActivate_Consumable( entity weapon )
 
 
 
+				if( modName == "ultimate_battery")
+
+				{
+					useData.statusEffectHandles.append( StatusEffect_AddEndless( weaponOwner, eStatusEffect.move_slow, .06 ) )
+				}
+				else
 				{
 					useData.statusEffectHandles.append( StatusEffect_AddEndless( weaponOwner, eStatusEffect.move_slow, GetCurrentPlaylistVarFloat( "survival_healthkits_move_speed_reduction", 0.4 ) ) )
 				}
@@ -1134,6 +1136,8 @@ void function Consumable_DisplayProgressBar( entity player, entity weapon, int c
 			RuiSetFloat( rui, "raiseTime", raiseTime )
 			RuiSetFloat( rui, "chargeTime", chargeTime )
 		}
+
+		RuiSetBool( rui, "isBoosted", PlayerHasPassive( player, ePassives.PAS_FAST_HEAL ) )
 
 
 		wait 0.1
@@ -1532,11 +1536,6 @@ void function AddModAndFireWeapon_Thread( entity player, string modName )
 
 	if ( player.IsBot() )
 		return
-
-	if( modName == "ultimate_battery" &&  PlayerHasPassive( player, ePassives.PAS_BATTERY_POWERED ) && PlayerHasPassive( player, ePassives.PAS_ULT_UPGRADE_ONE ) )
-	{
-		modName = "ultimate_battery_fast"
-	}
 
 	int consumableType  = file.modNameToConsumableType[ modName ]
 	if ( !Consumable_CanUseConsumable( player, consumableType, true ) )
@@ -2311,122 +2310,6 @@ void function ServerToClient_SetClientChargeTime( int consumableType, float char
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 bool function Consumable_CanUseUltAccel( entity player , bool checkMinToFire = true )
 {
 	entity ult = player.GetOffhandWeapon( OFFHAND_ULTIMATE )
@@ -2778,17 +2661,19 @@ int function TryUseConsumable( entity player, int consumableType )
 
 
 
-			if ( GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_VALENTINES_S15 ) )
-			{
-				entity partner = ValentinesGetPartner( player )
-				if ( IsValid( partner ) )
-				{
-					int partnerCurrentHealth  = partner.GetHealth()
-					int partnerCurrentShields = partner.GetShieldHealth()
-					needHeal      = needHeal || (partnerCurrentHealth < partner.GetMaxHealth())
-					needShield    = needShield || (partnerCurrentShields < partner.GetShieldHealthMax())
-				}
-			}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2982,12 +2867,6 @@ bool function Consumable_IsShieldItem( int consumableType )
 
 	return false
 }
-
-bool function WeaponDrivenConsumablesEnabled()
-{
-	return (GetCurrentPlaylistVarInt( "weapon_driven_consumables", 1 ) == 1)
-}
-
 
 bool function ShouldPlayUltimateSuperchargedFX( entity player )
 {

@@ -142,7 +142,6 @@ struct PrivateData
 	rtk_struct summaryExtraInfoModel
 	rtk_struct progressModel
 
-	bool isFirstTime = false
 	int numRanksEarned = 0
 	int scoreStart = 0
 	int scoreEnd = 0
@@ -150,6 +149,11 @@ struct PrivateData
 	bool hasLPBarAnimationStarted = false
 	bool callbacksRegistered = false
 }
+
+struct
+{
+	bool isFirstTime = false
+} file
 
 const string POSTGAME_XP_INCREASE = "UI_Menu_MatchSummary_Ranked_XPBar_Increase"
 const string POSTGAME_RANKED_MENU_NAME = "PostGameRankedMenu"
@@ -160,6 +164,8 @@ void function RTKRankedMatchSummary_InitMetaData( string behaviorType, string st
 	RTKMetaData_SetAllowedBehaviorTypes( structType, "tweenStagger", [ "TweenStagger" ] )
 
 	RegisterSignal( "OnRankedMatchSummaryDestroyed" )
+
+	file.isFirstTime = true
 }
 
 void function RTKRankedMatchSummary_OnInitialize( rtk_behavior self )
@@ -168,8 +174,6 @@ void function RTKRankedMatchSummary_OnInitialize( rtk_behavior self )
 	self.Private( p )
 
 	SetContinueButtonRegistration( self, true )
-
-	p.isFirstTime = GetPersistentVarAsInt( "showGameSummary" ) != 0
 
 	BuildRankedMatchSummaryDataModel( self )
 	BuildRankedBadgeDataModel( self )
@@ -180,7 +184,7 @@ void function RTKRankedMatchSummary_OnInitialize( rtk_behavior self )
 	AnimateRankedProgressBar( self )
 
 	
-	if ( p.isFirstTime )
+	if ( file.isFirstTime )
 	{
 		rtk_behavior ornull tweenStagger = self.PropGetBehavior( "tweenStagger" )
 		if ( tweenStagger != null )
@@ -601,7 +605,7 @@ void function BuildRankedMatchSummaryDataModel( rtk_behavior self )
 	RankedMatchSummaryScreenData screenData
 
 	
-	screenData.isProgressPanelVisible = !p.isFirstTime
+	screenData.isProgressPanelVisible = !file.isFirstTime
 	screenData.isRankUpAnimationInProgress = false
 
 	SeasonStyleData seasonStyle = GetSeasonStyle()
@@ -866,9 +870,8 @@ void function AnimateRankedProgressBar( rtk_behavior self )
 
 	entity player 			= GetLocalClientPlayer()
 	bool inProvisionals 	= !Ranked_HasCompletedProvisionalMatches( player )
-	bool animateProgressBar = !inProvisionals && p.isFirstTime
 	bool hasPromoTrial	= RankedTrials_PlayerHasIncompleteTrial( player )
-	animateProgressBar  = !inProvisionals && p.isFirstTime && !hasPromoTrial
+	bool animateProgressBar  = !inProvisionals && file.isFirstTime && !hasPromoTrial
 
 	
 	RTKStruct_SetBool( p.rankedMatchSummaryScreenDataModel, "isProgressPanelVisible", true )
@@ -891,6 +894,7 @@ void function AnimateRankedProgressBar( rtk_behavior self )
 
 		
 		self.AutoSubscribe( barAnimator, "onAnimationFinished", function ( rtk_behavior barAnimator, string animName ) : ( self, inProvisionals ) {
+			file.isFirstTime = false
 			StopUISoundByName( POSTGAME_XP_INCREASE )
 			if ( !RTKAnimator_IsPlaying( barAnimator ) )
 			{
@@ -963,7 +967,8 @@ void function StartRankUpAnimation( rtk_behavior self, bool isProvisionalGraduat
 
 	
 	SetContinueButtonRegistration( self, false )
-	RTKStruct_SetBool( p.rankedMatchSummaryScreenDataModel, "isRankUpAnimationInProgress", true )
+	if ( GetNextRankedDivisionFromScore( p.scoreStart ) != null )
+		RTKStruct_SetBool( p.rankedMatchSummaryScreenDataModel, "isRankUpAnimationInProgress", true )
 
 	
 	wait 0.1
@@ -1031,7 +1036,13 @@ void function OnContinueButton_Activated( var button )
 		thread CloseActiveMenu()
 }
 
+void function RankedMatchSummaryOnOpenPanel( var panel )
+{
+	DeathScreenUpdateCursor()
+}
+
 void function InitRTKRankedMatchSummary( var panel )
 {
+	AddPanelEventHandler( panel, eUIEvent.PANEL_SHOW, RankedMatchSummaryOnOpenPanel )
 	InitDeathScreenPanelFooter( panel, eDeathScreenPanel.RANK)
 }

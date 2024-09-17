@@ -52,17 +52,18 @@ struct
 	InputDef& xButtonDef
 
 	var menu
+	var loadscreenPreviewBox
 	int category
 	bool blockEscKey
 
-	int lastHighlightedBlockIndex = -1
-	bool wasInspectingChallengeList
+	int                  lastHighlightedBlockIndex = -1
+	bool                 wasInspectingChallengeList
+	bool                 isInstantChallengeListView
 	rtk_behavior ornull slidingListBehavior
 	ChallengeTile ornull tileData
-	bool isOverAReRollItem = false
-	bool isOverAReRollButton = false
-	float lastBlockScrollViewStep
-	float lastChallengeScrollViewStep
+	bool                 isOverAReRollButton = false
+	float                lastBlockScrollViewStep
+	float                lastChallengeScrollViewStep
 } file
 
 struct
@@ -85,6 +86,7 @@ struct PrivateData
 	int highlightedItems = 0
 	rtk_behavior ornull challengesScrollView
 	void functionref() OnTileUpdate
+	rtk_struct panelStruct
 }
 
 enum eChallengesBlockDisplayTemplate
@@ -103,6 +105,8 @@ const string CHALLENGES_GENERIC_INSPECT_MODEL_NAME = "challengesGenericInspectPa
 void function InitChallengesGenericInspectMenu( var menu )
 {
 	file.menu = menu
+	file.loadscreenPreviewBox = Hud_GetChild( menu, "LoadscreenPreviewBox" )
+
 	AddMenuEventHandler( menu, eUIEvent.MENU_SHOW, ChallengesTileGenericInspectMenu_OnShow )
 	AddMenuEventHandler( menu, eUIEvent.MENU_HIDE, ChallengesTileGenericInspectMenu_OnHide )
 	AddMenuEventHandler( menu, eUIEvent.MENU_NAVIGATE_BACK, ChallengesTileGenericInspectMenu_OnNavigateBack )
@@ -146,22 +150,17 @@ void function RTKChallengeGenericInspectPanel_OnBackPressed( var button )
 		return
 
 	rtk_behavior slidingListBehavior = expect rtk_behavior ( file.slidingListBehavior )
-	if ( RTKSlidingListInspect_IsInspectingItemList( slidingListBehavior ) )
+
+	if ( !file.blockEscKey || file.isInstantChallengeListView )
+	{
+		RunClientScript( "ClearBattlePassItem" )
+		RTKChallengesPanel_CloseMenuAndSendPin()
+	}
+	else if ( RTKSlidingListInspect_IsInspectingItemList( slidingListBehavior ) )
 	{
 		RTKSlidingListInspect_OnBlockListInspect( slidingListBehavior )
 	}
-	else if ( !file.blockEscKey )
-	{
-		if ( GetActiveMenu() == file.menu )
-		{
-			CloseActiveMenu()
-			OpenChallengesMenu()
-			file.lastHighlightedBlockIndex = -1
 
-			fileTelemetry.openDuration = int( UITime() ) - fileTelemetry.openTimestamp
-			RTKChallengesPanel_SendPageView()
-		}
-	}
 	file.wasInspectingChallengeList = false
 }
 
@@ -173,25 +172,27 @@ void function RTKChallengesGenericInspectPanel_OnInitialize( rtk_behavior self )
 	PrivateData p
 	self.Private( p )
 
-	rtk_struct panelStruct  = RTKDataModelType_GetOrCreateStruct( RTK_MODELTYPE_MENUS, CHALLENGES_GENERIC_INSPECT_MODEL_NAME, "RTKChallengesGenericInspectPanelModel" )
+	p.panelStruct = RTKDataModelType_GetOrCreateStruct( RTK_MODELTYPE_MENUS, CHALLENGES_GENERIC_INSPECT_MODEL_NAME, "RTKChallengesGenericInspectPanelModel" )
 	string pathToPanelModel = RTKDataModelType_GetDataPath( RTK_MODELTYPE_MENUS, CHALLENGES_GENERIC_INSPECT_MODEL_NAME, true )
 	self.GetPanel().SetBindingRootPath( pathToPanelModel )
-	RTKChallengesPanel_BuildBaseDataModel( panelStruct, pathToPanelModel )
+	RTKChallengesPanel_BuildBaseDataModel( p.panelStruct, pathToPanelModel )
 
-	p.blockIndexPropertyListener = RTKStruct_AddPropertyListener( panelStruct, "challengeBlockIndex", void function ( rtk_struct properties, string propName, int propType, var propValue ) : ( self ) {
+	p.blockIndexPropertyListener = RTKStruct_AddPropertyListener( p.panelStruct, "challengeBlockIndex", void function ( rtk_struct properties, string propName, int propType, var propValue ) : ( self ) {
 		RTKChallengesGenericInspectPanel_OnBlockIndexUpdated( self, expect int( propValue ) )
 	} )
 
 	p.OnTileUpdate = void function() : ( self ) {
 		RTKChallengesGenericInspectPanel_OnTileUpdate( self )
+		RTKChallengesPanel_RestoreMenuState( self )
 	}
 
-	RTKChallengesPanel_SetSlidingListBehavior( self, panelStruct )
+	RTKChallengesPanel_SetSlidingListBehavior( self )
 	RTKChallengesPanel_SetBlockButtons( self )
 	RTKChallengesPanel_SetChallengeItemButtons( self )
 	RTKChallengesPanel_SetDeeplinkButton( self )
-	RTKChallengesPanel_SetBreadcrumbHeader( self, panelStruct )
-	RTKChallengesPanel_RestoreMenuState( self, panelStruct )
+	RTKChallengesPanel_SetBreadcrumbHeader( self )
+	RTKChallengesPanel_HandleInstantViewBlocks()
+	RTKChallengesPanel_RestoreMenuState( self )
 
 	AddCallback_OnChallengeTileAdded( p.OnTileUpdate )
 	fileTelemetry.openTimestamp = int( UITime() )
@@ -201,12 +202,14 @@ void function RTKChallengesGenericInspectPanel_OnTileUpdate( rtk_behavior self )
 {
 	if ( file.tileData == null )
 		return
+	PrivateData p
+	self.Private( p )
 
-	rtk_struct panelStruct  = RTKDataModelType_CreateStruct( RTK_MODELTYPE_MENUS, CHALLENGES_GENERIC_INSPECT_MODEL_NAME, "RTKChallengesGenericInspectPanelModel" )
+	p.panelStruct = RTKDataModelType_CreateStruct( RTK_MODELTYPE_MENUS, CHALLENGES_GENERIC_INSPECT_MODEL_NAME, "RTKChallengesGenericInspectPanelModel" )
 	string pathToPanelModel = RTKDataModelType_GetDataPath( RTK_MODELTYPE_MENUS, CHALLENGES_GENERIC_INSPECT_MODEL_NAME, true )
 
 	ChallengeTile tileData = expect ChallengeTile(file.tileData)
-	array<ChallengeTile> activeTileData = ChallengeTile_GetActiveTiles()
+	array<ChallengeTile> activeTileData = ChallengeTile_GetActiveTilesSorted()
 	foreach ( ChallengeTile newTile in activeTileData )
 	{
 		if ( tileData.tileId == newTile.tileId )
@@ -215,20 +218,24 @@ void function RTKChallengesGenericInspectPanel_OnTileUpdate( rtk_behavior self )
 			break
 		}
 	}
-	PrivateData p
-	self.Private( p )
 
-	p.blockIndexPropertyListener = RTKStruct_AddPropertyListener( panelStruct, "challengeBlockIndex", void function ( rtk_struct properties, string propName, int propType, var propValue ) : ( self ) {
+	rtk_behavior slidingListInspect = self.PropGetBehavior( "slidingListInspectBehavior" )
+	if ( RTKSlidingListInspect_IsInspectingItemList( slidingListInspect ) )
+		RTKBreadcrumbHeader_RemoveStep()
+
+	p.blockIndexPropertyListener = RTKStruct_AddPropertyListener( p.panelStruct, "challengeBlockIndex", void function ( rtk_struct properties, string propName, int propType, var propValue ) : ( self ) {
 		RTKChallengesGenericInspectPanel_OnBlockIndexUpdated( self, expect int( propValue ) )
 	} )
 
-	RTKChallengesPanel_BuildBaseDataModel( panelStruct, pathToPanelModel )
+	RTKChallengesPanel_BuildBaseDataModel( p.panelStruct, pathToPanelModel )
 }
 
 void function RTKChallengesGenericInspectPanel_OnBlockIndexUpdated( rtk_behavior self, int blockIndex )
 {
-	rtk_struct panelStruct = RTKDataModelType_GetOrCreateStruct( RTK_MODELTYPE_MENUS, CHALLENGES_GENERIC_INSPECT_MODEL_NAME, "RTKChallengesGenericInspectPanelModel" )
-	rtk_array pipArray = RTKStruct_GetArray( panelStruct, "navPipArray" )
+	PrivateData p
+	self.Private( p )
+
+	rtk_array pipArray = RTKStruct_GetArray( p.panelStruct, "navPipArray" )
 
 	for ( int i = 0; i < RTKArray_GetCount( pipArray ); i++ )
 	{
@@ -238,14 +245,16 @@ void function RTKChallengesGenericInspectPanel_OnBlockIndexUpdated( rtk_behavior
 
 	if ( file.blockEscKey ) 
 	{
-		string blockTitle = RTKChallengesPanel_GetCurrentBlockTitle( self, panelStruct )
+		string blockTitle = RTKChallengesPanel_GetCurrentBlockTitle( self, p.panelStruct )
 		RTKChallengesPanel_SetPageTitle( self, blockTitle )
 
-		rtk_array blockListArray = RTKStruct_GetArray( panelStruct, "blockList" )
-		rtk_array challengesData = RTKStruct_GetArray( RTKArray_GetStruct( blockListArray, blockIndex ), "challengeData" )
-		string blockProgressString = Localize( "#CHALLENGES_PANEL_BLOCK_PROGRESS_TEXT", RTKChallengesPanel_GetCompletedChallengeCountFromModel( challengesData ), RTKArray_GetCount( challengesData ) )
-		RTKStruct_SetString( panelStruct, "currentBlockProgress", blockProgressString )
-		RTKStruct_SetBool( panelStruct, "showTimer", false )
+		rtk_array blockListArray = RTKStruct_GetArray( p.panelStruct, "blockList" )
+		rtk_struct blockStruct = RTKArray_GetStruct( blockListArray, blockIndex )
+		rtk_array challengesData = RTKStruct_GetArray( blockStruct, "challengeData" )
+		string progressionText = RTKStruct_GetBool( blockStruct, "isMetaBlock" ) ? "#CHALLENGES_PANEL_META_BLOCK_PROGRESS_TEXT" : "#CHALLENGES_PANEL_BLOCK_PROGRESS_TEXT"
+		string blockProgressString = Localize( progressionText , RTKChallengesPanel_GetCompletedChallengeCountFromModel( challengesData ), RTKArray_GetCount( challengesData ) )
+		RTKStruct_SetString( p.panelStruct, "currentBlockProgress", blockProgressString )
+		RTKStruct_SetBool( p.panelStruct, "showTimer", false )
 
 		if ( !file.wasInspectingChallengeList )
 		{
@@ -261,8 +270,6 @@ void function RTKChallengesGenericInspectPanel_OnBlockIndexUpdated( rtk_behavior
 		RTKPaginationNavController_SetInitPageIndex( pagController, blockIndex )
 	}
 
-	PrivateData p
-	self.Private( p )
 	rtk_behavior blockScrollView = self.PropGetBehavior( "blocksScrollView" )
 	if ( p.challengesScrollView != null )
 	{
@@ -287,17 +294,21 @@ void function RTKChallengesGenericInspectPanel_OnDestroy( rtk_behavior self )
 	self.Private( p )
 	RemoveCallback_OnChallengeTileAdded( p.OnTileUpdate )
 
-	rtk_struct panelStruct = RTKDataModelType_GetOrCreateStruct( RTK_MODELTYPE_MENUS, CHALLENGES_GENERIC_INSPECT_MODEL_NAME, "RTKChallengesGenericInspectPanelModel" )
-	RTKStruct_RemovePropertyListener( panelStruct, "challengeBlockIndex", p.blockIndexPropertyListener )
+	RTKStruct_RemovePropertyListener( p.panelStruct, "challengeBlockIndex", p.blockIndexPropertyListener )
 	RTKBreakcrumbHeader_RemoveAllSteps()
+	p.highlightedItems = 0
+	RTKChallengesPanel_HideVGUIFooterButtons( self )
 	RTKDataModelType_DestroyStruct( RTK_MODELTYPE_MENUS, CHALLENGES_GENERIC_INSPECT_MODEL_NAME )
 }
 
-void function RTKChallengeGenericInspectPanel_OnChallengeListInspect( rtk_behavior self, rtk_struct panelStruct )
+void function RTKChallengeGenericInspectPanel_OnChallengeListInspect( rtk_behavior self )
 {
+	PrivateData p
+	self.Private( p )
+
 	RTKChallengeBlockModel blockModel
-	rtk_array blockListArray = RTKStruct_GetArray( panelStruct, "blockList" )
-	int currentBlockIndex   = RTKStruct_GetInt( panelStruct, "challengeBlockIndex" )
+	rtk_array blockListArray = RTKStruct_GetArray( p.panelStruct, "blockList" )
+	int currentBlockIndex   = RTKStruct_GetInt( p.panelStruct, "challengeBlockIndex" )
 	rtk_struct blockData = RTKArray_GetStruct( blockListArray, currentBlockIndex )
 	rtk_array challengesData = RTKStruct_GetArray( blockData, "challengeData" )
 
@@ -308,18 +319,21 @@ void function RTKChallengeGenericInspectPanel_OnChallengeListInspect( rtk_behavi
 	int defaultRewardGUID = RTKStruct_GetInt( challengeData, "rewardItemGUID" )
 	RTKChallengeGenericInspectPanel_PreviewItem( defaultRewardGUID )
 
-	file.blockEscKey = true
+	if ( !file.isInstantChallengeListView )
+		file.blockEscKey = true
 
 	RTKChallengesPanel_DisplayNavigation( self, true )
 	RTKChallengesPanel_SetPageTitle( self, RTKStruct_GetString( blockData, "title" ) )
 
 	RTKBreadcrumbStepModel blockStep
 	blockStep.title = RTKStruct_GetString( blockData, "title" )
-	RTKBreadcrumbHeader_PushStep( blockStep )
+	if ( !file.isInstantChallengeListView )
+		RTKBreadcrumbHeader_PushStep( blockStep )
 
-	string blockProgressString = Localize( "#CHALLENGES_PANEL_BLOCK_PROGRESS_TEXT", RTKChallengesPanel_GetCompletedChallengeCountFromModel( challengesData ), RTKArray_GetCount( challengesData ) )
-	RTKStruct_SetString( panelStruct, "currentBlockProgress", blockProgressString )
-	RTKStruct_SetBool( panelStruct, "showTimer", false )
+	string progressionText = RTKStruct_GetBool( blockData, "isMetaBlock" ) ? "#CHALLENGES_PANEL_META_BLOCK_PROGRESS_TEXT" : "#CHALLENGES_PANEL_BLOCK_PROGRESS_TEXT"
+	string blockProgressString = Localize( progressionText , RTKChallengesPanel_GetCompletedChallengeCountFromModel( challengesData ), RTKArray_GetCount( challengesData ) )
+	RTKStruct_SetString( p.panelStruct, "currentBlockProgress", blockProgressString )
+	RTKStruct_SetBool( p.panelStruct, "showTimer", false )
 
 	
 	
@@ -327,8 +341,11 @@ void function RTKChallengeGenericInspectPanel_OnChallengeListInspect( rtk_behavi
 	
 }
 
-void function RTKChallengeGenericInspectPanel_OnBlockListInspect( rtk_behavior self, rtk_struct panelStruct )
+void function RTKChallengeGenericInspectPanel_OnBlockListInspect( rtk_behavior self )
 {
+	PrivateData p
+	self.Private( p )
+	rtk_struct panelStruct = p.panelStruct
 	RunClientScript( "ClearBattlePassItem" )
 	file.blockEscKey = false
 
@@ -354,8 +371,9 @@ void function RTKChallengeGenericInspectPanel_OnBlockListInspect( rtk_behavior s
 
 void function RTKChallengesGenericInspectPanel_OnRewardInspect( rtk_behavior self, rtk_behavior challengeItem )
 {
-	rtk_struct panelStruct = RTKDataModelType_GetOrCreateStruct( RTK_MODELTYPE_MENUS, CHALLENGES_GENERIC_INSPECT_MODEL_NAME, "RTKChallengesGenericInspectPanelModel" )
-	int currentBlockIndex   = RTKStruct_GetInt( panelStruct, "challengeBlockIndex" )
+	PrivateData p
+	self.Private( p )
+	int currentBlockIndex  = RTKStruct_GetInt( p.panelStruct, "challengeBlockIndex" )
 
 	rtk_behavior slidingListInspect = self.PropGetBehavior( "slidingListInspectBehavior" )
 	bool isInspectingChallengeList = RTKSlidingListInspect_IsInspectingItemList( slidingListInspect )
@@ -386,6 +404,9 @@ void function RTKChallengesGenericInspectPanel_OnRewardInspect( rtk_behavior sel
 
 void function OpenChallengesGenericInspectPanel( ChallengeTile tileData )
 {
+	while ( GetActiveMenu() != GetMenu( "LobbyMenu" ) )
+		CloseActiveMenu()
+
 	file.tileData = tileData
 	fileTelemetry.fromId = GetLastMenuIDForPIN()
 	fileTelemetry.challenge_tile = tileData.title
@@ -398,14 +419,25 @@ void function RTKChallengeGenericInspectPanel_PreviewItem( int guid )
 #if PC_PROG_NX_UI
 		isNxHH = IsNxHandheldMode()
 #endif
+	if ( !IsValidItemFlavorGUID( guid ) )
+		return
+
 	ItemFlavor item = GetItemFlavorByGUID( guid )
-	RunClientScript( "UIToClient_ItemPresentation", guid , -1, 1, Battlepass_ShouldShowLow( GetItemFlavorByGUID( guid ) ), GetLoadscreenPreviewBox(), true, "battlepass_right_ref", isNxHH, false, false, true )
+	RunClientScript( "UIToClient_ItemPresentation", guid , -1, 1, Battlepass_ShouldShowLow( GetItemFlavorByGUID( guid ) ), GetChallengesLoadscreenPreviewBox(), true, "battlepass_right_ref", isNxHH, false, false, true )
 }
 
-void function RTKChallengesPanel_BuildBaseChallengeListItemInfo( rtk_struct challengeStruct, ItemFlavor challenge )
+var function GetChallengesLoadscreenPreviewBox()
 {
-	RTKChallengeItemModel challengeModel
+	return file.loadscreenPreviewBox
+}
+
+void function RTKChallengesPanel_BuildBaseChallengeListItemInfo( rtk_struct challengeStruct, ItemFlavor challenge, ChallengeBlock block )
+{
 	entity player = GetLocalClientPlayer()
+	if ( !Challenge_IsAssigned( player, challenge ) )
+		return
+
+	RTKChallengeItemModel challengeModel
 	int activeTier = Challenge_GetActiveTier( player, challenge )
 	ItemFlavorBag rewards = Challenge_GetRewards( challenge, activeTier )
 	ItemFlavor rewardFlav = rewards.flavors[0] 
@@ -424,6 +456,7 @@ void function RTKChallengesPanel_BuildBaseChallengeListItemInfo( rtk_struct chal
 	challengeModel.maxTier = Challenge_GetTierCount( challenge )
 	challengeModel.isCompleted = Challenge_IsComplete( player, challenge )
 	challengeModel.isInfinite = Challenge_LastTierIsInfinite( challenge )
+	challengeModel.progressText = block.isMetaBlock ? "#CHALLENGES_META_BLOCK_PROGRESS_TEXT" : "#CHALLENGES_BLOCK_PROGRESS_TEXT"
 
 	if ( ItemFlavor_GetType( rewardFlav ) == eItemType.voucher )
 	{
@@ -499,14 +532,15 @@ void function RTKChallengesPanel_BuildBaseDataModel( rtk_struct panelStruct, str
 		blockData.endTime = block.endDate == UNIX_TIME_FALLBACK_2038 ? 0 : block.endDate
 		blockData.startTime = block.startDate
 		blockData.rewards = block.rewards
-		blockData.progressText = Localize( "#CHALLENGES_BLOCK_PROGRESS_TEXT", string( completedChallengeCount ), string( challengeCount ) )
+		blockData.progressText = RTKChallengesPanel_GetBlockProgressString( tileData, block )
 		blockData.index = i
 		blockData.pathToPanelModel = pathToPanelModel
-		blockData.isWeekly = tileData.tileCategory == eChallengeTileCategory.WEEKLY
+		blockData.isShortBlock = RTKChallengesPanel_IsShortBlock( tileData, i )
 		blockData.isTracked = ChallengeBlock_HasTrackedChallenges( block )
 		blockData.isBRMode = ChallengeBlock_HasBRChallenges( block )
 		blockData.isNBRMode = ChallengeBlock_HasNBRChallenges( block )
 		blockData.isLocked = block.locked
+		blockData.isMetaBlock = block.isMetaBlock
 		if ( block.locked )
 		{
 			array<ChallengeBlockLockReason> lockReasons = ChallengeBlock_GetLockReasons( block )
@@ -525,7 +559,7 @@ void function RTKChallengesPanel_BuildBaseDataModel( rtk_struct panelStruct, str
 		{
 			rtk_struct baseChallengeStruct
 			baseChallengeStruct = RTKArray_PushNewStruct( challengeArray )
-			RTKChallengesPanel_BuildBaseChallengeListItemInfo( baseChallengeStruct, challenge )
+			RTKChallengesPanel_BuildBaseChallengeListItemInfo( baseChallengeStruct, challenge, block )
 			int challengeListType = RTKChallenges_GetChallengeListItemButtonDisplayType( challenge )
 			if ( challengeListType != eChallengeListItemButtonType.BASIC && challengeListType != eChallengeListItemButtonType.META )
 			{
@@ -617,6 +651,14 @@ void function RTKChallengesPanel_SetChallengeItem( rtk_behavior self, rtk_behavi
 		} )
 
 		rtk_behavior button = challengeItem.PropGetBehavior( "buttonBehavior" )
+
+		self.AutoSubscribe( button, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( self ) {
+			
+			PrivateData p
+			self.Private( p )
+			p.highlightedItems--
+		} )
+
 		self.AutoSubscribe( button, "onHighlighted", function( rtk_behavior button, int prevState ) : ( self ) {
 			string itemPath = button.GetPanel().GetBindingRootPath()
 			rtk_struct itemData = RTKDataModel_GetStruct( itemPath )
@@ -652,17 +694,30 @@ void function RTKChallengesPanel_SetChallengeItem( rtk_behavior self, rtk_behavi
 				file.isOverAReRollButton = true
 				file.yButtonDef.mouseLabel = "#Y_BUTTON_RE_ROLL"
 				file.aButtonDef.mouseLabel = ""
+				file.xButtonDef.mouseLabel   = ""
+				file.xButtonDef.gamepadLabel = ""
+				PrivateData p
+				self.Private( p )
+				p.highlightedItems++
 				UpdateFooterOptions()
 			} )
 			self.AutoSubscribe( RerollButton, "onIdle", function( rtk_behavior RerollButton, int prevState ) : ( self ) {
 				file.isOverAReRollButton = false
 				file.yButtonDef.mouseLabel = ""
-				if ( file.isOverAReRollItem )
-				{
-					file.aButtonDef.mouseLabel = "#A_BUTTON_VIEW_REWARD"
-				}
+				PrivateData p
+				self.Private( p )
+				p.highlightedItems--
 				UpdateFooterOptions()
 			} )
+			self.AutoSubscribe( RerollButton, "onPressed", function( rtk_behavior button, int keycode, int prevState ) : ( self ) {
+				PrivateData p
+				self.Private( p )
+				int currentBlockIndex  = RTKStruct_GetInt( p.panelStruct, "challengeBlockIndex" )
+				rtk_behavior slidingListInspect = self.PropGetBehavior( "slidingListInspectBehavior" )
+				bool isInspectingChallengeList = RTKSlidingListInspect_IsInspectingItemList( slidingListInspect )
+				file.wasInspectingChallengeList = isInspectingChallengeList
+				file.lastHighlightedBlockIndex = currentBlockIndex
+			})
 		}
 	}
 }
@@ -693,8 +748,7 @@ void function RTKChallengesPanel_UpdateVGUIFooterButtons( rtk_behavior self, int
 	bool canReroll = false
 	if ( IsValidItemFlavorGUID( challengeGUID ) )
 	{
-		ItemFlavor flavor  = GetItemFlavorByGUID( challengeGUID )
-		canReroll          = Challenge_CanRerollChallenge( flavor )
+		canReroll = Challenge_PlayerCanRerollChallenge( GetLocalClientPlayer(), GetItemFlavorByGUID( challengeGUID ) )
 	}
 
 	switch ( challengeItemType )
@@ -713,11 +767,6 @@ void function RTKChallengesPanel_UpdateVGUIFooterButtons( rtk_behavior self, int
 				{
 					file.aButtonDef.mouseLabel	= ""
 				}
-				file.isOverAReRollItem = true
-			}
-			else
-			{
-				file.isOverAReRollItem = false
 			}
 			break
 		case eChallengeListItemButtonType.NARRATIVE:
@@ -780,29 +829,43 @@ void function RTKChallengesPanel_SetBlockButtons( rtk_behavior self )
 	} )
 }
 
-void function RTKChallengesPanel_SetSlidingListBehavior( rtk_behavior self, rtk_struct panelStruct )
+void function RTKChallengesPanel_SetSlidingListBehavior( rtk_behavior self )
 {
 	rtk_behavior slidingListInspect = self.PropGetBehavior( "slidingListInspectBehavior" )
 	file.slidingListBehavior = slidingListInspect
 
-	self.AutoSubscribe( slidingListInspect, "onItemListInspectStarted", function() : ( self, panelStruct ) {
-		RTKChallengeGenericInspectPanel_OnChallengeListInspect ( self, panelStruct )
+	self.AutoSubscribe( slidingListInspect, "onItemListInspectStarted", function() : ( self ) {
+		RTKChallengeGenericInspectPanel_OnChallengeListInspect ( self )
 	} )
 
-	self.AutoSubscribe( slidingListInspect, "onBlockListInspectFinished", function() : ( self, panelStruct ) {
-		RTKChallengeGenericInspectPanel_OnBlockListInspect ( self, panelStruct )
+	self.AutoSubscribe( slidingListInspect, "onBlockListInspectFinished", function() : ( self ) {
+		RTKChallengeGenericInspectPanel_OnBlockListInspect ( self )
 	} )
 }
 
-void function RTKChallengesPanel_RestoreMenuState( rtk_behavior self, rtk_struct panelStruct )
+void function RTKChallengesPanel_RestoreMenuState( rtk_behavior self )
 {
+	PrivateData p
+	self.Private( p )
+	
+	rtk_array blockListArray = RTKStruct_GetArray( p.panelStruct, "blockList" )
+	if ( RTKArray_GetCount( blockListArray ) <= 0 )
+	{
+		file.blockEscKey = false
+		file.wasInspectingChallengeList = false
+		file.lastHighlightedBlockIndex = -1
+		RunClientScript( "ClearBattlePassItem" )
+		ChallengesTileGenericInspectMenu_OnNavigateBack()
+		return
+	}
+
 	rtk_behavior slidingListInspect = self.PropGetBehavior( "slidingListInspectBehavior" )
 	
 	if ( file.lastHighlightedBlockIndex != -1 )
 	{
-		RTKStruct_SetInt( panelStruct, "challengeBlockIndex", file.lastHighlightedBlockIndex )
+		RTKStruct_SetInt( p.panelStruct, "challengeBlockIndex", file.lastHighlightedBlockIndex )
 
-		if ( file.wasInspectingChallengeList )
+		if ( file.wasInspectingChallengeList || file.isInstantChallengeListView )
 		{
 			rtk_behavior pagController = self.PropGetPanel( "paginationNav" ).FindBehaviorByTypeName( "PaginationNavController" )
 			RTKPaginationNavController_SetInitPageIndex( pagController, file.lastHighlightedBlockIndex )
@@ -818,13 +881,28 @@ void function RTKChallengesPanel_RestoreMenuState( rtk_behavior self, rtk_struct
 	}
 	else
 	{
-		RTKStruct_SetInt( panelStruct, "challengeBlockIndex", 0 )
+		RTKStruct_SetInt( p.panelStruct, "challengeBlockIndex", 0 )
 		file.blockEscKey = false
 	}
 	file.lastHighlightedBlockIndex = -1
 }
 
-void function RTKChallengesPanel_SetBreadcrumbHeader( rtk_behavior self, rtk_struct panelStruct )
+void function RTKChallengesPanel_HandleInstantViewBlocks()
+{
+	if ( file.tileData == null )
+		return
+
+	ChallengeTile tileData = expect ChallengeTile( file.tileData )
+	int blockCount = tileData.blocks.len()
+	file.isInstantChallengeListView = false
+	if ( blockCount == 1 )
+	{
+		file.lastHighlightedBlockIndex = 0
+		file.isInstantChallengeListView = tileData.challengeBlockDisplayBehavior == eChallengeBlockDisplayBehavior.AUTO_SKIP_TO_BLOCK
+	}
+}
+
+void function RTKChallengesPanel_SetBreadcrumbHeader( rtk_behavior self )
 {
 	RTKBreadcrumbStepModel challengesStep
 	challengesStep.title = "#CHALLENGE_FULL_MENU_TITLE"
@@ -866,7 +944,7 @@ int function RTKChallengesPanel_GetTimerDisplayTimestamp( ChallengeTile tile )
 		{
 			entity player = GetLocalClientPlayer()
 			Assert( player == GetLocalClientPlayer() )
-			return ClampChallengeExpireTime( player.GetPersistentVarAsInt( "dailyExpirationTime" ) )
+			return Challenge_GetDailyExpirationTimeWithOffset( player )
 		}
 		case eChallengeTileCategory.BEGINNER:
 		{
@@ -956,5 +1034,55 @@ void function RTKChallengesPanel_SendPageViewInspectChallenge()
 void function RTKChallengesPanel_SendPageView()
 {
 	PIN_PageView_ChallegeMainMenu( "ChallengesPanel", fileTelemetry.openDuration, fileTelemetry.fromId, fileTelemetry.clickType )
+}
+
+void function RTKChallengesPanel_CloseMenuAndSendPin()
+{
+	if ( GetActiveMenu() == file.menu )
+	{
+		CloseActiveMenu()
+		OpenChallengesMenu()
+		file.lastHighlightedBlockIndex = -1
+		file.isInstantChallengeListView = false
+
+		fileTelemetry.openDuration = int( UITime() ) - fileTelemetry.openTimestamp
+		RTKChallengesPanel_SendPageView()
+	}
+}
+
+bool function RTKChallengesPanel_IsShortBlock( ChallengeTile challengeTile, int currentBlockIndex )
+{
+	if ( challengeTile.tileCategory == eChallengeTileCategory.WEEKLY )
+		return true
+	else if ( challengeTile.blocks[0].isMetaBlock && currentBlockIndex != 0 )
+		return true
+	return false
+}
+
+bool function RTKChallengesPanel_IsInfiniteBlock( ChallengeTile parentTile, ChallengeBlock block )
+{
+	if ( parentTile.tileCategory == eChallengeTileCategory.DAILY )
+	{
+		foreach ( ItemFlavor challenge in block.challenges )
+		{
+			if ( Challenge_LastTierIsInfinite( challenge ) )
+				return true
+		}
+	}
+	return false
+}
+
+string function RTKChallengesPanel_GetBlockProgressString( ChallengeTile parentTile, ChallengeBlock block )
+{
+	int completedChallengeCount = ChallengeBlock_GetCompletedChallengeCount( block, GetLocalClientPlayer() )
+	int challengeCount = ChallengeBlock_GetChallengeCount( block )
+
+	if ( block.isMetaBlock )
+		return Localize( "#CHALLENGES_META_BLOCK_PROGRESS_TEXT", string( completedChallengeCount ), string( challengeCount ) )
+	else if ( RTKChallengesPanel_IsInfiniteBlock( parentTile, block ) )
+		return Localize( "%$rui/menu/challenges/challenges_icon_infinity_for_string%" )
+	else
+		return Localize( "#CHALLENGES_BLOCK_PROGRESS_TEXT", string( completedChallengeCount ), string( challengeCount ) )
+	return ""
 }
 

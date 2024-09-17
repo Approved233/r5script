@@ -12,6 +12,9 @@ global function GamemodeUtility_ParseVectorString
 global function GamemodeUtility_ParseStringOfVectors 
 global function GamemodeUtility_GetKillReplayActive 
 global function GamemodeUtility_GetIsTeamIndexValidPlayerTeam 
+global function GameModeUtility_GetAllowThirdPerson
+
+
 
 
 
@@ -67,7 +70,7 @@ global function GamemodeUtility_GetMaxPlayersToShowOnPodium
 global function GamemodeUtility_IsSpectatorEnabled 
 global function GamemodeUtility_IsPlacementPopupEnabled 
 global function GamemodeUtility_GetPlayerArrayOfTeamOrAlliance 
-global function GamemodeUtility_GetPlayerTeamOrAlliance 
+global function GamemodeUtility_GetTeamOrAllianceFromEntity 
 global function GamemodeUtility_GetObjectiveProgressPercentIntFromFloat 
 global function GamemodeUtility_GetLoadoutBonusOrdinanceCount 
 
@@ -85,6 +88,34 @@ global function GamemodeUtility_ServerCallback_TriggerScanOfVictimTeam
 
 
 
+
+
+
+
+
+
+
+
+global function GetWinningTeam
+
+global function IsFFAGame
+global function IsMultiTeamMission
+global function GetExpectedSquadSize
+global function IsMultiTeamPvPGame
+global function Is2TeamPvPGame
+global function IsSingleTeamMode
+global function IsLastPlaylistSolo
+global function IsDuoMode
+global function IsPVEMode
+
+global function IsCurrentModeMixtape
+global function GameModeHasCapturePoints
+
+
+
+
+
+global function GetMaxRoundsToPlay
 
 
 
@@ -165,6 +196,7 @@ struct {
 
 
 
+
 		bool isLoweringDVSForGamemode = false 
 
 
@@ -175,6 +207,13 @@ struct {
 
 void function GamemodeUtility_Init()
 {
+
+
+
+
+
+
+
 
 
 
@@ -273,6 +312,90 @@ void function GamemodeUtility_RegisterNetworking()
 
 	if ( GamemodeUtility_ShouldPingVictimSquadLocationOnDown() || GamemodeUtility_ShouldPingVictimSquadLocationOnKill() )
 		Remote_RegisterClientFunction( "GamemodeUtility_ServerCallback_TriggerScanOfVictimTeam", "int", 0, TEAM_MULTITEAM_FIRST + MAX_TEAMS + 1 )
+}
+
+void function RegisterDocs()
+{
+	#document( "GamemodeUtility_IsJIPEnabledInPlaylist", "Check if Join In Progress is enabled through playlist vars" )
+	
+	
+	
+	#document( "GamemodeUtility_GetKillReplayActive", "Check kill replay in playlist" )
+	#document( "GamemodeUtility_GetIsTeamIndexValidPlayerTeam", "Return whether the passed in team index is within the valid player team range for the mode" )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		#document( "GamemodeUtility_GetTeamOrAllianceScore", "Get the score of the passed in team or alliance. The function does the team vs alliance checks for you" )
+		#document( "GamemodeUtility_GetAllianceScoreFromTeam", "Get the alliance score from the passed in team" )
+		#document( "GamemodeUtility_GetScoreDifference", "Get the difference in score between the highest scoring team or alliance ( team vs alliance checks done for you) and the lowest scoring team or alliance" )
+		#document( "GamemodeUtility_GetScoreDifferenceBetweenTeams", "Get the difference in score between the highest scoring team and the lowest scoring team" )
+		#document( "GamemodeUtility_GetWinningTeamOrAlliance", "Get the team or alliance with the highest score ( team vs alliance checks done for you)" )
+		#document( "GamemodeUtility_GetWinningAlliance", "Get the alliance with the highest score" )
+		#document( "GamemodeUtility_GetWinningTeamOrAllianceScore", "Get the score of the team or alliance that has the highest score ( team vs alliance checks done for you)" )
+		#document( "GamemodeUtility_GetAlliancesOrTeamsSortedByScore", "Returns an array of teams or alliances ( depending on what the mode is using ) sorted by score" )
+		#document( "GamemodeUtility_GetAlliancesOrTeamsSortedByEliminationAndScore", "Returns an array of teams or alliances ( depending on what the mode is using ) sorted by whether they are eliminated first and score second" )
+		#document( "GamemodeUtility_IsTeamOrAllianceEliminated", "Returns whether the passed in team or alliance is eliminated ( based on the respawnstatus netvar being eRespawnStatus.PLAYER_ELIMINATED for any player in that team or alliance )" )
+		#document( "GamemodeUtility_IsJIPEnabled", "Check if Join In Progress is enabled ( playlist and convar )" )
+		#document( "GamemodeUtility_IsJIPPlayerSpawnBonusPending", "Get whether this JIP player is waiting to receive whatever bonus the mode wants to award on first spawn" )
+		#document( "GamemodeUtility_IsPlayerAbandoning ", "Check will a player get a penalty if they leave" )
+		#document( "GamemodeUtility_GetAbandonPenaltyLength", "How long will a player be penalized" )
+		#document( "GamemodeUtility_AddCallback_OnPlayerJoinedMatchInProgress", "Triggers for players that have joined as a JIP player for the first time in a match" )
+		#document( "GamemodeUtility_GetMatchTimeLimit", "Get the time limit set for this mode through playlist vars" )
+		#document( "GamemodeUtility_GetMatchTimeLimitWarning", "Get the match time remaining warning for this mode through playlist vars" )
+		#document( "GamemodeUtility_GetMaxPlayersToShowOnPodium", "Get max number of players to show on the start/end podium sequences" )
+		#document( "GamemodeUtility_IsSpectatorEnabled", "Get whether to enable spectate from playlist" )
+		#document( "GamemodeUtility_IsPlacementPopupEnabled", "Get whether placement popup text is enabled from playlist" )
+		#document( "GamemodeUtility_GetPlayerArrayOfTeamOrAlliance", "Automatically get an array of team or alliance players based on whether the mode is using Alliances or Not" )
+		#document( "GamemodeUtility_GetPlayerTeamOrAlliance", "Automatically get the team or the alliance of the passed in player based on whether the mode is using Alliances or Not" )
+		#document( "GamemodeUtility_GetObjectiveProgressPercentIntFromFloat", "Get objective progress in int form instead of float ( 10 percent is 0.1 in objective logic, convert that to 10 instead )" )
+		#document( "GamemodeUtility_GetLoadoutBonusOrdinanceCount", "get value for bonus ordinance to give players in their loadouts" )
+
+
+
+		#document( "GamemodeUtility_ServerCallback_DisplayMatchTimeLimitWarning", "Callback on the Client triggered by the Server to display a warning message when the match time limit is nearing and when it is reached" )
+		#document( "GamemodeUtility_ServerCallback_PlayMatchEndingCountdownAudio", "Callback on the Clien triggered by the Server to play a countdown audio near the end of the match" )
+		#document( "GamemodeUtility_AnnouncementMessageWarning", "Function used to display warning messages on the top center of the screen" )
+		#document( "GamemodeUtility_GetColorVectorForCaptureObjectiveState", "Get colors that respect color blind settings used for different capture objective states ( used for modes like Control and Winter Express )" )
+		#document( "GamemodeUtility_IsPlayerOnTeamObserver", "Return whether the player is on the Observer Team" )
+		#document( "GamemodeUtility_GetLocalTeamPlayers", "Get an array of players that is on the local players team/alliance or the enemy team/alliance. Adjusts for Observers ( assigns them to a team )" )
+		#document( "GamemodeUtility_ServerCallback_PlayerJoinedMatchInProgress", "Play SFX or do other events on the Client when a player has joined as a join in progress player" )
+		#document( "GamemodeUtility_ServerCallback_TriggerScanOfVictimTeam", "Server to Client call to trigger a scan showing the locations of all the players in the team of a player that got killed or knocked" )
+
+
+
+
+
 }
 
 
@@ -510,6 +633,14 @@ bool function GamemodeUtility_GetKillReplayActive()
 {
 	return GetCurrentPlaylistVarBool( "killreplay_enabled", false )
 }
+
+
+
+
+
+
+
+
 
 
 
@@ -903,6 +1034,141 @@ void function RunVictimSquadMapScan_Thread( int victimTeam )
 		wait totalScanDurationWithFadeOut
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2301,6 +2567,8 @@ bool function GamemodeUtility_IsTeamOrAllianceEliminated( int teamOrAlliance )
 
 
 
+
+
 bool function GamemodeUtility_IsPlayerAbandoning( entity player )
 {
 	if ( !GamemodeUtility_GetMixtapeAbandonPenaltyActive() )
@@ -2952,10 +3220,17 @@ bool function GamemodeUtility_GetMixtapeAbandonPenaltyActive()
 
 
 
+
+
+
+
+
+
 int function GamemodeUtility_GetMaxDroppedGrenadesOnDeath()
 {
 	return GetCurrentPlaylistVarInt( "grenade_ondeath_max_spawncount", 1 )
 }
+
 
 
 
@@ -3226,7 +3501,7 @@ bool function GamemodeUtility_GetIsTeamIndexValidPlayerTeam( int teamIndex )
 
 
 
-bool function GetPlaylistVar_AllowThirdPerson()
+bool function GameModeUtility_GetAllowThirdPerson()
 {
 	return GetCurrentPlaylistVarBool( "allow_third_person", false )
 }
@@ -3260,9 +3535,9 @@ array < entity > function GamemodeUtility_GetPlayerArrayOfTeamOrAlliance( int te
 
 
 
-int function GamemodeUtility_GetPlayerTeamOrAlliance( entity player )
+int function GamemodeUtility_GetTeamOrAllianceFromEntity( entity queryEntity )
 {
-	return AllianceProximity_IsUsingAlliances() ? AllianceProximity_GetAllianceFromTeam( player.GetTeam() ) : player.GetTeam()
+	return AllianceProximity_IsUsingAlliances() ? AllianceProximity_GetAllianceFromTeam( queryEntity.GetTeam() ) : queryEntity.GetTeam()
 }
 
 
@@ -3389,4 +3664,207 @@ string function GamemodeUtility_GetParsedStringForCircleValues( array< string > 
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+int function GetWinningTeam( bool shouldReturnInvalidInCaseOfTie = true )
+{
+	int currentWinningTeam = GetNetWinningTeam()
+	if ( currentWinningTeam != -1 )
+		return currentWinningTeam
+
+	int maxScore = -1
+	int currentScore
+	int winningTeam = TEAM_UNASSIGNED
+	array < int > allTeamsArray = GetAllValidPlayerTeams()
+
+	foreach ( playerTeam in allTeamsArray )
+	{
+		if ( IsRoundBased() )
+			currentScore = GameRules_GetTeamScore2( playerTeam )
+		else
+			currentScore = GameRules_GetTeamScore( playerTeam )
+
+		if ( shouldReturnInvalidInCaseOfTie && currentScore == maxScore && winningTeam != playerTeam ) 
+		{
+			winningTeam = TEAM_UNASSIGNED
+		}
+		else if ( currentScore > maxScore )
+		{
+			maxScore = currentScore
+			winningTeam = playerTeam
+		}
+	}
+
+	return winningTeam
+}
+
+
+bool function IsFFAGame()
+{
+	return (MAX_TEAMS == MAX_PLAYERS)
+}
+
+bool function IsMultiTeamMission()
+{
+	if ( IsSingleTeamMode() )
+		return false
+	return true
+}
+
+
+int function GetExpectedSquadSize( entity player = null )
+{
+	
+	return int ( GetCurrentPlaylistVarFloat( "max_players", 60 ) / GetCurrentPlaylistVarFloat( "max_teams", 20 ) )
+}
+
+bool function IsMultiTeamPvPGame()
+{
+	return (MAX_TEAMS > 2)
+}
+
+bool function Is2TeamPvPGame()
+
+{
+	return (MAX_TEAMS == 2)
+}
+
+bool function IsSingleTeamMode()
+{
+	return (1 == GetCurrentPlaylistVarInt( "max_teams", 2 ))
+}
+
+bool function IsLastPlaylistSolo( entity player )
+{
+	return GetPersistentLastGameTypeFlag( player, eGameType.SOLO )
+}
+
+bool function IsDuoMode()
+{
+	return (GetCurrentPlaylistVarFloat( "max_players", 60 ) / GetCurrentPlaylistVarFloat( "max_teams", 20 ) == 2.0)
+}
+
+bool function IsPVEMode()
+{
+
+
+
+
+
+
+
+
+
+#if MP_PVEMODE
+			return true
+#else
+			return false
+#endif
+
+}
+
+
+
+bool function IsCurrentModeMixtape()
+{
+	return GameMode_IsActive( eGameModes.CONTROL ) || GameMode_IsActive( eGameModes.FREEDM )
+}
+
+
+
+bool function GameModeHasCapturePoints()
+{
+
+		return clGlobal.hardpointStringIDs.len() > 0
+
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+int function GetMaxRoundsToPlay()
+{
+	Assert( IsRoundBased() )
+
+	return GetRoundScoreLimit_FromPlaylist() * 2 - 1
+}
 

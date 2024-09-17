@@ -139,11 +139,14 @@ global const GAMEMODE_HEATWAVE = "survival_heatwave"
 global const GAMEMODE_SURVIVAL_HARDCORE = "survival_hardcore"
 
 
-global const GAMEMODE_DATE_NIGHT = "date_night_duos"
+
 
 
 global const GAMEMODE_HALLOWEEN_18_1 = "halloween_18_1_trios"
 global const GAMEMODE_HALLOWEEN_18_1_HARBINGER = "halloween_18_1_harbinger_trios"
+
+
+global const GAMEMODE_HALLOWEEN_22_1 = "halloween_22_1_trios"
 
 
 global const GAMEMODE_GOLDEN_HORSE = "golden_horse_trios"
@@ -196,7 +199,7 @@ global const GAMEMODE_SURVIVAL_SOLOS = "survival_solos"
 
 
 
-
+global const GAMEMODE_OBJECTIVE_BR = "survival_objectivebr"
 
 
 
@@ -211,10 +214,10 @@ global const GAMEMODE_BIGTEAM_DEATHMATCH = "freedm_bigtdm"
 global const GAMEMODE_SURVIVAL_FREE_RESPAWNS = "survival_free_respawns"
 
 
-global const string PLAYLIST_TRAINING = "survival_training"
+global const string PLAYLIST_TRAINING = "training.survival_training"
 
 global const string PLAYLIST_NEW_PLAYER_ORIENTATION = "survival_bots_vs_humanteams"
-global const string PLAYLIST_FIRING_RANGE = "survival_firingrange"
+global const string PLAYLIST_FIRING_RANGE = "firing_range.survival_firingrange"
 global const int PLAYLIST_ID_SURVIVAL = 0
 global const int PLAYLIST_ID_NEW_PLAYER_ORIENTATION = 1
 
@@ -224,7 +227,7 @@ global const string COMBATRANGE = "combatrange"
 
 
 
-global const string BOTPLAYGROUND = "survival_bot_playground"
+global const string BOTPLAYGROUND = "bot_playground.survival_bot_playground"
 
 
 global const bool R2_SCOREBOARD = false
@@ -233,10 +236,6 @@ global const bool MINIMAP_DEBUG = false
 global const bool CHALLENGE_DEBUG = false
 
 global const bool VERBOSE_DAMAGE_PRINTOUTS = false
-
-global const NETWORTH_VAR = "netWorth"
-
-global const TESTCONST = 99
 
 
 global const INTELLIJ_OUTLINE_SECTION_MARKER = false
@@ -378,19 +377,6 @@ global enum eCodeDialogueID
 	DANGEROUS_AREA_DISPLACE 
 	REACT_SURPRISED        
 	DIALOGUE_COUNT
-}
-
-global enum eTitanVO
-{
-	RODEO_RAKE
-	ENEMY_EJECTED
-	FRIENDLY_EJECTED
-	FRIENDLY_TITAN_DEAD
-	ENEMY_TITAN_DEAD
-	ENEMY_TARGET_ELIMINATED
-	FRIENDLY_TITAN_HELPING
-	PILOT_HELPING
-	FRIENDLY_RODEOING_ENEMY
 }
 
 
@@ -730,7 +716,6 @@ global const OFFHAND_TITAN_CENTER = 2
 global const OFFHAND_COUNT = 8
 
 global const OFFHAND_ORDNANCE = OFFHAND_RIGHT
-global const OFFHAND_SPECIAL = OFFHAND_LEFT
 
 global const bool SHOW_SATCHEL_DETONATION_HINT_WITH_CLACKER = false
 
@@ -787,48 +772,6 @@ global enum eNumericDisplayType
 	TIME_MINUTES_LONG
 	SHORT_INT
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 global const ZIPLINE_IDLE_ANIM = "pt_zipline_slide_idle"
 
@@ -891,7 +834,10 @@ global enum ePresentationType
 	WEAPON_TRIAL_CELEBRATIONS,
 	MELEE_INSPECT,
 	PLAY_QUADS,
-	PLAY_STAGE_B,
+	PLAY_STAGE_B_TRIOS,
+	PLAY_STAGE_B_QUADS,
+	PLAY_STAGE_C_TRIOS,
+	PLAY_STAGE_C_QUADS,
 
 	COUNT
 }
@@ -980,6 +926,8 @@ global enum eUIEvent
 }
 
 global const int PHYS_EXPLOSION_LARGE = 500
+
+global const float DEFAULT_PODIUM_DURATION = 11.5
 
 global const ASPECT_RATIO_16_BY_9 = 16.0 / 9.0
 global const ASPECT_RATIO_21_BY_9 = 64.0 / 26.5
@@ -1325,9 +1273,7 @@ global enum eCommsAction
 	PING_ATTACHMENT_HOPUP_SHATTER_ROUNDS,
 	PING_ATTACHMENT_HOPUP_DUAL_SHELL
 	PING_ATTACHMENT_HOPUP_KINETIC_FEEDER
-
 	PING_ATTACHMENT_HOPUP_GUNSHIELD,
-
 	
 	PING_ITEM_COMBO_FULL,
 	PING_ITEM_SHIELD_SMALL,
@@ -1362,6 +1308,15 @@ global enum eCommsAction
 		PING_XP_LEVEL_UP_ARMOR,
 		PING_XP_LEVEL_UP_ABILITY,
 		PING_UPGRADE_STATION,
+		PING_HAS_UPGRADE_0,
+		PING_HAS_UPGRADE_1,
+		PING_HAS_UPGRADE_2,
+		PING_HAS_UPGRADE_3,
+
+
+
+
+
 
 
 		PING_COLLECTIBLE_NESSIE,
@@ -1443,6 +1398,9 @@ global enum eCommsAction
 	PING_CAREPACKAGE,
 	PING_MY_CAREPACKAGE,
 	PING_SURVEYBEACON,
+
+
+
 	PING_HOVERTANK,
 	PING_FLYER,
 	PING_FLYER_CAGED,
@@ -1552,7 +1510,7 @@ global enum eCommsAction
 	PING_RESPAWN_DROPSHIP,
 	PING_EVAC_DROPSHIP,
 
-
+		PING_DROPSHIP,
 
 	PING_JUMP_PAD,
 	PING_CRYPTO_DRONE,
@@ -1561,9 +1519,7 @@ global enum eCommsAction
 	PING_DEATH_TOTEM_NEUTRAL,
 	PING_GEYSER,
 	PING_LAVA,
-
-		PING_TRAIN,
-
+	PING_TRAIN,
 	
 	CANCELED_PING,
 	
@@ -1582,9 +1538,9 @@ global enum eCommsAction
 	REPLY_LOOT_UNDIBS,
 	REPLY_RESPAWN_YES,
 
-	REPLY_LOVE_YOU,
-	REPLY_LOVE_YOU_MORE,
-	REPLY_NO_I_LOVE_YOU_MORE,
+
+
+
 
 
 	PING_REPLICATOR_INCOMING,
@@ -1656,6 +1612,7 @@ global enum eCommsAction
 
 	INVENTORY_NEED_HEALTH,
 	INVENTORY_NEED_SHIELDS,
+	INVENTORY_NEED_ULTACCEL,
 	INVENTORY_NEED_INCAPSHIELD,
 	INVENTORY_NEED_THERMITE,
 	INVENTORY_NEED_FRAG,
@@ -1711,9 +1668,7 @@ global enum eCommsAction
 	INVENTORY_NEED_HOPUP_SHATTER_ROUNDS,
 	INVENTORY_NEED_HOPUP_DUAL_SHELL,
 	INVENTORY_NEED_HOPUP_KINETIC_FEEDER,
-
 	INVENTORY_NEED_HOPUP_GUNSHIELD,
-
 
 	INVENTORY_NEED_BETTER_ARMOR,
 	INVENTORY_NEED_BETTER_HELMET,
@@ -1771,10 +1726,8 @@ global enum eCommsAction
 		PING_SPAWNREGION,
 		REPLY_SPAWNREGION,
 
-
-		SPAWN_EVAC_SHIP,
-		SPAWN_EVAC_ZONE,
-
+	SPAWN_EVAC_SHIP,
+	SPAWN_EVAC_ZONE,
 
 
 
@@ -1791,9 +1744,7 @@ global enum eCommsAction
 		PING_HATCH_BUNKER_CLOSED,
 
 
-
-		PING_PHASE_RUNNER,
-
+	PING_PHASE_RUNNER,
 
 	PING_WEAPON_3030,
 
@@ -1829,9 +1780,7 @@ global enum eCommsAction
 	SUB_TYPE_BOOSTED_LOADER
 	SUB_TYPE_DUAL_SHELL
 	SUB_TYPE_KINETIC_FEEDER
-
 	SUB_TYPE_GUNSHIELD,
-
 	
 	FLAVOR_WEAPON_KRABER,
 	FLAVOR_WEAPON_MASTIFF,
@@ -2166,7 +2115,7 @@ global enum eCommsAction
 
 
 
-
+		PING_OBJECTIVE_CAPTURE,
 
 
 
@@ -2205,9 +2154,7 @@ global const string GENERIC_PING_PANEL_SCRIPTNAME_INACTIVE = "generic_panel_inac
 global const string JUMP_PAD_NEUTRAL_SCRIPTNAME = "jump_pad_neutral"
 global const string SKYDIVE_LAUNCHER_TARGETNAME = "skydive_launcher"
 
-
 global const string TRAIN_BRUSH_SCRIPTNAME = "train_brush"
-
 global const string GEYSER_PING_SCRIPT_NAME = "ping_geyser"
 global const string LAVA_FLOW_SURFACE_NAME = "lava_flow"
 
@@ -2353,6 +2300,7 @@ global const MINIMAP_YOU_RUI = $"ui/minimap_square_you.rpak"
 global const MINIMAP_JAMMER_LAYER_RUI = $"ui/minimap_square_jammer_layer.rpak"            
 global const MINIMAP_OBJECT_RUI = $"ui/minimap_square_object.rpak"                    
 global const MINIMAP_OBJECT_DYNAMIC_RUI = $"ui/minimap_square_object_dynamic.rpak"                    
+global const MINIMAP_OBJECT_PROXIMITY_RUI = $"ui/minimap_square_object_proximity.rpak"                    
 global const MINIMAP_PLAYER_RUI = $"ui/minimap_square_player.rpak"                    
 global const MINIMAP_RING_PULSE_RUI = $"ui/minimap_square_ring_pulse.rpak"                
 global const MINIMAP_SQUARE_SIMPLE_RUI = $"ui/minimap_square_simple.rpak"                    
@@ -2412,6 +2360,9 @@ global const int SURVIVAL_BACKPACK_LIMIT = 10
 global const int SURVIVAL_BACKPACK_LIMIT_SMALL = 12
 global const int SURVIVAL_BACKPACK_LIMIT_MEDIUM = 14
 global const int SURVIVAL_BACKPACK_LIMIT_MAX = 16
+
+
+
 
 
 
@@ -2683,10 +2634,15 @@ global enum eRarityTier
 	_COUNT,
 }
 
+
 global const int OBIT_FLAG_NONE = 1 << 0
 global const int OBIT_FLAG_HEADSHOT = 1 << 1
 global const int OBIT_FLAG_DOWNED = 1 << 2
 global const int OBIT_FLAG_KILL = 1 << 3
+global const int OBIT_FLAG_SQUAD_WIPE = 1 << 4
+global const int OBIT_FILTER_NONE = OBIT_FLAG_NONE
+global const int OBIT_FILTER_LITE = OBIT_FLAG_DOWNED | OBIT_FLAG_KILL | OBIT_FLAG_SQUAD_WIPE
+global const int OBIT_FILTER_ALL = 0
 
 global const table<string, int> ammoColors = {
 	bullet = COLORID_AMMO_SMALL_COLOR
@@ -2826,20 +2782,6 @@ global enum ePlayerStryderCharDataArraySlots
 	COUNT,
 }
 Assert( ePlayerStryderCharDataArraySlots.COUNT == 32 )
-
-global typedef DirURDL int
-global const DirURDL DIR_URDL_UP = 0
-global const DirURDL DIR_URDL_RIGHT = 1
-global const DirURDL DIR_URDL_DOWN = 2
-global const DirURDL DIR_URDL_LEFT = 3
-
-global typedef DirFBLRUD int
-global const DirFBLRUD DIR_FBLRUD_FORWARD = 0
-global const DirFBLRUD DIR_FBLRUD_BACK = 1
-global const DirFBLRUD DIR_FBLRUD_LEFT = 2
-global const DirFBLRUD DIR_FBLRUD_RIGHT = 3
-global const DirFBLRUD DIR_FBLRUD_UP = 4
-global const DirFBLRUD DIR_FBLRUD_DOWN = 5
 
 global struct ValkTacTargetData
 {

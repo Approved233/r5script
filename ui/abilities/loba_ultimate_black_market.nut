@@ -97,6 +97,7 @@ global function GetBlackMarketUseLimit
 
 
 
+
 struct {
 
 
@@ -169,11 +170,33 @@ void function LobaUltimateBlackMarket_LevelInit()
 
 
 
-
-
-
-
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1572,6 +1595,17 @@ int function GetBlackMarketUseLimit( entity blackMarket, entity player )
 	if ( IsInfiniteAmmoEnabled() )
 		return 99
 	int result = GetCurrentPlaylistVarInt( "loba_ultimate_use_limit", 2 )
+
+
+
+
+
+
+
+
+
+
+
 
 
 

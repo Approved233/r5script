@@ -83,6 +83,9 @@ struct
 {
 	var  gamestateRui = null
 	var  gamestateWaitingNestedRui = null
+
+
+
 	bool gameStateRuiCreated = false
 	var  letterBoxRui = null
 	bool thirtySecondWarningDone = false
@@ -138,6 +141,7 @@ void function ClGameState_Init()
 
 	AddCallback_OnClientScriptInit( ClGameState_AddClient )
 	AddCallback_OnScoreboardCreated( Hud_SetModeEmblem )
+	AddCallback_ClientOnPlayerConnectionStateChanged( OnPlayerConnectionStateChanged )
 
 	file.isNetGraphEnabled = IsNetGraphEnabled()
 	AddCallback_OnSettingsUpdated( RefreshNetGraphVisibility )
@@ -146,6 +150,12 @@ void function ClGameState_Init()
 	CreateScoreRUI()
 }
 
+void function OnPlayerConnectionStateChanged( entity player )
+{
+
+
+
+}
 
 void function CreateScoreRUI()
 {
@@ -182,14 +192,25 @@ void function CreateScoreRUI()
 	RuiSetImage( rui , "gameModeIcon", GetGamemodeLogoFromImageMap( GetCurrentPlaylistVarString( "gamemode_logo", "BATTLE_ROYALE" )) )
 
 	asset hudArtAsset = GetWaitingGameStateArtHud()
-	if ( hudArtAsset != $"" )
-	{
-		file.gamestateWaitingNestedRui = RuiCreateNested( rui, "waitingHUDHandle", hudArtAsset )
 
-		
-		RuiSetFloat( rui, "waitingMessageScale", 0.65 )
-		RuiSetFloat2( rui, "startingMessageOffset", <0.0, 570.0, 0.0> )
-		RuiSetFloat2( rui, "waitingMessageOffset", <0.0, 556.0, 0.0> )
+	{
+
+
+
+
+
+
+
+
+		if ( hudArtAsset != $"" )
+		{
+			file.gamestateWaitingNestedRui = RuiCreateNested( rui, "waitingHUDHandle", hudArtAsset )
+
+			
+			RuiSetFloat( rui, "waitingMessageScale", 0.65 )
+			RuiSetFloat2( rui, "startingMessageOffset", <0.0, 570.0, 0.0> )
+			RuiSetFloat2( rui, "waitingMessageOffset", <0.0, 556.0, 0.0> )
+		}
 	}
 
 	file.gamestateRui        = rui
@@ -205,6 +226,54 @@ void function CreateScoreRUI()
 		func()
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 bool function HasWaitingGameStateArtHud()
 {

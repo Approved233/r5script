@@ -173,6 +173,9 @@ void function MpAbilityConduitArcFlash_Init()
 		StatusEffect_RegisterDisabledCallback( eStatusEffect.shields_repairing, ArcFlash_StopShieldsRepairing )
 
 		RegisterSignal( "ArcFlash_EndShieldsRepairing" )
+		RegisterSignal( "Conduit_MoveToPodium" )
+
+		AddCallback_GameStateEnter( eGameState.Resolution, Conduit_OnGameState_Podium )
 
 }
 
@@ -407,10 +410,10 @@ var function OnWeaponPrimaryAttackAnimEvent_ability_conduit_arc_flash( entity we
 
 	weapon.PlayWeaponEffect( FX_TAC_MUZZLE_FLASH, FX_TAC_MUZZLE_FLASH, MUZZLE_ATTACH )
 
-
-
-
-
+	if ( weaponOwner.IsPlayer() )
+	{
+		PlayerUsedOffhand( weaponOwner, weapon )
+	}
 
 
 
@@ -1157,26 +1160,36 @@ void function TargetingHUD_Thread( entity player )
 	{
 		array<entity> allyArray = GetArrayOfPossibleAlliesForPlayer( player )
 
+
+
+
+
+
+
 		foreach ( ally in allyArray )
 		{
 			if ( !file.trackedAllys[player].contains(ally) )
 			{
-				thread SingleTargetRui_Thread( player, ally )
+				thread ConduitPassiveTacticalRui_Thread( player, ally )
 			}
 		}
 		WaitFrame()
 	}
 }
 
-void function SingleTargetRui_Thread(  entity player, entity target )
+void function ConduitPassiveTacticalRui_Thread(  entity player, entity target )
 {
 	if ( !IsValid( target ) )
+		return
+
+	if ( GetGameState() >= eGameState.Resolution )
 		return
 
 	EndSignal( target, "OnDestroy", "OnDeath" )
 	EndSignal( target, "OnModelChanged" )
 	EndSignal( player, "TargetingStop" )
 	EndSignal( player, "OnDestroy" )
+	EndSignal( clGlobal.signalDummy, "Conduit_MoveToPodium" )
 
 	file.trackedAllys[player].append(target)
 
@@ -1187,7 +1200,18 @@ void function SingleTargetRui_Thread(  entity player, entity target )
 
 	RuiKeepSortKeyUpdated( rui, true, "pos" )
 
-	RuiTrackFloat3( rui, "pos", target, RUI_TRACK_POINT_FOLLOW, target.LookupAttachment( "CHESTFOCUS" )  )
+	int attachmentID = target.LookupAttachment( "REF" )
+	if ( target.IsPlayer() )
+		attachmentID = target.LookupAttachment( "CHESTFOCUS" )
+
+
+
+
+
+
+
+	RuiTrackFloat3( rui, "pos", target, RUI_TRACK_POINT_FOLLOW, attachmentID  )
+
 
 	entity tacticalWeapon       = player.GetOffhandWeapon( OFFHAND_TACTICAL )
 	RuiTrackFloat( rui, "tacAmmoFrac", tacticalWeapon, RUI_TRACK_WEAPON_CLIP_AMMO_FRACTION )
@@ -1206,7 +1230,7 @@ void function SingleTargetRui_Thread(  entity player, entity target )
 			if ( IsValid(player) )
 				file.trackedAllys[player].removebyvalue(target)
 
-			if ( IsValid( target ) )
+			if ( IsValid( target ) && target.IsPlayer() )
 			{
 				target.DoModelChangeScriptCallback( false )
 				target.SetTargetInfoStatusIcon( $"" )
@@ -1267,53 +1291,56 @@ void function SingleTargetRui_Thread(  entity player, entity target )
 		}
 
 		
-		float shieldFrac = GetShieldHealthFrac( target )
-		if ( shieldFracLast != shieldFrac )
+		if ( target.IsPlayer() )
 		{
-			shieldFracLast = shieldFrac
-
-			const float SHIELD_FRAC_CRITICAL = 0.2
-			const float SHIELD_FRAC_SAFE = 0.6
-
-			if ( shieldFrac <= SHIELD_FRAC_CRITICAL )
-				shieldState = eShieldState.CRITICAL
-			else if ( shieldFrac <= SHIELD_FRAC_SAFE )
-				shieldState = eShieldState.LOW
-			else if ( shieldFrac < 1.0 )
-				shieldState = eShieldState.HIGH
-			else
-				shieldState = eShieldState.FULL
-
-			RuiSetAsset( rui, "shieldIcon", GetRealShieldIcon( shieldState ) )
-		}
-
-		
-		if ( target.IsPlayer() && target.GetPlayerNetBool( TEMPSHIELD_ACTIVE_NETVAR ) )
-		{
-			
-			if ( state != eArcFlashState.NONE )
+			float shieldFrac = GetShieldHealthFrac( target )
+			if ( shieldFracLast != shieldFrac )
 			{
-				RuiSetInt( rui, "activeState", state )
-				RuiSetFloat( rui, "healTimeDuration", GetArcFlashDuration( player, state ) )
+				shieldFracLast = shieldFrac
+
+				const float SHIELD_FRAC_CRITICAL = 0.2
+				const float SHIELD_FRAC_SAFE = 0.6
+
+				if ( shieldFrac <= SHIELD_FRAC_CRITICAL )
+					shieldState = eShieldState.CRITICAL
+				else if ( shieldFrac <= SHIELD_FRAC_SAFE )
+					shieldState = eShieldState.LOW
+				else if ( shieldFrac < 1.0 )
+					shieldState = eShieldState.HIGH
+				else
+					shieldState = eShieldState.FULL
+
+				RuiSetAsset( rui, "shieldIcon", GetRealShieldIcon( shieldState ) )
 			}
 
-			SetUnitFrameOvershieldChargingState( target, state == eArcFlashState.CHARGE )
+			
+			if ( target.GetPlayerNetBool( TEMPSHIELD_ACTIVE_NETVAR ) )
+			{
+				
+				if ( state != eArcFlashState.NONE )
+				{
+					RuiSetInt( rui, "activeState", state )
+					RuiSetFloat( rui, "healTimeDuration", GetArcFlashDuration( player, state ) )
+				}
 
-			if ( !isOutOfRange )
-				target.SetTargetInfoStatusIcon( $"rui/hud/character_abilities/conduit_tactical_enemy_shielded" )
+				SetUnitFrameOvershieldChargingState( target, state == eArcFlashState.CHARGE )
+
+				if ( !isOutOfRange )
+					target.SetTargetInfoStatusIcon( $"rui/hud/character_abilities/conduit_tactical_enemy_shielded" )
+				else
+					target.SetTargetInfoStatusIcon( $"" )
+			}
 			else
-				target.SetTargetInfoStatusIcon( $"" )
-		}
-		else
-		{
-			RuiSetInt( rui, "activeState", eArcFlashState.NONE )
+			{
+				RuiSetInt( rui, "activeState", eArcFlashState.NONE )
 
-			SetUnitFrameOvershieldChargingState( target, false )
+				SetUnitFrameOvershieldChargingState( target, false )
 
-			if ( !isOutOfRange )
-				target.SetTargetInfoStatusIcon( GetRealShieldIcon( shieldState ) )
-			else
-				target.SetTargetInfoStatusIcon( $"" )
+				if ( !isOutOfRange )
+					target.SetTargetInfoStatusIcon( GetRealShieldIcon( shieldState ) )
+				else
+					target.SetTargetInfoStatusIcon( $"" )
+			}
 		}
 
 
@@ -1445,6 +1472,11 @@ void function ArcFlash_ShieldsRepairingThread( entity player )
 		WaitFrame()
 		state = GetArcFlashState( player )
 	}
+}
+
+void function Conduit_OnGameState_Podium()
+{
+	Signal( clGlobal.signalDummy, "Conduit_MoveToPodium" )
 }
 
 

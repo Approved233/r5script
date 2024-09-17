@@ -191,7 +191,9 @@ asset function GetDownloadedImageAsset( string rpakName, string imageName, int d
 
 
 		if( CanRunClientScript() )
+		{
 			RunClientScript( "RequestDownloadedImagePakLoad", rpakName, dlType, imageElem, imageName )
+		}
 
 
 	return image
@@ -245,6 +247,12 @@ void function ImagePakLoad_UIScriptResetComplete()
 	if ( CanRunClientScript() )
 		RunClientScript( "UIScriptResetCallback_ImagePakLoad" )
 }
+
+
+
+
+
+
 
 
 

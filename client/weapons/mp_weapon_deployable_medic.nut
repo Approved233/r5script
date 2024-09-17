@@ -1684,8 +1684,6 @@ int function DeployableMedic_GetHealAmount()
 
 
 
-
-
 void function DeployableMedic_OnPropScriptCreated( entity ent )
 {
 }

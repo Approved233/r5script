@@ -78,6 +78,8 @@ global function UpgradeCore_ParseUpgradeOverrides
 
 
 
+
+
 global function UpgradeCore_SetProgressionLocked
 global function UpgradeCore_ProgressionLocked_ForPlayer_Set
 global function UpgradeCore_ProgressionLocked_ForPlayer_Get
@@ -171,8 +173,8 @@ global enum eUpgradeXPActions
 
 
 
-
-
+		CAPTURE_THRESHOLD,
+		CAPTURE_COMPLETE,
 
 	COUNT
 }
@@ -276,6 +278,7 @@ struct
 
 
 
+
 } file
 
 struct
@@ -316,8 +319,8 @@ struct
 
 
 
-
-
+		int captureThresholdXP = 100
+		int captureCompleteXP = 200
 
 
 	bool shiftInventoryRight = true
@@ -372,6 +375,8 @@ struct
 
 	bool harvester_useBadAreaAvoidanceRadius = true
 	float harvester_badAreaAvoidanceRadius = 3000.0
+	bool harvester_usePropAvoidanceRadius = true
+	float harvester_propAvoidanceRadius = 400.0
 
 	float harvester_useSafeDistFromRing = -1.0
 
@@ -599,8 +604,8 @@ void function UpgradeCore_InitTuningValues()
 
 
 
-
-
+		tunings.captureThresholdXP = GetCurrentPlaylistVarInt( "passive_upgrade_core_capture_threshold_xp", tunings.captureThresholdXP )
+		tunings.captureCompleteXP = GetCurrentPlaylistVarInt( "passive_upgrade_core_capture_complete_xp", tunings.captureCompleteXP )
 
 	tunings.evoHarvesterTimegateDuration = GetCurrentPlaylistVarFloat( "passive_upgrade_core_evo_harvester_activation_delay", tunings.evoHarvesterTimegateDuration ) 
 	tunings.shiftInventoryRight = GetCurrentPlaylistVarBool( "passive_upgrade_core_shift_inventory_right", tunings.shiftInventoryRight )
@@ -647,6 +652,8 @@ void function UpgradeCore_InitTuningValues()
 	tunings.messageDoubleRingScan = GetCurrentPlaylistVarBool( "passive_upgrade_core_ring_rescan_messaging_enabled", true )
 	tunings.harvester_useBadAreaAvoidanceRadius = GetCurrentPlaylistVarBool( "passive_upgrade_core_harvester_bad_area_avoidance_enabled", tunings.harvester_useBadAreaAvoidanceRadius )
 	tunings.harvester_badAreaAvoidanceRadius = GetCurrentPlaylistVarFloat( "passive_upgrade_core_harvester_bad_area_avoidance_radius", tunings.harvester_badAreaAvoidanceRadius )
+	tunings.harvester_usePropAvoidanceRadius = GetCurrentPlaylistVarBool( "passive_upgrade_core_harvester_prop_avoidance_enabled", tunings.harvester_usePropAvoidanceRadius )
+	tunings.harvester_propAvoidanceRadius = GetCurrentPlaylistVarFloat( "passive_upgrade_core_harvester_prop_avoidance_radius", tunings.harvester_propAvoidanceRadius )
 	tunings.harvester_useSafeDistFromRing = GetCurrentPlaylistVarFloat( "passive_upgrade_core_harvester_dist_from_ring", tunings.harvester_useSafeDistFromRing )
 	tunings.harvester_checkGroundNormalAngle = GetCurrentPlaylistVarBool( "passive_upgrade_core_harvester_check_ground_normal_angle", tunings.harvester_checkGroundNormalAngle )
 }
@@ -871,6 +878,17 @@ bool function UpgradeCore_IsEquipmentArmorCore( string ref )
 
 
 
+
+
+
+
+
+
+
+
+
+
+
 array<int> function UpgradeCore_ParseStringIntoIntArray( string fullStr )
 {
 	array<string> splitStr = GetTrimmedSplitString( fullStr, " " )
@@ -967,6 +985,11 @@ bool function UpgradeCore_Message_ReKnocks()
 	return GetCurrentPlaylistVarBool( "passive_upgrade_core_reknock_messaging_enabled", true )
 }
 
+bool function UpgradeCore_EvoHarvester_PreventInteractionForFullyUpgradeTeams()
+{
+	return GetCurrentPlaylistVarBool( "passive_upgrade_core_harvester_prevent_fullyupgraded_teaminteraction", true )
+}
+
 array<int> function UpgradeCore_GetLevelXpThresholds()
 {
 	string defaults = UPGRADE_CORE_DEFAULT_XP_THRESHOLDS_THREE_TIER
@@ -986,6 +1009,71 @@ array<int> function UpgradeCore_GetLevelXpThresholds()
 	}
 	return result
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3632,6 +3720,48 @@ asset function GetShieldCoreIconFromShieldAmount( int amount )
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 UpgradeCoreChoice function UpgradeCore_GetUpgradeChoiceStructByIndex( entity player, int upgradeIndex )
 {
 	array<UpgradeCoreChoice> upgradesList = UpgradeCore_GetUpgradesForPlayer( player )
@@ -3643,6 +3773,91 @@ UpgradeCoreChoice function UpgradeCore_GetUpgradeChoiceStructByIndex( entity pla
 	}
 	return clone upgradesList[upgradeIndex]
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

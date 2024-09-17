@@ -23,11 +23,15 @@ global function MeleeSkin_GetStoreImage
 global function MeleeSkin_GetEquipImage
 global function MeleeSkin_GetItemInspectScale
 global function MeleeSkin_GetItemInspectOffset
+global function MeleeSkin_GetMilestoneEventOffset
 global function MeleeSkin_ShouldHideIfLocked
 global function MeleeSkin_IsItemFlavorUnlocked
 global function MeleeCustomization_ShouldHideIfLocked
 
-
+global function Loadout_MeleeAddOns
+global function Loadout_GetEquippedMeleeAddOnsForWeapon
+global function Loadout_WeaponAddons
+global function Loadout_DoesAddOnAutoEquip
 
 
 
@@ -41,6 +45,10 @@ global function ArtifactsCallback_AddArtifactDeathboxesToCharacterLoadouts
 global function Deathbox_GetVideo
 global function RequestSetDeathboxEquipForMeleeSkin
 global function Deathbox_GetEquipped
+
+
+
+
 
 
 
@@ -110,7 +118,7 @@ global enum eMeleeWeaponType {
 	HEIRLOOM
 	ARTIFACT
 
-
+		UNIVERSAL
 
 	COUNT
 }
@@ -150,9 +158,9 @@ const float MELEE_KNOCKBACK_DURATION = 0.25
 
 
 
-
-
-
+global const int MELEE_ADDONS_IS_OWNED = 1 << 0
+const int LOADOUTS_MAX_ADDONS = 5
+const asset DEFAULT_EMPTY_MELEE_ADDON = $"settings/itemflav/melee_addon/_empty.rpak"
 
 
 
@@ -180,9 +188,9 @@ struct FileStruct_LifetimeLevel
 	table<ItemFlavor, CharacterAndMeleeWeapons > charactersMeleeWeaponsMap 
 
 
-
-
-
+	table< ItemFlavor, array< ItemFlavor > > weaponAddOnsMap 
+	array< ItemFlavor > allMeleeAddOns = [] 
+	array< LoadoutEntry > meleeAddOnLoadoutSlots = [] 
 
 
 
@@ -239,9 +247,9 @@ void function OnItemFlavorRegistered_Melee_Weapon( ItemFlavor meleeWeapon )
 	if ( legendsList.len() == 0 )
 	{
 
+		Assert( ItemFlavor_GetGUID( meleeWeapon ) == DEFAULT_MELEE_WEAPON_GUID || MeleeWeapon_GetWeaponType( meleeWeapon ) == eMeleeWeaponType.ARTIFACT || MeleeWeapon_GetWeaponType( meleeWeapon ) == eMeleeWeaponType.UNIVERSAL )
 
 
-		Assert( ItemFlavor_GetGUID( meleeWeapon ) == DEFAULT_MELEE_WEAPON_GUID || MeleeWeapon_GetWeaponType( meleeWeapon ) == eMeleeWeaponType.ARTIFACT )
 
 
 		foreach ( obj in fileLevel.charactersMeleeWeaponsMap )
@@ -261,7 +269,7 @@ void function OnItemFlavorRegistered_Melee_Weapon( ItemFlavor meleeWeapon )
 		RegisterArtifactComponentsForWeapon( meleeWeapon )
 
 
-
+	RegisterMeleeAddOnsForWeapon( meleeWeapon )
 
 }
 
@@ -358,7 +366,7 @@ void function OnAllItemFlavorsRegistered_Melee_Weapon()
 	}
 
 
-
+	OnAllItemFlavorsRegistered_MeleeAddOns()
 
 }
 
@@ -535,6 +543,20 @@ vector function MeleeSkin_GetItemInspectOffset( ItemFlavor flavor )
 }
 
 
+vector function MeleeSkin_GetMilestoneEventOffset( ItemFlavor flavor )
+{
+	Assert( ItemFlavor_GetType( flavor ) == eItemType.melee_skin )
+
+	if ( Artifacts_Loadouts_IsConfigPointerItemFlavor( flavor ) )
+	{
+		
+		asset meleeWeaponAsset = GetGlobalSettingsAsset( ItemFlavor_GetAsset( flavor ), "parentItemFlavor" )
+		flavor = GetItemFlavorByAsset( meleeWeaponAsset )
+	}
+
+	return GetGlobalSettingsVector( ItemFlavor_GetAsset( flavor ), "milestoneItemOffset" )
+}
+
 
 bool function MeleeSkin_ShouldHideIfLocked( ItemFlavor meleeSkin )
 {
@@ -693,8 +715,66 @@ ItemFlavor function Deathbox_GetEquipped( ItemFlavor character, ItemFlavor melee
 			return boxBackups[i]
 	}
 
-	return GetDefaultItemFlavorForLoadoutSlot( playerEHI, boxSlot )
+	return GetDefaultItemFlavorForLoadoutSlot( boxSlot )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1206,14 +1286,81 @@ ItemFlavor function MeleeSkin_GetCharacterFlavor( ItemFlavor meleeSkin )
 
 
 
+void function RegisterMeleeAddOnsForWeapon( ItemFlavor meleeWeapon )
+{
+	fileLevel.weaponAddOnsMap[ meleeWeapon ] <- []
+	var settingsBlock = ItemFlavor_GetSettingsBlock( meleeWeapon )
+	foreach ( var addOnBlock in IterateSettingsArray( GetSettingsBlockArray( settingsBlock, "meleeAddOns" ) ) )
+	{
+		ItemFlavor ornull addOnFlav = RegisterItemFlavorFromSettingsAsset( GetSettingsBlockAsset( addOnBlock, "flavor" ) )
+		if ( addOnFlav != null )
+		{
+			expect ItemFlavor( addOnFlav )
+			fileLevel.weaponAddOnsMap[ meleeWeapon ].append( addOnFlav )
+			fileLevel.allMeleeAddOns.append( addOnFlav )
+		}
+		else Warning( format( "Melee Weapon %s refers to Invalid Asset ", ItemFlavor_GetGUIDString( meleeWeapon), string( GetSettingsBlockAsset( addOnBlock, "flavor" ) ) ) )
+	}
+}
 
 
 
+void function OnAllItemFlavorsRegistered_MeleeAddOns()
+{
+	ItemFlavor ornull emptyAddOn = RegisterItemFlavorFromSettingsAsset( DEFAULT_EMPTY_MELEE_ADDON )
+	Assert( emptyAddOn != null, "Failed to register default Melee Add On from asset " + DEFAULT_EMPTY_MELEE_ADDON ) 
+	expect ItemFlavor( emptyAddOn )
+	fileLevel.allMeleeAddOns.append( emptyAddOn )
+
+	for ( int i = 0; i < LOADOUTS_MAX_ADDONS; i++ )
+	{
+		LoadoutEntry addOnEntry 			 = RegisterLoadoutSlot( eLoadoutEntryType.ITEM_FLAVOR, format( "melee_addon_%d", i ) , eLoadoutEntryClass.ACCOUNT )
+		addOnEntry.category     			 = eLoadoutCategory.MELEE_ADDONS
+		addOnEntry.defaultItemFlavor         = emptyAddOn
+		addOnEntry.validItemFlavorList       = fileLevel.allMeleeAddOns
+		addOnEntry.isSlotLocked              = bool function( EHI playerEHI ) { return !IsLobby() }
+		addOnEntry.associatedCharacterOrNull = null
+		addOnEntry.networkTo                 = eLoadoutNetworking.PLAYER_EXCLUSIVE
+		addOnEntry.stryderCharDataArrayIndex = ePlayerStryderCharDataArraySlots.INVALID
+
+		fileLevel.meleeAddOnLoadoutSlots.append( addOnEntry )
+	}
+}
 
 
 
+array< LoadoutEntry > function Loadout_MeleeAddOns()
+{
+	return fileLevel.meleeAddOnLoadoutSlots
+}
 
 
+
+bool function Loadout_DoesAddOnAutoEquip( ItemFlavor addOn )
+{
+	Assert( ItemFlavor_GetType( addOn ) == eItemType.melee_addon )
+	return GetGlobalSettingsBool( ItemFlavor_GetAsset( addOn ), "autoEquip" )
+}
+
+
+
+array< ItemFlavor > function Loadout_GetEquippedMeleeAddOnsForWeapon( EHI playerEHI, ItemFlavor meleeWeapon )
+{
+	array< ItemFlavor > equippedAddOns = []
+	foreach ( LoadoutEntry entry in Loadout_MeleeAddOns() )
+	{
+		ItemFlavor equippedItem = LoadoutSlot_GetItemFlavor( playerEHI, entry )
+		if ( fileLevel.weaponAddOnsMap[ meleeWeapon ].contains( equippedItem ) )
+			equippedAddOns.append( equippedItem )
+	}
+
+	return equippedAddOns
+}
+
+table< ItemFlavor, array< ItemFlavor > > function Loadout_WeaponAddons()
+{
+	return fileLevel.weaponAddOnsMap
+}
 
 
 

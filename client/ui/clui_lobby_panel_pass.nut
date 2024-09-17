@@ -2456,6 +2456,49 @@ void function ShPassPanel_LevelInit()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function UIToClient_StartTempBattlePassPresentationBackground( asset bgImage )
 {
 	
@@ -3092,6 +3135,12 @@ void function OnMouseWheelDown( entity unused )
 
 
 
+
+
+
+
+
+
 void function UIToClient_ItemPresentation( SettingsAssetGUID itemFlavorGUID, int level, float scale, bool showLow, var loadscreenPreviewBox, bool shouldPlayAudioPreview, string sceneRefName, bool isNXHH = false, bool isMilestoneEvent = false, bool isBattlepassMilestone = false, bool useMenuZoomOffset = true, vector offset = <0, 0, 0>  )
 {
 	ItemFlavor flav = GetItemFlavorByGUID( itemFlavorGUID )
@@ -3177,11 +3226,13 @@ void function UIToClient_ItemPresentation( SettingsAssetGUID itemFlavorGUID, int
 			else
 			{
 				scale *= 1.5 
+				fileLevel.sceneRefOrigin += <0, 0, -2.5>
 			}
 		}
 		else if ( itemType == eItemType.skydive_emote )
 		{
 			scale *= 1.5 
+			fileLevel.sceneRefOrigin += <0, 0, -2.5>
 		}
 
 	}
@@ -3191,7 +3242,7 @@ void function UIToClient_ItemPresentation( SettingsAssetGUID itemFlavorGUID, int
 		
 		if ( itemType == eItemType.emote_icon )
 		{
-			fileLevel.sceneRefOrigin += <0, 105, -10> 
+			fileLevel.sceneRefOrigin += <0, 105, 16> 
 		}
 		else if ( itemType == eItemType.weapon_charm )
 		{
@@ -3328,8 +3379,7 @@ void function UIToClient_ItemPresentation( SettingsAssetGUID itemFlavorGUID, int
 			fileLevel.sceneRefOrigin += <0, 0, 0>
 		else if ( itemType == eItemType.melee_skin )
 		{
-			
-			fileLevel.sceneRefOrigin += <0, 0, 0>
+			fileLevel.sceneRefOrigin += MeleeSkin_GetMilestoneEventOffset( flav )
 			scale *= 1.5
 		}
 	}
@@ -3493,11 +3543,9 @@ void function ShowBattlepassItem( ItemFlavor item, int level, float scale, var l
 			ShowBattlePassItem_QuestMission( item, scale )
 			break
 
-
 		case eItemType.quest_comic:
 			ShowBattlePassItem_QuestComicPage( item, scale )
 			break
-
 
 		case eItemType.battlepass_purchased_xp:
 			thread ShowBattlePassItem_Level( item, scale )
@@ -3930,7 +3978,7 @@ void function ShowBattlePassItem_Banner( ItemFlavor item, float scale )
 		SetNestedGladiatorCardOverrideCharacter( nestedGCHandleFront, character )
 		SetNestedGladiatorCardOverrideStance( nestedGCHandleFront, item )
 
-		ItemFlavor characterDefaultFrame = GetDefaultItemFlavorForLoadoutSlot( EHI_null, Loadout_GladiatorCardFrame( character ) )
+		ItemFlavor characterDefaultFrame = GetDefaultItemFlavorForLoadoutSlot( Loadout_GladiatorCardFrame( character ) )
 		SetNestedGladiatorCardOverrideFrame( nestedGCHandleFront, characterDefaultFrame ) 
 	}
 

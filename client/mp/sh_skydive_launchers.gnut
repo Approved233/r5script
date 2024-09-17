@@ -11,6 +11,10 @@ global function Sh_SkydiveLaunchers_Init
 
 
 
+
+
+
+
 global enum eSkydiveLauncherType
 {
 	DEFAULT,
@@ -144,6 +148,29 @@ void function Sh_SkydiveLaunchers_Init()
 
 	file.holsterWeaponsOnAscent = GetCurrentPlaylistVarBool( "skydive_launchers_holster_weapons", true )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

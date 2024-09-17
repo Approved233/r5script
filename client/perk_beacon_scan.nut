@@ -53,6 +53,9 @@ global enum eBeaconScanType
 	DEFAULT,
 	BEACON_SCAN_CIRCLE,
 	BEACON_SCAN_ENEMY,
+
+
+
 	BEACON_SCAN_DROPPOD,
 
 	_count
@@ -119,6 +122,13 @@ float function GetBaseSurveyBeaconExclusionDistance()
 
 asset function SurveyBeacon_GetBeaconIcon( entity beacon )
 {
+
+
+
+
+
+
+
 	if( beacon.GetScriptName() == NEXT_ZONE_SURVEY_BEACON_SCRIPTNAME )
 		return Perks_GetIconForPerk( ePerkIndex.BEACON_SCAN )
 	return Perks_GetIconForPerk( ePerkIndex.BEACON_ENEMY_SCAN )
@@ -126,6 +136,13 @@ asset function SurveyBeacon_GetBeaconIcon( entity beacon )
 
 bool function SurveyBeacon_IsSurveyBeacon( entity beacon )
 {
+
+
+
+
+
+
+
 	return beacon.GetScriptName() == ENEMY_SURVEY_BEACON_SCRIPTNAME || beacon.GetScriptName() == NEXT_ZONE_SURVEY_BEACON_SCRIPTNAME
 }
 
@@ -178,6 +195,13 @@ void function RegisterSurveyBeaconData( entity player, SurveyBeaconData data )
 
 int function BeaconEntToScanType( entity beacon )
 {
+
+
+
+
+
+
+
 	string scriptName = beacon.GetScriptName()
 	if( scriptName == NEXT_ZONE_SURVEY_BEACON_SCRIPTNAME )
 		return eBeaconScanType.BEACON_SCAN_CIRCLE
@@ -287,6 +311,13 @@ void function OnSurveyBeaconCreated( entity beacon )
 			AddAnimEvent( beacon, "PlayEffects_RingConsole_Pulse", PlayEffects_RingConsole_Pulse )
 			Perks_AddMinimapEntityForPerk( ePerkIndex.BEACON_SCAN, beacon )
 		}
+
+
+
+
+
+
+
 		AddEntityCallback_GetUseEntOverrideText( beacon, GetSurveyBeaconHoldUseTextOverride )
 
 		thread SurveyBeacon_UpdateWorldspaceIconVisibility( beacon )
@@ -304,23 +335,37 @@ string function GetSurveyBeaconHoldUseTextOverride( entity ent )
 
 string function GetBaseHintTextOverride( entity ent )
 {
+	int beaconType = BeaconEntToScanType( ent )
+
 	entity player = GetLocalViewPlayer()
 	if( !PlayerShouldSeeSurveyBeaconMarkers( player, ent ) )
 	{
 		entity beaconUser = GetTeamSurveyBeaconUser( player.GetTeam() )
-		if ( HasActiveSurveyZone( beaconUser ) && ent.GetScriptName() == NEXT_ZONE_SURVEY_BEACON_SCRIPTNAME && IsValid( beaconUser ) )
-			return "#SURVEY_ALREADY_ACTIVE"
+		if ( HasActiveSurveyZone( beaconUser ) && IsValid( beaconUser ) )
+		{
+			bool isCircleScan = beaconType == eBeaconScanType.BEACON_SCAN_CIRCLE
+
+
+
+			if ( isCircleScan )
+			{
+				return "#SURVEY_ALREADY_ACTIVE"
+			}
+		}
 		else
 		{
-			if( ent.GetScriptName() == NEXT_ZONE_SURVEY_BEACON_SCRIPTNAME )
+			if( beaconType == eBeaconScanType.BEACON_SCAN_CIRCLE )
 				return "#CONTROLLER_SURVEY_TEAM_MESSAGE"
+
+
+
+
 			else
 				return "#SURVEY_TEAM_MESSAGE"
 		}
 	}
 	else
 	{
-		int beaconType =  BeaconEntToScanType( ent )
 		if( beaconType in file.surveyBeaconData[player] )
 		{
 			SurveyBeaconData data = file.surveyBeaconData[ player ][beaconType]
@@ -328,16 +373,20 @@ string function GetBaseHintTextOverride( entity ent )
 			{
 				if ( data.canUseFunc( player, ent ) )
 				{
-					if( ent.GetScriptName() == NEXT_ZONE_SURVEY_BEACON_SCRIPTNAME )
+					if( beaconType == eBeaconScanType.BEACON_SCAN_CIRCLE )
 						return "#RING_CONSOLE_HOLD_PROMPT"
 					else
 						return "#SURVEY_BEACON_HOLD_PROMPT"
 				}
 				else
 				{
-					if( ent.GetScriptName() == NEXT_ZONE_SURVEY_BEACON_SCRIPTNAME )
+					bool isCircleScan = beaconType == eBeaconScanType.BEACON_SCAN_CIRCLE
+
+
+
+					if( isCircleScan )
 						return "#SURVEY_ALREADY_ACTIVE"
-					else
+					else if ( beaconType == eBeaconScanType.BEACON_SCAN_ENEMY )
 						return "#SURVEY_ENEMY_ALREADY_ACTIVE"
 				}
 			}
@@ -404,6 +453,10 @@ entity function GetTeamSurveyBeaconUser( int team )
 	}
 	return null
 }
+
+
+
+
 
 
 

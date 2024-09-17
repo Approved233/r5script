@@ -116,6 +116,7 @@ struct
 
 	int promoPaksLoaded = 0
 	int promoPaksWanted = 0
+	int promoPaksLoadFailed = 0
 	float acceptableLoadTimeSeconds = MIN_ACCEPTABLE_LOAD_TIME_SECONDS
 } file
 
@@ -671,6 +672,7 @@ void function OpenPromoDialogIfNewUM()
 		if ( PromoDialog_HasPages() )
 		{
 			file.promoPaksLoaded = 0
+			file.promoPaksLoadFailed = 0
 			UpdateNumPages()
 			UpdatePageRui() 
 			UpdatePreviewButtonRui()
@@ -708,17 +710,26 @@ void function IncreaseAcceptableLoadTime()
 	}
 }
 
-void function OnDLPromoPakLoaded()
+void function OnDLPromoPakLoaded( bool result )
 {
-	file.promoPaksLoaded++
+	if ( result )
+	{
+		file.promoPaksLoaded++
+	}
+	else
+	{
+		file.promoPaksLoadFailed++
+	}
+
 #if DEV
-		printf( "%s: %i / %i paks loaded", FUNC_NAME(), file.promoPaksLoaded, file.promoPaksWanted )
+		printf( "%s: %i + %i / %i DL_PROMO paks loaded", FUNC_NAME(), file.promoPaksLoaded, file.promoPaksLoadFailed, file.promoPaksWanted )
 #endif
-	if( file.promoPaksLoaded >= file.promoPaksWanted )
+	if( file.promoPaksLoaded + file.promoPaksLoadFailed >= file.promoPaksWanted )
 	{
 		OpenPromoDialogIfNewAfterPakLoadUM()
 	}
 }
+
 void function OpenPromoDialogIfNewAfterPakLoadUM()
 {
 	if ( IsFirstPromoDialogView() && !file.hasHijackContent )
@@ -1089,6 +1100,12 @@ void function UpdatePreviewButtonRui()
 			if ( GetConVarBool( "assetdownloads_enabled" ) )
 			{
 				var previewButton = Hud_GetChild( file.promoPreviewButtons, PROMO_PREVIEW_BUTTON_NAME + string( i ) )
+
+				if ( DidImagePakLoadFail( page.imageName ) )
+				{
+					file.promoPaksLoadFailed++
+				}
+
 				RuiSetImage( rui, "imageAsset", GetDownloadedImageAsset( page.imageName, page.imageName, ePakType.DL_PROMO, previewButton ) )
 				RuiSetBool( rui, "isImageLoading", IsImagePakLoading( page.imageName ) )
 			}
@@ -1156,6 +1173,7 @@ void function GoToActivePageLink( var button )
 	if ( page.linkType == "" )
 		return
 
+	CloseActiveMenu()
 	PIN_UM_Message( page.title, page.trackingId, PIN_MESSAGE_TYPE_PROMO, ePINPromoMessageStatus.CLICK, file.activePageIndex )
 	OpenPromoLink( page.linkType, page.link )
 }

@@ -21,6 +21,20 @@ global function CharSelect_GetOutroMVPPresentDuration
 global function CharSelect_GetOutroChampionPresentDuration
 global function CharSelect_GetOutroTransitionDuration
 
+global function CharSelect_GetAllSquadIntroEnabled
+global function CharSelect_GetSquadIntroEnabled
+global function CharSelect_GetGladiatorCardsEnabled
+global function CharSelect_GetMVPGladCardEnabled
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -150,8 +164,18 @@ const string PODIUM_FX_CONFETTI = "confetti_burst"
 
 
 
+
+
+
+
 global const int NUMBER_OF_SUMMARY_DISPLAY_VALUES = 7 
 global const array< int > SUMMARY_DISPLAY_EMPTY_SET = [ 0, 0, 0, 0, 0, 0, 0 ]
+
+
+
+
+
+
 
 enum eUseHealthKitResult
 {
@@ -263,6 +287,8 @@ struct
 
 
 
+
+
 } file
 
 
@@ -292,13 +318,54 @@ float function CharSelect_GetPickingSingleDurationMin()			{ return (HasFastIntro
 float function CharSelect_GetPickingDelayAfterEachLock()		{ return GetCurrentPlaylistVarFloat( "charselect_picking_delay_after_each_lock", 0.5 ) }
 float function CharSelect_GetPickingDelayAfterAll()				{ return GetCurrentPlaylistVarFloat( "charselect_picking_delay_after_all", 1.5 ) }
 
+
+bool function CharSelect_GetAllSquadIntroEnabled()					{ return GetCurrentPlaylistVarBool( "survival_enable_all_squads_intro", false ) }
+
+
+
+bool function CharSelect_GetSquadIntroEnabled()					{ return GetCurrentPlaylistVarBool( "survival_enable_squad_intro", true ) }
+bool function CharSelect_GetGladiatorCardsEnabled()				{ return GetCurrentPlaylistVarBool( "survival_enable_gladiator_intros", true ) }
+bool function CharSelect_GetMVPGladCardEnabled()				{ return GetCurrentPlaylistVarBool( "survival_enable_mvp_intros", false ) }
+
 float function CharSelect_GetOutroSceneChangeDuration()			{ return GetCurrentPlaylistVarFloat( "charselect_outro_scene_change_duration", 4.0 ) }
-float function CharSelect_GetOutroAllSquadsPresentDuration()	{ return GetCurrentPlaylistVarFloat( "charselect_outro_all_squads_present_duration", 0.0 ) }
-float function CharSelect_GetOutroSquadPresentDuration()		{ return GetCurrentPlaylistVarFloat( "charselect_outro_squad_present_duration", 6.0  ) }
-float function CharSelect_GetOutroMVPPresentDuration()			{ return GetCurrentPlaylistVarFloat( "charselect_outro_mvp_present_duration", 0.0 ) }
-float function CharSelect_GetOutroChampionPresentDuration()		{ return GetCurrentPlaylistVarFloat( "charselect_outro_champion_present_duration", 8.0 ) }
 float function CharSelect_GetOutroTransitionDuration()			{ return GetCurrentPlaylistVarFloat( "charselect_outro_transition_duration", 3.0 ) }
 
+float function CharSelect_GetOutroAllSquadsPresentDuration() {
+	if( CharSelect_GetAllSquadIntroEnabled() )
+		return GetCurrentPlaylistVarFloat( "charselect_outro_all_squads_present_duration", 0.0 )
+
+	return 0
+}
+
+
+
+
+
+
+
+
+
+
+float function CharSelect_GetOutroSquadPresentDuration() {
+	if( CharSelect_GetSquadIntroEnabled() )
+		return GetCurrentPlaylistVarFloat( "charselect_outro_squad_present_duration", 6.0  )
+
+	return 0
+}
+
+float function CharSelect_GetOutroMVPPresentDuration() {
+	if( CharSelect_GetMVPGladCardEnabled() )
+		return GetCurrentPlaylistVarFloat( "charselect_outro_mvp_present_duration", 0.0 )
+
+	return 0
+}
+
+float function CharSelect_GetOutroChampionPresentDuration()	{
+	if( CharSelect_GetGladiatorCardsEnabled() )
+		return GetCurrentPlaylistVarFloat( "charselect_outro_champion_present_duration", 8.0 )
+
+	return 0
+}
 
 
 
@@ -785,242 +852,132 @@ void function UIInputChanged( bool controllerModeActive )
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-float function Survival_GetPlaneJumpDelay()
+bool function Survival_ShowEnemyPlanePathsOnMap()
 {
-	return GetCurrentPlaylistVarFloat( "survival_plane_jump_delay", 9.0 )
+	return GetCurrentPlaylistVarBool( "multi_survival_plane_show_enemy_path", false )
 }
+
+bool function Survival_ShouldSplitUpAlliancesIntoShips()
+{
+	return GetCurrentPlaylistVarBool( "multi_survival_plane_split_alliances_into_planes", false )
+}
+
+bool function Survival_ShipsGoSameDirection()
+{
+	return GetCurrentPlaylistVarBool( "multi_survival_plane_same_direction", false )
+}
+
+float function Survival_GetCustomPlaneHeight( int planeNum )
+{
+	return GetCurrentPlaylistVarFloat( "multi_survival_plane_custom_plane_height_" + planeNum, 0.0 )
+}
+
+bool function Survival_StopDropshipsEarly()
+{
+	return GetCurrentPlaylistVarBool( "dropship_stops_early", false )
+}
+
+bool function Survival_AllowDropBeforeEarlyStop()
+{
+	return GetCurrentPlaylistVarBool( "dropship_stops_early_allow_early_drop", true )
+}
+
+bool function Survival_EvenlyDisperseStopEarlyPoints()
+{
+	return GetCurrentPlaylistVarBool( "dropship_stops_early_evenly_dispersed", true )
+}
+
+bool function Survival_PlanesFlyAtCenter()
+{
+	return GetCurrentPlaylistVarBool( "multi_dropship_fly_at_center", false )
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+bool function Survival_RunTropicsSpecificLogic()
+{
+
+
+
+	return GetCurrentPlaylistVarBool( "multi_dropship_tropics_specific_logic", false )
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 float function Survival_GetPlaneLeaveMapDurationMultiplier()
 {
 	return GetCurrentPlaylistVarFloat( "survival_plane_leave_map_duration_multiplier", 3.0 )
 }
-
 
 
 
@@ -1516,6 +1473,13 @@ bool function IsSquadDataPersistenceEmpty( entity player )
 	}
 	return true
 }
+
+
+
+
+
+
+
 
 
 

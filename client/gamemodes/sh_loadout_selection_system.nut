@@ -126,9 +126,13 @@ const table<string, asset> CUSTOM_VARIANT_ROTATIONS_DATATABLE = {
 		[ "TDM" ] = $"datatable/gamemode_tdm_loadout_rotations.rpak",
 		[ "SWAT" ] = $"datatable/gamemode_tdm_swat_loadout_rotations.rpak",
 		[ "SHOTTYSNIPERS" ] = $"datatable/gamemode_tdm_shottysnipers_loadout_rotations.rpak",
+		[ "KNIVESONLY" ] = $"datatable/gamemode_tdm_knivesonly_loadout_rotations.rpak",
 
 
-	[ "AKIMBO_LMG" ] = $"datatable/loadouts/loadoutselection_loadout_rotations_akimbo_lmg.rpak",
+		[ "AKIMBO_LMG" ] = $"datatable/loadouts/loadoutselection_loadout_rotations_akimbo_lmg.rpak",
+
+
+
 
 }
 
@@ -140,9 +144,14 @@ const table<string, asset> CUSTOM_VARIANT_LOADOUTS_DATATABLE = {
 		[ "TDM" ] = $"datatable/gamemode_tdm_selectable_loadouts.rpak",
 		[ "SWAT" ] = $"datatable/gamemode_tdm_swat_selectable_loadouts.rpak",
 		[ "SHOTTYSNIPERS" ] = $"datatable/gamemode_tdm_shottysnipers_selectable_loadouts.rpak",
+		[ "KNIVESONLY" ] = $"datatable/gamemode_tdm_knivesonly_selectable_loadouts.rpak",
 
 
-	[ "AKIMBO_LMG" ] = $"datatable/loadouts/loadoutselection_selectable_loadouts_akimbo_lmg.rpak",
+
+		[ "AKIMBO_LMG" ] = $"datatable/loadouts/loadoutselection_selectable_loadouts_akimbo_lmg.rpak",
+
+
+
 
 }
 
@@ -2654,6 +2663,9 @@ void function UICallback_LoadoutSelection_OpticSelectDialogueClose()
 {
 	file.selectedLoadoutForOptic = -1
 }
+
+
+
 
 
 

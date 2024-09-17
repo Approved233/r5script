@@ -8,8 +8,59 @@ global function GetEyeForQualityCanSee
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+struct{
+
+
+
+} file
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function ShLobaPassiveEyeForQuality_LevelInit()
 {
+
+
+
+
+
 
 
 
@@ -29,6 +80,50 @@ void function ShLobaPassiveEyeForQuality_LevelInit()
 		AddCallback_EditLootDesc( Loba_EditUALootDesc )
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -226,6 +321,20 @@ string function Loba_EditUALootDesc( string lootRef, entity player, string origi
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 float function GetEyeForQualityRadius()
 {
 	return GetCurrentPlaylistVarFloat( "loba_pas_eye_for_quality_range", GetBlackMarketNearbyLootRadius() )
@@ -244,6 +353,83 @@ bool function GetEyeForQualityCanSee( LootData data )
 
 	return false
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -588,7 +588,8 @@ void function AddMultiPackDisclosureCollectionEventPackTab( ItemFlavor pack )
 
 	string currentEventName = Localize( ItemFlavor_GetLongName( expect ItemFlavor( file.activeCollectionEvent ) ) )
 
-	string nameText = Localize( "#BANGALORE_HEIRLOOM_SET_2" )
+	ItemFlavor chaseItem = HeirloomEvent_GetPrimaryCompletionRewardItem( expect ItemFlavor( file.activeCollectionEvent ) )
+	string nameText = Localize( ItemFlavor_GetLongName( chaseItem ) )
 
 	RuiSetString( rui, "probabilityDescText", Localize( "#COLLECTION_EVENT_PACK_SUBHEADER", currentEventName ) )
 	RuiSetString( rui, "itemDetailsText3", Localize( "#COLLECTION_EVENT_DISCLAIMER_1", currentEventName ) )
@@ -829,7 +830,9 @@ void function PurchaseDialog( PurchaseDialogConfig cfg )
 		{
 			var rui                 = Hud_GetRui( file.dialogContent )
 			string currentEventName = Localize( ItemFlavor_GetLongName( expect ItemFlavor( file.activeCollectionEvent ) ) )
-			string nameText = Localize( "#BANGALORE_HEIRLOOM_SET_2" )
+
+			ItemFlavor chaseItem = HeirloomEvent_GetPrimaryCompletionRewardItem( expect ItemFlavor( file.activeCollectionEvent ) )
+			string nameText = Localize( ItemFlavor_GetLongName( chaseItem ) )
 
 			RuiSetString( rui, "probabilityDescText", Localize( "#COLLECTION_EVENT_PACK_SUBHEADER", currentEventName ) )
 			RuiSetString( rui, "itemDetailsText3", Localize( "#COLLECTION_EVENT_DISCLAIMER_1", currentEventName ) )
@@ -1318,7 +1321,7 @@ void function UpdatePurchaseDialog()
 
 		if ( file.activeDialog == file.genericPurchaseDialog )
 			HudElem_SetRuiArg( file.dialogContent, "reRollsAmount", "" )
-		if ( file.state.cfg.isCupsReRoll )
+		if ( file.state.cfg.isCupsReRoll && Cups_IsValidCupID( RTKApexCupsOverview_GetCupID() ) )
 		{
 			SettingsAssetGUID cupId = RTKApexCupsOverview_GetCupID()
 			CupBakeryAssetData cupData = Cups_GetCupBakeryAssetDataFromGUID( cupId )

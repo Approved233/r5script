@@ -83,6 +83,10 @@ void function MpAbilityGibraltarShield_Init()
 
 
 
+
+
+
+
 }
 
 void function GibraltarShield_RegisterNetworkFunctions()
@@ -108,6 +112,29 @@ void function GunShieldTogglePressed( entity player )
 	if ( activeWeapon.IsWeaponAdsButtonPressed() || activeWeapon.IsWeaponInAds() )
 		Remote_ServerCallFunction( "ClientCallback_ToggleGibraltarShield" )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -343,6 +370,13 @@ var function OnWeaponPrimaryAttack_ability_gibraltar_shield( entity weapon, Weap
 {
 	return 0
 }
+
+
+
+
+
+
+
 
 
 

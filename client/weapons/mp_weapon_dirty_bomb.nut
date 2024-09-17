@@ -25,16 +25,13 @@ const int DIRTY_BOMB_MAX_GAS_CANISTERS = 6
 
 const string DIRTY_BOMB_WARNING_SOUND = "weapon_vortex_gun_explosivewarningbeep"
 
-
 global const string DIRTY_BOMB_CLOUD_HOST_TARGETNAME = "caustic_trap_cloud_host"
 const int DIRTY_BOMB_HEALTH = 150
 const float DIRTY_BOMB_CLOUD_LINGER_TIME = 2.0
 const asset DIRTY_BOMB_CANISTER_EXPLODE_FX = $"P_gastrap_destroyed"
 const string DIRTY_BOMB_CANISTER_EXPLODE_SOUND = "GasTrap_Destroyed_Explo"
 const float DIRTY_BOMB_GAS_DURATION = 11.0
-
-
-
+const float DIRTY_BOMB_GAS_DURATION_NO_HEALTH = 12.5
 const float DIRTY_BOMB_GAS_RADIUS = 256.0
 const float DIRTY_BOMB_DETECTION_RADIUS = 140.0
 
@@ -73,10 +70,12 @@ struct
 
 
 
+	bool causticTrapHealthEnabled
 } file
 
 void function MpWeaponDirtyBomb_Init()
 {
+	file.causticTrapHealthEnabled = GetCurrentPlaylistVarBool( "enable_caustic_trap_health", true )
 	DirtyBombPrecache()
 
 
@@ -110,15 +109,13 @@ void function DirtyBombPrecache()
 	RegisterSignal( "DirtyBomb_Ready" )
 
 	PrecacheScriptString( DIRTY_BOMB_TARGETNAME )
-
+	if ( HasCausticTrapHealthEnabled() )
 		PrecacheScriptString( DIRTY_BOMB_CLOUD_HOST_TARGETNAME )
-
 
 	PrecacheParticleSystem( DIRTY_BOMB_CANISTER_EXP_FX )
 	PrecacheParticleSystem( DIRTY_BOMB_CANISTER_FX_ALL )
-
+	if ( HasCausticTrapHealthEnabled() )
         PrecacheParticleSystem( DIRTY_BOMB_CANISTER_EXPLODE_FX )
-
 	PrecacheModel( DIRTY_BOMB_CANISTER_MODEL )
 
 	if ( GetCurrentPlaylistVarBool( "enable_caustic_friendly_traps", true ) )
@@ -132,6 +129,15 @@ void function DirtyBombPrecache()
         RegisterSignal( "DirtyBomb_StopPlacementProxy" )
 
 }
+
+bool function HasCausticTrapHealthEnabled()
+{
+	return file.causticTrapHealthEnabled
+}
+
+
+
+
 
 
 
@@ -1286,7 +1292,7 @@ void function RestoreDirtyBombAmmo( entity owner )
 {
 	if ( IsAlive( owner ) )
 	{
-		entity weapon = owner.GetOffhandWeapon( OFFHAND_SPECIAL )
+		entity weapon = owner.GetOffhandWeapon( OFFHAND_TACTICAL )
 		if ( IsValid( weapon ) && weapon.GetWeaponClassName() == CAUSTIC_DIRTY_BOMB_WEAPON_CLASS_NAME )
 		{
 			Weapon_AddSingleCharge( weapon )

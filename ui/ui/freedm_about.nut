@@ -9,10 +9,14 @@ global function TreasureHunt_PopulateAboutText
 
 
 
+
+global function Halloween_22_Mixtape_PopulateAboutText
+
+
 array< featureTutorialTab > function FreeDM_PopulateAboutText()
 {
 	array< featureTutorialTab > tabs
-	string playlistUiRules = GetPlaylist_UIRules()
+	string playlistUiRules = GetCurrentPlaylist_UIRules()
 	if ( playlistUiRules != GAMEMODE_FREEDM )
 		return tabs
 
@@ -37,6 +41,10 @@ array< featureTutorialTab > function GunGame_PopulateAboutText()
 	tab1Rules.append( UI_FeatureTutorialDialog_BuildDetailsData( "#GUNGAME_RULES_KNIFE_HEADER", "#GUNGAME_RULES_KNIFE_BODY", $"rui/hud/gametype_icons/freedm/about_gungame_knife" ) )
 	tab1.rules = tab1Rules
 	tabs.append( tab1 )
+
+
+		Halloween_22_Mixtape_PopulateAboutText( tabs )
+
 
 
 
@@ -74,6 +82,10 @@ array< featureTutorialTab > function TreasureHunt_PopulateAboutText()
 	tab1.rules = tab1Rules
 	tabs.append( tab1 )
 
+
+		Halloween_22_Mixtape_PopulateAboutText( tabs )
+
+
 	GameMode_AboutDialog_AppendRequeueTab(tabs)
 
 	return tabs
@@ -108,6 +120,25 @@ array< featureTutorialTab > function TreasureHunt_PopulateAboutText()
 
 
 
+
+
+
+void function Halloween_22_Mixtape_PopulateAboutText( array< featureTutorialTab > tabs )
+{
+	if ( GetPlaylistVarBool( GamemodeUtility_GetPlaylist(), "halloween_22_mixtape_active", false ) )
+	{
+		featureTutorialTab tab
+		array< featureTutorialData > tabRules
+		tab.tabName = "#MIXTAPE_HALLOWEEN_S22_TAB_NAME"
+		tabRules.append( UI_FeatureTutorialDialog_BuildDetailsData( "#MIXTAPE_RULES_HALLOWEEN_CANDY_HEADER", "#MIXTAPE_RULES_CANDY_BODY", $"rui/hud/gametype_icons/trick_n_treats/about_halloween_22_candy" ) )
+
+		if ( GetPlaylistVarBool( GamemodeUtility_GetPlaylist(), "cyber_rev_shell_enabled", false ) )
+			tabRules.append( UI_FeatureTutorialDialog_BuildDetailsData( "#MIXTAPE_RULES_HALLOWEEN_REV_SHELL_HEADER", "#MIXTAPE_RULES_REV_SHELL_BODY", $"rui/hud/gametype_icons/trick_n_treats/about_halloween_22_rev_shell" ) )
+
+		tab.rules = tabRules
+		tabs.append( tab )
+	}
+}
 
 
 

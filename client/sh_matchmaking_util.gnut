@@ -1,10 +1,4 @@
-global function DoesPlaylistSupportNoFillTeams
-global function DoesPlaylistSupportNoFill
-
-
-global function StartMatchmakingStandard
-global function StartMatchmakingWithNoFillTeams
-
+globalize_all_functions
 
 
 bool function DoesPlaylistSupportNoFillTeams( string playlist )
@@ -18,7 +12,7 @@ bool function DoesPlaylistSupportNoFill( string playlist )
 }
 
 
-void function StartMatchmaking_( string playlist, bool requestNoFillTeam )
+void function StartMatchmaking_Internal( string playlist, bool requestNoFillTeam )
 {
 	SetConVarInt( "match_teamNoFill", (requestNoFillTeam ? 1 : 0) )
 	StartMatchmaking( playlist )
@@ -48,14 +42,72 @@ void function StartMatchmaking_( string playlist, bool requestNoFillTeam )
 
 void function StartMatchmakingStandard( string playlist )
 {
-	StartMatchmaking_( playlist, false )
+	StartMatchmaking_Internal( playlist, false )
 }
 
 void function StartMatchmakingWithNoFillTeams( string playlist )
 {
 	Assert( DoesPlaylistSupportNoFillTeams( playlist ) )
-	StartMatchmaking_( playlist, true )
+	StartMatchmaking_Internal( playlist, true )
 }
+
+
+
+bool function IsMatchmakingFromMatchEnabled()
+{
+	return GetConVarBool( "matchmake_from_match_enabled" ) && GetCurrentPlaylistVarBool( "matchmake_from_match", false ) && ( GetCurrentPlaylistVarBool( "private_match", false ) == false )
+}
+
+bool function IsMatchmakingFromMatchAllowed( entity player )
+{
+	bool isAllowed = IsMatchmakingFromMatchEnabled()
+	isAllowed = isAllowed && !Playlist_ShouldBeHiddenForScheduleBlocks( GetCurrentPlaylistName() )
+
+
+
+
+
+
+
+
+
+
+
+
+	return isAllowed
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

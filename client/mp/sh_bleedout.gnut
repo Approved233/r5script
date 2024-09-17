@@ -38,6 +38,10 @@ global function Bleedout_CanSelfResFromUpgrade
 
 
 
+
+
+
+
 #if DEV
 global function Bleedout_OverrideBleedoutTime
 #endif
@@ -102,6 +106,12 @@ struct
 
 
 
+
+
+
+
+
+
 } file
 
 void function BleedoutShared_Init()
@@ -157,6 +167,15 @@ void function BleedoutShared_Init()
 	file.bleedoutTypes.append( defData4 )
 
 
+
+
+
+
+
+
+
+
+
 		AddCreateCallback( "player", OnPlayerCreated )
 		if ( GetCurrentPlaylistVarBool( "bleedout_ping_los_block_enabled", true ) )
 			AddCallback_OnPingCreatedByAnyPlayer( OnPingCreatedByAnyPlayer_TrackCrosshairTarget )
@@ -181,13 +200,6 @@ bool function CheckPlayerCanUse( entity player, entity target )
 {
 	if ( !Bleedout_IsBleedingOut( player ) )
 		return true
-
-
-
-
-
-
-
 
 	if ( target.GetNetworkedClassName() == "prop_door" || target.GetScriptName() == "survival_door_plain")
 		return true
@@ -501,17 +513,11 @@ float function Bleedout_GetFirstAidTime( entity player )
 {
 	float firstAidTimeScaler = 1.0
 
+
 	if( PlayerHasPassive( player, ePassives.PAS_FASTER_REVIVES ) ) 
 	{
 		firstAidTimeScaler = Bleedout_GetFastReviveScaler()
 	}
-
-
-
-
-
-
-
 
 	return Bleedout_GetBaseFirstAidTime( player ) * firstAidTimeScaler
 }
@@ -533,6 +539,18 @@ float function Bleedout_GetBaseFirstAidTime( entity player )
 	
 	if ( BubbleBunker_ShouldGibraltarGiveFastRevive( player ) )
 		return GIB_DOME_REVIVE_TIME
+
+	if ( PassiveMedic_ShouldDoCombatRevive( player ) && !PassiveMedic_ShouldDoHandsFreeCombatRevive() )
+	{
+		return MEDIC_FIRSTAID_TIME
+	}
+
+
+
+
+
+
+
 
 	return file.bleedoutTypes[ type ].firstAidTime
 }
@@ -853,6 +871,17 @@ int function Bleedout_GetPlayerBleedoutTypeCount()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
 int function BleedoutState_GetPlayerBleedoutState( entity player )
 {
 	return player.GetBleedoutState()
@@ -905,6 +934,19 @@ void function TrackCrosshairTargetForPing( entity wayPoint )
 		wait 0.1
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 const float BLEEDOUT_MAX_USE_DIST2_MOD = 64 * 64

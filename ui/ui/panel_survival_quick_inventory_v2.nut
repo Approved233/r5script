@@ -374,7 +374,7 @@ void function UpdateMouseDropGroundSizes()
 		int targetRightWidth = mouseDropGroundRightWidth
 		if( UpgradeCore_IsEnabled() )
 		{
-			UIScaleFactor scaleFactor = GetContentScaleFactor( file.mainInventoryPanel )
+			UIScaleFactor scaleFactor = GetContentFixedScaleFactor( file.mainInventoryPanel )
 			targetLeftWidth = int( 640.0 * scaleFactor.x )
 			targetRightWidth = int( 180.0 * scaleFactor.x )
 		}

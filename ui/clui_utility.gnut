@@ -1,0 +1,638 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+untyped
+globalize_all_functions
+
+global enum eStreamMode
+{
+	DISABLED,
+	KILLER,
+	ALL,
+}
+
+struct
+{
+	int hud_setting_accessibleChatCache
+} file
+
+ToolTipData function CreateSimpleToolTip( string titleText, string descText, string actionHint1 = "", string actionHint2 = "", string actionHint3 = "", string actionHint4 = "" )
+{
+	ToolTipData toolTipData
+	toolTipData.titleText = titleText
+	toolTipData.descText = descText
+	toolTipData.actionHint1 = actionHint1
+	toolTipData.actionHint2 = actionHint2
+	toolTipData.actionHint3 = actionHint3
+	toolTipData.actionHint4 = actionHint4
+
+	return toolTipData
+}
+
+bool function PointInBounds( vector point, UIPos pos, UISize size )
+{
+	if ( point.x < pos.x )
+		return false
+	if ( point.y < pos.y )
+		return false
+	if ( point.x > pos.x + size.width )
+		return false
+	if ( point.y > pos.y + size.height )
+		return false
+
+	return true
+}
+
+
+UIPos function REPLACEHud_GetPos( var panel )
+{
+	var untypedPos = Hud_GetPos( panel )
+
+	UIPos pos
+	pos.x = expect int( untypedPos[0] )
+	pos.y = expect int( untypedPos[1] )
+
+	return pos
+}
+
+
+UIPos function REPLACEHud_GetAbsPos( var panel )
+{
+	var untypedPos = Hud_GetAbsPos( panel )
+
+	UIPos pos
+	pos.x = expect int( untypedPos[0] )
+	pos.y = expect int( untypedPos[1] )
+
+	return pos
+}
+
+
+UIPos function REPLACEHud_GetBasePos( var panel )
+{
+	var untypedPos = Hud_GetBasePos( panel )
+
+	UIPos pos
+	pos.x = expect int( untypedPos[0] )
+	pos.y = expect int( untypedPos[1] )
+
+	return pos
+}
+
+
+UISize function REPLACEHud_GetSize( var panel )
+{
+	var untypedSize = Hud_GetSize( panel )
+
+	UISize size
+	size.width = expect int( untypedSize[0] )
+	size.height = expect int( untypedSize[1] )
+
+	return size
+}
+
+UIPos function REPLACEHud_GetParentRelativePos( var panel )
+{
+	var untypedPos = Hud_GetParentRelativePos( panel )
+
+	UIPos pos
+	pos.x = expect int( untypedPos[0] )
+	pos.y = expect int( untypedPos[1] )
+
+	return pos
+}
+
+UISize function GetScreenSize()
+{
+
+		return REPLACEHud_GetSize( GetMenu( "MainMenu" ) )
+
+
+
+
+
+
+
+
+
+}
+
+UIScaleFactor function GetContentScaleFactor( var panel )
+{
+	UISize size
+	float heightBasis = 1080.0
+
+
+		size = REPLACEHud_GetSize( panel )
+
+
+
+
+
+
+	float aspectRatio = size.width / float( size.height )
+
+	UIScaleFactor scaleFactor
+	scaleFactor.x = size.width / (heightBasis * aspectRatio)
+	scaleFactor.y = size.height / heightBasis
+
+	return scaleFactor
+}
+
+UIScaleFactor function GetContentFixedScaleFactor( var panel )
+{
+	UISize size
+	float vwidth  = 1920
+	float vheight = 1080
+
+
+		size = REPLACEHud_GetSize( panel )
+
+
+
+
+
+
+	float rx = size.width / vwidth
+	float ry = size.height / vheight
+
+	UIScaleFactor scaleFactor
+	if ( rx < ry )
+	{
+		scaleFactor.x = rx
+		scaleFactor.y = rx
+	}
+	else
+	{
+		scaleFactor.x = ry
+		scaleFactor.y = ry
+	}
+
+	return scaleFactor
+}
+
+bool function ButtonIsBoundToAction( int buttonID, string actionSubString )
+{
+	string binding = GetEffectiveButtonBinding( buttonID )
+	if ( binding.tolower().find_olduntyped( actionSubString.tolower() ) != null )
+		return true
+
+	return false
+}
+
+bool function ButtonIsBoundToHoldAction( int buttonID, string actionSubString )
+{
+	string binding = GetEffectiveButtonHoldBinding( buttonID )
+	if ( binding.tolower().find_olduntyped( actionSubString.tolower() ) != null )
+		return true
+
+	return false
+}
+
+bool function ButtonIsBoundToPing( int buttonID )
+{
+	return ButtonIsBoundToAction( buttonID, "+ping" )
+}
+
+int function SortByScriptId( var a, var b )
+{
+	int aId = int( Hud_GetScriptID( a ) )
+	int bId = int( Hud_GetScriptID( b ) )
+	if ( aId > bId )
+		return 1
+	else if ( bId > aId )
+		return -1
+
+	return 0
+}
+
+
+
+
+
+
+
+
+bool function IsAccessibilityChatHintEnabled()
+{
+
+
+
+
+		return GetConVarInt( "hud_setting_accessibleChat" ) == 1 || GetConVarInt( "hud_setting_accessibleChat" ) == 3
+
+}
+
+bool function IsAccessibilityChatToSpeech()
+{
+	if ( !IsAccessibilityAvailable() )
+		return false
+
+	return GetConVarInt( "speechtotext_enabled" ) > 0
+}
+
+bool function IsAccessibilityAvailable()
+{
+
+		if ( GetLanguage() != "english" )
+			return false
+
+
+	return true
+}
+
+int function GetStreamerMode()
+{
+	return GetConVarInt( "hud_setting_streamerMode" )
+}
+
+bool function DisplayKillerName()
+{
+	return GetStreamerMode() < eStreamMode.KILLER
+}
+
+bool function DisplayObituaryName()
+{
+	return GetStreamerMode() < eStreamMode.ALL
+}
+
+bool function DisplayHopupPopup()
+{
+	bool forceHidePopup = GetCurrentPlaylistVarBool( "hud_hide_hopuppopup", false )
+	return !forceHidePopup && GetConVarBool( "hud_setting_showHopUpPopUp" )
+}
+
+bool function IsNetGraphEnabled()
+{
+	return GetConVarInt( "net_netGraph2" ) > 0
+}
+
+bool function IsAnonymousModeEnabled()
+{
+	return GetConVarInt( "hud_setting_anonymousMode" ) > 0
+}
+
+vector function GetKeyColor( int colorID, int optionalParam = 0 )
+{
+	Assert( optionalParam >= 0, "optionalParam must not be negative" )
+	return ColorPalette_GetColorFromID( colorID + optionalParam )
+}
+
+
+
+bool function IsAccessibilityNarrationEnabled()
+{
+	if ( !IsAccessibilityAvailable() )
+		return false
+
+	return GetConVarInt( "hud_setting_accessibleChat" ) == 2 || GetConVarInt( "hud_setting_accessibleChat" ) == 3
+}
+
+
+bool function CanSendFriendRequest( entity player )
+{
+	if ( !GetCurrentPlaylistVarBool( "enable_squad_friend_invite", true ) )
+		return false
+
+	return true
+}
+
+bool function CanInviteSquadMate( string uid )
+{
+	if ( !GetCurrentPlaylistVarBool( "enable_squad_invite", true ) )
+		return false
+
+	if ( IsInMyParty( uid ) )
+		return false
+
+	if ( GetParty().numFreeSlots == 0 )
+		return false
+
+	return true
+}
+
+bool function IsInMyParty( string uid )
+{
+	Party party = GetParty()
+	foreach ( p in party.members )
+	{
+		if ( p.uid == uid )
+			return true
+	}
+	return false
+}
+
+bool function IsMyPartyMatchmaking()
+{
+	bool isMyPartyMatchmaking = false
+	if ( AmIPartyLeader() )
+		isMyPartyMatchmaking = AreWeMatchmaking()
+	else
+		isMyPartyMatchmaking = ( GetMyMatchmakingStatus() != "" )
+
+	return isMyPartyMatchmaking
+}
+
+void functionref( bool success ) MenuExtendedUse_callback = null
+void function StartMenuExtendedUse( var focusElem, var holdToUseElem, float duration, bool requireControllerFocus, bool isAltAction, void functionref( bool success ) callback,
+		string loopSound = "survival_titan_linking_loop", string successSound = "ui_menu_store_purchase_success" )
+{
+	
+	if ( MenuExtendedUse_callback != null )
+		return
+
+	MenuExtendedUse_callback = callback
+
+		bool isForClientVM = false
+		thread _MenuExtendedUse_InternalThread( focusElem, holdToUseElem, duration, loopSound, successSound, isForClientVM, requireControllerFocus, isAltAction )
+
+
+
+}
+
+
+
+void function _ClientToUI_MenuExtendedUseBegin( var focusElem, var holdToUseElem, float duration, string loopSound, string successSound, bool requireControllerFocus, bool isAltAction )
+{
+	bool isForClientVM = true
+	thread _MenuExtendedUse_InternalThread( focusElem, holdToUseElem, duration, loopSound, successSound, isForClientVM, requireControllerFocus, isAltAction )
+}
+
+
+
+
+
+
+
+
+
+
+
+bool _MenuExtendedUse_InternalThread_isActive = false
+void function _MenuExtendedUse_InternalThread( var focusElem, var holdToUseElem, float duration, string loopSound, string successSound, bool isForClientVM, bool requireControllerFocus, bool isAltAction )
+{
+	
+	if ( _MenuExtendedUse_InternalThread_isActive )
+		return
+	_MenuExtendedUse_InternalThread_isActive = true
+
+	Hud_Show( holdToUseElem )
+	HideGameCursor()
+
+	var rui = Hud_GetRui( holdToUseElem )
+	RuiSetBool( rui, "isVisible", true )
+	RuiSetGameTime( rui, "startTime", ClientTime() )
+	RuiSetFloat( rui, "duration", duration )
+	RuiSetString( rui, "holdButtonHint", isAltAction ? "%[X_BUTTON|MOUSE2]%" : "%[A_BUTTON|MOUSE1]%" )
+
+	float uiEndTime = ClientTime() + duration
+
+	if ( loopSound != "" )
+		EmitUISound( loopSound )
+
+	bool[1] success = [false]
+
+	OnThreadEnd( void function() : ( loopSound, rui, holdToUseElem, isForClientVM, success ) {
+		ShowGameCursor()
+		Hud_Hide( holdToUseElem )
+		RuiSetBool( rui, "isVisible", false )
+		if ( loopSound != "" )
+			StopUISound( loopSound )
+
+		if ( isForClientVM && CanRunClientScript() )
+		{
+			RunClientScript( "_UIToClient_MenuExtendedUseEnded", success[0] )
+		}
+		else
+		{
+			Assert( MenuExtendedUse_callback != null )
+			MenuExtendedUse_callback( success[0] )
+			MenuExtendedUse_callback = null
+		}
+
+		_MenuExtendedUse_InternalThread_isActive = false
+	} )
+
+	while ( true )
+	{
+		bool isButtonHeld = false
+		if ( InputIsButtonDown( MOUSE_LEFT ) || InputIsButtonDown( BUTTON_A ) )
+			isButtonHeld = true
+
+		bool allowRightClick = true
+		if ( allowRightClick && (InputIsButtonDown( MOUSE_RIGHT ) || InputIsButtonDown( BUTTON_X )) )
+			isButtonHeld = true
+
+		if ( !isButtonHeld )
+			break
+
+		if ( ClientTime() >= uiEndTime )
+			break
+
+		if ( GetMouseFocus() != focusElem && !GetDpadNavigationActive() )
+		{
+			if ( IsControllerModeActive() && requireControllerFocus )
+				break
+			else if ( !IsControllerModeActive() )
+				break
+			
+		}
+
+		vector screenPos = ConvertCursorToScreenPos()
+		Hud_SetPos( holdToUseElem, screenPos.x - Hud_GetWidth( holdToUseElem ) * 0.5, screenPos.y - Hud_GetHeight( holdToUseElem ) * 0.5 )
+		WaitFrame()
+	}
+
+	if ( ClientTime() < uiEndTime )
+		return
+
+	if ( successSound != "" )
+		EmitUISound( successSound )
+	success[0] = true
+}
+
+
+float function GetScreenScaleFrac()
+{
+	UISize screenSize = GetScreenSize()
+	float screenSizeXFrac =  screenSize.width / 1920.0
+	float screenSizeYFrac =  screenSize.height / 1080.0
+	return min(screenSizeXFrac, screenSizeYFrac)
+}
+
+float function GetNearestAspectRatio( int width, int height )
+{
+	float aspectRatio = width / float( height )
+
+	if ( fabs( ASPECT_RATIO_16_BY_10 - aspectRatio ) < 0.1 )
+		return aspectRatio
+	else if ( fabs( ASPECT_RATIO_16_BY_9 - aspectRatio ) < 0.1 )
+		return aspectRatio
+	else if ( fabs( ASPECT_RATIO_21_BY_9 - aspectRatio ) < 0.1 )
+		return aspectRatio 
+	else if ( fabs( (16.0 * 3 / 9.0) - aspectRatio ) < 0.1 )
+		return ASPECT_RATIO_16_BY_9
+	else if ( fabs( (16.0 * 3 / 10.0) - aspectRatio ) < 0.1 )
+		return ASPECT_RATIO_16_BY_10
+
+	return aspectRatio
+}
+
+bool function IsUserOnSamePlatform( string hardware )
+{
+
+		return hardware == GetPlayerHardware()
+
+
+
+
+
+}
+
+bool function IsUserOnSamePlatformID( int hardwareID )
+{
+
+		int localPlayerHardwareID = GetHardwareFromName( GetPlayerHardware() )
+		if( ( hardwareID == HARDWARE_PS4 || hardwareID == HARDWARE_PS5 ) && (localPlayerHardwareID == HARDWARE_PS4 || localPlayerHardwareID == HARDWARE_PS5) )
+		{
+			return true
+		}
+		else if( ( hardwareID == HARDWARE_XBOXONE || hardwareID == HARDWARE_XB5 ) && (localPlayerHardwareID == HARDWARE_XBOXONE || localPlayerHardwareID == HARDWARE_XB5) )
+		{
+			return true
+		}
+		else
+		{
+			return hardwareID == GetHardwareFromName( GetPlayerHardware() )
+		}
+		return false
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+}
+
+bool function CrossplayUserOptIn()
+{
+	return IsUserOptedInToCrossPlay() && CrossplayEnabled()
+}
+
+
+bool function CrossplayEnabled()
+{
+	return GetConVarInt( "crossPlay_enabled" ) != 0
+}
+
+string function PlatformIDToIconString( int platformID )
+{
+	if ( IsUserOnSamePlatformID( platformID ) )
+	{
+		switch ( platformID )
+		{
+			case HARDWARE_PC:
+			case HARDWARE_PC_STEAM:
+				return Localize( "#CROSSPLAY_ICON_PC" )
+
+			case HARDWARE_PS4:
+			case HARDWARE_PS5:
+				return Localize( "#CROSSPLAY_ICON_PS4" )
+
+			case HARDWARE_XBOXONE:
+			case HARDWARE_XB5:
+				return Localize( "#CROSSPLAY_ICON_XBOX" )
+
+			case HARDWARE_SWITCH:
+				return Localize( "#CROSSPLAY_ICON_NX" )
+
+			default:
+				return ""
+		}
+	}
+	else
+	{
+		switch ( platformID )
+		{
+			case HARDWARE_PC:
+			case HARDWARE_PC_STEAM:
+				return Localize( "#CROSSPLAY_ICON_PC" )
+
+			case HARDWARE_PS4:
+			case HARDWARE_XBOXONE:
+			case HARDWARE_SWITCH:
+			case HARDWARE_XB5:
+			case HARDWARE_PS5:
+				return Localize( "#CROSSPLAY_ICON_CONTROLLER" )
+
+			default:
+				return ""
+		}
+	}
+
+	Assert( false, "Unhandled platformID " + platformID )
+	unreachable
+}

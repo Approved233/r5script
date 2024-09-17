@@ -1,3 +1,4 @@
+
 global function SeasonQuest_SharedInit
 global function SeasonQuest_RegisterNetworking
 global function SeasonQuest_GetStatusForComicPageIndex
@@ -161,6 +162,8 @@ void function SeasonQuest_SharedInit()
 		Remote_RegisterServerFunction( CC_QuestComicRewardDisplayAcknowledged, "int", INT_MIN, INT_MAX )
 		Remote_RegisterServerFunction( CC_QuestMissionReadAcknowledged, "int", INT_MIN, INT_MAX, "int", INT_MIN, INT_MAX )
 		Remote_RegisterServerFunction( CC_QueueRadioPlayRewardGranting )
+
+
 
 
 
@@ -1797,19 +1800,6 @@ ItemFlavorBag function SeasonQuestMission_GetRewards( ItemFlavor quest, ItemFlav
 const string CMD_GIVETREASUREBOX_1 = "seasonquest_give_treasurebox_1"
 const string CMD_GIVETREASUREBOX_5 = "seasonquest_give_treasurebox_5"
 const string CMD_FINISHMISSION = "seasonquest_finish_mission"
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

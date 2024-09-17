@@ -4,7 +4,6 @@ global function UI_SetScoreboardTeamData
 global function UI_SetScoreboardTitle
 global function UI_SetScoreboardAnimateIn
 global function UI_SetScoreboardAnimateOut
-global function UI_ClearLocalPlayerToolTip
 global function UI_ToggleReportTooltip
 
 global function ScoreboardMenu_CustomMatch_GetButtonTeamID
@@ -41,7 +40,6 @@ struct PanelGroupData
 
 	int teams
 	int playersPerTeam
-	int localPlayersTeam
 	int gamemode
 
 	float teamWidth
@@ -545,22 +543,7 @@ void function UI_SetScoreboardVerticalOffset( float verticalOffset )
 	file.scoreboardVerticalOffset = verticalOffset
 }
 
-void function UI_ClearLocalPlayerToolTip( var panel, int localPlayersRow )
-{
-	array<var> teamPlayers = file.panels[panel].teamPlayers
-
-	if( file.panels[panel].lastLastPlayerRow != -1 )
-	{
-		int previous = ( file.panels[panel].localPlayersTeam * file.panels[panel].playersPerTeam ) + file.panels[panel].lastLastPlayerRow
-		SetPlayerTooltip( teamPlayers[previous] )
-	}
-	int new = ( file.panels[panel].localPlayersTeam * file.panels[panel].playersPerTeam ) + localPlayersRow
-	Hud_ClearToolTipData( teamPlayers[ new ] )
-
-	file.panels[panel].lastLastPlayerRow = localPlayersRow
-}
-
-void function UI_SetScoreboardTeamData( var panel, int teams, int playersPerTeam, int localPlayersTeam, int gamemode )
+void function UI_SetScoreboardTeamData( var panel, int teams, int playersPerTeam, int gamemode )
 {
 	if( panel == null )
 		return
@@ -573,7 +556,6 @@ void function UI_SetScoreboardTeamData( var panel, int teams, int playersPerTeam
 
 	file.panels[panel].teams = teams
 	file.panels[panel].playersPerTeam = playersPerTeam
-	file.panels[panel].localPlayersTeam = localPlayersTeam
 	file.panels[panel].gamemode = gamemode
 	file.panels[panel].vPadding = GetVPadding( panel )
 	file.panels[panel].hPadding = GetHPadding( panel )
@@ -624,22 +606,9 @@ void function UI_SetScoreboardTeamData( var panel, int teams, int playersPerTeam
 	file.panels[panel].firstTeamOffsetY = -1 * ( tabsHeight + file.scoreboardVerticalOffset + ( ( avialableHeight - vSpaceTakenByHeaders - vSpaceTakenByPlayers - vSpaceTakenByPadding ) / 2 ) )
 	int teamsAdded = 0
 
-	if( localPlayersTeam >= 0)
-	{
-		var teamHeader = UpdateTeamHeader( panel, localPlayersTeam, teamsAdded )
-
-		for( int playerRow = 0; playerRow <= playersPerTeam - 1; playerRow++ )
-		{
-			UpdateTeamPlayer( panel, teamHeader, teamsAdded, localPlayersTeam, playerRow )
-		}
-		teamsAdded++
-	}
 
 	for( int teamIndex = 0; teamIndex < teams; teamIndex++ )
 	{
-		if( teamIndex ==  localPlayersTeam )
-			continue
-
 		int correctedTeamIndex = CustomMatchTeamRoster_GetCorrectedTeamId( teamIndex, false )
 		var teamHeader = UpdateTeamHeader( panel, correctedTeamIndex, teamsAdded )
 
@@ -1371,7 +1340,7 @@ void function CustomMatch_ScoreboardUpdate()
 	}
 
 	file.customMatchDataPlayersSorted = teams
-	UI_SetScoreboardTeamData( file.activePanel, data.maxTeams, data.maxPlayers / data.maxTeams, -1, -1 )
+	UI_SetScoreboardTeamData( file.activePanel, data.maxTeams, data.maxPlayers / data.maxTeams, -1 )
 }
 
 

@@ -295,7 +295,7 @@ void function EventShop_Init()
 				Assert( Challenge_GetTimeSpanKind( expect ItemFlavor( challengeFlav ) ) == eChallengeTimeSpanKind.EVENTSHOP_DAILY_CHALLENGE, "Event shop daily challenges must be configured with timespan EVENTSHOP_DAILY_CHALLENGE." )
 
 				eventShopData.dailyChallenges.append( expect ItemFlavor( challengeFlav ) )
-				RegisterChallengeSource( expect ItemFlavor( challengeFlav ), event, 0 )
+				RegisterChallengeSource( expect ItemFlavor( challengeFlav ), event, index )
 			}
 		}
 
@@ -308,7 +308,7 @@ void function EventShop_Init()
 				Assert( Challenge_GetTimeSpanKind( expect ItemFlavor( challengeFlav ) ) == eChallengeTimeSpanKind.EVENTSHOP_EVENT_CHALLENGE, "Event shop event challenges must be configured with timespan EVENTSHOP_EVENT_CHALLENGE." )
 
 				eventShopData.eventChallenges.append( expect ItemFlavor( challengeFlav ) )
-				RegisterChallengeSource( expect ItemFlavor( challengeFlav ), event, 0 )
+				RegisterChallengeSource( expect ItemFlavor( challengeFlav ), event, index )
 			}
 		}
 

@@ -25,10 +25,9 @@ global function Perk_QuickPackup_GetRemotePickupBlockRange
 
 
 
+
 struct
 {
-
-
 
 
 
@@ -61,10 +60,12 @@ const string QUICK_PACKUP_CLIENT_TO_SERVER_START = "ClientToServer_Perk_QuickPac
 const string QUICK_PACKUP_CLIENT_TO_SERVER_CANCEL = "ClientToServer_Perk_QuickPackup_Cancel"
 const string QUICK_PACKUP_CLIENT_TO_SERVER_SINGLE_TRAP = "ClientToServer_Perk_QuickPackup_SingleTrap"
 const string QUICK_PACKUP_CLIENT_TO_SERVER_SINGLE_TRAP_CATALYST = "ClientToServer_Perk_QuickPackup_SingleTrap_Catalyst"
+
+
+
 const string QUICK_PACKUP_CLIENT_TO_SERVER_FURTHEST_PICKUP = "ClientToServer_Perk_QuickPackup_FurthestPlacable"
 const string QUICK_PACKUP_CLIENT_TO_SERVER_ABANDONED_PICKUP = "ClientToServer_Perk_QuickPackup_AbandonedPickup"
 const string QUICK_PACKUP_SERVER_TO_CLIENT_REGISTER = "ServerToClient_Perk_QuickPackup_Register"
-const string QUICK_PACKUP_SERVER_TO_CLIENT_REGISTER_USABLE = "ServerToClient_Perk_QuickPackup_RegisterUsable"
 const string QUICK_PACKUP_ENDED_SIGNAL = "quick_packup_ended"
 const float AR_EFFECT_SIZE = 768.0 
 const vector AR_COLOR = <60, 110, 300>
@@ -73,6 +74,8 @@ const asset RADIUS_FX = $"P_ar_edge_ring_gen"
 
 void function Perk_QuickPackup_Init()
 {
+
+
 
 
 
@@ -124,42 +127,6 @@ float function Perk_QuickPackup_GetRemotePickupBlockRange()
 {
 	return tunings.rampartPickupBlockRange
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

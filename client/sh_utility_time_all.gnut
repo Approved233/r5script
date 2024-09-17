@@ -1,0 +1,567 @@
+globalize_all_functions
+
+
+
+global const PST_TIME_ZONE_OFFSET = -8        
+global const PDT_TIME_ZONE_OFFSET = -7
+global enum eDaysOfWeek
+{
+	SUNDAY,
+	MONDAY,
+	TUESDAY,
+	WEDNESDAY,
+	THURSDAY,
+	FRIDAY,
+	SATURDAY,
+	_NUM_DAYS
+}
+global const array<string> MONTH_NAMES = [
+	"#MONTH_JAN",
+	"#MONTH_FEB",
+	"#MONTH_MAR",
+	"#MONTH_APR",
+	"#MONTH_MAY",
+	"#MONTH_JUN",
+	"#MONTH_JUL",
+	"#MONTH_AUG",
+	"#MONTH_SEP",
+	"#MONTH_OCT",
+	"#MONTH_NOV",
+	"#MONTH_DEC",
+]
+global struct TimeParts
+{
+	int year
+	int month
+	int day
+	int hour
+	int minute
+	int second
+}
+global struct DisplayTime
+{
+	int days
+	int hours
+	int minutes
+	int seconds
+}
+
+
+
+
+
+
+
+
+
+
+const int DST_2024_START = 1710064800 
+const int DST_2024_END = 1730628000 
+const int DST_2025_START = 1741514400 
+const int DST_2025_END = 1762077600 
+const int DST_2026_START = 1772964000 
+const int DST_2026_END = 1793527200 
+const int DST_2027_START = 1805018400 
+const int DST_2027_END = 1825581600 
+const int DST_2028_START = 1836468000 
+const int DST_2028_END = 1857031200 
+const array< int > DST_TIMESTAMPS = [
+	
+	DST_2024_START,
+	DST_2024_END,
+	DST_2025_START,
+	DST_2025_END,
+	DST_2026_START,
+	DST_2026_END,
+	DST_2027_START,
+	DST_2027_END,
+	DST_2028_START,
+	DST_2028_END,
+]
+
+int ornull function DateTimeStringToUnixTimestamp( string str )
+{
+	str = strip( str )
+
+	
+	if ( str.isnumeric() )
+		return int( str )
+
+	
+	string datetimeStringPattern = "2020-12-28 10:00:00 -08:00"
+
+	if ( str.len() != datetimeStringPattern.len() )
+		return null
+
+	TimeParts parts
+	parts.year = ConvertStringToInt(str.slice(0, 4))
+	parts.month = ConvertStringToInt(str.slice(5, 7))
+	parts.day = ConvertStringToInt(str.slice(8, 10))
+	parts.hour = ConvertStringToInt(str.slice(11, 13))
+	parts.minute = ConvertStringToInt(str.slice(14, 16))
+	parts.second = ConvertStringToInt(str.slice(17, 19))
+	int timezoneOffsetHours = ( str.slice(20, 21) == "-" ? -1 : 1 ) * ConvertStringToInt( str.slice(21, 23) )
+
+
+
+
+
+	
+	int convertedUnixTime = GetUnixTimeFromParts( parts, timezoneOffsetHours ) 
+
+
+
+
+
+	foreach ( int idx, int timestamp in DST_TIMESTAMPS )
+	{
+		if ( timestamp > convertedUnixTime )
+		{
+			if ( idx == 0 )
+				break 
+
+
+
+
+
+
+
+			if ( idx % 2 == 0 && timezoneOffsetHours != -8 ) 
+			{
+				Warning( format( "Updating DST offset for %s to -08:00", str ) )
+				timezoneOffsetHours = -8
+			}
+			else if ( idx % 2 == 1 && timezoneOffsetHours != -7 ) 
+			{
+				Warning( format( "Updating DST offset for %s to -07:00", str ) )
+				timezoneOffsetHours = -7
+			}
+
+			convertedUnixTime = GetUnixTimeFromParts( parts, timezoneOffsetHours )
+			break
+		}
+		else if ( idx == DST_TIMESTAMPS.len() - 1 )
+		{
+
+
+
+		}
+	}
+
+	return convertedUnixTime
+}
+
+
+int function GetUnixTimePST()
+{
+	int unixTime = GetUnixTimestamp()
+	unixTime += (PST_TIME_ZONE_OFFSET * SECONDS_PER_HOUR)
+	return unixTime
+}
+
+
+int function GetUnixTimePDT()
+{
+	int unixTime = GetUnixTimestamp()
+	unixTime += (PDT_TIME_ZONE_OFFSET * SECONDS_PER_HOUR)
+	return unixTime
+}
+
+
+string function GetDebugTimeString()
+{
+	
+
+	if ( GetDeveloperLevel() == 0 )
+		return ""
+
+	bool dst 		  = GetIsDSTActive()
+	int utTime        = dst ? GetUnixTimePDT() : GetUnixTimePST()
+	string timeString = GetDateTimeString( utTime, 0 )
+	string dayName    = GetDayOfWeekName( GetDayOfWeek( utTime ) )
+
+
+
+
+		string localDayName = Localize( dayName )
+
+
+	return format( "%s, %s %s", localDayName, timeString, dst ? "PDT" : "PST" )
+}
+
+
+void function PrintDebugTimeDetails()
+{
+	printt( FUNC_NAME() )
+
+	string debugTime = GetDebugTimeString()
+	printt( "DebugTime =", debugTime )
+	PrintFakeTime()
+}
+
+
+TimeParts function GetUnixTimeParts( int unixtime, int timezoneOffsetHours = -7 )
+{
+	unixtime += SECONDS_PER_HOUR * timezoneOffsetHours
+
+	
+	TimeParts parts
+
+	
+
+	parts.second = unixtime % 60
+	unixtime /= 60
+
+	parts.minute = unixtime % 60
+	unixtime /= 60
+
+	parts.hour = unixtime % 24
+	unixtime /= 24
+
+	
+
+	unixtime += 719499
+
+	
+	
+
+	for ( parts.year = 1969 ; unixtime > __YearToDays( parts.year + 1 ) + 30; parts.year++ )
+	{
+	}
+
+	
+	unixtime -= __YearToDays( parts.year )
+
+	
+
+	
+	for ( parts.month = 1 ; parts.month < 12 && unixtime > 367 * (parts.month + 1) / 12; parts.month++ )
+	{
+	}
+
+	
+	unixtime -= 367 * parts.month / 12
+
+	
+
+	
+	parts.month += 2
+	if ( parts.month > 12 )
+	{
+		parts.month -= 12
+		parts.year++
+	}
+
+	parts.day = unixtime
+
+	return parts
+}
+
+
+int function GetUnixTimeFromParts( TimeParts parts, int timezoneOffsetHours )
+{
+	int y                     = parts.year - (parts.month <= 2 ? 1 : 0)
+	int era                   = (y >= 0 ? y : y - 399) / 400
+	int yoe                   = y - era * 400 
+	int doy                   = (153 * (parts.month + (parts.month > 2 ? -3 : 9)) + 2) / 5 + parts.day - 1 
+	int doe                   = yoe * 365 + yoe / 4 - yoe / 100 + doy 
+	int days_since_1970_01_01 = era * 146097 + doe - 719468
+
+	return (SECONDS_PER_DAY * days_since_1970_01_01
+	+ SECONDS_PER_HOUR * (parts.hour - timezoneOffsetHours)
+	+ SECONDS_PER_MINUTE * parts.minute
+	+ parts.second)
+}
+
+
+int function __YearToDays( int y )
+{
+	return (y) * 365 + (y) / 4 - (y) / 100 + (y) / 400
+}
+
+
+DisplayTime function SecondsToDHMS( int seconds )
+{
+	DisplayTime dt
+
+	
+	dt.days = int( floor( seconds / SECONDS_PER_DAY ) )
+
+	
+	int hourSeconds = seconds % SECONDS_PER_DAY
+	dt.hours = int( floor( hourSeconds / SECONDS_PER_HOUR ) )
+
+	
+	int minuteSeconds = hourSeconds % SECONDS_PER_HOUR
+	dt.minutes = int( floor( minuteSeconds / SECONDS_PER_MINUTE ) )
+
+	
+	int remainingSeconds = minuteSeconds % SECONDS_PER_MINUTE
+	dt.seconds = int( ceil( remainingSeconds ) )
+
+	return dt
+}
+
+
+string function GetDaysHoursRemainingLoc(int days, int hours)
+{
+	string dateFormat = "#DAYS_HOURS_REMAINING"
+
+	if ( hours == 1 )
+	{
+		dateFormat = "#DAYS_HOUR_REMAINING"
+	}
+	if ( days == 1 )
+	{
+		if ( hours == 1 )
+		{
+			dateFormat = "#DAY_HOUR_REMAINING"
+		}
+		else
+		{
+			dateFormat = "#DAY_HOURS_REMAINING"
+		}
+	}
+
+	return dateFormat
+}
+
+
+string function GetDaysHoursMinutesSecondsString( int seconds )
+{
+	
+	DisplayTime dt = SecondsToDHMS( seconds )
+	return format( "%i:%02i:%02i.%02i", dt.days, dt.hours, dt.minutes, dt.seconds )
+}
+
+
+int function GetDayOfWeek( int unixTime )
+{
+	return int( (floor( unixTime / SECONDS_PER_DAY ) + 4) % 7 )
+}
+
+
+string function GetDayOfWeekName( int dayOfWeek )
+{
+	array<string> days = ["#SUNDAY", "#MONDAY", "#TUESDAY", "#WEDNESDAY", "#THURSDAY", "#FRIDAY", "#SATURDAY"]
+	Assert( dayOfWeek >= 0 && dayOfWeek < days.len() )
+	return days[dayOfWeek]
+}
+
+
+string function GetDateTimeString( int unixTime, int timezoneOffsetHours = -7 )
+{
+	TimeParts timeParts = GetUnixTimeParts( unixTime, timezoneOffsetHours )
+	return format( "%04i-%02i-%02i %02i:%02i:%02i", timeParts.year, timeParts.month, timeParts.day, timeParts.hour, timeParts.minute, timeParts.second )
+}
+
+
+string function GetDateTimeStringNoYearNoSeconds( int unixTime, int timezoneOffsetHours = 0 )
+{
+	TimeParts timeParts = GetUnixTimeParts( unixTime, timezoneOffsetHours )
+	return format( "%02i/%02i %02i:%02i", timeParts.month, timeParts.day, timeParts.hour, timeParts.minute )
+}
+
+
+string function GetTimeString( int unixTime )
+{
+	TimeParts timeParts = GetUnixTimeParts( unixTime )
+	return format( "%02i:%02i:%02i", timeParts.hour, timeParts.minute, timeParts.second )
+}
+
+
+string function GetDateTimeStringDayMonthYear( int unixTime, int timezoneOffsetHours = 0 )
+{
+	TimeParts timeParts = GetUnixTimeParts( unixTime, timezoneOffsetHours )
+	return format( "%02i-%02i-%04i",  timeParts.day, timeParts.month, timeParts.year )
+}
+
+
+int function GetStartOfDay( int unixTime )
+{
+	TimeParts timeParts    = GetUnixTimeParts( unixTime )
+	int unixTimeStartOfDay = unixTime
+	unixTimeStartOfDay = unixTimeStartOfDay - (timeParts.hour * SECONDS_PER_HOUR) - (timeParts.minute * SECONDS_PER_MINUTE) - timeParts.second
+	return unixTimeStartOfDay
+}
+
+
+int function GetEndOfDay( int unixTime )
+{
+	return GetStartOfDay( unixTime + SECONDS_PER_DAY )
+}
+
+
+int function SecondsRemainingInDay( int unixTime )
+{
+	int endOfDay = GetEndOfDay( unixTime )
+	return endOfDay - unixTime
+}
+
+
+void function WaitForUnixTime( int unixTime )
+{
+	while ( true )
+	{
+		float delay = float(unixTime - GetUnixTimestamp())
+		if ( delay <= 0.0 )
+			break
+
+#if DEV
+			wait min( 1.0, delay )
+#else
+			wait delay
+#endif
+	}
+}
+
+
+
+float function GetGameEndTime()
+{
+	return GetGlobalNonRewindNetTime( "gameEndTime" )
+}
+
+
+float function GetGameStartTime()
+{
+	return GetGlobalNonRewindNetTime( "gameStartTime" )
+}
+
+
+float function GetRoundStartTime()
+{
+	return GetGlobalNonRewindNetTime( "roundStartTime" )
+}
+
+
+float function GetRoundEndTime()
+{
+	return GetGlobalNonRewindNetTime( "roundEndTime" )
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

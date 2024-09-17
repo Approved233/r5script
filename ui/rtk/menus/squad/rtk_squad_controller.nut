@@ -602,6 +602,7 @@ void function RTKSquadGladCards_RTKViewProfile( rtk_behavior self, int index )
 
 
 
+
 bool function IsRTKSquadsEnabled()
 {
 	return GetCurrentPlaylistVarBool( "rtk_squads_enabled", true )

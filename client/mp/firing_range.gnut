@@ -3875,6 +3875,13 @@ void function SCB_Restore_UpgradeCore_Rui()
 
 
 
+
+
+
+
+
+
+
 void function OnClientScriptInit( entity player )
 {
 	if( GetFirstTimePlayerState() < eNewPlayerState.FIRING_RANGE_COMPLETED )

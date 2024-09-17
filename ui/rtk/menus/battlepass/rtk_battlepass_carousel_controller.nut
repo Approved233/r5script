@@ -52,6 +52,7 @@ struct FileStruct_SessionPersistence
 FileStruct_SessionPersistence& file
 
 const float CAROUSEL_DELAY = 5.0
+const int MAX_CAROUSEL_ITEMS = 5
 
 void function OnBattlepassCarouselPakLoaded( string pakName = "" )
 {
@@ -76,10 +77,7 @@ void function RTKBattlepassCarouselController_WaitPakLoaded( rtk_behavior self )
 		if ( p.carouselInfos.len() == 0 || p.currentCarouselItemIndex >= p.carouselInfos.len() )
 			continue
 
-		if ( p.carouselInfos[ p.currentCarouselItemIndex ].imageName != file.lastLoadedPakName)
-			continue
-
-		BuildCarouselInfo( self, battlepassModelStruct, p.carouselInfos[ p.currentCarouselItemIndex ] )
+		RTKBattlepassCarouselController_BuildCarouselInfo( self, battlepassModelStruct, p.carouselInfos[ p.currentCarouselItemIndex ] )
 	}
 
 }
@@ -127,7 +125,7 @@ void function RTKBattlepassControllerPanel_OnInitializedAndConnected( rtk_behavi
 		if ( !GRX_AreOffersReady() )
 			return
 
-		thread AutoAdvanceCarousel( self, battlepassModelStruct, battlePassAsset )
+		thread RTKBattlepassCarouselController_AutoAdvanceCarousel( self, battlepassModelStruct, battlePassAsset )
 	})
 
 	AddCallbackAndCallNow_OnGRXOffersRefreshed( p.OnGRXStateChanged )
@@ -169,13 +167,14 @@ void function RTKBattlepassCarouselController_OnDestroy( rtk_behavior self )
 	Signal( uiGlobal.signalDummy, "RTKBattlepassCarouselDestroyed" )
 }
 
-void function AutoAdvanceCarousel( rtk_behavior self, rtk_struct battlepassModelStruct, asset battlePassAsset )
+void function RTKBattlepassCarouselController_AutoAdvanceCarousel( rtk_behavior self, rtk_struct battlepassModelStruct, asset battlePassAsset )
 {
 	Signal( uiGlobal.signalDummy, "RTKBattlepassEndAutoAdvance" )
 	EndSignal( uiGlobal.signalDummy, "RTKBattlepassEndAutoAdvance" )
 
 	PrivateData p
 	self.Private( p )
+	p.carouselInfos.clear()
 
 	UMData um = EADP_UM_GetPromoData()
 
@@ -263,7 +262,7 @@ void function AutoAdvanceCarousel( rtk_behavior self, rtk_struct battlepassModel
 		p.carouselInfos.push(itemInfo)
 	}
 
-	BuildCarouselInfo( self, battlepassModelStruct, p.carouselInfos[ p.currentCarouselItemIndex ] )
+	RTKBattlepassCarouselController_BuildCarouselInfo( self, battlepassModelStruct, p.carouselInfos[ p.currentCarouselItemIndex ] )
 
 	if ( p.carouselInfos.len() <= 1 )
 		return
@@ -272,12 +271,13 @@ void function AutoAdvanceCarousel( rtk_behavior self, rtk_struct battlepassModel
 
 	string passModelName = GetPassModelName( passType )
 
+	if ( !RTKDataModel_HasDataModel( "&menus." + passModelName + ".carouselInfo.progress" ) )
+		return
+
+	rtk_array arr = RTKDataModel_GetArray( "&menus." + passModelName + ".carouselInfo.progress" )
+
 	while ( true )
 	{
-
-		if ( !RTKDataModel_HasDataModel( "&menus." + passModelName + ".carouselInfo.progress" ) )
-			return
-
 		if ( p.nextOfferChangeTime != p.lastOfferChangeTimeUpdate )
 		{
 			p.nextOfferChangeTime = ClientTime() + CAROUSEL_DELAY
@@ -288,17 +288,17 @@ void function AutoAdvanceCarousel( rtk_behavior self, rtk_struct battlepassModel
 		float remainingTime = p.nextOfferChangeTime - ClientTime()
 		float totalTime = p.nextOfferChangeTime - p.offerChangeStartTime
 		float progress = remainingTime/totalTime
-		rtk_array arr = RTKDataModel_GetArray( "&menus." + passModelName + ".carouselInfo.progress" )
+
 		RTKArray_SetFloat( arr, p.currentCarouselItemIndex, progress )
 
 		if ( progress < 0.0 )
 		{
 			p.currentCarouselItemIndex++
-			if ( p.currentCarouselItemIndex > p.carouselInfos.len() - 1 || p.currentCarouselItemIndex > 5 )
+			if ( p.currentCarouselItemIndex > p.carouselInfos.len() - 1 || p.currentCarouselItemIndex > MAX_CAROUSEL_ITEMS )
 				p.currentCarouselItemIndex = 0
 
 			if ( GRX_IsInventoryReady() )
-				BuildCarouselInfo( self, battlepassModelStruct, p.carouselInfos[p.currentCarouselItemIndex] )
+				RTKBattlepassCarouselController_BuildCarouselInfo( self, battlepassModelStruct, p.carouselInfos[p.currentCarouselItemIndex] )
 			p.nextOfferChangeTime = ClientTime() + CAROUSEL_DELAY
 		}
 
@@ -318,20 +318,23 @@ void function RTKBattlepassCarouselController_AdvanceCarousel( rtk_behavior self
 		p.currentCarouselItemIndex = p.carouselInfos.len() - 1
 	}
 
-	if ( p.currentCarouselItemIndex > p.carouselInfos.len() - 1 || p.currentCarouselItemIndex > 5 )
+	if ( p.currentCarouselItemIndex > p.carouselInfos.len() - 1 || p.currentCarouselItemIndex > MAX_CAROUSEL_ITEMS || p.currentCarouselItemIndex < 0 )
 	{
 		p.currentCarouselItemIndex = 0
 	}
+
+	if ( p.currentCarouselItemIndex >= p.carouselInfos.len() )
+		return
 
 	if ( GRX_IsInventoryReady() )
 	{
 		int passType = self.PropGetInt( "passType" )
 		rtk_struct battlepassModelStruct = GetPassModel( passType )
-		BuildCarouselInfo( self, battlepassModelStruct, p.carouselInfos[p.currentCarouselItemIndex] )
+		RTKBattlepassCarouselController_BuildCarouselInfo( self, battlepassModelStruct, p.carouselInfos[p.currentCarouselItemIndex] )
 	}
 }
 
-void function BuildCarouselInfo( rtk_behavior self, rtk_struct battlepassModelStruct, RTKBattlepassCarouselInfo carouselItemInstance )
+void function RTKBattlepassCarouselController_BuildCarouselInfo( rtk_behavior self, rtk_struct battlepassModelStruct, RTKBattlepassCarouselInfo carouselItemInstance )
 {
 	PrivateData p
 	self.Private( p )

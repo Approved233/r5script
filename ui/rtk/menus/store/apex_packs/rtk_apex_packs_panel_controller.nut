@@ -124,6 +124,8 @@ void function RTKApexPacksPanel_OnDestroy( rtk_behavior self )
 	PrivateData p
 	self.Private( p )
 
+	RTKDataModelType_DestroyStruct( RTK_MODELTYPE_MENUS, "apexPacksData" )
+
 	RemoveCallback_OnGRXOffersRefreshed( p.OnGRXStateChanged )
 	RemoveCallback_OnGRXInventoryStateChanged( p.OnGRXStateChanged )
 }
@@ -338,18 +340,18 @@ void function UpdateOpenPackButton( rtk_behavior self, rtk_struct apexPackModelS
 	{
 		expect ItemFlavor( packFlav )
 
-		bool isPlural = lootBoxCount == 1
+		bool isPlural = lootBoxCount > 1
 		if ( ItemFlavor_GetAccountPackType( packFlav ) == eAccountPackType.EVENT )
 		{
 			buttonText = ItemFlavor_GetShortName( packFlav )
-			descText = (isPlural ? "#EVENT_PACK" : "#EVENT_PACKS")
+			descText = (isPlural ? "#EVENT_PACKS" : "#EVENT_PACK")
 		}
 		else if ( ItemFlavor_GetAccountPackType( packFlav ) == eAccountPackType.SIRNGE )
 		{
 			if ( MilestoneEvent_IsMilestonePackFlav( packFlav, false, true ) )
-				buttonText = (isPlural ? "#PACK_MILESTONE_TEXT" : "#PACK_MILESTONE_TEXT_PLURAL")
+				buttonText = (isPlural ? "#PACK_MILESTONE_TEXT_PLURAL" : "#PACK_MILESTONE_TEXT")
 			else
-				buttonText = (isPlural ? "#EVENT_PACK" : "#EVENT_PACKS")
+				buttonText = (isPlural ? "#EVENT_PACKS" : "#EVENT_PACK")
 
 			ItemFlavor ornull milestoneEvent = GetActiveMilestoneEvent( GetUnixTimestamp() )
 			if ( milestoneEvent != null )
@@ -362,7 +364,7 @@ void function UpdateOpenPackButton( rtk_behavior self, rtk_struct apexPackModelS
 		else if ( ItemFlavor_GetAccountPackType( packFlav ) == eAccountPackType.THEMATIC || ItemFlavor_GetAccountPackType( packFlav ) == eAccountPackType.EVENT_THEMATIC )
 		{
 			buttonText = ItemFlavor_GetShortName( packFlav )
-			descText = (isPlural ? "#THEMATIC_PACK" : "#THEMATIC_PACKS")
+			descText = (isPlural ? "#THEMATIC_PACKS" : "#THEMATIC_PACK")
 		}
 		else
 		{
@@ -370,11 +372,11 @@ void function UpdateOpenPackButton( rtk_behavior self, rtk_struct apexPackModelS
 			if ( packRarity > 1 )
 			{
 				string packTier = ItemFlavor_GetQualityName( packFlav, isPlural )
-				buttonText = ( isPlural ? Localize( "#APEX_PACK_WITH_TIER", Localize( packTier ) ) : Localize( "#APEX_PACKS_WITH_TIER", Localize ( packTier ) ) )
+				buttonText = ( isPlural ? Localize( "#APEX_PACKS_WITH_TIER", Localize ( packTier ) ) : Localize( "#APEX_PACK_WITH_TIER", Localize( packTier ) ) )
 			}
 			else
 			{
-				buttonText = ( isPlural ? "#APEX_PACK" : "#APEX_PACKS" )
+				buttonText = ( isPlural ? "#APEX_PACKS" : "#APEX_PACK" )
 			}
 		}
 

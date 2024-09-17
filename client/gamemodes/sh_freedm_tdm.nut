@@ -46,6 +46,13 @@ void function TDM_Init()
 
 
 
+
+
+
+
+
+
+
 		PakHandle pakHandle = RequestPakFile( "ui_arenas", TRACK_FEATURE_UI )
 		FreeDM_SetScoreboardSetupFunc( TDM_ScoreboardSetup() )
 

@@ -13,30 +13,21 @@ global function DEV_SetLobbyBannerSkin
 
 
 
-global function Lobby_OnReadyFX
-
 
 const int LOBBY_BANNER_DEFAULT_SKIN_INDEX = 0
 const int LOBBY_BANNER_MIXTAPE_SKIN_INDEX = 1
 const int LOBBY_BANNER_LTM_SKIN_INDEX = 2
-
-const int LOBBY_EVENT1_SKIN_OFFSET = 3
-const int LOBBY_EVENT2_SKIN_OFFSET = 6
 
 struct
 {
 	array<void functionref( entity )> onPlayerAddedToLobbyCallbacks
 
 	array<entity> lobbyBanners
-	array<entity> lobbyReskinProps
 #if DEV
 		bool overrideLobbyBanner = false
 #endif
 
 	array< entity > radioPlayProps
-
-	float readyUpCooldown = 0
-	float readyUpCooldownTime = 15.0
 
 	bool registeredForPartyMemberCallback = false
 	bool radioPlayPropsSetup = false
@@ -71,8 +62,6 @@ void function Lobby_AddLocalPlayer()
 	}
 
 	CacheLobbyBannerEnt()
-	SetupEventProps()
-	SetupEventBase()
 
 
 
@@ -91,50 +80,11 @@ void function AddCallback_OnPlayerAddedToLobby( void functionref( entity ) onPla
 void function CacheLobbyBannerEnt()
 {
 	file.lobbyBanners     = GetEntArrayByScriptName( "lobby_banner" )
-	file.lobbyReskinProps = GetEntArrayByScriptName( "event_skin_prop" )
-}
-
-void function Lobby_OnReadyFX( bool isReady )
-{
-	if ( !isReady )
-		return
-
-	float now = ClientTime()
-
-	if ( file.readyUpCooldown != 0 && now < (file.readyUpCooldown + file.readyUpCooldownTime))
-		return
-
-	file.readyUpCooldown = now
-
-	if ( IsLobbyEvent1Active() )
-	{
-		thread Event1ReadyFX()
-	}
-	else if ( IsLobbyEvent2Active()  )
-	{
-		thread Event2ReadyFX()
-	}
-	else
-	{
-		thread NonEventLobbyReadyUp()
-	}
-}
-
-void function NonEventLobbyReadyUp()
-{
-}
-
-void function Event1ReadyFX()
-{
-}
-
-void function Event2ReadyFX()
-{
 }
 
 void function Lobby_SetBannerSkin( string playlist )
 {
-	if( file.lobbyBanners.len() == 0 )
+	if ( file.lobbyBanners.len() == 0 )
 	{
 		
 		CacheLobbyBannerEnt()
@@ -146,12 +96,13 @@ void function Lobby_SetBannerSkin( string playlist )
 		}
 	}
 
+	
 	string playlistName = GetParty().playlistName
 	int skinIndex =  LOBBY_BANNER_DEFAULT_SKIN_INDEX
 
 	if ( GetPlaylistVarBool( playlistName, "is_limited_mode", false ) )
 		skinIndex =  LOBBY_BANNER_LTM_SKIN_INDEX
-	else if ( GetPlaylistVarString( playlistName, "ui_slot", "" ) == "mixtape" )
+	else if ( GetScheduleFromPlaylist( playlistName ) == "mixtape" )
 		skinIndex =  LOBBY_BANNER_MIXTAPE_SKIN_INDEX
 
 #if DEV
@@ -159,17 +110,9 @@ void function Lobby_SetBannerSkin( string playlist )
 			return
 #endif
 
-	if ( IsLobbyEvent1Active() )
-	{
-		skinIndex = skinIndex + LOBBY_EVENT1_SKIN_OFFSET
-	}
+	skinIndex = skinIndex + LobbyStageSwitching_GetBannerSkinOffset()
 
-	if ( IsLobbyEvent2Active() )
-	{
-		skinIndex = skinIndex + LOBBY_EVENT2_SKIN_OFFSET
-	}
-
-	Lobby_SetBannerSkinInternal ( skinIndex )
+	Lobby_SetBannerSkinInternal( skinIndex )
 }
 
 void function Lobby_SetBannerSkinInternal( int skinIndex )
@@ -194,72 +137,6 @@ void function DEV_SetLobbyBannerSkin( int i )
 	file.overrideLobbyBanner = true
 }
 #endif
-
-void function SetupEventBase()
-{
-	string skinName = ""
-
-	if ( IsLobbyEvent1Active() )
-	{
-		skinName = "event_1_skin"
-	}
-
-	if ( IsLobbyEvent2Active() )
-	{
-		skinName = "event_2_skin"
-	}
-
-	if ( skinName == "" )
-		return
-
-	foreach ( lobbyReskinProp in file.lobbyReskinProps )
-	{
-		if ( IsValid( lobbyReskinProp ) && lobbyReskinProp.GetSkinIndexByName(skinName) != -1)
-		{
-			lobbyReskinProp.SetSkin(lobbyReskinProp.GetSkinIndexByName(skinName))
-		}
-	}
-}
-
-void function SetupEventProps()
-{
-	SetupEvent1Props()
-	SetupEvent2Props()
-}
-
-void function SetupEvent1Props()
-{
-	if ( !IsLobbyEvent1Active() )
-	{
-		array<entity> event_props = GetEntArrayByScriptName( "event_1_prop" )
-		foreach ( event_prop in event_props )
-		{
-			if ( IsValid( event_prop ) )
-				event_prop.Destroy()
-		}
-
-		return
-	}
-
-	
-}
-
-void function SetupEvent2Props()
-{
-	if ( !IsLobbyEvent2Active() )
-	{
-		array<entity> event_props = GetEntArrayByScriptName( "event_2_prop" )
-		foreach ( event_prop in event_props )
-		{
-			if ( IsValid( event_prop ) )
-				event_prop.Destroy()
-		}
-
-		return
-	}
-
-	
-}
 
 void function OnPartyMemberAdded()
 {

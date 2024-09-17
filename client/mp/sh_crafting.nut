@@ -79,6 +79,18 @@ global function Crafting_IsPingMapIconEnabled
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 #if DEV
 
 
@@ -124,6 +136,10 @@ global function Crafting_IsPlayerAtWorkbench
 global function Crafting_GetCraftingIcon
 global function Crafting_GetSmallCraftingIcon
 global function Crafting_GetCraftingZoneIcon
+
+
+
+
 
 #if DEV
 global function DEV_Crafting_TogglePreMatchRotation
@@ -182,6 +198,9 @@ const asset WORKBENCH_DISPENSER_HOLO_COLOR_FX = $"P_workbench_s20"
 const asset WORKBENCH_DISPENSER_START_FX = $"P_workbench_s20_start"
 const asset WORKBENCH_DISPENSER_BEAM_FX = $"P_workbench_s20_stock_beam_LT"
 const vector WORKBENCH_DISPENSER_VFX_COLOR = < 183, 135, 255 >
+
+
+
 
 const asset WORKBENCH_HOLO_FX = $"P_workbench_holo"
 
@@ -550,14 +569,12 @@ void function Crafting_Init()
 		AddCreateCallback( "info_target", OnLimitedStockParentCreated )
 
 
-	RegisterSignal( "Crafting_PlayerStartedPlaying" )
 	RegisterSignal( "CraftingPlayerAttaching" )
 	RegisterSignal( "CraftingComplete" )
 	RegisterSignal( "CraftingPlayerDetached" )
 	RegisterSignal( "OnPinged_Crafting" )
 	RegisterSignal( "CraftingPlayerPlayExitAnim" )
 	RegisterSignal( "CraftingPlayerDetachImmediate" )
-	RegisterSignal( "CraftingDestroyReferencePlacement" )
 	if ( file.craftingBetterSpectatorEnabled )
 	{
 		RegisterSignal( "crafting_kill_spectator_thread" )
@@ -678,6 +695,9 @@ void function Crafting_RegisterNetworking()
 	Remote_RegisterClientFunction( "ServerCallback_CL_MaterialsChanged", "int", -1, INT_MAX, "int", -1, INT_MAX, "int", 0, eWildLifeCampType.Count, "entity", "bool" )
 
 
+
+
+
 	Remote_RegisterClientFunction( "ServerCallback_CL_HarvesterUsed", "entity", "entity" )
 	Remote_RegisterClientFunction( "ServerCallback_CL_ArmorDeposited" )
 	Remote_RegisterClientFunction( "ServerCallback_PromptNextHarvester", "entity", "entity" )
@@ -697,6 +717,13 @@ void function Crafting_RegisterNetworking()
 	Remote_RegisterServerFunction( "ClientCallback_ClosedCraftingMenu" )
 
 	Remote_RegisterServerFunction( FUNCNAME_PingCrafterFromMap, "typed_entity", "prop_dynamic" )
+
+
+
+
+
+
+
 
 	Remote_RegisterClientFunction( "ServertoClientCallback_SetDispenserData", "entity", "entity", "entity", "entity", "bool", "bool" )
 
@@ -889,6 +916,8 @@ void function RegisterCraftingDistribution()
 
 	int numRows = GetDataTableRowCount( distributionTable )
 
+	
+	
 	foreach ( category in file.craftingDataArray )
 	{
 		printf( "CRAFTING: Getting datatable for category " + category.category )
@@ -2626,7 +2655,7 @@ void function ServerCallback_CL_HarvesterUsed( entity harvester, entity minimapO
 
 	file.ambGenericTable[harvester].SetEnabled( false )
 	thread HarvesterAnimThread( file.harvesterToClientProxy[harvester] )
-	thread PROTO_FadeModelIntensityOverTime( file.harvesterToClientProxy[harvester], 1, 1, 0.1 )
+	thread FadeModelIntensityOverTime( file.harvesterToClientProxy[harvester], 1, 1, 0.1 )
 
 	Signal( file.harvesterToClientProxy[harvester], "HarvesterDisabled" )
 	Signal( harvester, "HarvesterDisabled" )
@@ -3017,6 +3046,12 @@ bool function Crafting_IsPlayerAtWorkbench( entity player )
 
 asset function Crafting_GetCraftingIcon( bool isAirdrop )
 {
+
+
+
+
+
+
 	if ( Crafting_IsDispenserCraftingEnabled() )
 	{
 		return isAirdrop ? DISPENSER_WORKBENCH_ICON_AIRDROP_ASSET : DISPENSER_WORKBENCH_ICON_ASSET
@@ -3027,6 +3062,12 @@ asset function Crafting_GetCraftingIcon( bool isAirdrop )
 
 asset function Crafting_GetSmallCraftingIcon()
 {
+
+
+
+
+
+
 	if ( Crafting_IsDispenserCraftingEnabled() )
 	{
 		return DISPENSER_CRAFTING_SMALL_WORKBENCH_ASSET
@@ -3044,6 +3085,9 @@ asset function Crafting_GetCraftingZoneIcon()
 
 	return CRAFTING_ZONE_ASSET
 }
+
+
+
 
 
 
@@ -3648,6 +3692,13 @@ void function OnWorkbenchClusterCreated( entity target )
 		thread PlayClientSideWorkbenchHologramFX( target )
 	}
 
+
+
+
+
+
+
+
 	
 	file.workbenchClusterArray.append( target )
 }
@@ -3678,6 +3729,24 @@ string function Crafting_Workbench_UseTextOverride( entity ent )
 		if ( player in dispensorData.playersHaveUsed )
 			CustomUsePrompt_SetText( Localize("#DISPENSER_HAS_USED_PROMPT") )
 	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3727,6 +3796,19 @@ void function UseCraftingWorkbench( entity bench, entity player, int pickupFlags
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
 	if ( IsBitFlagSet( pickupFlags, USE_INPUT_LONG ) )
 	{
 		entity cluster
@@ -3749,6 +3831,33 @@ void function UseCraftingWorkbench( entity bench, entity player, int pickupFlags
 			cluster.Signal("WorkbenchUsed")
 
 	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 
 void function WorkbenchThink( entity ent, entity playerUser )
@@ -3779,6 +3888,31 @@ void function WorkbenchThink( entity ent, entity playerUser )
 	waitthread ExtendedUse( ent, playerUser, settings )
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ExtendedUseSettings function WorkbenchExtendedUseSettings( entity ent, entity playerUser )
 {
 	ExtendedUseSettings settings
@@ -3796,6 +3930,133 @@ ExtendedUseSettings function WorkbenchExtendedUseSettings( entity ent, entity pl
 
 	return settings
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4920,6 +5181,21 @@ array< string > function GenerateCraftingItemsInCategory( entity player, Craftin
 	}
 
 
+
+		if ( categoryToCheck.category == "mode_objectivebr" )
+		{
+			if ( Crafting_IsDispenserCraftingEnabled() && GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_OBJECTIVE_BR ) )
+			{
+				CraftingBundle bundle = GetBundleForCategory( categoryToCheck )
+				return bundle.itemsInBundle
+			}
+			else
+			{
+				return []
+			}
+		}
+
+
 	if ( craftingRotation == eCraftingRotationStyle.LOADOUT_BASED )
 	{
 		array< string > itemList
@@ -5039,12 +5315,6 @@ bool function CheckCraftingRotation( int craftingRotation )
 
 	return false
 }
-
-
-
-
-
-
 
 
 
@@ -5394,6 +5664,12 @@ table<int, var> function CreateMarker( entity markedEnt, bool shouldFadeOutNearC
 	{
 		fxHandle = StartParticleEffectInWorldWithHandle( GetParticleSystemIndex( WORKBENCH_DISPENSER_BEAM_FX ), markedEnt.GetOrigin(), markedEnt.GetAngles() )
 		EffectSetControlPointVector( fxHandle, 1, WORKBENCH_DISPENSER_VFX_COLOR )
+
+
+
+
+
+
 	}
 	else
 	{
@@ -5875,6 +6151,12 @@ bool function Crafting_OnMenuItemSelected( int index, var menuRui )
 
 
 
+
+		else if ( item.category == "mode_objectivebr" )
+		{
+			canBuy = GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_OBJECTIVE_BR )
+		}
+
 	}
 	else
 	{
@@ -6301,6 +6583,11 @@ void function Crafting_PopulateItemRuiAtIndex( var rui, int index )
 
 
 
+	else if ( item.category == "mode_objectivebr" )
+	{
+		canBuy = GameModeVariant_IsActive( eGameModeVariants.SURVIVAL_OBJECTIVE_BR )
+	}
+
 	else
 	{
 		canBuy = false
@@ -6465,6 +6752,12 @@ void function PlayClientSideWorkbenchHologramFX( entity workbench )
 	int holoFx = StartParticleEffectOnEntityWithPos( workbench, GetParticleSystemIndex( WORKBENCH_DISPENSER_HOLO_COLOR_FX ), FX_PATTACH_POINT_FOLLOW_NOROTATE, attachId, <0, 0, 0>, <-90, 0, 0> )
 	EffectSetControlPointVector( holoFx, 1, WORKBENCH_DISPENSER_VFX_COLOR )
 
+
+
+
+
+
+
 	OnThreadEnd(
 		function() : ( holoFx )
 		{
@@ -6477,6 +6770,49 @@ void function PlayClientSideWorkbenchHologramFX( entity workbench )
 
 	WaitForever()
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 bool function Crafting_IsPlayerCrafting()
 {

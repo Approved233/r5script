@@ -201,7 +201,7 @@ ItemFlavor function GetMusicPackForPlayer( entity player )
 {
 	LoadoutEntry entry = Loadout_MusicPack()
 	if ( !LoadoutSlot_IsReady( ToEHI( player ), entry ) )
-		return GetDefaultItemFlavorForLoadoutSlot( EHI_null, entry )
+		return GetDefaultItemFlavorForLoadoutSlot( entry )
 
 	ItemFlavor flav = LoadoutSlot_GetItemFlavor( ToEHI( player ), entry )
 
@@ -543,7 +543,7 @@ ItemFlavor function __GetMusicPackForPlayer_RollTheRandom( entity player )
 	if ( GRX_IsInventoryReady( player ) && ItemFlavor_IsTheRandom( music ) )
 	{
 		LoadoutEntry musicSlot  = Loadout_MusicPack()
-		array<ItemFlavor> items = clone GetValidItemFlavorsForLoadoutSlot( ToEHI( player ), musicSlot )
+		array<ItemFlavor> items = clone GetValidItemFlavorsForLoadoutSlot( musicSlot )
 
 		foreach ( item in clone items )
 		{

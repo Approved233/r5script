@@ -701,6 +701,14 @@ var function OnWeaponTossReleaseAnimEvent_ability_portable_auto_loader( entity w
 
 
 
+
+
+
+
+
+
+
+
 void function OnPrimaryWeaponStatusUpdate_FastReloadIcon( entity player, var weaponRui, bool turnOn )
 {
 	if( turnOn )

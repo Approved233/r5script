@@ -1,4 +1,5 @@
 global function InitWeaponCharmsPanel
+global function GetCurrentActiveWeaponCharmSlot
 
 struct PanelData
 {
@@ -23,6 +24,7 @@ struct
 	table< ItemFlavor, ItemFlavor > charmToWeaponMap
 	string collectedCountString = ""
 	bool grxCallbackAdded = false
+	LoadoutEntry& currentActiveEntry
 } file
 
 
@@ -85,6 +87,10 @@ void function InitWeaponCharmsPanel( var panel )
 #endif
 }
 
+LoadoutEntry function GetCurrentActiveWeaponCharmSlot()
+{
+	return file.currentActiveEntry
+}
 
 void function WeaponCharmsPanel_OnShow( var panel )
 {
@@ -176,6 +182,7 @@ void function WeaponCharmsPanel_Update( var panel )
 		bool shouldIgnoreOtherSlots
 
 		entry = Loadout_WeaponCharm( file.currentWeapon )
+		file.currentActiveEntry = entry
 
 		if ( file.weaponCharmListCache.len() == 0 )
 			file.weaponCharmListCache = clone GetLoadoutItemsSortedForMenu( [entry], WeaponCharm_GetSortOrdinal, null, [] )
@@ -239,11 +246,13 @@ void function WeaponCharmsPanel_Update( var panel )
 			ConfirmDialogData data
 			data.headerText = Localize( "#CHARM_DIALOG", localizedEquippedWeaponName )
 			data.messageText = Localize( "#CHARM_DIALOG_DESC", localizedCurrentWeaponName, localizedEquippedWeaponName )
-			data.resultCallback = (void function( int result ) : ( charmCurrentWeaponFlav, proceedCb )
+			data.resultCallback = (void function( int result ) : ( charmFlav, charmCurrentWeaponFlav, proceedCb )
 			{
 				if ( result != eDialogResult.YES )
 					return
 
+				
+				delete file.charmToWeaponMap[ charmFlav ]
 				RequestSetItemFlavorLoadoutSlot( LocalClientEHI(), Loadout_WeaponCharm( charmCurrentWeaponFlav ), GetItemFlavorByAsset( $"settings/itemflav/weapon_charm/none.rpak" ) )
 
 				proceedCb()

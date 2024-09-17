@@ -1980,6 +1980,22 @@ void function OpenSurvivalGroundListMenu()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function ClientToUI_RestrictedLootConfirmDialog_Open( bool isBlackMarketOwner, int restrictedLootType )
 {
 	ConfirmDialogData data

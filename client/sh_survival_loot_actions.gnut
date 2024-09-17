@@ -270,6 +270,14 @@ bool function PickupCustomItem( entity pickup, entity player, int pickupFlags, e
 
 
 
+
+
+
+
+
+
+
+
 		return result
 	}
 
@@ -660,6 +668,11 @@ bool function PickupAmmo( entity ammoPickup, entity player, int pickupFlags, ent
 	int poolMax   = player.AmmoPool_GetCapacity()
 	int poolCount = player.AmmoPool_GetCount( ammoType )
 
+
+
+
+
+
 	if ( !IsInfiniteAmmoEnabled() )
 		numToPickup = minint( numToPickup, poolMax - poolCount )
 
@@ -667,6 +680,15 @@ bool function PickupAmmo( entity ammoPickup, entity player, int pickupFlags, ent
 		return false
 
 	int numPickedUp = numToPickup
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1072,6 +1094,11 @@ bool function GiveMainWeapon_Internal( entity pickup, entity player, bool dropCu
 
 
 
+
+
+
+
+
 	return true
 }
 
@@ -1099,10 +1126,6 @@ bool function EquipEquipment( entity pickup, entity player, string equipSlot, en
 
 	if ( as.action == eLootAction.NONE )
 		return false
-
-
-
-
 
 
 

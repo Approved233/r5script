@@ -109,6 +109,9 @@ void function Perk_CarePackageInsight_Init()
 		AddCallback_OnPassiveChanged( ePassives.PAS_UPGRADE_CAREPACKAGE_INSIGHT, OnPassiveChangedCarePackageInsightUpgrade )
 
 
+
+
+
 	PrecacheScriptString( HIDDEN_CARE_PACKAGE_ENT_NAME )
 	PrecacheScriptString( REVEALED_CARE_PACKAGE_ENT_NAME )
 
@@ -193,6 +196,20 @@ float function Perk_CarePackageInsight_IgnoreLosRevealDistance()
 {
 	return GetCurrentPlaylistVarFloat( "care_package_insight_ignore_los_distance", 6000.0 )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -822,8 +839,14 @@ void function UpdateCarePackageLootAtReveal( entity player )
 			if( !IsValid( ent ) )
 				continue
 
+
+
+
 			if( data.revealed && !player.HasPassive( ePassives.PAS_PATHFINDER ) )
+
+			{
 				continue
+			}
 
 			int playerIndex = player.GetEntIndex()
 			if( data.revealProgress >= 1.0 )
@@ -998,7 +1021,11 @@ void function Perk_CarePackageInsight_UpdateLookAtRevealRuiVisibility( var rui, 
 		}
 		prevWithinGroundRevealDist = withinGroundRevealDist
 
+
+
+
 		bool shouldHideFromNotPathfinders = !player.HasPassive( ePassives.PAS_PATHFINDER ) && file.revealEntitiesToData[carePackage].revealed
+
 		bool visible = !shouldHideFromNotPathfinders && ( file.revealEntitiesToData[carePackage].hasLos || file.revealEntitiesToData[carePackage].revealProgress > 0 || withinGroundRevealDist )
 		if( visible )
 		{

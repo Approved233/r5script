@@ -69,6 +69,7 @@ global function Perks_AllClassesCanScanBeacons
 
 
 
+
 global enum ePerkIndex
 {
 	
@@ -101,12 +102,16 @@ global enum ePerkIndex
 
 
 
+
+
+
 	COUNT	
 }
 
 global struct PerkInfo
 {
 	int perkId = ePerkIndex.INVALID
+
 
 
 
@@ -429,6 +434,50 @@ void function Perks_RegisterClassPerk( PerkInfo perkToRegister )
 
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

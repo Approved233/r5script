@@ -272,6 +272,8 @@ void function InitTimelineButtons( rtk_behavior self )
 void function SetSelectedMatch( rtk_behavior self , int matchIndex )
 {
 	SettingsAssetGUID cupId = RTKApexCupsOverview_GetCupID()
+	if ( !Cups_IsValidCupID( cupId ) )
+		return
 	CupEntry cupEntryData =  expect CupEntry ( Cups_GetSquadCupData( cupId ))
 
 	
@@ -320,7 +322,7 @@ array< RTKPlayerDataModel > function  RTKApexCupHistory_GetPlayerBreakdownData( 
 			{
 				if ( statPoints.statRef == statInfo.statRef )
 				{
-					newRow.leftText =  Localize( "#CUPS_MATCHHISTORY_PLAYER_STATS_CARD_ROW", Localize ( ShStats_GenerateStatLocStringFromStatRef( statInfo.statRef ) ), ( FormatAndLocalizeNumber( "1" , float( statInfo.statChange ) , true ) ) )
+					newRow.leftText =  Localize( "#CUPS_MATCHHISTORY_PLAYER_STATS_CARD_ROW", Localize ( Cups_GetCupStatLocFromStatRef( cupData.statPoints, statInfo.statRef ) ), ( FormatAndLocalizeNumber( "1" , float( statInfo.statChange ) , true ) ) )
 
 					if ( statInfo.pointsGained != 0 )
 						newRow.rightText =  Localize( "#PLUS_N", FormatAndLocalizeNumber( "1" , float( statInfo.pointsGained  ) , true ) )

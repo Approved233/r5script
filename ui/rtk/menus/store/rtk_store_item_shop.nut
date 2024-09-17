@@ -14,6 +14,7 @@ global function RTKStore_SetOverrideStartingSection
 global function RTKStore_SetStartingSection
 global function RTKStore_InspectOffer
 global function RTKStore_InspectOffer_SaveTelemetryData
+global function RTKStore_GetSectionFromOffers
 
 global function StoreTelemetry_SendOferPageViewEvent
 global function StoreTelemetry_SaveDeepLink
@@ -46,8 +47,8 @@ global enum eStoreGridItemType
 	EXOTIC			= 17,
 	INFO_SML		= 18,
 
-
-
+		UNIVERSAL_SET	= 19,
+		UNIVERSAL		= 20,
 
 }
 
@@ -72,9 +73,23 @@ const table<string, asset> STORE_SECTION_BG_MAP =
 	[ "#NEON_OMEN_STORE" ]						= $"ui_image/rui/menu/store/backgrounds/store_background_seer_op_sale.rpak",
 	[ "#BLOOD_MOON_SALE" ]						= $"ui_image/rui/menu/store/backgrounds/store_background_blood_moon.rpak",
 	
-	["#BATTLE_ACADEMY_PACK_SALE"]				= $"ui_image/rui/menu/store/backgrounds/store_background_battle_academy.rpak",
+	[ "#BATTLE_ACADEMY_PACK_SALE" ]				= $"ui_image/rui/menu/store/backgrounds/store_background_battle_academy.rpak",
 	
-	["#BATTLE_ACADEMY_SALE"]					= $"ui_image/rui/menu/store/backgrounds/store_background_battle_academy.rpak",
+	[ "#BATTLE_ACADEMY_SALE" ]					= $"ui_image/rui/menu/store/backgrounds/store_background_battle_academy.rpak",
+
+	
+	
+	[ "#SPACE_HUNT_EVENT" ]						= $"ui_image/rui/menu/store/backgrounds/store_background_space_hunt.rpak",
+	[ "#TECHNO_TERROR_EVENT" ]					= $"ui_image/rui/menu/store/backgrounds/store_background_techno_terror.rpak",
+	
+	[ "#DEATH_DYNASTY_STORE" ]					= $"ui_image/rui/menu/store/backgrounds/store_background_death_dynasty.rpak",
+	[ "#THREAT_LEVEL_STORE" ]					= $"ui_image/rui/menu/store/backgrounds/store_background_threat_level.rpak",
+	[ "#DOPPELGANGERS_STORE" ]					= $"ui_image/rui/menu/store/backgrounds/store_background_doppelgangers.rpak",
+	[ "#MONSTERS_WITHIN_STORE" ]				= $"ui_image/rui/menu/store/backgrounds/store_background_monsters_within.rpak",
+	
+	[ "#FIGHT_OR_FRIGHT_SALE" ]					= $"ui_image/rui/menu/store/backgrounds/store_background_fight_or_fright.rpak",
+	
+	[ "#FIGHT_OR_FRIGHT_STORE" ]				= $"ui_image/rui/menu/store/backgrounds/store_background_fight_or_fright.rpak",
 }
 
 const table<string, vector> STORE_SECTION_BG_TINT_MAP =
@@ -84,7 +99,8 @@ const table<string, vector> STORE_SECTION_BG_TINT_MAP =
 	[ "#STORE_V2_SECTION_PERSONALIZED" ]	= <511, 0, 0>,
 	[ "#STORE_V2_SECTION_MONTHLY" ] 		= <280, 268, 247>,
 	[ "#STORE_V2_SECTION_RECOLORS" ] 		= <204, 204, 204>,
-	[ "#STORE_V2_SECTION_BATTLEPASS" ] 		= <52, 396, 510>,
+	[ "#STORE_V2_SECTION_BATTLEPASS" ] 		= <234, 0, 432>,
+	[ "#STORE_V2_SECTION_STARTER" ] 		= <280, 268, 247>,
 }
 
 const array<string> STORE_SECTION_KEY_ART_LIST =
@@ -186,6 +202,7 @@ struct PrivateData
 {
 	int         menuGUID = -1
 	rtk_struct	storeItemShopModel
+	string 		panelName
 }
 
 struct InstanceData
@@ -251,7 +268,7 @@ void function RTKStoreItemShop_OnDestroy( rtk_behavior self )
 	}
 
 	
-	RTKDataModelType_DestroyStruct( RTK_MODELTYPE_MENUS, "storeItemShop" )
+	RTKDataModelType_DestroyStruct( RTK_MODELTYPE_MENUS, p.panelName )
 	file.allCurrentOffers.clear()
 
 	if ( GetActiveMenu() != null )
@@ -269,17 +286,19 @@ void function RTKStoreItemShop_OnInitialize( rtk_behavior self )
 	PrivateData p
 	self.Private( p )
 
-	if ( RTKDataModel_HasDataModel( "menus.storeItemShop" ) )
-	{
-		RTKDataModelType_DestroyStruct( RTK_MODELTYPE_MENUS, "storeItemShop" )
-	}
-
-	p.storeItemShopModel = RTKDataModel_CreateStruct( RTK_MODELTYPE_MENUS, "storeItemShop", "RTKStoreModel" )
-	self.GetPanel().SetBindingRootPath( "&menus.storeItemShop" )
-
 	
 	file.activePanel = self.GetPanel().GetSystemDisplayName()
 	InitPanelInstanceData( file.activePanel )
+
+	
+	p.panelName = file.activePanel
+	string modelPath = "&menus." + p.panelName
+	if ( RTKDataModel_HasDataModel( modelPath ) )
+	{
+		RTKDataModelType_DestroyStruct( RTK_MODELTYPE_MENUS, p.panelName )
+	}
+	p.storeItemShopModel = RTKDataModel_CreateStruct( RTK_MODELTYPE_MENUS, p.panelName, "RTKStoreModel" )
+	self.GetPanel().SetBindingRootPath( modelPath )
 
 	
 	if ( file.activePanel == STORE_SET_ITEM_SHOP )
@@ -446,7 +465,7 @@ void function RTKStoreItemShop_InitStoreData( rtk_behavior self )
 
 				default:
 					if ( sectionEnum in storeData )
-						section = GetSectionFromOffers( sectionInfo.offers )
+						section = RTKStore_GetSectionFromOffers( sectionInfo.offers )
 					break
 			}
 
@@ -715,9 +734,9 @@ void function RTKStoreItemShop_InitMythicData( rtk_behavior self )
 				break
 
 
-
-
-
+				case eMythicSections.UNIVERSALS:
+					section = GetUniversalSection()
+					break
 
 		}
 
@@ -762,9 +781,9 @@ void function RTKStoreItemShop_InitSetData( rtk_behavior self )
 	rtk_array storeSectionsArray = RTKStruct_GetArray( p.storeItemShopModel, SECTIONS )
 
 
+		RTKStoreSectionModel section = RTKStore_GetGridItemType() == eStoreGridItemType.ARTIFACT_SET ? GetArtifactSetSection() : GetUniversalSetSection()
 
 
-		RTKStoreSectionModel section = GetArtifactSetSection()
 
 	section.bgAsset = MYTHIC_BG_ASSET
 	storeModel.sections.append( section )
@@ -820,19 +839,19 @@ void function RTKStore_InspectOffer( int offerIndex, int slotIndex )
 		StoreMythicInspectMenu_AttemptOpenWithOffer( offer )
 	}
 
-
-
-
-
-
-
-
-
-
-		else if ( Artifacts_IsItemFlavorArtifact( item ) )
+		else if ( Artifacts_IsItemFlavorArtifact( item ) && !UniversalMelee_IsItemFlavorUniversalMelee( item ) )
 		{
 			ArtifactsInspectMenu_AttemptOpenWithOffer( offer )
 		}
+		else if ( UniversalMelee_IsItemFlavorUniversalMelee( item ) )
+		{
+			UniversalMeleeInspectMenu_AttemptOpenWithOffer( offer )
+		}
+
+
+
+
+
 
 	else
 	{
@@ -1238,9 +1257,9 @@ bool function PopulateItemModelFromSet( RTKStoreGridItemModel itemModel, int set
 			success = RTKStore_PopulateOfferArtifactSetButtonModel( offerButtonModel, setIndex )
 			break
 
-
-
-
+		case eStoreGridItemType.UNIVERSAL_SET:
+			success = RTKStore_PopulateOfferUniversalSetButtonModel( offerButtonModel, setIndex )
+			break
 
 	}
 
@@ -1262,7 +1281,7 @@ bool function PopulateItemModelFromSet( RTKStoreGridItemModel itemModel, int set
 	return true
 }
 
-RTKStoreSectionModel function GetSectionFromOffers( array<GRXScriptOffer> offers )
+RTKStoreSectionModel function RTKStore_GetSectionFromOffers( array<GRXScriptOffer> offers )
 {
 	RTKStoreSectionModel section
 	int sectionExpireTime = INT_MAX
@@ -1284,7 +1303,7 @@ RTKStoreSectionModel function GetSectionFromOffers( array<GRXScriptOffer> offers
 
 RTKStoreSectionModel function GetEventSection( array<GRXScriptOffer> offers )
 {
-	RTKStoreSectionModel section = GetSectionFromOffers( offers )
+	RTKStoreSectionModel section = RTKStore_GetSectionFromOffers( offers )
 
 	ItemFlavor ornull activeCollectionEvent = GetActiveCollectionEvent( GetUnixTimestamp() )
 	if ( activeCollectionEvent != null )
@@ -1313,7 +1332,7 @@ RTKStoreSectionModel function GetEventSection( array<GRXScriptOffer> offers )
 		section.endTime = CalEvent_GetFinishUnixTime( activeMilestoneEvent )
 
 		RTKStoreGridItemModel gridItem
-		gridItem.gridItemType = eStoreGridItemType.INFO_XLG
+		gridItem.gridItemType = eStoreGridItemType.INFO_MED
 		gridItem.mainImage     = MilestoneEvent_GetStoreEventSectionMainImage( activeMilestoneEvent )
 		gridItem.mainText      = MilestoneEvent_GetStoreEventSectionMainText( activeMilestoneEvent )
 		gridItem.subText       = MilestoneEvent_GetStoreEventSectionSubText( activeMilestoneEvent )
@@ -1329,7 +1348,7 @@ RTKStoreSectionModel function GetEventSection( array<GRXScriptOffer> offers )
 
 RTKStoreSectionModel function GetStoreEventSection( array<GRXScriptOffer> offers )
 {
-	RTKStoreSectionModel section = GetSectionFromOffers( offers )
+	RTKStoreSectionModel section = RTKStore_GetSectionFromOffers( offers )
 
 	
 
@@ -1397,7 +1416,7 @@ RTKStoreSectionModel function GetStoreEventSection( array<GRXScriptOffer> offers
 
 RTKStoreSectionModel function GetFlexSection( array<GRXScriptOffer> offers, string sectionName )
 {
-	RTKStoreSectionModel section = GetSectionFromOffers( offers )
+	RTKStoreSectionModel section = RTKStore_GetSectionFromOffers( offers )
 
 	bool hasKeyArt = STORE_SECTION_KEY_ART_LIST.contains( sectionName )
 
@@ -1419,7 +1438,7 @@ RTKStoreSectionModel function GetFlexSection( array<GRXScriptOffer> offers, stri
 
 RTKStoreSectionModel function GetRecolorSection( array<GRXScriptOffer> offers )
 {
-	RTKStoreSectionModel section = GetSectionFromOffers( offers )
+	RTKStoreSectionModel section = RTKStore_GetSectionFromOffers( offers )
 
 	for ( int index = offers.len() - 1; index >= 0; index-- )
 	{
@@ -1446,7 +1465,7 @@ RTKStoreSectionModel function GetRecolorSection( array<GRXScriptOffer> offers )
 
 RTKStoreSectionModel function GetBattlePassSection( array<GRXScriptOffer> offers )
 {
-	RTKStoreSectionModel section = GetSectionFromOffers( offers )
+	RTKStoreSectionModel section = RTKStore_GetSectionFromOffers( offers )
 
 	foreach ( item in section.itemsArray )
 		item.subText = ""
@@ -1506,7 +1525,7 @@ RTKStoreSectionModel function GetPersonalizedSection()
 	}
 
 	
-	section.endTime = 1713891600
+	section.endTime = 1727802000
 	section.sectionName = "#STORE_V2_SECTION_PERSONALIZED"
 
 	return section
@@ -1660,75 +1679,83 @@ RTKStoreSectionModel function GetArtifactSetSection()
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+RTKStoreSectionModel function GetUniversalSection()
+{
+	RTKStoreSectionModel section
+
+	array<GRXScriptOffer> bundles =  GRX_GetLocationOffers( "universal_bund_shop" )
+
+	foreach ( index, bundle in bundles )
+	{
+		if ( bundle.output.flavors.len() == 0 )
+			continue
+
+		RTKStoreGridItemModel itemSetModel
+		if ( PopulateItemModelFromSet( itemSetModel, index, eStoreGridItemType.UNIVERSAL_SET ) )
+		{
+			section.itemsArray.append( itemSetModel )
+		}
+	}
+
+	section.endTime = 0
+	section.sectionName = Localize( "#UNIVERSAL_MELEES" )
+	section.sectionCurrency = GetCurrencyBalanceString( GRX_CURRENCY_HEIRLOOM )
+	section.sectionCurrency += "    " +  GetCurrencyBalanceString( GRX_CURRENCY_EXOTIC )
+
+	return section
+}
+
+RTKStoreSectionModel function GetUniversalSetSection()
+{
+	RTKStoreSectionModel section
+
+	int selectedSetIndex = RTKStore_GetSelectedOfferSet()
+	array<GRXScriptOffer> offers =  GRX_GetLocationOffers( "universal_set_shop" )
+	offers.sort( SortOffersBySlot )
+
+	int numTotal = 0
+	int numOwned = 0
+
+	foreach ( int index, offer in offers )
+	{
+		
+		array<ItemFlavor> offerFlavors = offer.output.flavors
+		if ( offerFlavors.len() == 0 )
+			continue
+
+		
+		int numItems = section.itemsArray.len()
+		if ( numItems > 0 && section.itemsArray[ numItems - 1 ].gridItemType != eStoreGridItemType.DIVIDER )
+		{
+			RTKStoreGridItemModel dividerItem
+			dividerItem.gridItemType = eStoreGridItemType.DIVIDER_ARROW
+			dividerItem.mainImage = $"ui_image/rui/menu/common/vertical_trapezoid_separator_arrow.rpak"
+			section.itemsArray.append( dividerItem )
+		}
+
+		RTKStoreGridItemModel itemModel = GetItemModelFromOffer( offer, index, eStoreGridItemType.UNIVERSAL, GRXOffer_GetHeirloomPriceQuantity( offer ) > 0 )
+		section.itemsArray.append( itemModel )
+
+		numTotal++
+		if ( GRXOffer_IsFullyClaimed( offer ) )
+			numOwned++
+	}
+
+	string sectionName = ""
+	if ( offers.len() > 0 )
+	{
+		if ( offers[0].output.flavors.len() > 0 )
+		{
+			sectionName = Localize( ItemFlavor_GetLongName( UniversalMelee_GetBaseSkin( offers[0].output.flavors[0] ) ) )
+		}
+	}
+
+	section.endTime = 0
+	section.sectionName = sectionName
+	section.sectionCount = Localize( "#OWNED_COLLECTED", numOwned, numTotal )
+
+	return section
+}
 
 
 void function SetOnlySectionVisible( rtk_behavior self, int pageIndex )
@@ -1884,7 +1911,7 @@ int function GetGridItemSpanHorizontalFromType( int gridItemType )
 		case eStoreGridItemType.HEIRLOOM:
 		case eStoreGridItemType.ARTIFACT:
 
-
+			case eStoreGridItemType.UNIVERSAL:
 
 			return 1
 		case eStoreGridItemType.OFFER_2_1:
@@ -1896,7 +1923,7 @@ int function GetGridItemSpanHorizontalFromType( int gridItemType )
 		case eStoreGridItemType.ARTIFACT_SET:
 		case eStoreGridItemType.EXOTIC:
 
-
+			case eStoreGridItemType.UNIVERSAL_SET:
 
 			return 2
 	}
@@ -1928,8 +1955,8 @@ int function GetGridItemSpanVerticalFromType( int gridItemType )
 		case eStoreGridItemType.ARTIFACT:
 		case eStoreGridItemType.EXOTIC:
 
-
-
+			case eStoreGridItemType.UNIVERSAL_SET:
+			case eStoreGridItemType.UNIVERSAL:
 
 			return 2
 	}
@@ -1952,7 +1979,7 @@ float function GetGridItemWidthFromType( int gridItemType )
 			return 320
 		case eStoreGridItemType.ARTIFACT:
 
-
+			case eStoreGridItemType.UNIVERSAL:
 
 			return 398
 		case eStoreGridItemType.OFFER_2_1:
@@ -1964,7 +1991,7 @@ float function GetGridItemWidthFromType( int gridItemType )
 		case eStoreGridItemType.ARTIFACT_SET:
 		case eStoreGridItemType.EXOTIC:
 
-
+			case eStoreGridItemType.UNIVERSAL_SET:
 
 			return 664
 		case eStoreGridItemType.INFO_LRG:
@@ -2003,8 +2030,8 @@ float function GetGridItemHeightFromType( int gridItemType )
 		case eStoreGridItemType.ARTIFACT:
 		case eStoreGridItemType.EXOTIC:
 
-
-
+			case eStoreGridItemType.UNIVERSAL_SET:
+			case eStoreGridItemType.UNIVERSAL:
 
 			return 600
 	}
@@ -2023,7 +2050,7 @@ bool function IsGridItemCustomSize( int gridItemType )
 		case eStoreGridItemType.OFFER_3_2:
 		case eStoreGridItemType.ARTIFACT:
 
-
+			case eStoreGridItemType.UNIVERSAL:
 
 			return true
 	}

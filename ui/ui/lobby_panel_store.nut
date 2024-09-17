@@ -694,7 +694,7 @@ void function OnWalletModalClosed()
 
 void function ToggleApexCoinsWalletModal( var button )
 {
-	if ( file.isWalletOpened )
+	if ( file.isWalletOpened && UI_RTKTabbedModal_GetCurrentTabType() == eTabbedModalType.WALLET_APEX_COINS)
 	{
 		CloseActiveMenu()
 	} else {
@@ -704,7 +704,7 @@ void function ToggleApexCoinsWalletModal( var button )
 
 void function ToggleExoticShardsWalletModal( var button )
 {
-	if ( file.isWalletOpened )
+	if ( file.isWalletOpened && UI_RTKTabbedModal_GetCurrentTabType() == eTabbedModalType.WALLET_EXOTIC_SHARDS)
 	{
 		CloseActiveMenu()
 	} else {

@@ -376,14 +376,12 @@ void function UIToClient_SurvivalGroundListOpened( var menu )
 			category.itemHeight = 100
 			category.itemPadding = 4
 		}
-
 		else if ( enumVal == eLootSortCategories.HEALING )
 		{
 			category.itemWidth   = 100
 			category.itemHeight  = 100
 			category.itemPadding = 4
 		}
-
 		else
 		{
 			category.itemWidth = 406 + 110
@@ -413,7 +411,6 @@ void function UIToClient_SurvivalGroundListOpened( var menu )
 		DeathBoxListPanel_AddItem( fileLevel.listPanel, item )
 	}
 
-
 	array<string> healingTypes = [ "health_pickup_health_small", "health_pickup_combo_small", "health_pickup_health_large", "health_pickup_combo_large", "health_pickup_combo_full" ]
 	
 	foreach ( string healingItemType in healingTypes )
@@ -429,7 +426,6 @@ void function UIToClient_SurvivalGroundListOpened( var menu )
 		item.key = entryData.key
 		DeathBoxListPanel_AddItem( fileLevel.listPanel, item )
 	}
-
 
 	thread Delayed_SetCursorToObject( fileLevel.backer )
 
@@ -721,11 +717,30 @@ void function UpdateSurvivalGroundList( SurvivalGroundListUpdateParams params )
 
 		
 
-		DeathBoxEntryData entryData
-
 		LootData lootFlavor = SURVIVAL_Loot_GetLootDataByIndex( lootEnt.GetSurvivalInt() )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 		bool isArmor        = (lootFlavor.lootType == eLootType.ARMOR)
 		bool hasSpecialAmmo = (lootFlavor.lootType == eLootType.MAINWEAPON && !GetWeaponInfoFileKeyField_GlobalBool( lootFlavor.baseWeapon, "uses_ammo_pool" ))
+
+		DeathBoxEntryData entryData
 
 		string itemKey = (hasSpecialAmmo ? format( "specialammo%d", lootEnt.GetEncodedEHandle() ) : lootFlavor.ref)
 		if ( itemKey in fileLevel.deathBoxEntryDataByKey )
@@ -1017,12 +1032,10 @@ void function UpdateSurvivalGroundList( SurvivalGroundListUpdateParams params )
 
 
 		bool shouldSortTop = false
-
 		if ( entryData.lootFlav.lootType == eLootType.ARMOR )
 		{
 			shouldSortTop = true
 		}
-
 
 		DeathBoxListPanelItem ornull item = DeathBoxListPanel_GetItemByKey( fileLevel.listPanel, entryData.key )
 		if ( shouldBeVisible )
@@ -1242,10 +1255,9 @@ void function UpdateSurvivalGroundList( SurvivalGroundListUpdateParams params )
 			asset ammoIcon = $""
 			if ( lootFlavor.lootType == eLootType.MAINWEAPON )
 			{
-				ItemFlavor ornull weaponFlav = GetWeaponItemFlavorByClass( lootFlavor.baseWeapon )
 
+					icon = GetWeaponLootIcon_Square( lootFlavor )
 
-					icon = GetWeaponLootIcon_WeaponLootHint( player, lootFlavor )
 
 
 
@@ -1339,6 +1351,16 @@ bool function LastItemWasBetterUpgrade( LootData data, entity player, entity bes
 
 	LootData lastLootItem = SURVIVAL_Loot_GetLootDataByRef( fileLevel.predictedActions.top().lootFlavRef )
 
+	if ( data.lootType == eLootType.ARMOR && IsValid( lastLootItem ) && lastLootItem.lootType == eLootType.ARMOR ) {
+		
+ 		bool isBasicArmor = !EvolvingArmor_IsEquipmentEvolvingArmor( data.ref )
+
+			isBasicArmor = isBasicArmor && !UpgradeCore_IsEquipmentArmorCore( data.ref )
+
+		
+		return !isBasicArmor
+	}
+
 	return IsValid( lastLootItem ) && lastLootItem.attachmentStyle == data.attachmentStyle &&
 			SURVIVAL_IsLootAnUpgrade( player, bestLootEnt, lastLootItem, eLootContext.GROUND ) &&
 			lastLootItem.tier > data.tier
@@ -1377,9 +1399,7 @@ void function UpdateItem( DeathBoxListPanelItem item )
 	bool isMainWeapon   = (lootFlavor.lootType == eLootType.MAINWEAPON)
 	bool isGadget		= (lootFlavor.lootType == eLootType.GADGET)
 	bool isArmor   		= (lootFlavor.lootType == eLootType.ARMOR)
-
 	bool isHealth  		= ( (lootFlavor.lootType == eLootType.HEALTH) && lootFlavor.ref != "health_pickup_ultimate" )
-
 
 
 
@@ -1469,7 +1489,6 @@ void function UpdateItem( DeathBoxListPanelItem item )
 			title = (entryData.totalCount == 0 ? "--" : format( "%d", entryData.totalCount ))
 		}
 	}
-
 	if ( isHealth )
 	{
 
@@ -1483,7 +1502,6 @@ void function UpdateItem( DeathBoxListPanelItem item )
 			title = (entryData.totalCount == 0 ? "--" : format( "%d", entryData.totalCount ))
 		}
 	}
-
 
 	else if ( isVendingMachine && isMainWeapon )
 	{
@@ -1569,9 +1587,7 @@ void function UpdateItem( DeathBoxListPanelItem item )
 	RuiSetBool( rui, "isDimmed", (fileLevel.currentQuickSwapEntry != null && fileLevel.currentQuickSwapEntry != entryData) )
 	RuiSetBool( rui, "isBlocked", entryData.isBlocked )
 	RuiSetBool( rui, "isClickable", entryData.isClickable )
-
 	RuiSetBool( rui, "isHealthItem", isHealth )
-
 
 
 

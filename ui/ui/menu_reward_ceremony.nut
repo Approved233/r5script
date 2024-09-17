@@ -121,7 +121,7 @@ void function DEV_TestRewardCeremonyDialog( array<string> grxRefs, string header
 		ItemFlavor flav = DEV_GetItemFlavorByGRXRef( grxRef )
 		if ( ItemFlavor_GetType( flav ) == eItemType.character )
 		{
-			ItemFlavor overrideSkin = GetDefaultItemFlavorForLoadoutSlot( EHI_null, Loadout_CharacterSkin( flav ) )
+			ItemFlavor overrideSkin = GetDefaultItemFlavorForLoadoutSlot( Loadout_CharacterSkin( flav ) )
 			info.flav = overrideSkin
 		}
 		else
@@ -288,7 +288,11 @@ void function PassAwardsDialog_OnOpen()
 
 	if ( file.isForBattlePass && !file.isGift )
 	{
-		ItemFlavor ornull bpFlav = GetPlayerLastActiveBattlePass( LocalClientEHI() )
+
+			ItemFlavor ornull bpFlav = GetActiveBattlePassV2()
+
+
+
 		if ( bpFlav != null )
 		{
 			Remote_ServerCallFunction( "ClientCallback_UpdateBattlePassLastInfo", ItemFlavor_GetGUID( expect ItemFlavor(bpFlav) ) )
@@ -364,11 +368,6 @@ void function ContinueButton_OnActivate( var button )
 	}
 
 	CloseActiveMenu()
-
-	
-	DialogFlow()
-	if ( !IsPlayPanelCurrentlyTopLevel() )
-		return
 
 	if ( storeInspect_JumpingToBPFromBPStorePurchase )
 	{
@@ -493,6 +492,7 @@ void function PassAwardsDialog_UpdateAwards()
 		BattlePassReward bpReward = file.displayAwards[index]
 		file.buttonToItem[awardButton] <- bpReward
 
+		
 		HudElem_SetRuiArg( awardButton, "isOwned", true )
 		HudElem_SetRuiArg( awardButton, "isPremium", bpReward.isPremium )
 
@@ -511,7 +511,7 @@ void function PassAwardsDialog_UpdateAwards()
 		else
 			HudElem_SetRuiArg( awardButton, "isLootBox", false )
 
-		BattlePass_PopulateRewardButton( bpReward, awardButton, true, false )
+		BattlePass_PopulateRewardButton( bpReward, awardButton, true, false, null, true )
 
 		Hud_AddEventHandler( awardButton, UIE_GET_FOCUS, PassAward_OnFocusAward )
 
@@ -535,7 +535,7 @@ void function PresentItem( ItemFlavor item, int level )
 {
 	if ( ItemFlavor_GetType( item ) == eItemType.character )
 	{
-		ItemFlavor overrideSkin = GetDefaultItemFlavorForLoadoutSlot( EHI_null, Loadout_CharacterSkin( item ) )
+		ItemFlavor overrideSkin = GetDefaultItemFlavorForLoadoutSlot( Loadout_CharacterSkin( item ) )
 		item = overrideSkin
 	}
 

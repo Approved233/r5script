@@ -31,7 +31,7 @@ struct PrivateData
 
 }
 
-void function RTKItemDetailsControllerPanel_SetItem( rtk_behavior self, int itemGUID, string modelRoot = "menus", string modelName = "itemDetails", bool elitePassPrompt = true )
+void function RTKItemDetailsControllerPanel_SetItem( rtk_behavior self, BattlePassReward bpReward, string modelRoot = "menus", string modelName = "itemDetails", bool elitePassPrompt = true )
 {
 	rtk_struct itemInspectStruct = RTKDataModelType_GetOrCreateStruct( modelRoot, modelName, "RTKItemDetailsControllerPanel_ModelStruct" )
 	rtk_struct itemDetails = RTKStruct_GetOrCreateScriptStruct( itemInspectStruct, "item", "RTKItemDetailsModelStruct" )
@@ -41,7 +41,7 @@ void function RTKItemDetailsControllerPanel_SetItem( rtk_behavior self, int item
 		self.GetPanel().SetBindingRootPath( RTKDataModelType_GetDataPath( modelRoot, modelName, true ) )
 	}
 
-	ItemFlavor item = GetItemFlavorByGUID( itemGUID )
+	ItemFlavor item = bpReward.flav
 
 	int itemType = ItemFlavor_GetType( item )
 	int grxMode = ItemFlavor_GetGRXMode( item )
@@ -50,7 +50,7 @@ void function RTKItemDetailsControllerPanel_SetItem( rtk_behavior self, int item
 	itemInfo.isOwned = (itemType == eItemType.character) ? ( Character_IsCharacterOwnedByPlayer( item ) || Character_IsCharacterUnlockedForCalevent( item ))
 		: ( grxMode != GRX_ITEMFLAVORMODE_REGULAR  ) ? false
 		: GRX_IsItemOwnedByPlayer( item )
-	int quality = ItemFlavor_GetQuality( item )
+	int quality = GRX_GetRarityOverrideFromQuantity( item, ItemFlavor_GetQuality( item ), bpReward.quantity ) 
 	vector qualityColor = GetKeyColor( COLORID_MENU_TEXT_LOOT_TIER0, maxint(0, quality) + 1 ) / 255.0
 	itemInfo.quality = quality
 	itemInfo.qualityColor = qualityColor
@@ -69,13 +69,13 @@ void function RTKItemDetailsControllerPanel_SetItem( rtk_behavior self, int item
 			if ( activePass != null )
 			{
 				expect ItemFlavor( activePass )
-				bool hasElitePass = DoesPlayerOwnEliteBattlePass( GetLocalClientPlayer(), activePass )
+				bool hasUltimatePlusPass = DoesPlayerOwnBattlePassTier( GetLocalClientPlayer(), activePass, eBattlePassV2OwnershipTier.ULTIMATE_PLUS )
 				if ( ItemFlavor_GetType( associatedItem ) == eItemType.character
-					&& !hasElitePass
+					&& !hasUltimatePlusPass
 					&& ( !Character_IsCharacterOwnedByPlayer( associatedItem ) && !Character_IsCharacterUnlockedForCalevent( associatedItem ))
 				)
 				{
-					itemInfo.extraItemDescription = "#BATTLEPASS_PLAYABLE_WITH_ELITE"
+					itemInfo.extraItemDescription = "#BATTLEPASS_PLAYABLE_WITH_ULTIMATE_PLUS"
 				}
 			}
 		}

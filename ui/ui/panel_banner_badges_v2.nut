@@ -118,7 +118,7 @@ void function CardBadgesPanel_Update( var panel )
 			entries.append( entry )
 		}
 
-		file.cardBadgeList = clone GetValidItemFlavorsForLoadoutSlot( LocalClientEHI(), entry )
+		file.cardBadgeList = clone GetValidItemFlavorsForLoadoutSlot( entry )
 		FilterCategorizeAndSortBadges( character, file.cardBadgeList )
 
 		Hud_InitGridButtons( file.listPanel, file.cardBadgeList.len() )

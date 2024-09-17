@@ -71,8 +71,8 @@ const bool ARROWS_CAN_BE_PICKED_UP_DEFAULT = false
 const string SHATTER_ARROWS_DMG_MODS_BASE_STR = "arrows_shatter_dmg_lv"
 
 
-const string VALENTINES_COLOR = "255 119 188 255"
-const vector VALENTINES_COLOR_VEC = <255, 119, 188>
+
+
 
 
 const string FX_BOW_LIGHT_PREFIX = "fx_bow_light_"
@@ -264,6 +264,8 @@ void function OnWeaponActivate_weapon_bow( entity weapon )
 
 
 
+
+
 }
 
 
@@ -281,6 +283,8 @@ void function OnWeaponDeactivate_weapon_bow( entity weapon )
 
 
 	MarksmansTempo_OnDeactivate( weapon, file.bowTempoSettings )
+
+
 
 
 
@@ -746,11 +750,11 @@ bool function StuckArrow_ExtraCanUseFunction( entity player, entity arrow, int u
 void function WeaponBow_UpdateArrowColor( entity weapon, int shatterRoundsType )
 {
 
-		if ( weapon.HasMod( WEAPON_LOCKEDSET_MOD_CUPID ) )
-		{
-			weapon.kv.rendercolor = VALENTINES_COLOR
-			return
-		}
+
+
+
+
+
 
 
 	if ( shatterRoundsType == eShatterRoundsTypes.STANDARD )
@@ -894,11 +898,11 @@ void function PlayChargeFX( entity player, entity weapon )
 
 
 
-		if ( weapon.HasMod( WEAPON_LOCKEDSET_MOD_CUPID ) )
-		{
-			EffectSetControlPointVector( handle, 2, VALENTINES_COLOR_VEC )
-		}
-		else
+
+
+
+
+
 
 		EffectSetControlPointVector( handle, 2, file.arrowTypeColors[ weapon.GetScriptInt0() ] )
 	}

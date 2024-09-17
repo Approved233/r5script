@@ -182,6 +182,7 @@ global struct CareerStats
 	StatTemplate& character_games_played_any_mode
 	StatTemplate& dooms_any_mode
 	StatTemplate& wins_any_mode
+	StatTemplate& weaponcategory_kills_any_mode
 
 	
 	StatTemplate& ring_closings_survived
@@ -483,6 +484,8 @@ global struct CareerStats
 
 	
 	StatTemplate& season_battlepass_level
+	
+	StatTemplate& season_battlepass_level_split_2
 	StatTemplate& season_character_damage_done
 	StatTemplate& season_character_kills
 	StatTemplate& season_character_placements_win
@@ -785,51 +788,16 @@ global struct CareerStats
 
 	
 
-		StatTemplate& s21alter_complete_all_challenges
-
-		StatTemplate& s21exp_play_game_x_legends_any_mode
-
-		
-		StatTemplate& s21ce01_buffet_points
-
-		
-		StatTemplate& s21me02_event_currency_total
-
-
-	
-	
-
-		StatTemplate& gamemode_solo_games_played
-		StatTemplate& gamemode_solo_kills
-		StatTemplate& gamemode_solo_damage_done
-		StatTemplate& gamemode_solo_placement_top_10_with_10_legends
-		StatTemplate& gamemode_solo_games_wins
-		StatTemplate& gamemode_solo_complete_all_challenges
-
-
-	
-
-		StatTemplate& gamemode_quad_games_played
-		StatTemplate& gamemode_quad_damage_done
-		StatTemplate& gamemode_quad_kills
-		StatTemplate& gamemode_quad_placement_top_5
-		StatTemplate& gamemode_quad_premade_win
-		StatTemplate& gamemode_quad_placement_top_5_with_10_legends
-		StatTemplate& gamemode_quad_knockdowns
-		StatTemplate& gamemode_quad_damage_done_max_in_one_game
-		StatTemplate& gamemode_quad_complete_all_challenges
-
-
-
-		StatTemplate& gamemode_bigtdm_games_played
-
-
-	
-
 		StatTemplate& s22_complete_all_badge_challenges
 
 		
 		StatTemplate& s22ce01_buffet_points
+
+		
+		StatTemplate& s22me01_event_currency_total
+
+		
+		StatTemplate& s22ce02_buffet_points
 
 
 			StatTemplate& gamemode_turbo_knockdowns
@@ -837,6 +805,14 @@ global struct CareerStats
 
 
 		StatTemplate& s22rc01_games_played_trios_edistrict
+
+
+	
+
+		StatTemplate& gamemode_halloween_22_1_candies_picked_up
+		StatTemplate& gamemode_halloween_22_1_damage_done
+		StatTemplate& gamemode_halloween_22_1_placement_top_5
+		StatTemplate& gamemode_halloween_22_1_complete_all_challenges
 
 
 
@@ -950,29 +926,6 @@ global struct CareerStats
 	StatTemplate& gamemode_control_highest_exp_as_expleader
 	StatTemplate& gamemode_control_time_on_objective
 
-	
-
-		StatTemplate& slide_count
-		StatTemplate& armor_upgaraded_count
-		StatTemplate& doors_broken_by_melee
-		StatTemplate& phoenix_kits_used
-		StatTemplate& beginner_distance_kill
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -1011,9 +964,15 @@ global struct CareerStats
 	StatTemplate& eventshop_currency_total
 	StatTemplate& eventshop_current_guid
 
+	
+	StatTemplate& kepler_play_game_x_legends_any_mode
+
 	StatTemplate& lastGameParticipationScore
 
 
+		
+		StatTemplate& gamemode_objectivebr_zones_captured
+		StatTemplate& gamemode_objectivebr_capture_score
 
 
 
@@ -1023,6 +982,11 @@ global struct CareerStats
 
 
 
+		
+		StatTemplate& gamemode_objectivebr_evo_score
+
+		
+		StatTemplate& gamemode_objectivebr_aggregate_score
 
 
 } 
@@ -1057,7 +1021,7 @@ global const array<string> STATS_ALTERNATE_MODE_REFS = [
 
 
 
-
+		"objective_br",
 
 ]
 
@@ -1086,7 +1050,7 @@ global const array<string> STATS_MATCH_TYPES = [
 
 
 
-
+		"objective_br",
 
 
 	
@@ -1125,7 +1089,7 @@ global enum eChallengeGameMode
 
 
 
-
+	OBJECTIVE_BR,
 
 }
 
@@ -1156,7 +1120,7 @@ global const table<int, string> GAME_MODE_TO_STAT_REF_MAP =
 
 
 
-
+		[eChallengeGameMode.OBJECTIVE_BR] = "objective_br",
 
 }
 

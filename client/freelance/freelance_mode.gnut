@@ -202,10 +202,8 @@ void function FreelanceMode_SharedInit()
 	if ( GetCurrentPlaylistVarBool( "freelance_mode_s05ending", false ) )
 		QuestS05EndInit()
 
-
 	if ( GetCurrentPlaylistVarBool( "freelance_mode_dropdown", false ) )
 		DropDownModeInit()
-
 }
 
 const string NV_MODE_PHASE = "PVEMODEPHASE"

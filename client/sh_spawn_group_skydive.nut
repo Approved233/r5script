@@ -18,6 +18,8 @@ global function SpawnGroupSkydive_SetCallback_GetSquadSpawnDelay
 
 
 
+
+
 global function SpawnSquadSkyDive_GetRemainingRespawnsForAllPlayersInSquad
 global function SpawnGroupSkydive_ShouldTeamHavePoolOfRespawns
 
@@ -32,6 +34,8 @@ const int RESPAWN_ALL_DEAD_PLAYERS_TOGETHER_SPAWNGROUP_IDX = TEAM_INVALID
 struct
 {
 	float functionref( int ) GetSquadSpawnDelay_Callback
+
+
 
 
 
@@ -836,10 +840,6 @@ int function SpawnSquadSkyDive_GetRemainingRespawnsForAllPlayersInSquad( int tea
 
 
 
-
-
-
-
 float function SpawnGroupSkydive_GetSquadSpawnDelay( int team )
 {
 	float spawnDelay = GetCurrentPlaylistVarFloat( "respawn_cooldown", 5.0 )
@@ -851,11 +851,46 @@ float function SpawnGroupSkydive_GetSquadSpawnDelay( int team )
 }
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void function SpawnGroupSkydive_SetCallback_GetSquadSpawnDelay( float functionref( int ) func )
 {
 	Assert( file.GetSquadSpawnDelay_Callback == null )
 	file.GetSquadSpawnDelay_Callback = func
 }
+
+
+
+
+
+
+
+
 
 
 

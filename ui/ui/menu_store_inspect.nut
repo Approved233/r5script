@@ -38,6 +38,7 @@ global struct StoreInspectUIData
 	var purchaseButton
 	var giftablePurchaseButton
 	var giftButton
+	var browseLootPoolButton
 }
 
 global struct StoreInspectOfferData
@@ -109,11 +110,18 @@ void function InitStoreInspectMenu( var newMenuArg )
 
 	s_inspectUIData.giftablePurchaseButton = Hud_GetChild( file.inspectPanel, "GiftablePurchaseOfferButton" )
 	s_inspectUIData.giftButton             = Hud_GetChild( file.inspectPanel, "GiftOfferButton" )
+
+
+
+
+
 	file.giftingMenu = GetMenu( "GiftingFriendDialog" )
 
 	AddButtonEventHandler( s_inspectUIData.purchaseButton, UIE_CLICK, PurchaseOfferButton_OnClick )
 	AddButtonEventHandler( s_inspectUIData.giftablePurchaseButton, UIE_CLICK, PurchaseOfferButton_OnClick )
 	AddButtonEventHandler( s_inspectUIData.giftButton, UIE_CLICK, GiftButton_OnClick )
+
+
 
 
 
@@ -210,6 +218,7 @@ void function StoreInspectMenu_UpdatePrices( GRXScriptOffer storeOffer, StoreIns
 	bool hasMultipleItems = storeOffer.output.flavors.len() > 1
 	bool isHeirloomPack = GRXOffer_IsHeirloomPack( storeOffer )
 	bool isBundle = isMarketplaceBundle || (hasMultipleItems && !isHeirloomPack)
+	bool hasValidPrice = GRXOffer_HasValidPrice( storeOffer )
 
 	bool isBundlePriceMissing = false
 	string ineligibleReason = ""
@@ -217,20 +226,29 @@ void function StoreInspectMenu_UpdatePrices( GRXScriptOffer storeOffer, StoreIns
 	Assert( storeOffer.purchaseCount >= 0, "Store offer " + storeOffer.offerAlias +
 	" is missing a purchase count." )
 
-	offerData.displayedPrice = storeOffer.prices[0].quantities[0]
-
-	
-	if ( storeOffer.prices.len() == 2 )
+	if ( hasValidPrice )
 	{
-		array<ItemFlavorBag> orderedPricesList = GRXOffer_GetPricesInPriorityOrder( storeOffer )
-		string firstPrice = GRX_GetFormattedPrice( orderedPricesList[0], 1 )
-		string secondPrice = GRX_GetFormattedPrice( orderedPricesList[1], 1 )
-		offerData.displayedPriceStr = Localize( "#STORE_PRICE_N_N", firstPrice, secondPrice )
-		offerData.isDualCurrency = true
+		offerData.displayedPrice = storeOffer.prices[0].quantities[0]
+
+		
+		if ( storeOffer.prices.len() == 2 )
+		{
+			array<ItemFlavorBag> orderedPricesList = GRXOffer_GetPricesInPriorityOrder( storeOffer )
+			string firstPrice = GRX_GetFormattedPrice( orderedPricesList[0], 1 )
+			string secondPrice = GRX_GetFormattedPrice( orderedPricesList[1], 1 )
+			offerData.displayedPriceStr = Localize( "#STORE_PRICE_N_N", firstPrice, secondPrice )
+			offerData.isDualCurrency = true
+		}
+		else
+		{
+			offerData.displayedPriceStr = GRX_GetFormattedPrice( storeOffer.prices[0], 1 )
+			offerData.isDualCurrency = false
+		}
 	}
 	else
 	{
-		offerData.displayedPriceStr = GRX_GetFormattedPrice( storeOffer.prices[0], 1 )
+		offerData.displayedPrice = 0
+		offerData.displayedPriceStr = "#UNAVAILABLE"
 		offerData.isDualCurrency = false
 	}
 
@@ -282,6 +300,7 @@ void function StoreInspectMenu_UpdatePrices( GRXScriptOffer storeOffer, StoreIns
 	                          && !isOverActiveBPLevelLimit
 	                          && isWithinThematicPackLimit
 							  && GRXOffer_IsEligibleForPurchase( storeOffer )
+							  && hasValidPrice
 
 	bool displayAsBundle = isBundle && !GRXOffer_ContainsBattlePass( storeOffer )
 	bool isEventShopOffer = IsOfferPartOfEventShop( storeOffer )
@@ -566,16 +585,26 @@ void function StoreInspectMenu_UpdatePurchaseButton( GRXScriptOffer storeOffer, 
 	isExtraInfoVisible = !isOfferFullyClaimed && !isMythic && !isEventShopOffer && ( ( offerData.isPurchasable && offerData.discountPct > 0.0 ) || isGiftable || !offerData.canAfford ) && !isPurchaseLimitReached
 
 	bool hasPurchaseLimit = offerData.purchaseLimit > 0
+	bool hasValidPrice = GRXOffer_HasValidPrice( storeOffer )
 	HudElem_SetRuiArg( uiData.discountInfo, "hasPurchaseLimit", hasPurchaseLimit )
 
 	if ( !isExtraInfoVisible && !isEventShopOffer )
 	{
-		isExtraInfoVisible = hasPurchaseLimit && !isPurchaseLimitReached
+		isExtraInfoVisible = hasPurchaseLimit && !isPurchaseLimitReached && hasValidPrice
 	}
 
 	Hud_SetVisible( uiData.discountInfo, isExtraInfoVisible )
 	HudElem_SetRuiArg( uiData.purchaseButton, "buttonText", offerData.purchaseText )
 	HudElem_SetRuiArg( uiData.purchaseButton, "buttonDescText", offerData.purchaseDescText )
+
+
+
+
+
+
+
+
+
 
 	bool showPurchaseButton = true
 	bool showDisclaimers = false
@@ -1104,6 +1133,20 @@ void function GiftButton_OnClick( var button )
 	OpenGiftingDialog( offer )
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 bool function ShouldShowGiftDisclaimer()
 {
 	return ( !Escrow_IsPlayerTrusted() && PCPlat_IsSteam() )
@@ -1340,6 +1383,14 @@ bool function CheckIsGiftable()
 
 	return false
 }
+
+
+
+
+
+
+
+
 
 bool function StoreInspectMenu_IsItemTypeEquippable( int itemType )
 {

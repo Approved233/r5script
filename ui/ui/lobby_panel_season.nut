@@ -156,7 +156,7 @@ void function OnGRXSeasonUpdate()
 
 			if ( Hud_GetHudName( tabDef.panel ) == "RTKNewplayerpassPanel" )
 			{
-				ItemFlavor ornull activePass = NPP_GetPlayerActiveNPP( GetLocalClientPlayer() )
+				ItemFlavor ornull activePass = NPP_GetAssignedNPP( GetLocalClientPlayer() )
 				showTab = activePass != null
 				enableTab = showTab
 			}
@@ -171,24 +171,9 @@ void function OnGRXSeasonUpdate()
 
 		file.lastMenuNavDirectionTopLevel = GetLastMenuNavDirection()
 
-		
-		
-		bool isSeasonPanelReverseNav = GetCurrentPlaylistVarBool( "season_panel_reverse_nav", true )
-		bool isSeasonPanelFirstOpenBehavior = GetCurrentPlaylistVarBool( "season_panel_first_open_behavior", true )
-
-		if ( ( isSeasonPanelReverseNav || ( file.isFirstSessionOpen && isSeasonPanelFirstOpenBehavior ) ) && !storeInspect_JumpingToBPFromBPStorePurchase )
+		if ( storeInspect_JumpingToBPFromBPStorePurchase )
 		{
-			if ( GetLastMenuNavDirection() == MENU_NAV_FORWARD )
-				activeIndex = 0
-
-			while( (!IsTabIndexEnabled( tabData, activeIndex ) || !IsTabIndexVisible( tabData, activeIndex ) || activeIndex == INVALID_TAB_INDEX) && activeIndex < numTabs )
-			{
-				activeIndex++
-			}
-		}
-		else if ( storeInspect_JumpingToBPFromBPStorePurchase )
-		{
-			int tabIndex = Tab_GetTabIndexByBodyName( tabData, "PassPanel" )
+			int tabIndex = Tab_GetTabIndexByBodyName( tabData, "RTKBattlepassPanel" )
 
 			if ( tabIndex == -1 )
 			{
@@ -202,7 +187,7 @@ void function OnGRXSeasonUpdate()
 				activeIndex = tabIndex
 			}
 		}
-		else
+		else if ( file.isFirstSessionOpen || !IsTabIndexEnabled( tabData, activeIndex ) )
 		{
 			if ( GetLastMenuNavDirection() == MENU_NAV_FORWARD )
 				activeIndex = numTabs - 1
@@ -210,9 +195,11 @@ void function OnGRXSeasonUpdate()
 			while( activeIndex < numTabs && (!IsTabIndexEnabled( tabData, activeIndex ) || !IsTabIndexVisible( tabData, activeIndex ) || activeIndex == INVALID_TAB_INDEX) && activeIndex >= 0 )
 				activeIndex--
 		}
+
 		file.isFirstSessionOpen = false
 
 		bool wasPanelActive = IsTabActive( tabData )
+
 		if ( !wasPanelActive && file.isOpened  )
 			ActivateTab( tabData, activeIndex )
 

@@ -174,7 +174,7 @@ global enum eGameModeVariants
 	SURVIVAL_BATTLE_RUSH,
 
 
-	SURVIVAL_VALENTINES_S15,
+
 
 
 
@@ -199,6 +199,9 @@ global enum eGameModeVariants
 	SURVIVAL_HALLOWEEN_18_1,
 
 
+	SURVIVAL_HALLOWEEN_22_1,
+
+
 
 
 
@@ -211,7 +214,7 @@ global enum eGameModeVariants
 	SURVIVAL_QUADS,
 
 
-
+	SURVIVAL_OBJECTIVE_BR,
 
 
 
@@ -648,6 +651,7 @@ void function GameModes_Init()
 		GameModeVariant_Create( eGameModeVariants.SURVIVAL_BATTLE_RUSH, eGameModes.SURVIVAL )
 		GameModeVariant_SetPlaylistFlag( eGameModeVariants.SURVIVAL_BATTLE_RUSH, "is_gamemode_battle_rush" )
 		GameModeVariant_SetDevName( eGameModeVariants.SURVIVAL_BATTLE_RUSH, GAMEMODE_QUICK_MATCH )
+		GameModeVariant_SetName( eGameModeVariants.SURVIVAL_BATTLE_RUSH, "#PL_BATTLE_RUSH" )
 
 
 
@@ -659,9 +663,6 @@ void function GameModes_Init()
 
 
 
-		GameModeVariant_Create( eGameModeVariants.SURVIVAL_VALENTINES_S15, eGameModes.SURVIVAL )
-		GameModeVariant_SetPlaylistFlag( eGameModeVariants.SURVIVAL_VALENTINES_S15, "is_valentines_s15" )
-		GameModeVariant_SetDevName( eGameModeVariants.SURVIVAL_VALENTINES_S15, GAMEMODE_DATE_NIGHT )
 
 
 
@@ -670,8 +671,11 @@ void function GameModes_Init()
 
 
 
-			AddCallback_UI_FeatureTutorialDialog_PopulateTabsForMode( Date_Night_PopulateAboutText, GAMEMODE_DATE_NIGHT )
-			AddCallback_UI_FeatureTutorialDialog_SetTitle( FeatureTutorial_GetGameModeName, GAMEMODE_DATE_NIGHT )
+
+
+
+
+
 
 
 
@@ -724,8 +728,8 @@ void function GameModes_Init()
 
 
 
-		AddCallback_UI_FeatureTutorialDialog_PopulateTabsForMode( BotPlayground_PopulateAboutText, BOTPLAYGROUND )
-		AddCallback_UI_FeatureTutorialDialog_SetTitle( FeatureTutorial_GetGameModeName, BOTPLAYGROUND )
+		AddCallback_UI_FeatureTutorialDialog_PopulateTabsForMode( BotPlayground_PopulateAboutText, BOT_PLAYGROUND_PLAYLIST_NAME )
+		AddCallback_UI_FeatureTutorialDialog_SetTitle( FeatureTutorial_GetGameModeName, BOT_PLAYGROUND_PLAYLIST_NAME )
 
 
 
@@ -739,6 +743,21 @@ void function GameModes_Init()
 		AddCallback_UI_FeatureTutorialDialog_SetTitle( FeatureTutorial_GetGameModeName, GAMEMODE_HALLOWEEN_18_1 )
 		AddCallback_UI_FeatureTutorialDialog_PopulateTabsForMode( Halloween_18_1_Harbinger_PopulateAboutText, GAMEMODE_HALLOWEEN_18_1_HARBINGER )
 		AddCallback_UI_FeatureTutorialDialog_SetTitle( FeatureTutorial_GetGameModeName, GAMEMODE_HALLOWEEN_18_1_HARBINGER )
+
+
+
+
+	GameModeVariant_Create( eGameModeVariants.SURVIVAL_HALLOWEEN_22_1, eGameModes.SURVIVAL )
+	GameModeVariant_SetPlaylistFlag( eGameModeVariants.SURVIVAL_HALLOWEEN_22_1, "halloween_22_active" )
+	GameModeVariant_SetDevName( eGameModeVariants.SURVIVAL_HALLOWEEN_22_1, GAMEMODE_HALLOWEEN_22_1 )
+
+
+
+
+
+
+		AddCallback_UI_FeatureTutorialDialog_PopulateTabsForMode( Halloween_22_1_PopulateAboutText, GAMEMODE_HALLOWEEN_22_1 )
+		AddCallback_UI_FeatureTutorialDialog_SetTitle( FeatureTutorial_GetGameModeName, GAMEMODE_HALLOWEEN_22_1 )
 
 
 
@@ -818,19 +837,19 @@ void function GameModes_Init()
 
 
 
+	
+	GameModeVariant_Create( eGameModeVariants.SURVIVAL_OBJECTIVE_BR, eGameModes.SURVIVAL )
+	GameModeVariant_SetDevName( eGameModeVariants.SURVIVAL_OBJECTIVE_BR, GAMEMODE_OBJECTIVE_BR )
+	GameModeVariant_SetName( eGameModeVariants.SURVIVAL_OBJECTIVE_BR, "#GAMEMODE_OBJECTIVE_BR" )
+	GameModeVariant_SetPlaylistFlag( eGameModeVariants.SURVIVAL_OBJECTIVE_BR, "gamemode_objectivebr_active" )
 
 
 
 
+	
 
-
-
-
-
-
-
-
-
+		AddCallback_UI_FeatureTutorialDialog_PopulateTabsForMode( ObjectiveBR_PopulateAboutText, GAMEMODE_OBJECTIVE_BR )
+		AddCallback_UI_FeatureTutorialDialog_SetTitle( FeatureTutorial_GetGameModeName, GAMEMODE_OBJECTIVE_BR )
 
 
 
@@ -1203,7 +1222,6 @@ int function GameModeVariant_GetActiveMode()
 
 	return eGameModeVariants.invalid
 }
-
 
 
 

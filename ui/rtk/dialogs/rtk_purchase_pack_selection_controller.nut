@@ -68,6 +68,7 @@ void function InitPurchasePackSelectionDialog( var newMenuArg )
 	file.menu = menu
 	SetDialog( menu, false )
 	AddMenuFooterOption( menu, LEFT, BUTTON_B, true, "#B_BUTTON_BACK", "#B_BUTTON_BACK" )
+	RegisterSignal( "StopMilestoneSelectPackCloseWhenOffersReady" )
 }
 
 void function RTKPurchasePackSelectionPanel_OnInitialize( rtk_behavior self )
@@ -97,6 +98,7 @@ void function RTKPurchasePackSelectionPanel_OnInitialize( rtk_behavior self )
 void function RTKPurchasePackSelectionPanel_OnDestroy( rtk_behavior self )
 {
 	RTKDataModelType_DestroyStruct( RTK_MODELTYPE_MENUS, "packSelectionPage" )
+	Signal( uiGlobal.signalDummy, "StopMilestoneSelectPackCloseWhenOffersReady" )
 	RemoveCallback_OnGRXInventoryStateChanged( UpdatePurchaseButtonData )
 }
 
@@ -390,7 +392,7 @@ void function OnPurchaseOperationFinished( int status, GRXScriptOffer offer, Ite
 		if ( GetActiveMenu() == file.menu )
 		{
 			MilestoneEvent_PurchasePackDialogOnClose()
-			CloseActiveMenu()
+			thread CloseMenuWhenOffersReady()
 		}
 	}
 	else
@@ -428,4 +430,13 @@ bool function RTKMutator_IsPurchaseButtonInteractable( int state )
 			return false
 	}
 	unreachable
+}
+
+void function CloseMenuWhenOffersReady()
+{
+	EndSignal( uiGlobal.signalDummy, "StopMilestoneSelectPackCloseWhenOffersReady" )
+	while ( !GRX_AreOffersReady() )
+		WaitFrame()
+
+	CloseActiveMenu()
 }

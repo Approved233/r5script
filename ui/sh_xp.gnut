@@ -105,9 +105,9 @@ global enum eXPType
 
 	CHALLENGE_REWARD = 24,
 
-
-
-
+	OBJ_BR_ROUNDS_SURVIVED = 25,
+	OBJ_BR_TOP_ROUND_POINTS = 26,
+	OBJ_BR_POINTS_EARNED = 27,
 
 	_count_,
 }
@@ -608,14 +608,14 @@ void function InitXPData()
 	XpEventTypeData_SetDisplayEmpty( eXPType.CHALLENGE_REWARD, false )
 
 
+		InitXpEventTypeData( eXPType.OBJ_BR_ROUNDS_SURVIVED, "xp_obj_br_rounds_survived", "#EOG_XP_OBJ_BR_ROUNDS_SURVIVED" )
+		XpEventTypeData_SetDisplayEmpty( eXPType.OBJ_BR_ROUNDS_SURVIVED, true )
 
+		InitXpEventTypeData( eXPType.OBJ_BR_TOP_ROUND_POINTS, "xp_obj_br_top_round_points", "#EOG_XP_OBJ_BR_TOP_ROUND_POINTS" )
+		XpEventTypeData_SetDisplayEmpty( eXPType.OBJ_BR_TOP_ROUND_POINTS, true )
 
-
-
-
-
-
-
+		InitXpEventTypeData( eXPType.OBJ_BR_POINTS_EARNED, "xp_obj_br_points_earned", "#EOG_XP_OBJ_BR_POINTS_EARNED" )
+		XpEventTypeData_SetDisplayEmpty( eXPType.OBJ_BR_POINTS_EARNED, true )
 
 }
 

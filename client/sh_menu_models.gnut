@@ -3,7 +3,10 @@
 global function Menu_GetCameraTarget
 global function UICallback_MenuModels_UIScriptHasReset
 global function OnReady_PLAY
-global function LSS_SetLobbyStage
+#if DEV
+global function DEV_LobbyStageSwitching_ForceStage
+#endif
+global function LobbyStageSwitching_SetLobbyStage
 
 #if DEV
 
@@ -13,10 +16,15 @@ global function OnReadyThread
 #endif
 
 
+#if DEV
+global function DEV_LobbyStageSwitching_FoceEvent
+#endif
+
 
 const string STORE_BACKGROUND_ENT_NAME = "store_inspect_bg_target"
 const asset STORE_BACKGROUND_SMOKE_MODEL = $"mdl/levels_terrain/mp_lobby/mp_lobby_bundle_store_smoke.rmdl"
 const asset STORE_BACKGROUND_GEO_MODEL = $"mdl/levels_terrain/mp_lobby/mp_lobby_bundle_store_bg.rmdl"
+const asset S221_SPACE_HUNT_SPECTRE_HEMLOK = $"mdl/weapons/m1a1_hemlok/prop_hemlok_holo.rmdl"
 
 const string WEAPON_OVERVIEW_BACKGROUND_ENT_NAME = "weapons_mastery_inspect_bg_target"
 
@@ -59,13 +67,19 @@ const array<asset> STORE_BACKGROUND_FX_TIERS =
 	$"P_store_BG_bundle_T5", 
 ]
 
+const array< string > HALLOWEEN_S221_BIRD_IDLE_ANIMATIONS = [
+	"creatures/bird/bird/Bird_lobby_s221_idle_01",
+	"creatures/bird/bird/Bird_lobby_s221_idle_02",
+	"creatures/bird/bird/Bird_lobby_s221_idle_03"
+]
+
+const array< string > HALLOWEEN_S221_BIRD_ANIMATIONS = [
+	"creatures/bird/bird/Bird_lobby_s221_flyaway_01",
+	"creatures/bird/bird/Bird_lobby_s221_flyaway_02",
+	"creatures/bird/bird/Bird_lobby_s221_flyaway_03"
+]
+
 const asset WEAPON_MASTERY_BACKGROUND_FX = $"P_wpnmstry_BG_bundle_T4"
-
-
-
-
-
-const asset READY_UP_EFFECT = $"P_env_lobby_s22_readyup_terrain_pulse" 
 
 global const vector MENU_MODELS_DEFAULT_HIGHLIGHT_COLOR = <102, 120, 242>
 
@@ -76,8 +90,6 @@ const float[2] WEAPON_BASE_ROTATION_DELTA = [-35.2458, -14.5691]
 
 const float STORE_ITEM_ROTATE_SPEED = 1.5
 const float[2] STORE_ITEM_BASE_ROTATION_DELTA = [0.0, 0.0]
-
-global const vector EVENT_LOBBY_OFFSET = <0, 0, 0>
 
 global struct MenuCharacterDef
 {
@@ -212,18 +224,27 @@ struct AppliedStickerData
 
 enum eLobbyStage
 {
-	MAIN,
-	QUADS,
-	STAGE_B
+	MAIN_TRIOS,
+	MAIN_QUADS,
+	STAGE_B_TRIOS,
+	STAGE_B_QUADS,
+	STAGE_C_TRIOS,
+	STAGE_C_QUADS
 }
 
 enum eLobbyEntityIndex
 {
-	CAMERA,
 	PLAYER,
 	TEAMMATE1,
 	TEAMMATE2,
 	TEAMMATE3
+}
+
+struct ReadyUpVFXData
+{
+	vector origin
+	vector angles
+	asset VFX
 }
 
 
@@ -344,42 +365,94 @@ struct
 			bool   DEV_previewSelfAsParty = false
 			string DEV_characterOffsetCharacter = ""
 			vector DEV_characterOffset = <0, 0, 0>
-			bool DEV_modelInfoEnabled = false
+			bool   DEV_modelInfoEnabled = false
+			int    DEV_forcedStage = -1
 #endif
 
+		bool halloweenBirdsIdling = true
+
 		table< int, array< string > > stageReferenceEntities = {
-			[ eLobbyStage.MAIN ] = [
-				"play_camera_target",
+			[ eLobbyStage.MAIN_TRIOS ] = [
 				"play_character_ref",
 				"play_teammate1_ref",
 				"play_teammate2_ref",
 			],
-			[ eLobbyStage.QUADS ] = [
-				"play_camera_quads_target",
+			[ eLobbyStage.MAIN_QUADS ] = [
 				"play_character_quads_ref",
 				"play_teammate1_quads_ref",
 				"play_teammate2_quads_ref",
 				"play_teammate3_quads_ref",
 			],
-			
-			
-			
-			
-			
-			
-			
-			
+			[ eLobbyStage.STAGE_B_TRIOS ] = [
+				"play_character_stageb_ref",
+				"play_teammate1_stageb_ref",
+				"play_teammate2_stageb_ref",
+			],
+			[ eLobbyStage.STAGE_B_QUADS ] = [
+				"play_character_quads_stageb_ref",
+				"play_teammate1_quads_stageb_ref",
+				"play_teammate2_quads_stageb_ref",
+				"play_teammate3_quads_stageb_ref",
+			],
+			[ eLobbyStage.STAGE_C_TRIOS ] = [
+				"play_character_stagec_ref",
+				"play_teammate1_stagec_ref",
+				"play_teammate2_stagec_ref",
+			],
+			[ eLobbyStage.STAGE_C_QUADS ] = [
+				"play_character_quads_stagec_ref",
+				"play_teammate1_quads_stagec_ref",
+				"play_teammate2_quads_stagec_ref",
+				"play_teammate3_quads_stagec_ref",
+			],
 		}
 
 		table< int, int > stagePresentationTypes = {
-			[ eLobbyStage.MAIN ] = ePresentationType.PLAY,
-			[ eLobbyStage.QUADS ] = ePresentationType.PLAY_QUADS,
-			[ eLobbyStage.STAGE_B ] = ePresentationType.PLAY_STAGE_B,
+			[ eLobbyStage.MAIN_TRIOS ] = ePresentationType.PLAY,
+			[ eLobbyStage.MAIN_QUADS ] = ePresentationType.PLAY_QUADS,
+			[ eLobbyStage.STAGE_B_TRIOS ] = ePresentationType.PLAY_STAGE_B_TRIOS,
+			[ eLobbyStage.STAGE_B_QUADS ] = ePresentationType.PLAY_STAGE_B_QUADS,
+			[ eLobbyStage.STAGE_C_TRIOS ] = ePresentationType.PLAY_STAGE_C_TRIOS,
+			[ eLobbyStage.STAGE_C_QUADS ] = ePresentationType.PLAY_STAGE_C_QUADS,
 		}
+
+		
+		table< int, array< ReadyUpVFXData > > stageReadyUpVFX
+
+		table< int, int > stageBannerSkinOffset = {
+			[ eLobbyStage.MAIN_TRIOS ] = 0,
+			[ eLobbyStage.MAIN_QUADS ] = 0,
+			[ eLobbyStage.STAGE_B_TRIOS ] = 3,
+			[ eLobbyStage.STAGE_B_QUADS ] = 3,
+			[ eLobbyStage.STAGE_C_TRIOS ] = 6,
+			[ eLobbyStage.STAGE_C_QUADS ] = 6,
+		}
+
+		
+		
+		table< int, int > stageBannerReadiedUpSkinOffset = {
+			[ eLobbyStage.MAIN_TRIOS ] = -1,
+			[ eLobbyStage.MAIN_QUADS ] = -1,
+			[ eLobbyStage.STAGE_B_TRIOS ] = 9,
+			[ eLobbyStage.STAGE_B_QUADS ] = 9,
+			[ eLobbyStage.STAGE_C_TRIOS ] = -1,
+			[ eLobbyStage.STAGE_C_QUADS ] = -1,
+		}
+
+		int currentStage = eLobbyStage.MAIN_TRIOS
 
 
 	array<void functionref()> mouseWheelDownCallbacks
 	array<void functionref()> mouseWheelUpCallbacks
+
+#if DEV
+	bool DEV_CameraTuningInited = false
+	bool DEV_CameraTuningEnabled = false
+#endif
+
+#if DEV
+	int DEV_forceLobbyEvent = -1
+#endif
 } file
 
 
@@ -452,13 +525,12 @@ global function DEV_ScaleModel
 global function DEV_TweakCharacterOffset
 global function DEV_SpinActiveMenuModelLinearly
 global function DEV_SpinActiveMenuModelSmoothly
-global function ApplyEventPositioning
 global function DEV_ToggleModelInfo
 #endif
 
 global function UIToClient_PROTO_UpdateClientWithLocalClientUID
-global function IsEventLobbyActive
-global function LSS_UpdateLobbyStage
+global function LobbyStageSwitching_UpdateLobbyStage
+global function LobbyStageSwitching_GetBannerSkinOffset
 
 
 const STICK_ROTATE_SPEED = 2.0 
@@ -497,6 +569,10 @@ global function IsCallbackRegistered_OnMouseWheelUp
 global function IsPlayPresentationType
 
 
+#if DEV
+global function DEV_EnableCameraTuning
+global function DEV_DisableCameraTuning
+#endif
 
 
 
@@ -521,6 +597,23 @@ global function IsPlayPresentationType
 
 
 
+
+
+
+void function RegisterReadyUpVFXData( int stage, vector origin, vector angles, asset VFX )
+{
+	if ( !(stage in file.stageReadyUpVFX) )
+	{
+		file.stageReadyUpVFX[stage] <- []	
+	}
+
+	ReadyUpVFXData readyUpVFXData
+	readyUpVFXData.origin = origin
+	readyUpVFXData.angles = angles
+	readyUpVFXData.VFX = VFX
+
+	file.stageReadyUpVFX[stage].append( readyUpVFXData )
+}
 
 void function ClMenuModels_Init()
 {
@@ -535,9 +628,6 @@ void function ClMenuModels_Init()
 
 	PrecacheModel( STORE_BACKGROUND_SMOKE_MODEL )
 	PrecacheModel( STORE_BACKGROUND_GEO_MODEL )
-	
-	
-	
 
 
 
@@ -545,8 +635,27 @@ void function ClMenuModels_Init()
 
 	PrecacheParticleSystem( WEAPON_MASTERY_BACKGROUND_FX )
 
-	PrecacheParticleSystem( READY_UP_EFFECT )
+	
+	RegisterReadyUpVFXData( eLobbyStage.MAIN_TRIOS, <0.0, 406.0, 0.0>, <0.0, 90.0, 0.0>, $"P_env_lobby_s22_readyup_terrain_pulse" )
+	RegisterReadyUpVFXData( eLobbyStage.MAIN_QUADS, <0.0, 406.0, 0.0>, <0.0, 90.0, 0.0>, $"P_env_lobby_s22_readyup_terrain_pulse" )
 
+	
+	RegisterReadyUpVFXData( eLobbyStage.STAGE_B_TRIOS, <0.0, 406.0, 1275.0>, <0.0, 90.0, 0.0>, $"P_env_lobby_s221_halloween_readyup_terrain_pulse" )
+	RegisterReadyUpVFXData( eLobbyStage.STAGE_B_QUADS, <0.0, 406.0, 1275.0>, <0.0, 90.0, 0.0>, $"P_env_lobby_s221_halloween_readyup_terrain_pulse" )
+	RegisterReadyUpVFXData( eLobbyStage.STAGE_B_TRIOS, <0.0, 110.0, 1260.0>, <0.0, 90.0, 0.0>, $"P_env_lobby_s221_readyup_halloween_banner" )
+	RegisterReadyUpVFXData( eLobbyStage.STAGE_B_QUADS, <0.0, 110.0, 1260.0>, <0.0, 90.0, 0.0>, $"P_env_lobby_s221_readyup_halloween_banner" )
+
+	
+	RegisterReadyUpVFXData( eLobbyStage.STAGE_C_TRIOS, <0.0, 406.0, 2691.0>, <0.0, 90.0, 0.0>, $"P_env_lobby_s221_readyup_terrain_pulse" )
+	RegisterReadyUpVFXData( eLobbyStage.STAGE_C_QUADS, <0.0, 406.0, 2691.0>, <0.0, 90.0, 0.0>, $"P_env_lobby_s221_readyup_terrain_pulse" )
+
+	foreach ( array< ReadyUpVFXData > readyUpVFXDataList in file.stageReadyUpVFX.clonevalues() )
+	{
+		foreach ( ReadyUpVFXData readyUpVFXData in readyUpVFXDataList )
+		{
+			PrecacheParticleSystem( readyUpVFXData.VFX )
+		}
+	}
 
 	RegisterSignal( "EndRevConvo" )
 	RegisterSignal( "ChangedTeam" )
@@ -589,7 +698,6 @@ bool function MenuMapEntitiesExist()
 	array<string> entNames =
 	[
 		"default_camera_target",
-		"play_camera_quads_target",
 		"play_character_quads_ref",
 		"play_teammate1_quads_ref",
 		"play_teammate2_quads_ref",
@@ -613,7 +721,25 @@ bool function MenuMapEntitiesExist()
 		"club_landing_camera_target"
 		"club_landing_discovery_ref"
 		"club_landing_lobby_ref"
-		"club_landing_marvin"
+		"club_landing_marvin",
+
+		"play_character_stageb_ref",
+		"play_teammate1_stageb_ref",
+		"play_teammate2_stageb_ref",
+
+		"play_character_quads_stageb_ref",
+		"play_teammate1_quads_stageb_ref",
+		"play_teammate2_quads_stageb_ref",
+		"play_teammate3_quads_stageb_ref",
+
+		"play_character_stagec_ref",
+		"play_teammate1_stagec_ref",
+		"play_teammate2_stagec_ref",
+
+		"play_character_quads_stagec_ref",
+		"play_teammate1_quads_stagec_ref",
+		"play_teammate2_quads_stagec_ref",
+		"play_teammate3_quads_stagec_ref"
 	]
 
 	foreach ( name in entNames )
@@ -623,31 +749,6 @@ bool function MenuMapEntitiesExist()
 	}
 
 	return true
-}
-
-void function ApplyEventPositioning()
-{
-	array<entity> ents
-	ents.append( GetEntByScriptName( "play_camera_quads_target" ) )
-	ents.append( GetEntByScriptName( "play_character_quads_ref" ) )
-	ents.append( GetEntByScriptName( "play_teammate1_quads_ref" ) )
-	ents.append( GetEntByScriptName( "play_teammate2_quads_ref" ) )
-	ents.append( GetEntByScriptName( "play_teammate3_quads_ref" ) )
-	ents.append( GetEntByScriptName( "play_camera_target" ) )
-	ents.append( GetEntByScriptName( "play_character_ref" ) )
-	ents.append( GetEntByScriptName( "play_teammate1_ref" ) )
-	ents.append( GetEntByScriptName( "play_teammate2_ref" ) )
-	ents.append( GetEntByScriptName( "battlepass_camera_target" ) )
-	ents.append( GetEntByScriptName( "battlepass_3_camera_target" ) )
-	ents.append( GetEntByScriptName( "collection_event_camera_target" ) )
-	ents.append( GetEntByScriptName( "battlepass_right_ref" ) )
-	ents.append( GetEntByScriptName( "battlepass_center_ref" ) )
-	ents.append( GetEntByScriptName( "collection_event_ref" ) )
-
-
-
-	foreach ( ent in ents )
-		ent.SetOrigin( ent.GetOrigin() + EVENT_LOBBY_OFFSET )
 }
 
 #if DEV
@@ -1265,8 +1366,28 @@ void function OnReady_PLAY( bool ready )
 
 	if ( ready )
 	{
-		int particleIndex = GetParticleSystemIndex( READY_UP_EFFECT )
-		StartParticleEffectInWorld( particleIndex, <0, 406, 0>, <0, 90, 0> )
+		Assert( file.currentStage in file.stageReadyUpVFX, "Stage not setup in VFX table" )
+
+		foreach ( ReadyUpVFXData readyUpVFXData in file.stageReadyUpVFX[file.currentStage] )
+		{
+			int particleIndex = GetParticleSystemIndex( readyUpVFXData.VFX )
+
+			StartParticleEffectInWorld( particleIndex, readyUpVFXData.origin, readyUpVFXData.angles )
+		}
+	}
+
+	
+	if ( ready && file.halloweenBirdsIdling && (file.currentStage == eLobbyStage.STAGE_B_TRIOS || file.currentStage == eLobbyStage.STAGE_B_QUADS) )
+	{
+		array< entity > birds = GetEntArrayByScriptName( "halloween_ready_up_bird" )
+
+		foreach ( entity bird in birds )
+		{
+			string anim = HALLOWEEN_S221_BIRD_ANIMATIONS.getrandom()
+			bird.Anim_Play( anim )
+		}
+
+		file.halloweenBirdsIdling = false
 	}
 
 	if ( !ModelData_GetModel( file.playCharacter ).Anim_HasSequence( "ACT_MP_MENU_LOBBY_CENTER_READYUP" )  )
@@ -1326,8 +1447,27 @@ void function OnReadyThread( bool onReady )
 	}
 }
 
+void function S221_Halloween_ResetBirds()
+{
+	array< entity > birds = GetEntArrayByScriptName( "halloween_ready_up_bird" )
+
+	foreach ( entity bird in birds )
+	{
+		string anim = HALLOWEEN_S221_BIRD_IDLE_ANIMATIONS.getrandom()
+		bird.Anim_Play( anim )
+
+		float duration = bird.GetSequenceDuration( anim )
+		float initialTime = RandomFloatRange( 0.0, duration )
+		bird.Anim_SetInitialTime( initialTime )
+	}
+
+	file.halloweenBirdsIdling = true
+}
+
 void function EndPresentation_PLAY()
 {
+	S221_Halloween_ResetBirds()
+
 	RemoveCallback_OnPartyUpdated( UpdateMenuWithPartyMembers )
 }
 
@@ -1460,6 +1600,7 @@ void function StartPresentation_WEAPON_CHARMS()
 	charmBaseRotationDelta[1] = 0.0
 	ModelData_SetBaseAngles( file.customizeWeapon, <0, 140, 0> )
 	ModelData_SetBaseRotationDelta( file.customizeWeapon, charmBaseRotationDelta )
+	ModelData_SetRotationDelta( file.customizeWeapon, charmBaseRotationDelta )
 }
 
 void function EndPresentation_WEAPON_CHARMS()
@@ -1895,22 +2036,6 @@ void function EnableLobbyMenuCameraZoom()
 	waitthread CameraZoomThread( file.cameraZoomData )
 }
 
-bool function IsEventLobbyActive()
-{
-	bool eventLobbyOverride = GetCurrentPlaylistVarBool( "lobby_event_positioning_override", false )
-
-	if ( eventLobbyOverride )
-		return true
-
-	if ( IsLobbyEvent1Active() )
-		return true
-
-	if ( IsLobbyEvent2Active() )
-		return true
-
-	return false
-}
-
 void function InitMenuEntities()
 {
 	printf( "InitMenuEntitiesDebug: InitMenuEntities() START" )
@@ -1920,9 +2045,6 @@ void function InitMenuEntities()
 #endif
 
 	Assert( MenuMapEntitiesExist() )
-
-	if ( IsEventLobbyActive() )
-		ApplyEventPositioning()
 
 	InitPresentationData()
 	InitMenuModelFlashData()
@@ -2122,6 +2244,27 @@ void function InitBackgroundModels()
 		file.weaponOverviewBackgroundModelSmoke.kv.fadedist = -1
 		file.weaponOverviewBackgroundModelSmoke.MakeSafeForUIScriptHack()
 		file.weaponOverviewBackgroundModelSmoke.Hide()
+
+		
+		{
+			array< entity > spectres = GetEntArrayByScriptName( "lobby_space_hunt_spectre" )
+
+			foreach ( entity spectre in spectres )
+			{
+				string attachmentPoint = "PROPGUN"
+
+				int attachId = spectre.LookupAttachment( attachmentPoint )
+
+				if ( attachId == ATTACHMENTID_INVALID )
+					continue
+
+				
+				entity hemlok = CreateClientSidePropDynamic( <0.0, 0.0, 0.0>, <0.0, 0.0, 0.0>, S221_SPACE_HUNT_SPECTRE_HEMLOK )
+				hemlok.kv.solid = 0
+				hemlok.MakeSafeForUIScriptHack()
+				hemlok.SetParent( spectre, attachmentPoint, false )
+			}
+		}
 
 }
 
@@ -2821,7 +2964,7 @@ void function TrackPartyMembersAndDisplayModelsThread()
 						if ( IsValidItemFlavorCharacterRef( candidate ) )
 						{
 							characterOrNull = GetItemFlavorByCharacterRef( candidate )
-							skinOrNull = GetDefaultItemFlavorForLoadoutSlot( EHI_null, Loadout_CharacterSkin( expect ItemFlavor( characterOrNull ) ) )
+							skinOrNull = GetDefaultItemFlavorForLoadoutSlot( Loadout_CharacterSkin( expect ItemFlavor( characterOrNull ) ) )
 						}
 					}
 				}
@@ -3128,7 +3271,7 @@ void function UIToClient_PreviewWeaponSkin( int skinFlavorGUID, int charmFlavorG
 		
 	}
 
-	weaponModel.Anim_SetPaused( true )
+		weaponModel.Anim_SetPaused( true )
 
 	
 	file.cameraZoomModelInitialized = true
@@ -3143,13 +3286,16 @@ void function UIToClient_PreviewWeaponSkin( int skinFlavorGUID, int charmFlavorG
 	}
 
 	
-	bool shouldZoomIn = file.currentPresentationType == ePresentationType.WEAPON_CHARMS && !file.cameraZoomedToGunCharm
+	bool shouldZoomIn = file.currentPresentationType == ePresentationType.WEAPON_CHARMS
 
-	if( file.currentPresentationType != ePresentationType.WEAPON_CHARMS )
-	{
-		ModelData_SetBaseOrigin( file.customizeWeapon, origin )
-		weaponMover.SetOrigin( ModelData_GetBaseOrigin( file.customizeWeapon ) )
-	}
+	ModelData_SetBaseOrigin( file.customizeWeapon, origin )
+	weaponMover.SetOrigin( ModelData_GetBaseOrigin( file.customizeWeapon ) )
+
+	SetWeaponSkinLocalOffset( weaponModel, false )
+
+	if ( file.currentPresentationType == ePresentationType.WEAPON_CHARMS )
+		SetWeaponSkinLocalOffset( weaponModel, true )
+
 	
 	bool shouldZoomOut = file.currentPresentationType == ePresentationType.WEAPON_SKIN && file.cameraZoomedToGunCharm
 
@@ -3159,11 +3305,6 @@ void function UIToClient_PreviewWeaponSkin( int skinFlavorGUID, int charmFlavorG
 			thread ZoomInCameraToWeaponCharm( weaponModel, weaponMover, armoryScale )
 		else
 			thread ZoomOutCameraToWeaponSkin( weaponModel, charmFlavor, weaponMover, armoryScale )
-	}
-	else
-	{
-		bool useCharmAttachment = file.currentPresentationType == ePresentationType.WEAPON_CHARMS ? true : false
-		SetWeaponSkinLocalOffset( weaponModel, useCharmAttachment )
 	}
 
 	
@@ -3470,7 +3611,7 @@ void function UpdateStoreItemDisplay_BannerCard( ItemFlavor item, bool isSingleI
 		SetNestedGladiatorCardOverrideCharacter( nestedGCHandleFront, character )
 		SetNestedGladiatorCardOverrideStance( nestedGCHandleFront, item )
 
-		ItemFlavor characterDefaultFrame = GetDefaultItemFlavorForLoadoutSlot( EHI_null, Loadout_GladiatorCardFrame( character ) )
+		ItemFlavor characterDefaultFrame = GetDefaultItemFlavorForLoadoutSlot( Loadout_GladiatorCardFrame( character ) )
 		SetNestedGladiatorCardOverrideFrame( nestedGCHandleFront, characterDefaultFrame )
 	}
 
@@ -4122,9 +4263,9 @@ void function UpdateStoreItemDisplay_Sticker( ItemFlavor item )
 void function UpdateStoreItemDisplay_ArtifactBink( ItemFlavor item )
 {
 
+		Assert( ItemFlavor_GetType( item ) == eItemType.artifact_component_deathbox || ItemFlavor_GetType( item ) == eItemType.artifact_component_activation_emote || ItemFlavor_GetType( item ) == eItemType.melee_addon )
 
 
-		Assert( ItemFlavor_GetType( item ) == eItemType.artifact_component_deathbox || ItemFlavor_GetType( item ) == eItemType.artifact_component_activation_emote )
 
 
 	entity refEnt = file.storeInspectRefEnt
@@ -4155,9 +4296,9 @@ void function UpdateStoreItemDisplay_ArtifactBink( ItemFlavor item )
 			break
 
 
-
-
-
+		case eItemType.melee_addon:
+			video = UniversalMelee_GetVideo( item )
+			break
 
 
 		default:
@@ -4297,12 +4438,12 @@ void function UIToClient_PreviewStoreItem( SettingsAssetGUID itemFlavorGUID, boo
 			break
 
 
-
-
-
-
-
-
+		case eItemType.melee_addon:
+			autoRotate = false
+			DisableModelTurn()
+			EnableTurnLockout()
+			UpdateStoreItemDisplay_ArtifactBink( item )
+			break
 
 
 		case eItemType.loadscreen:
@@ -4663,6 +4804,7 @@ const float CHARM_CAMERA_ZOOM_DURATION = 0.15
 void function ZoomInCameraToWeaponCharm( entity model, entity mover, float armoryScale )
 {
 	Signal( level, "EndGunCharmCameraZoom" )
+	EndSignal( level, "EndGunCharmCameraZoom" )
 
 	const float FORWARD_OFFSET = -12.0
 	const float RIGHT_OFFSET = -1.0
@@ -4692,7 +4834,6 @@ void function ZoomInCameraToWeaponCharm( entity model, entity mover, float armor
 	model.SetParent( mover )
 
 	file.charmVerticalOffset = GraphCapped( armoryScale, 0.5, 2.0, 0.35, 1.5 )
-	SetWeaponSkinLocalOffset( model, true )
 
 	
 	file.cameraZoomData.mover.SetOrigin( cameraTarget.GetOrigin() )
@@ -5242,6 +5383,8 @@ void function SetMenuCamera( entity player, int presentationType, bool interpola
 	int cameraTargetName = file.presentationData[ presentationType ].cameraTargetName
 	entity cameraTarget  = file.cameraTargets[ cameraTargetName ]
 
+	clGlobal.menuCamera.SetTarget( cameraTarget, fov, interpolate, EASING_CUBIC_INOUT, TRANSITION_DURATION )
+
 	if ( IsPlayPresentationType( presentationType ) )
 	{
 		RunUIScript( "ClientToUI_CheckPlaylist" )
@@ -5253,7 +5396,6 @@ void function SetMenuCamera( entity player, int presentationType, bool interpola
 		cameraTarget.SetAngles( file.cameraStartOriginsAngles[ cameraTargetName ]["angles"] + file.presentationData[ presentationType ].angleOffset )
 	}
 
-	clGlobal.menuCamera.SetTarget( cameraTarget, fov, interpolate, EASING_CUBIC_INOUT, TRANSITION_DURATION )
 	file.currentCameraTarget = cameraTarget
 
 	
@@ -6230,7 +6372,12 @@ bool function IsCallbackRegistered_OnMouseWheelDown( void functionref() cb )
 
 bool function IsPlayPresentationType( int presentationType )
 {
-	return presentationType == ePresentationType.PLAY || presentationType == ePresentationType.PLAY_QUADS || presentationType == ePresentationType.PLAY_STAGE_B
+	return presentationType == ePresentationType.PLAY
+		|| presentationType == ePresentationType.PLAY_QUADS
+		|| presentationType == ePresentationType.PLAY_STAGE_B_TRIOS
+		|| presentationType == ePresentationType.PLAY_STAGE_B_QUADS
+		|| presentationType == ePresentationType.PLAY_STAGE_C_TRIOS
+		|| presentationType == ePresentationType.PLAY_STAGE_C_QUADS
 }
 
 
@@ -6265,32 +6412,107 @@ void function UICallback_MenuModels_UIScriptHasReset()
 
 
 
+bool function IsLobbyEvent1Active()
+{
+#if DEV
+		if ( file.DEV_forceLobbyEvent != -1 )
+			return file.DEV_forceLobbyEvent == 1
+#endif
 
-void function LSS_UpdateLobbyStage( string playlistName )
+	return IsMTXEventActive( "MTX_Event_1" )
+}
+
+bool function IsLobbyEvent2Active()
+{
+#if DEV
+		if ( file.DEV_forceLobbyEvent != -1 )
+			return file.DEV_forceLobbyEvent == 2
+#endif
+
+	return IsMTXEventActive( "MTX_Event_2" )
+}
+
+#if DEV
+void function DEV_LobbyStageSwitching_FoceEvent( int newEvent )
+{
+	file.DEV_forceLobbyEvent = newEvent
+
+	RunUIScript( "ClientToUI_CheckPlaylist" )
+
+
+
+}
+#endif
+
+
+int function LobbyStageSwitching_GetBannerSkinOffset()
+{
+	bool isReadiedUp = GetConVarBool( "party_readyToSearch" )
+
+	if ( isReadiedUp && file.stageBannerReadiedUpSkinOffset[file.currentStage] != -1 )
+	{
+		return file.stageBannerReadiedUpSkinOffset[file.currentStage]
+	}
+
+	return file.stageBannerSkinOffset[file.currentStage]
+}
+
+void function LobbyStageSwitching_UpdateLobbyStage( string playlistName )
 {
 	int maxTeamSize = GetMaxTeamSizeForAllPlaylistsInRotation()
 
-	if ( maxTeamSize >= 4 )
+
+
+
+
+
+
+
+	if ( IsLobbyEvent1Active() )
 	{
-		LSS_SetLobbyStage( eLobbyStage.QUADS )
+		int newStage = maxTeamSize >= 4 ? eLobbyStage.STAGE_B_QUADS : eLobbyStage.STAGE_B_TRIOS
+		LobbyStageSwitching_SetLobbyStage( newStage )
+
 	}
-	
-	
-	
-	
-	
-	
+	else if ( IsLobbyEvent2Active() )
+	{
+		int newStage = maxTeamSize >= 4 ? eLobbyStage.STAGE_C_QUADS : eLobbyStage.STAGE_C_TRIOS
+		LobbyStageSwitching_SetLobbyStage( newStage )
+	}
+	else if ( maxTeamSize >= 4 )
+	{
+		LobbyStageSwitching_SetLobbyStage( eLobbyStage.MAIN_QUADS )
+	}
 	else
 	{
-		LSS_SetLobbyStage( eLobbyStage.MAIN )
+		LobbyStageSwitching_SetLobbyStage( eLobbyStage.MAIN_TRIOS )
 	}
-
-	RunUIScript( "UpdateButtonsPositions", maxTeamSize )
 }
 
-void function LSS_SetLobbyStage( int newStage )
+#if DEV
+void function DEV_LobbyStageSwitching_ForceStage( int newStage )
+{
+	file.DEV_forcedStage = newStage
+	RunUIScript( "ClientToUI_CheckPlaylist" )
+}
+#endif
+
+void function LobbyStageSwitching_SetLobbyStage( int newStage )
 {
 	Assert( newStage in file.stageReferenceEntities, "Tried switching to a stage which isn't setup" )
+
+#if DEV
+		if ( file.DEV_forcedStage != -1 )
+		{
+			newStage = file.DEV_forcedStage
+		}
+#endif
+
+	
+	if ( (file.currentStage == eLobbyStage.STAGE_B_TRIOS || file.currentStage == eLobbyStage.STAGE_B_QUADS) && newStage != eLobbyStage.STAGE_B_TRIOS && newStage != eLobbyStage.STAGE_B_QUADS )
+	{
+		S221_Halloween_ResetBirds()
+	}
 
 	array< string > referenceNames = file.stageReferenceEntities[newStage]
 	PresentationDef presentationDefinition = file.presentationData[file.stagePresentationTypes[newStage]]
@@ -6309,9 +6531,17 @@ void function LSS_SetLobbyStage( int newStage )
 	if ( !IsValid( playerReference ) )
 		return
 
+	file.currentStage = newStage
+
+	if ( IsPlayPresentationType( file.currentPresentationType ) && IsValid( clGlobal.menuCamera ) )
+		clGlobal.menuCamera.SetFOV( presentationDefinition.fov )
+
 	
 	if ( Distance( presentationDefinition.positionOffset, camera.GetOrigin() ) > 100 )
 	{
+		camera.Signal( "StopCamPosBlend" )
+		camera.Signal( "StopCamAngBlend" )
+
 		camera.SetOrigin( presentationDefinition.positionOffset )
 		camera.SetAngles( presentationDefinition.angleOffset )
 	}
@@ -6331,7 +6561,9 @@ void function LSS_SetLobbyStage( int newStage )
 		playerModel.SetAngles( playerReference.GetAngles() )
 	}
 
-	for ( int i = 0; i < 3; i ++ )
+	const int maxPlayersToCheck = 10
+
+	for ( int i = 0; i < maxPlayersToCheck; i ++ )
 	{
 		if ( i in file.teammateModel && IsValid( file.teammateModel[i] ) )
 		{
@@ -6352,5 +6584,133 @@ void function LSS_SetLobbyStage( int newStage )
 			file.teammateModel[i].SetAngles( teammateReference.GetAngles() )
 		}
 	}
+
+	RunUIScript( "LobbyStageSwitching_UpdateFriendsButtons", referenceNames.len() )
 }
 
+
+#if DEV
+void function DEV_EnableCameraTuning()
+{
+	if ( file.DEV_CameraTuningInited == false )
+	{
+		thread DEV_CameraTuningThread()
+		file.DEV_CameraTuningInited = true
+	}
+
+	file.DEV_CameraTuningEnabled = true
+}
+
+void function DEV_DisableCameraTuning()
+{
+	file.DEV_CameraTuningEnabled = false
+}
+
+void function DEV_CameraTuningThread()
+{
+	while ( true )
+	{
+		if ( !file.DEV_CameraTuningEnabled || !IsValid( clGlobal.menuCamera ) )
+		{
+			WaitFrame()
+			continue
+		}
+
+		entity camera = clGlobal.menuCamera.GetFollowTarget()
+		if ( !IsValid( camera ) )
+		{
+			WaitFrame()
+			continue
+		}
+
+		vector offset = <0.0, 0.0, 0.0>
+
+		if ( InputIsButtonDown( KEY_SPACE ) )
+		{
+			offset += < 0.0, 0.0, 1.0 >
+		}
+
+		if ( InputIsButtonDown( KEY_LCONTROL ) )
+		{
+			offset += < 0.0, 0.0, -1.0 >
+		}
+
+		if ( InputIsButtonDown( KEY_W ) )
+		{
+			offset += < 0.0, 1.0, 0.0 >
+		}
+
+		if ( InputIsButtonDown( KEY_S ) )
+		{
+			offset += < 0.0, -1.0, 0.0 >
+		}
+
+		if ( InputIsButtonDown( KEY_A ) )
+		{
+			offset += < -1.0, 0.0, 0.0 >
+		}
+
+		if ( InputIsButtonDown( KEY_D ) )
+		{
+			offset += < 1.0, 0.0, 0.0 >
+		}
+
+		if ( InputIsButtonDown( KEY_LSHIFT ) )
+		{
+			offset *= 10.0
+		}
+
+		camera.SetOrigin( camera.GetOrigin() + offset )
+
+		vector anglesOffset = <0.0, 0.0, 0.0>
+
+		if ( InputIsButtonDown( KEY_UP ) )
+		{
+			anglesOffset += < -0.2, 0.0, 0.0 >
+		}
+		if ( InputIsButtonDown( KEY_DOWN ) )
+		{
+			anglesOffset += < 0.2, 0.0, 0.0 >
+		}
+		if ( InputIsButtonDown( KEY_LEFT ) )
+		{
+			anglesOffset += < 0.0, 0.2, 0.0 >
+		}
+		if ( InputIsButtonDown( KEY_RIGHT ) )
+		{
+			anglesOffset += < 0.0, -0.2, 0.0 >
+		}
+
+		if ( InputIsButtonDown( KEY_LSHIFT ) )
+		{
+			anglesOffset *= 10.0
+		}
+
+		camera.SetAngles( camera.GetAngles() + anglesOffset )
+
+		float fovChange = 0.0
+
+		if ( InputIsButtonDown( KEY_PAGEUP ) )
+		{
+			fovChange += 0.2
+		}
+		else if ( InputIsButtonDown( KEY_PAGEDOWN ) )
+		{
+			fovChange -= 0.2
+		}
+
+		float newFov = clGlobal.menuCamera.GetCameraFOV() + fovChange
+
+		
+		newFov = Clamp( newFov, 0.01, 179.99 )
+
+		clGlobal.menuCamera.SetFOV( newFov )
+
+		DebugDrawScreenText( 0.6, 0.6, "Camera Position: " + camera.GetOrigin() )
+		DebugDrawScreenText( 0.6, 0.62, "Camera Angles: " + camera.GetAngles() )
+		DebugDrawScreenText( 0.6, 0.64, "Camera FOV: " + clGlobal.menuCamera.GetCameraFOV() )
+
+		WaitFrame()
+	}
+}
+#endif

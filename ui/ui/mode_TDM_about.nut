@@ -23,6 +23,10 @@ array< featureTutorialTab > function TDM_PopulateAboutText()
 	tabs.append( tab1 )
 
 
+		Halloween_22_Mixtape_PopulateAboutText( tabs )
+
+
+
 
 
 
@@ -67,6 +71,10 @@ array< featureTutorialTab > function BigTDM_PopulateAboutText()
 
 	tab1.rules = tab1Rules
 	tabs.append( tab1 )
+
+
+		Halloween_22_Mixtape_PopulateAboutText( tabs )
+
 
 	GameMode_AboutDialog_AppendRequeueTab(tabs)
 
